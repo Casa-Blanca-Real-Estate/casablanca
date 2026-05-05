@@ -1,0 +1,34 @@
+{
+  "name": "Claire Dubois",
+  "slug": "claire-dubois",
+  "photo": "claire-dubois.jpg",
+  "initials": "CD",
+  "photoColor": ["#d4c5b8", "#ab967a"],
+  "title": "Licensed Real Estate Salesperson",
+  "neighborhoods": ["Tribeca", "SoHo", "West Village", "Nolita"],
+  "languages": ["English", "French"],
+  "bio": "Claire came to New York from Paris fifteen years ago and never left — which might explain why she has such a particular eye for space and light. She specializes in Tribeca, SoHo, and the West Village, where she's built a reputation for representing both buyers and sellers at the top of the market. She's negotiated dozens of deals over ask, and she's candid when a property isn't worth it.",
+  "email": "claire@casa-blanca.com",
+  "phone": "212-555-0103",
+  "streeteasy": "https://streeteasy.com/nyc/agent/claire-dubois",
+  "instagram": "https://instagram.com/clairedubois.nyc",
+  "stats": {
+    "closedDeals": 220,
+    "avgDaysOnMarket": 18,
+    "satisfactionRate": 99,
+    "yearsExperience": 14
+  },
+  "specialties": ["Luxury Sales", "Loft Conversions", "Investment Properties", "Seller Representation"],
+  "testimonials": [
+    {
+      "quote": "Claire sold our Tribeca loft $80K over asking. She had a buyer lined up before we even listed. Two years later, she helped us find our forever home in Brooklyn. That's Casa Blanca.",
+      "author": "Sarah & Leo W.",
+      "detail": "Sellers · Tribeca"
+    },
+    {
+      "quote": "Working with Claire felt like working with an architect who also happens to understand deal structure. She spotted value in the SoHo space that we almost passed on. Best decision we made.",
+      "author": "Hiroshi T.",
+      "detail": "Buyer · SoHo"
+    }
+  ]
+}

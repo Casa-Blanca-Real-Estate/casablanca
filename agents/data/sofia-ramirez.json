@@ -1,0 +1,34 @@
+{
+  "name": "Sofia Ramirez",
+  "slug": "sofia-ramirez",
+  "photo": "sofia-ramirez.jpg",
+  "initials": "SR",
+  "photoColor": ["#c5bfe0", "#9991c4"],
+  "title": "Licensed Real Estate Salesperson",
+  "neighborhoods": ["Upper West Side", "Harlem", "Inwood", "Washington Heights"],
+  "languages": ["English", "Spanish"],
+  "bio": "Sofia has spent over a decade helping families plant roots on the Upper West Side and upper Manhattan. A native New Yorker who grew up in Inwood, she knows every co-op board, every super, and every hidden gem in the neighborhoods she serves. Her fluency in Spanish makes her a trusted partner for the area's diverse community.",
+  "email": "sofia@casa-blanca.com",
+  "phone": "212-555-0101",
+  "streeteasy": "https://streeteasy.com/nyc/agent/sofia-ramirez",
+  "instagram": "https://instagram.com/sofiaramirez.nyc",
+  "stats": {
+    "closedDeals": 180,
+    "avgDaysOnMarket": 21,
+    "satisfactionRate": 98,
+    "yearsExperience": 11
+  },
+  "specialties": ["Co-op Purchases", "First-Time Buyers", "Relocation", "Rentals"],
+  "testimonials": [
+    {
+      "quote": "Sofia found us an apartment we didn't even know existed. She called us before it hit the market. We closed in three weeks. I've never felt so taken care of during a New York apartment search.",
+      "author": "Adriana M.",
+      "detail": "Buyer · Upper West Side"
+    },
+    {
+      "quote": "As first-time buyers with a lot of questions, Sofia was endlessly patient and honest. She never pushed us. She just found us the right place.",
+      "author": "Miguel & Tanya R.",
+      "detail": "Buyers · Inwood"
+    }
+  ]
+}

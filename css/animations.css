@@ -1,0 +1,122 @@
+/* ─── Fade-in on Scroll ─────────────────────────────────────────── */
+.fade-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delays for child elements */
+.fade-in-group > *:nth-child(1) { transition-delay: 0s; }
+.fade-in-group > *:nth-child(2) { transition-delay: 0.08s; }
+.fade-in-group > *:nth-child(3) { transition-delay: 0.16s; }
+.fade-in-group > *:nth-child(4) { transition-delay: 0.24s; }
+.fade-in-group > *:nth-child(5) { transition-delay: 0.32s; }
+.fade-in-group > *:nth-child(6) { transition-delay: 0.40s; }
+
+/* Slide from left */
+.fade-in-left {
+  opacity: 0;
+  transform: translateX(-32px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.fade-in-left.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Slide from right */
+.fade-in-right {
+  opacity: 0;
+  transform: translateX(32px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.fade-in-right.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Scale in */
+.scale-in {
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.scale-in.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ─── Page Load Hero Animation ──────────────────────────────────── */
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-animate {
+  animation: heroFadeUp 0.8s ease forwards;
+}
+
+.hero-animate--delay-1 { animation-delay: 0.15s; opacity: 0; }
+.hero-animate--delay-2 { animation-delay: 0.3s; opacity: 0; }
+.hero-animate--delay-3 { animation-delay: 0.45s; opacity: 0; }
+
+/* ─── Hover Lift ────────────────────────────────────────────────── */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(15, 15, 15, 0.12);
+}
+
+/* ─── Number Count Animation ────────────────────────────────────── */
+.count-up {
+  display: inline-block;
+}
+
+/* ─── Underline Reveal ──────────────────────────────────────────── */
+.underline-reveal {
+  position: relative;
+  display: inline-block;
+}
+
+.underline-reveal::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #aaa3cf;
+  transition: width 0.4s ease;
+}
+
+.underline-reveal:hover::after { width: 100%; }
+
+/* ─── Shimmer Loading (skeleton) ────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e8e6e0 25%, #f0eee9 50%, #e8e6e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}

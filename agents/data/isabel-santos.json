@@ -1,0 +1,34 @@
+{
+  "name": "Isabel Santos",
+  "slug": "isabel-santos",
+  "photo": "isabel-santos.jpg",
+  "initials": "IS",
+  "photoColor": ["#e0c5cb", "#ab7a87"],
+  "title": "Licensed Real Estate Salesperson",
+  "neighborhoods": ["Park Slope", "Prospect Heights", "Crown Heights", "Carroll Gardens"],
+  "languages": ["English", "Spanish", "Portuguese"],
+  "bio": "Isabel grew up in Brooklyn and has watched its neighborhoods evolve from the inside. She specializes in Park Slope, Prospect Heights, and Crown Heights — areas she loves for their townhouse stock, community feel, and access to Prospect Park. She's particularly skilled with brownstone transactions and works with a network of inspectors, attorneys, and contractors who make the process seamless from offer to move-in.",
+  "email": "isabel@casa-blanca.com",
+  "phone": "212-555-0105",
+  "streeteasy": "https://streeteasy.com/nyc/agent/isabel-santos",
+  "instagram": "https://instagram.com/isabelsantos.nyc",
+  "stats": {
+    "closedDeals": 130,
+    "avgDaysOnMarket": 19,
+    "satisfactionRate": 98,
+    "yearsExperience": 7
+  },
+  "specialties": ["Brownstone Sales", "Townhouse Purchases", "Brooklyn Neighborhoods", "Family Homes"],
+  "testimonials": [
+    {
+      "quote": "Isabel found us our Park Slope brownstone in a market where nothing was available. She knew about the listing three days before it hit Zillow. We'd still be looking without her.",
+      "author": "Gabrielle & Tom F.",
+      "detail": "Buyers · Park Slope"
+    },
+    {
+      "quote": "We were nervous about a two-family in Crown Heights — it was a big step up from renting. Isabel held our hand through every inspection, every negotiation, every form. We couldn't have done it without her.",
+      "author": "Omar A.",
+      "detail": "Buyer · Crown Heights"
+    }
+  ]
+}

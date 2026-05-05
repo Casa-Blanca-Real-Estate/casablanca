@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{NAME}} — Casa Blanca</title>
+  <meta name="description" content="{{NAME}}, {{TITLE}} at Casa Blanca Real Estate. Specializing in {{NEIGHBORHOODS_CSV}}." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/animations.css" />
+  <link rel="stylesheet" href="../../css/agent-profile.css" />
+
+  <style>
+    @font-face {
+      font-family: 'Object Sans';
+      src: url('../../assets/fonts/ObjectSans-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Object Sans';
+      src: url('../../assets/fonts/ObjectSans-Heavy.woff2') format('woff2');
+      font-weight: 800;
+      font-display: swap;
+    }
+    body {
+      font-family: 'Object Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav class="nav" aria-label="Main navigation">
+    <a href="../../index.html" class="nav__logo">Casa<span>·</span>Blanca</a>
+    <ul class="nav__links">
+      <li><a href="../../index.html#about">About</a></li>
+      <li><a href="../../index.html#neighborhoods">Neighborhoods</a></li>
+      <li><a href="../../index.html#listings">Listings</a></li>
+      <li><a href="../index.html">Our Team</a></li>
+      <li><a href="../../index.html#contact" class="nav__cta">Get in Touch</a></li>
+    </ul>
+    <button class="nav__hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- ── Agent Hero ── -->
+  <section class="agent-hero">
+    <div class="container">
+      <div class="agent-hero__breadcrumb">
+        <a href="../../index.html">Home</a>
+        <span>/</span>
+        <a href="../index.html">Our Team</a>
+        <span>/</span>
+        <span>{{NAME}}</span>
+      </div>
+
+      <div class="agent-hero__layout">
+        <div class="agent-hero__photo-wrap">
+          <div class="agent-hero__photo" style="background: linear-gradient(135deg, {{PHOTO_COLOR_A}}, {{PHOTO_COLOR_B}});">
+            {{PHOTO_OR_INITIALS}}
+          </div>
+          <div class="agent-hero__availability">
+            <span class="agent-hero__status-dot"></span>
+            Available for new clients
+          </div>
+        </div>
+
+        <div class="agent-hero__info">
+          <p class="about__eyebrow hero-animate">Casa Blanca Agent</p>
+          <h1 class="agent-hero__name hero-animate hero-animate--delay-1">{{NAME}}</h1>
+          <p class="agent-hero__title hero-animate hero-animate--delay-1">{{TITLE}}</p>
+
+          <div class="agent-hero__neighborhoods hero-animate hero-animate--delay-2">
+            {{NEIGHBORHOOD_TAGS}}
+          </div>
+
+          <div class="agent-hero__langs hero-animate hero-animate--delay-2">
+            <span class="agent-hero__langs-label">Languages:</span>
+            {{LANGUAGE_LIST}}
+          </div>
+
+          <div class="agent-hero__actions hero-animate hero-animate--delay-3">
+            <a href="mailto:{{EMAIL}}" class="btn btn--primary">Email {{FIRST_NAME}}</a>
+            <a href="tel:{{PHONE_RAW}}" class="btn btn--outline">{{PHONE}}</a>
+            {{STREETEASY_LINK}}
+          </div>
+
+          <div class="agent-stats hero-animate hero-animate--delay-3">
+            <div class="agent-stat">
+              <div class="agent-stat__num count-up" data-target="{{STAT_DEALS}}">{{STAT_DEALS}}</div>
+              <div class="agent-stat__label">Deals closed</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat__num count-up" data-target="{{STAT_DAYS}}" data-suffix=" days">{{STAT_DAYS}}</div>
+              <div class="agent-stat__label">Avg. days on market</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat__num count-up" data-target="{{STAT_RATING}}" data-suffix="%">{{STAT_RATING}}%</div>
+              <div class="agent-stat__label">Client satisfaction</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat__num count-up" data-target="{{STAT_YEARS}}">{{STAT_YEARS}}</div>
+              <div class="agent-stat__label">Years in NYC</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Bio + Specialties ── -->
+  <section class="section" style="background:#fff;border-top:1px solid #dddbd5;">
+    <div class="container">
+      <div class="agent-bio-layout">
+        <div class="agent-bio__content">
+          <p class="about__eyebrow fade-in">About {{FIRST_NAME}}</p>
+          <h2 class="fade-in" style="font-size:clamp(1.5rem,3vw,2rem);margin-bottom:1.5rem;">{{FIRST_NAME}}'s approach</h2>
+          <p class="agent-bio__text fade-in">{{BIO}}</p>
+        </div>
+
+        <div class="agent-bio__sidebar fade-in">
+          <div class="agent-sidebar-card">
+            <h4>Specialties</h4>
+            <ul class="agent-specialties">
+              {{SPECIALTY_ITEMS}}
+            </ul>
+          </div>
+
+          <div class="agent-sidebar-card">
+            <h4>Reach {{FIRST_NAME}}</h4>
+            <div class="agent-contact-links">
+              <a href="mailto:{{EMAIL}}" class="agent-contact-link">
+                <span class="agent-contact-link__icon">✉</span>
+                {{EMAIL}}
+              </a>
+              <a href="tel:{{PHONE_RAW}}" class="agent-contact-link">
+                <span class="agent-contact-link__icon">☎</span>
+                {{PHONE}}
+              </a>
+              {{INSTAGRAM_CONTACT}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Testimonials ── -->
+  {{TESTIMONIALS_SECTION}}
+
+  <!-- ── CTA ── -->
+  <section class="section">
+    <div class="container">
+      <div class="cta-banner fade-in">
+        <div class="cta-banner__accent"></div>
+        <div>
+          <p class="cta-banner__eyebrow">Work with {{FIRST_NAME}}</p>
+          <h2 class="cta-banner__title">Ready to start<br />your search?</h2>
+          <p class="cta-banner__body">{{FIRST_NAME}} is taking new clients. Reach out to start the conversation — no pressure, just an honest talk about what you're looking for.</p>
+        </div>
+        <div class="cta-banner__actions">
+          <a href="mailto:{{EMAIL}}" class="btn btn--lavender">Email {{FIRST_NAME}}</a>
+          <a href="../index.html" class="btn btn--outline" style="color:#fff;border-color:rgba(255,255,255,0.2);">See all agents</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <div>
+          <div class="footer__logo">Casa<span>·</span>Blanca</div>
+          <p class="footer__tagline">A boutique real estate brokerage serving New York City since 2006.</p>
+          <div class="footer__social">
+            <a href="#" class="footer__social-link" aria-label="Instagram">ig</a>
+            <a href="#" class="footer__social-link" aria-label="LinkedIn">in</a>
+            <a href="#" class="footer__social-link" aria-label="StreetEasy">se</a>
+          </div>
+        </div>
+        <div>
+          <div class="footer__col-title">Navigate</div>
+          <ul class="footer__col-links">
+            <li><a href="../../index.html#about">About</a></li>
+            <li><a href="../../index.html#neighborhoods">Neighborhoods</a></li>
+            <li><a href="../../index.html#listings">Listings</a></li>
+            <li><a href="../index.html">Our Team</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer__col-title">Neighborhoods</div>
+          <ul class="footer__col-links">
+            <li><a href="#">Upper West Side</a></li>
+            <li><a href="#">Harlem</a></li>
+            <li><a href="#">Washington Heights</a></li>
+            <li><a href="#">Tribeca</a></li>
+            <li><a href="#">West Village</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer__col-title">Contact</div>
+          <ul class="footer__col-links">
+            <li><a href="mailto:hello@casa-blanca.com">hello@casa-blanca.com</a></li>
+            <li><a href="tel:+12125550100">212-555-0100</a></li>
+            <li style="color:rgba(255,255,255,0.3);font-size:0.9rem;line-height:1.6;margin-top:0.5rem;">145 West 57th Street<br />New York, NY 10019</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span>© 2025 Casa Blanca Real Estate LLC. All rights reserved.</span>
+        <div style="display:flex;gap:1.5rem;">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Use</a>
+          <a href="#">Fair Housing</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../js/nav.js"></script>
+  <script src="../../js/scroll.js"></script>
+</body>
+</html>

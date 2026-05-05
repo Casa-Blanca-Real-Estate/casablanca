@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Casa Blanca — NYC Real Estate</title>
+  <meta name="description" content="Casa Blanca is a boutique New York City real estate brokerage specializing in residential sales and rentals across Manhattan and Brooklyn." />
+
+  <!-- Preconnect for Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Object Sans via Adobe Fonts fallback — using closest Google Fonts match -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+
+  <style>
+    /* Object Sans — loaded locally if available, falls back to DM Sans */
+    @font-face {
+      font-family: 'Object Sans';
+      src: url('assets/fonts/ObjectSans-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Object Sans';
+      src: url('assets/fonts/ObjectSans-Heavy.woff2') format('woff2');
+      font-weight: 800;
+      font-display: swap;
+    }
+    body {
+      font-family: 'Object Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav class="nav" aria-label="Main navigation">
+    <a href="/" class="nav__logo">Casa<span>·</span>Blanca</a>
+
+    <ul class="nav__links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#neighborhoods">Neighborhoods</a></li>
+      <li><a href="#listings">Listings</a></li>
+      <li><a href="agents/index.html">Our Team</a></li>
+      <li><a href="#contact" class="nav__cta">Get in Touch</a></li>
+    </ul>
+
+    <button class="nav__hamburger" aria-label="Toggle menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero__bg"></div>
+    <div class="hero__accent"></div>
+
+    <div class="container">
+      <div class="hero__content">
+        <p class="hero__eyebrow hero-animate">New York City Real Estate</p>
+
+        <h1 class="hero__headline hero-animate hero-animate--delay-1">
+          Your home<br />in the city<br /><em>awaits.</em>
+        </h1>
+
+        <p class="hero__sub hero-animate hero-animate--delay-2">
+          A boutique brokerage built on relationships. We know every block, every building, every deal.
+        </p>
+
+        <div class="hero__actions hero-animate hero-animate--delay-3">
+          <a href="#listings" class="btn btn--primary">Browse Listings</a>
+          <a href="agents/index.html" class="btn btn--outline">Meet the Team</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero__scroll" aria-hidden="true">
+      <div class="hero__scroll-line"></div>
+      <span>Scroll</span>
+    </div>
+  </section>
+
+  <!-- ── Marquee ── -->
+  <div class="marquee-wrap" aria-hidden="true">
+    <div class="marquee-track">
+      <div class="marquee-item">Upper West Side</div>
+      <div class="marquee-item">Tribeca</div>
+      <div class="marquee-item">West Village</div>
+      <div class="marquee-item">SoHo</div>
+      <div class="marquee-item">Park Slope</div>
+      <div class="marquee-item">Harlem</div>
+      <div class="marquee-item">Inwood</div>
+      <div class="marquee-item">Washington Heights</div>
+      <div class="marquee-item">Chelsea</div>
+      <div class="marquee-item">Midtown</div>
+      <div class="marquee-item">Flatiron</div>
+      <!-- Duplicate for seamless loop -->
+      <div class="marquee-item">Upper West Side</div>
+      <div class="marquee-item">Tribeca</div>
+      <div class="marquee-item">West Village</div>
+      <div class="marquee-item">SoHo</div>
+      <div class="marquee-item">Park Slope</div>
+      <div class="marquee-item">Harlem</div>
+      <div class="marquee-item">Inwood</div>
+      <div class="marquee-item">Washington Heights</div>
+      <div class="marquee-item">Chelsea</div>
+      <div class="marquee-item">Midtown</div>
+      <div class="marquee-item">Flatiron</div>
+    </div>
+  </div>
+
+  <!-- ── Stats ── -->
+  <section class="section--sm">
+    <div class="container">
+      <div class="stats fade-in-group">
+        <div class="stat fade-in">
+          <div class="stat__number">
+            $<span class="count-up" data-target="2.4" data-suffix="B">2.4B</span>
+          </div>
+          <div class="stat__label">In closed transactions</div>
+        </div>
+        <div class="stat fade-in">
+          <div class="stat__number">
+            <span class="count-up" data-target="1200" data-suffix="+">1,200+</span>
+          </div>
+          <div class="stat__label">Families placed</div>
+        </div>
+        <div class="stat fade-in">
+          <div class="stat__number">
+            <span class="count-up" data-target="18">18</span>+
+          </div>
+          <div class="stat__label">Years in New York</div>
+        </div>
+        <div class="stat fade-in">
+          <div class="stat__number">
+            <span class="count-up" data-target="40" data-suffix="+">40+</span>
+          </div>
+          <div class="stat__label">Neighborhoods covered</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── About / Philosophy ── -->
+  <section class="section" id="about">
+    <div class="container">
+      <div class="about">
+        <div class="about__visual fade-in-left">
+          <div class="about__img-wrap">
+            <div class="about__img-placeholder">
+              <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="80" height="80" rx="8" fill="#dddbd5"/>
+                <path d="M20 55 L40 25 L60 55 Z" fill="#aaa3cf" opacity="0.5"/>
+                <rect x="32" y="40" width="16" height="15" fill="#aaa3cf" opacity="0.7"/>
+              </svg>
+            </div>
+          </div>
+          <div class="about__badge">
+            <div class="about__badge-num">NYC</div>
+            <div class="about__badge-text">Born &amp;<br/>Bred</div>
+          </div>
+        </div>
+
+        <div class="about__text">
+          <p class="about__eyebrow fade-in">Our Philosophy</p>
+          <h2 class="about__headline fade-in">Real estate is<br />personal. We treat<br />it that way.</h2>
+          <p class="about__body fade-in">
+            Casa Blanca was founded on one idea: that buying, selling, or renting a home should feel like working with a trusted friend who happens to know every building on every block. We're not a big-box brokerage. We're a tight team of neighborhood specialists who live and breathe this city.
+          </p>
+          <ul class="about__values fade-in">
+            <li>Neighborhood expertise, not just market data</li>
+            <li>Full transparency at every step of the deal</li>
+            <li>Relationships that outlast the closing</li>
+            <li>English, Spanish, French &amp; more spoken here</li>
+          </ul>
+          <a href="agents/index.html" class="btn btn--primary fade-in">Meet our agents</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Neighborhoods ── -->
+  <section class="section" id="neighborhoods" style="background: #fff; border-top: 1px solid #dddbd5; border-bottom: 1px solid #dddbd5;">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div>
+          <p class="section-header__eyebrow">Where We Work</p>
+          <h2 class="section-header__title">Specialists in<br />every corner of the city</h2>
+        </div>
+        <a href="#listings" class="btn btn--outline">View all listings</a>
+      </div>
+
+      <div class="neighborhoods-grid fade-in-group">
+        <div class="neighborhood-card fade-in" style="--card-color-a: #c5bfe0; --card-color-b: #9991c4;">
+          <div class="neighborhood-card__bg"></div>
+          <div class="neighborhood-card__overlay"></div>
+          <div class="neighborhood-card__content">
+            <div class="neighborhood-card__name">Upper West Side</div>
+            <div class="neighborhood-card__listings">12 active listings</div>
+          </div>
+        </div>
+        <div class="neighborhood-card fade-in" style="--card-color-a: #b8d4c8; --card-color-b: #7aab97;">
+          <div class="neighborhood-card__bg"></div>
+          <div class="neighborhood-card__overlay"></div>
+          <div class="neighborhood-card__content">
+            <div class="neighborhood-card__name">Harlem</div>
+            <div class="neighborhood-card__listings">8 active listings</div>
+          </div>
+        </div>
+        <div class="neighborhood-card fade-in" style="--card-color-a: #d4c5b8; --card-color-b: #ab967a;">
+          <div class="neighborhood-card__bg"></div>
+          <div class="neighborhood-card__overlay"></div>
+          <div class="neighborhood-card__content">
+            <div class="neighborhood-card__name">Inwood</div>
+            <div class="neighborhood-card__listings">5 active listings</div>
+          </div>
+        </div>
+        <div class="neighborhood-card fade-in" style="--card-color-a: #c5cde0; --card-color-b: #7a8cab;">
+          <div class="neighborhood-card__bg"></div>
+          <div class="neighborhood-card__overlay"></div>
+          <div class="neighborhood-card__content">
+            <div class="neighborhood-card__name">Washington Heights</div>
+            <div class="neighborhood-card__listings">9 active listings</div>
+          </div>
+        </div>
+        <div class="neighborhood-card fade-in" style="--card-color-a: #e0c5cb; --card-color-b: #ab7a87;">
+          <div class="neighborhood-card__bg"></div>
+          <div class="neighborhood-card__overlay"></div>
+          <div class="neighborhood-card__content">
+            <div class="neighborhood-card__name">West Village</div>
+            <div class="neighborhood-card__listings">7 active listings</div>
+          </div>
+        </div>
+        <div class="neighborhood-card fade-in" style="--card-color-a: #d4e0c5; --card-color-b: #97ab7a;">
+          <div class="neighborhood-card__bg"></div>
+          <div class="neighborhood-card__overlay"></div>
+          <div class="neighborhood-card__content">
+            <div class="neighborhood-card__name">Tribeca</div>
+            <div class="neighborhood-card__listings">6 active listings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Featured Listings ── -->
+  <section class="section" id="listings">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div>
+          <p class="section-header__eyebrow">Featured</p>
+          <h2 class="section-header__title">Current listings</h2>
+        </div>
+        <a href="#contact" class="btn btn--outline">See all listings</a>
+      </div>
+
+      <div class="listings-grid fade-in-group">
+        <!-- Listing 1 -->
+        <div class="listing-card fade-in">
+          <div class="listing-card__img">
+            <div class="listing-card__badge listing-card__badge--active">For Sale</div>
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,#c5bfe0,#9991c4);display:flex;align-items:center;justify-content:center;">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="6" fill="rgba(255,255,255,0.2)"/><path d="M8 34 L24 14 L40 34 Z" fill="rgba(255,255,255,0.5)"/><rect x="18" y="24" width="12" height="10" fill="rgba(255,255,255,0.7)"/></svg>
+            </div>
+          </div>
+          <div class="listing-card__body">
+            <div class="listing-card__price">$1,850,000</div>
+            <div class="listing-card__address">315 West 86th Street, #8D · Upper West Side</div>
+            <div class="listing-card__meta">
+              <span class="listing-card__meta-item">3 bd</span>
+              <span class="listing-card__meta-item">2 ba</span>
+              <span class="listing-card__meta-item">1,420 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Listing 2 -->
+        <div class="listing-card fade-in">
+          <div class="listing-card__img">
+            <div class="listing-card__badge">For Rent</div>
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,#b8d4c8,#7aab97);display:flex;align-items:center;justify-content:center;">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="6" fill="rgba(255,255,255,0.2)"/><path d="M8 34 L24 14 L40 34 Z" fill="rgba(255,255,255,0.5)"/><rect x="18" y="24" width="12" height="10" fill="rgba(255,255,255,0.7)"/></svg>
+            </div>
+          </div>
+          <div class="listing-card__body">
+            <div class="listing-card__price">$4,200 / mo</div>
+            <div class="listing-card__address">540 West 153rd Street, #3A · Washington Heights</div>
+            <div class="listing-card__meta">
+              <span class="listing-card__meta-item">2 bd</span>
+              <span class="listing-card__meta-item">1 ba</span>
+              <span class="listing-card__meta-item">875 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Listing 3 -->
+        <div class="listing-card fade-in">
+          <div class="listing-card__img">
+            <div class="listing-card__badge listing-card__badge--active">For Sale</div>
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,#d4c5b8,#ab967a);display:flex;align-items:center;justify-content:center;">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="6" fill="rgba(255,255,255,0.2)"/><path d="M8 34 L24 14 L40 34 Z" fill="rgba(255,255,255,0.5)"/><rect x="18" y="24" width="12" height="10" fill="rgba(255,255,255,0.7)"/></svg>
+            </div>
+          </div>
+          <div class="listing-card__body">
+            <div class="listing-card__price">$3,200,000</div>
+            <div class="listing-card__address">25 Hudson Yards, #24E · Hudson Yards</div>
+            <div class="listing-card__meta">
+              <span class="listing-card__meta-item">4 bd</span>
+              <span class="listing-card__meta-item">3 ba</span>
+              <span class="listing-card__meta-item">2,180 sf</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Our Process ── -->
+  <section class="section" style="background: #fff; border-top: 1px solid #dddbd5; border-bottom: 1px solid #dddbd5;">
+    <div class="container">
+      <div class="section-header section-header--center fade-in" style="margin-bottom: 3rem;">
+        <p class="section-header__eyebrow">How It Works</p>
+        <h2>Simple. Transparent.<br />No surprises.</h2>
+      </div>
+
+      <div class="process fade-in-group">
+        <div class="process-step fade-in">
+          <div class="process-step__num">Step 01</div>
+          <div class="process-step__icon">🤝</div>
+          <div class="process-step__title">Introductory Call</div>
+          <div class="process-step__body">We learn your goals, timeline, and budget. No pressure — just a conversation to see if we're the right fit.</div>
+        </div>
+        <div class="process-step fade-in">
+          <div class="process-step__num">Step 02</div>
+          <div class="process-step__icon">🗺</div>
+          <div class="process-step__title">Neighborhood Deep Dive</div>
+          <div class="process-step__body">We walk you through options block by block, including buildings that aren't on public listings yet.</div>
+        </div>
+        <div class="process-step fade-in">
+          <div class="process-step__num">Step 03</div>
+          <div class="process-step__icon">📋</div>
+          <div class="process-step__title">Offer &amp; Negotiation</div>
+          <div class="process-step__body">We've negotiated hundreds of New York deals. We know what levers to pull and when to pull them.</div>
+        </div>
+        <div class="process-step fade-in">
+          <div class="process-step__num">Step 04</div>
+          <div class="process-step__icon">🔑</div>
+          <div class="process-step__title">Close &amp; Beyond</div>
+          <div class="process-step__body">We hand you the keys and stay available. Most of our clients become friends — and return for their next move.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Our Team Preview ── -->
+  <section class="section" id="team">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div>
+          <p class="section-header__eyebrow">Our Team</p>
+          <h2 class="section-header__title">Agents who<br />know the city</h2>
+        </div>
+        <a href="agents/index.html" class="btn btn--outline">View all agents</a>
+      </div>
+
+      <div class="agents-preview fade-in-group">
+        <a href="agents/sofia-ramirez/index.html" class="agent-card fade-in" style="text-decoration:none;">
+          <div class="agent-card__photo">
+            <div class="agent-card__photo-placeholder" style="background:linear-gradient(135deg,#c5bfe0,#9991c4);">
+              <span style="font-size:2.5rem;opacity:0.6;">SR</span>
+            </div>
+          </div>
+          <div class="agent-card__body">
+            <div class="agent-card__name">Sofia Ramirez</div>
+            <div class="agent-card__title">Licensed Salesperson</div>
+            <div class="agent-card__neighborhoods">
+              <span class="tag">UWS</span>
+              <span class="tag">Harlem</span>
+              <span class="tag">Inwood</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="agents/marcus-johnson/index.html" class="agent-card fade-in" style="text-decoration:none;">
+          <div class="agent-card__photo">
+            <div class="agent-card__photo-placeholder" style="background:linear-gradient(135deg,#b8d4c8,#7aab97);">
+              <span style="font-size:2.5rem;opacity:0.6;">MJ</span>
+            </div>
+          </div>
+          <div class="agent-card__body">
+            <div class="agent-card__name">Marcus Johnson</div>
+            <div class="agent-card__title">Licensed Salesperson</div>
+            <div class="agent-card__neighborhoods">
+              <span class="tag">Heights</span>
+              <span class="tag">Harlem</span>
+              <span class="tag">Bronx</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="agents/claire-dubois/index.html" class="agent-card fade-in" style="text-decoration:none;">
+          <div class="agent-card__photo">
+            <div class="agent-card__photo-placeholder" style="background:linear-gradient(135deg,#d4c5b8,#ab967a);">
+              <span style="font-size:2.5rem;opacity:0.6;">CD</span>
+            </div>
+          </div>
+          <div class="agent-card__body">
+            <div class="agent-card__name">Claire Dubois</div>
+            <div class="agent-card__title">Licensed Salesperson</div>
+            <div class="agent-card__neighborhoods">
+              <span class="tag">Tribeca</span>
+              <span class="tag">SoHo</span>
+              <span class="tag">Village</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="agents/david-kim/index.html" class="agent-card fade-in" style="text-decoration:none;">
+          <div class="agent-card__photo">
+            <div class="agent-card__photo-placeholder" style="background:linear-gradient(135deg,#c5cde0,#7a8cab);">
+              <span style="font-size:2.5rem;opacity:0.6;">DK</span>
+            </div>
+          </div>
+          <div class="agent-card__body">
+            <div class="agent-card__name">David Kim</div>
+            <div class="agent-card__title">Licensed Salesperson</div>
+            <div class="agent-card__neighborhoods">
+              <span class="tag">Midtown</span>
+              <span class="tag">Flatiron</span>
+              <span class="tag">Chelsea</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Testimonials ── -->
+  <section class="section" style="background: #fff; border-top: 1px solid #dddbd5;">
+    <div class="container">
+      <div class="section-header section-header--center fade-in" style="margin-bottom: 3rem;">
+        <p class="section-header__eyebrow">Client Stories</p>
+        <h2>What our clients say</h2>
+      </div>
+
+      <div class="testimonials-grid fade-in-group">
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-card__quote">"</div>
+          <p class="testimonial-card__body">Sofia found us an apartment we didn't even know existed. She called us before it hit the market. We closed in three weeks. I've never felt so taken care of during a New York apartment search.</p>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">AM</div>
+            <div>
+              <div class="testimonial-card__name">Adriana M.</div>
+              <div class="testimonial-card__detail">Buyer · Upper West Side</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-card__quote">"</div>
+          <p class="testimonial-card__body">Marcus knows Washington Heights like the back of his hand. He introduced us to three buildings we'd never find on StreetEasy. The whole process was smooth and completely transparent.</p>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">JR</div>
+            <div>
+              <div class="testimonial-card__name">James &amp; Rosa T.</div>
+              <div class="testimonial-card__detail">Renters · Washington Heights</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-card__quote">"</div>
+          <p class="testimonial-card__body">Claire sold our Tribeca loft $80K over asking. She had a buyer lined up before we even listed. Two years later, she helped us find our forever home in Brooklyn. That's Casa Blanca.</p>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">SL</div>
+            <div>
+              <div class="testimonial-card__name">Sarah &amp; Leo W.</div>
+              <div class="testimonial-card__detail">Sellers · Tribeca</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA Banner ── -->
+  <section class="section" id="contact">
+    <div class="container">
+      <div class="cta-banner fade-in">
+        <div class="cta-banner__accent"></div>
+        <div>
+          <p class="cta-banner__eyebrow">Start the conversation</p>
+          <h2 class="cta-banner__title">Ready to find<br />your place in the city?</h2>
+          <p class="cta-banner__body">Whether you're buying, selling, or renting — we're here. No hard sell, just honest guidance from people who love New York as much as you do.</p>
+        </div>
+        <div class="cta-banner__actions">
+          <a href="mailto:hello@casa-blanca.com" class="btn btn--lavender">Email us</a>
+          <a href="tel:+12125550100" class="btn btn--outline" style="color:#fff;border-color:rgba(255,255,255,0.2);">212-555-0100</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <div>
+          <div class="footer__logo">Casa<span>·</span>Blanca</div>
+          <p class="footer__tagline">A boutique real estate brokerage serving New York City since 2006.</p>
+          <div class="footer__social">
+            <a href="#" class="footer__social-link" aria-label="Instagram">ig</a>
+            <a href="#" class="footer__social-link" aria-label="LinkedIn">in</a>
+            <a href="#" class="footer__social-link" aria-label="StreetEasy">se</a>
+          </div>
+        </div>
+
+        <div>
+          <div class="footer__col-title">Navigate</div>
+          <ul class="footer__col-links">
+            <li><a href="#about">About</a></li>
+            <li><a href="#neighborhoods">Neighborhoods</a></li>
+            <li><a href="#listings">Listings</a></li>
+            <li><a href="agents/index.html">Our Team</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer__col-title">Neighborhoods</div>
+          <ul class="footer__col-links">
+            <li><a href="#">Upper West Side</a></li>
+            <li><a href="#">Harlem</a></li>
+            <li><a href="#">Washington Heights</a></li>
+            <li><a href="#">Inwood</a></li>
+            <li><a href="#">Tribeca</a></li>
+            <li><a href="#">West Village</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer__col-title">Contact</div>
+          <ul class="footer__col-links">
+            <li><a href="mailto:hello@casa-blanca.com">hello@casa-blanca.com</a></li>
+            <li><a href="tel:+12125550100">212-555-0100</a></li>
+            <li style="color:rgba(255,255,255,0.3);font-size:0.9rem;line-height:1.6;margin-top:0.5rem;">
+              145 West 57th Street<br />New York, NY 10019
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer__bottom">
+        <span>© 2025 Casa Blanca Real Estate LLC. All rights reserved.</span>
+        <div style="display:flex;gap:1.5rem;">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Use</a>
+          <a href="#">Fair Housing</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/nav.js"></script>
+  <script src="js/scroll.js"></script>
+</body>
+</html>
