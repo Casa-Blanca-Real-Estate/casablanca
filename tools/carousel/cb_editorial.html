@@ -211,7 +211,13 @@ function parseRuns(el){const runs=[];(function walk(node,bold){node.childNodes.f
   else{const b=bold||/^(B|STRONG)$/.test(c.nodeName)||(c.style&&(c.style.fontWeight==='bold'||+c.style.fontWeight>=600));
     if(/^(DIV|P|BR)$/.test(c.nodeName)&&runs.length)runs.push({text:' ',bold:false});walk(c,b);}});})(el,false);
   const merged=[];runs.forEach(r=>{const last=merged[merged.length-1];if(last&&last.bold===r.bold)last.text+=r.text;else merged.push({...r});});return merged;}
-function runsToWords(runs){const out=[];(runs||[]).forEach(r=>{r.text.split(/(\s+)/).forEach(p=>{if(p.trim())out.push({w:p,bold:r.bold});});});return out;}
+// words are whitespace-delimited; each word is an array of {t,bold} segments, so a bold
+// run abutting following punctuation ("parties"+".") renders with no spurious space.
+function runsToWords(runs){const words=[];let cur=null;
+  (runs||[]).forEach(r=>{const s=r.text;for(let i=0;i<s.length;i++){const ch=s[i];
+    if(/\s/.test(ch)){if(cur){words.push(cur);cur=null;}}
+    else{if(!cur)cur=[];const last=cur[cur.length-1];if(last&&last.bold===r.bold)last.t+=ch;else cur.push({t:ch,bold:r.bold});}}});
+  if(cur)words.push(cur);return words;}
 
 // core editorial text renderer: wraps, justifies (default), supports bold runs + letter-spacing
 // y = TOP of text box. returns {bottom, lines}
@@ -219,7 +225,7 @@ function drawRuns(ctx,runs,x,topY,maxW,sz,lh,opt){
   opt=opt||{};const color=opt.color||BODY, justify=opt.justify!==false, align=opt.align||'left', isph=!!opt.isph;
   ctx.save();setLS(ctx,true);ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle=color;ctx.globalAlpha=isph?0.4:1;
   const words=runsToWords(runs);
-  const wordW=p=>{ctx.font=f(p.bold?800:400,sz);return ctx.measureText(p.w).width;};
+  const wordW=word=>{let w=0;word.forEach(seg=>{ctx.font=f(seg.bold?800:400,sz);w+=ctx.measureText(seg.t).width;});return w;};
   ctx.font=f(400,sz);const spaceW=ctx.measureText(' ').width;
   const lines=[];let cur=[],wordsW=0;
   words.forEach(p=>{const ww=wordW(p);const lineW=wordsW+spaceW*cur.length+ww;
@@ -231,7 +237,7 @@ function drawRuns(ctx,runs,x,topY,maxW,sz,lh,opt){
     if(justify&&!last&&n>1){gap=(maxW-ln.wordsW)/(n-1);}
     else if(align==='right')sx=x+(maxW-naturalW);
     else if(align==='center')sx=x+(maxW-naturalW)/2;
-    let dx=sx;ln.words.forEach((p,j)=>{ctx.font=f(p.bold?800:400,sz);ctx.fillText(p.w,dx,cy);dx+=ctx.measureText(p.w).width;if(j<n-1)dx+=gap;});
+    let dx=sx;ln.words.forEach((word,j)=>{word.forEach(seg=>{ctx.font=f(seg.bold?800:400,sz);ctx.fillText(seg.t,dx,cy);dx+=ctx.measureText(seg.t).width;});if(j<n-1)dx+=gap;});
     cy+=lh;});
   ctx.restore();return{bottom:topY+lines.length*lh,lines:lines.length};}
 
@@ -253,10 +259,16 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
   drawPic(ctx,c.image,0,161,1080,1076);
   // badge — 35pt(105px) max → 30pt(90px) min, fit to BODYW, anchored above image (bottom border @161)
   const bt=ph(c.badge,PH.badge),btxt=(bt.t||'').toUpperCase();
-  if(btxt){setLS(ctx,true);let sz=35*PT;ctx.font=f(800,sz);if(ctx.measureText(btxt).width>BODYW){sz=Math.max(30*PT,sz*BODYW/ctx.measureText(btxt).width);ctx.font=f(800,sz);}
-    const bw=ctx.measureText(btxt).width;ctx.fillStyle=c.badgeColor;ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.globalAlpha=bt.isph?0.4:1;
-    const baseY=161-Math.max(8,(161-sz*ASC)/2-4);ctx.fillText(btxt,W/2,baseY);ctx.globalAlpha=1;setLS(ctx,false);
-    hit('badge',W/2-bw/2,baseY-sz*ASC,bw,sz*ASC);}
+  if(btxt){setLS(ctx,true);
+    // Badge fills the strip above the image (height-driven, to match the reference cover),
+    // shrinking only if it would exceed the body width; min 30pt. (Reference PNG > literal 35pt spec.)
+    const CAP=0.72,padTop=22,padBot=12,strip=161;
+    let sz=(strip-padTop-padBot)/CAP;ctx.font=f(800,sz);
+    if(ctx.measureText(btxt).width>BODYW){sz=Math.max(30*PT,sz*BODYW/ctx.measureText(btxt).width);ctx.font=f(800,sz);}
+    const bw=ctx.measureText(btxt).width,capH=sz*CAP,baseY=strip-padBot;
+    ctx.fillStyle=c.badgeColor;ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.globalAlpha=bt.isph?0.4:1;
+    ctx.fillText(btxt,W/2,baseY);ctx.globalAlpha=1;setLS(ctx,false);
+    hit('badge',W/2-bw/2,baseY-capH,bw,capH);}
   // subhead — over image, X=57, weight 800 caps, LS = 85% of font size, Y by slider
   const sr=ph(c.subhead,PH.subhead);
   if(sr.t){const sz=c.subSize,lh=sz*0.85;setLS(ctx,true);ctx.fillStyle=c.subColor;ctx.textBaseline='alphabetic';ctx.font=f(800,sz);ctx.globalAlpha=sr.isph?0.4:1;
@@ -330,7 +342,7 @@ function drawDoubleA(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.f
 // off-canvas measure of line count (for vertical centering)
 const _mc=document.createElement('canvas').getContext('2d');
 function drawRunsCount(runs,maxW,sz){_mc.save();setLS(_mc,true);const words=runsToWords(runs);
-  const wordW=p=>{_mc.font=f(p.bold?800:400,sz);return _mc.measureText(p.w).width;};
+  const wordW=word=>{let w=0;word.forEach(seg=>{_mc.font=f(seg.bold?800:400,sz);w+=_mc.measureText(seg.t).width;});return w;};
   _mc.font=f(400,sz);const spaceW=_mc.measureText(' ').width;let lines=0,len=0,wordsW=0;
   words.forEach(p=>{const ww=wordW(p);const lineW=wordsW+spaceW*len+ww;if(len&&lineW>maxW){lines++;len=0;wordsW=0;}len++;wordsW+=ww;});
   if(len)lines++;_mc.restore();return lines;}
