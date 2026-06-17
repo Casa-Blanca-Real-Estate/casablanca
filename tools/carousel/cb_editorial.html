@@ -160,17 +160,26 @@ const PH={
   name:'Building or Neighborhood Name'
 };
 
+// post status → badge text + teaser price lead-in (lead-in stays editable per teaser)
+const STATUSES={
+  justlisted:{badge:'JUST LISTED', leadin:'Listed at'},
+  incontract:{badge:'IN CONTRACT', leadin:'In contract at'},
+  justsold:{badge:'JUST SOLD',  leadin:'Sold for'},
+  closed:{badge:'CLOSED',       leadin:'Acquired for'}
+};
+const STATUS_OPTS=[{v:'justlisted',t:'Just Listed'},{v:'incontract',t:'In Contract'},{v:'justsold',t:'Just Sold'},{v:'closed',t:'Closed'}];
+
 // ── slide factories ──
 function blankImg(){return{img:null,src:null,ox:0,oy:0,scale:1,border:false,bc:'#ffffff'};}
 function mkCover(){return{type:'cover',badge:'',badgeColor:'#0f0f0f',image:blankImg(),subhead:'',subColor:'#ffffff',subSize:82,subY:0.645,subAlign:'left'};}
-function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',image:blankImg(),descRuns:[]};}
+function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',leadin:'',image:blankImg(),descRuns:[]};}
 function mkSingleA(){return{type:'singleA',image:blankImg(),descRuns:[]};}
 function mkSingleB(){return{type:'singleB',image:blankImg(),descRuns:[],tx:0.055,ty:0.70,color:'#ffffff',align:'left'};}
 function mkDoubleA(){return{type:'doubleA',top:blankImg(),bottom:blankImg(),descRuns:[]};}
 function mkContext(kind){return{type:'context',kind:kind||'building',name:'',image:blankImg(),descRuns:[]};}
 function makeKind(t){if(t==='teaser')return mkTeaser();if(t==='singleA')return mkSingleA();if(t==='singleB')return mkSingleB();if(t==='doubleA')return mkDoubleA();if(t==='building')return mkContext('building');if(t==='neighborhood')return mkContext('neighborhood');return mkSingleA();}
 
-const S={ accent:'#aaa3cf', showPlaceholders:true, cover:mkCover(),
+const S={ accent:'#aaa3cf', showPlaceholders:true, status:'closed', cover:mkCover(),
   mid:[ mkTeaser(), mkSingleA(), mkDoubleA(), mkContext('building'), mkSingleB() ] };
 let active=0, ACTIVE=null, ACTIVEIMG=null;
 
@@ -265,7 +274,7 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
   // cover image 1080×1076 @ Y=161
   drawPic(ctx,c.image,0,161,1080,1076);
   // badge — 35pt(105px) max → 30pt(90px) min, fit to BODYW, anchored above image (bottom border @161)
-  const bt=ph(c.badge,PH.badge),btxt=(bt.t||'').toUpperCase();
+  const bt=ph(c.badge,(STATUSES[S.status]||STATUSES.closed).badge),btxt=(bt.t||'').toUpperCase();
   if(btxt){setLS(ctx,true);
     // CLOSED badge: fixed cap-height 106px, top Y=54, centered (matches official template); shrinks only if wider than body
     const capTop=54,capH=106;let sz=capH/CAPR;ctx.font=f(800,sz);
@@ -295,7 +304,8 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
   let y=Math.max(0,(IMGTOP-nLines*lh)/2);
   const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
   if(addr.t)hit('address',X,y,MEAS,ar.lines*lh);y=ar.bottom;
-  const r2=drawRuns(ctx,[{text:'Acquired for ',bold:false},{text:pr.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:pr.isph});
+  const lead=(t.leadin||(STATUSES[S.status]||STATUSES.closed).leadin);
+  const r2=drawRuns(ctx,[{text:lead+' ',bold:false},{text:pr.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:pr.isph});
   hit('price',X,y,MEAS,lh);y=r2.bottom;
   const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:ag.isph});
   hit('agent',X,y,MEAS,lh);y=r3.bottom;
@@ -431,7 +441,8 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
   head.innerHTML=`<div class="slidetype">${KINDNAME[k]||k}</div><div class="slidename">${slideLabel(active)}</div>`;body.appendChild(head);
 
   if(k==='cover'){
-    body.appendChild(fld('Badge',o.badge,v=>{o.badge=v;renderAll();},'CLOSED','badge','35pt max, shrinks to 30pt. All caps. Sits above the cover photo.'));
+    body.appendChild(seg('Status (whole post)',STATUS_OPTS,S.status,v=>{S.status=v;o.badge=STATUSES[v].badge;buildEditor();renderAll();}));
+    body.appendChild(fld('Badge',o.badge,v=>{o.badge=v;renderAll();},(STATUSES[S.status]||STATUSES.closed).badge,'badge','All caps, sits above the cover photo. Status sets this; edit freely.'));
     body.appendChild(seg('Badge color',[{v:'#0f0f0f',t:'Black'},{v:'#ffffff',t:'White'},{v:'__accent',t:'Accent'}],o.badgeColor===S.accent?'__accent':o.badgeColor,v=>{o.badgeColor=(v==='__accent')?S.accent:v;renderAll();}));
     imageBlock(body,'Cover photo',o.image,'1080×1076. Drag on the canvas to reposition.');
     body.appendChild(richField('Subhead  ·  line break = hard break',[{text:o.subhead,bold:false}].filter(r=>r.text),runs=>{o.subhead=runsPlain(runs);renderAll();},'subhead'));
@@ -442,7 +453,8 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
   }
   else if(k==='teaser'){
     body.appendChild(fld('Address line',o.address,v=>{o.address=v;renderAll();},'71 BLEECKER ST #2E, NOHO, NYC','address'));
-    body.appendChild(fld('Acquired for (price)',o.price,v=>{o.price=v;renderAll();},'$5.4M','price'));
+    body.appendChild(fld('Price lead-in',o.leadin,v=>{o.leadin=v;renderAll();},(STATUSES[S.status]||STATUSES.closed).leadin,null,'Defaults from the post status set on the cover (e.g. Listed at / Sold for). Edit to override.'));
+    body.appendChild(fld('Price',o.price,v=>{o.price=v;renderAll();},'$5.4M','price'));
     body.appendChild(fld('With agent',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent'));
     imageBlock(body,'Photo',o.image,'1080×720. Drag on the canvas to reposition.');
     body.appendChild(richField('Description  ·  select text + Bold',o.descRuns,runs=>{o.descRuns=runs;renderAll();},'desc'));

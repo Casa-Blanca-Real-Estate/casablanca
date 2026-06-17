@@ -34,6 +34,7 @@ as base64 in the one file.
 - Drag a photo to reposition within its frame; zoom slider for the active photo.
 - Click an empty frame to pick an image.
 - Filmstrip thumbnails with drag-to-reorder (cover is locked first).
+- **Status selector** (cover): Just Listed / In Contract / Just Sold / Closed — sets the badge text and the teaser price lead-in ("Listed at" / "In contract at" / "Sold for" / "Acquired for"). Both stay editable.
 - Add-slide **dropdown** (Teaser / Single A / Single B / Double A / Building / Neighborhood).
 - Placeholder toggle ghosts unfilled fields at 40%.
 - Inline **Bold** for emphasis (price, agent name, lead phrases) in any description.
