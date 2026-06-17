@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* Members gate (casual, client-side): bounce to the studio home unless an approved
+   email was saved there. Same-origin localStorage is shared across the platform. */
+(function(){
+  var A=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+  if(A.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase())===-1) location.replace('../../');
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Casa Blanca — Profile Generator</title>

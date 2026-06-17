@@ -21,20 +21,21 @@
     font-family:'Object Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
   a{color:inherit;text-decoration:none}
 
-  /* header */
   header{display:flex;align-items:center;justify-content:space-between;gap:20px;
     background:var(--ink);color:#fff;padding:18px clamp(20px,5vw,56px)}
   header img{height:22px;width:auto;display:block}
   header .stax{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
 
-  /* compact hero */
   .hero{background:var(--ink);color:#fff;padding:8px clamp(20px,5vw,56px) clamp(34px,5vw,52px);
     border-bottom:1px solid rgba(255,255,255,.07)}
   .hero h1{margin:0 0 8px;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em}
   .hero h1 em{font-style:italic;font-weight:400;color:var(--accent)}
   .hero p{margin:0;color:#bdbab4;font-size:clamp(14px,1.7vw,16px);max-width:60ch}
 
-  main{padding:clamp(28px,4vw,48px) clamp(20px,5vw,56px) 64px;max-width:1200px;margin:0 auto}
+  main{padding:clamp(28px,4vw,48px) clamp(20px,5vw,56px) 48px;max-width:1200px;margin:0 auto}
+  .sec-label{display:flex;align-items:baseline;gap:12px;font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin:36px 0 24px}
+  .sec-label .note{letter-spacing:.02em;text-transform:none;font-size:12px;color:#a9a59c}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:22px}
   .tool{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;
@@ -61,8 +62,33 @@
   .meta .open{font-size:13px;font-weight:800;color:var(--plum);display:inline-flex;align-items:center;gap:7px}
   .meta .open .arr{transition:transform .15s}.tool:hover .open .arr{transform:translateX(3px)}
 
-  footer{background:var(--ink);color:#9a968f;text-align:center;padding:30px 20px;font-size:12px}
+  #members[hidden]{display:none}
+
+  footer{background:var(--ink);color:#9a968f;text-align:center;padding:30px 20px 36px;font-size:12px}
   footer img{height:18px;opacity:.92;display:block;margin:0 auto 8px}
+  .devbtn{margin-top:16px;background:transparent;border:1px solid rgba(255,255,255,.22);color:#cbc8c2;
+    font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    padding:8px 18px;border-radius:8px;cursor:pointer;transition:border-color .12s,color .12s}
+  .devbtn:hover{border-color:var(--accent);color:#fff}
+  .devbtn.on{border-color:var(--accent);color:var(--accent)}
+
+  /* login modal */
+  .modal{position:fixed;inset:0;background:rgba(10,9,15,.62);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.open{display:flex}
+  .modal .box{background:#fff;border-radius:16px;padding:30px;max-width:380px;width:100%;
+    box-shadow:0 40px 80px -30px rgba(0,0,0,.5)}
+  .modal h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.01em}
+  .modal p{margin:0 0 18px;color:#55514a;font-size:13.5px}
+  .modal input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;margin-bottom:12px}
+  .modal .row{display:flex;gap:10px}
+  .modal .row button{flex:1;font-family:inherit;font-weight:800;font-size:14px;padding:12px;border-radius:10px;cursor:pointer;border:1px solid var(--line)}
+  .modal .go{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .modal .go:hover{background:var(--plum2)}
+  .modal .cancel{background:#fff;color:#55514a}
+  .modal .err{color:#b4452f;font-size:12.5px;min-height:16px;margin-top:4px}
+
+  @media(max-width:760px){ header .stax{display:none} }
 </style>
 </head>
 <body>
@@ -78,7 +104,6 @@
 </section>
 
 <main>
-  <!-- Add a tool: copy a card, set href, thumbnail (assets/thumbs/NAME.jpg), tags, title, desc. -->
   <div class="grid">
 
     <a class="tool" href="tools/carousel/cb_editorial.html">
@@ -121,16 +146,6 @@
       </div>
     </a>
 
-    <a class="tool" href="tools/profile-pic/">
-      <div class="thumb"><img src="assets/thumbs/profilepic.jpg" alt="Profile Pic Generator preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip members">Members</span></div>
-        <h3>Profile Pic Generator</h3>
-        <p>Branded agent headshots — background removed in-browser.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
-
     <a class="tool" href="https://docs.google.com/forms/d/e/1FAIpQLSeKggwwRk7MB2oidHKwZk6E-qVkhW3k2Ig0exbB8XCbxKX_Pw/viewform" target="_blank" rel="noopener">
       <div class="thumb ph">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
@@ -145,12 +160,71 @@
     </a>
 
   </div>
+
+  <!-- Members / dev — hidden until Dev sign-in -->
+  <section id="members" hidden>
+    <p class="sec-label">Members <span class="note">— signed in</span></p>
+    <div class="grid">
+      <a class="tool" href="tools/profile-pic/">
+        <div class="thumb"><img src="assets/thumbs/profilepic.jpg" alt="Profile Pic Generator preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip members">Members</span></div>
+          <h3>Profile Pic Generator</h3>
+          <p>Branded agent headshots — background removed in-browser.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+    </div>
+  </section>
 </main>
 
 <footer>
   <img src="assets/cb-logo-white.png" alt="Casa Blanca">
   Creative Studio · built in-house
+  <div><button class="devbtn" id="devBtn" type="button">Dev</button></div>
 </footer>
+
+<div class="modal" id="loginModal">
+  <div class="box">
+    <h2>Dev sign-in</h2>
+    <p>Enter an approved email to unlock members &amp; dev tools on this device.</p>
+    <input id="emailInput" type="email" placeholder="you@casa-blanca.com" autocomplete="email" spellcheck="false">
+    <div class="err" id="loginErr"></div>
+    <div class="row">
+      <button class="cancel" id="cancelBtn" type="button">Cancel</button>
+      <button class="go" id="goBtn" type="button">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Casual, client-side email gate. Not security — just keeps casual clickers out.
+  var ALLOWED=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+  function currentEmail(){return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}
+  function authed(){return ALLOWED.indexOf(currentEmail())!==-1;}
+  function applyAuth(){
+    var on=authed();
+    document.getElementById('members').hidden=!on;
+    var btn=document.getElementById('devBtn');
+    btn.textContent=on?'Signed in · Log out':'Dev';
+    btn.classList.toggle('on',on);
+  }
+  var modal=document.getElementById('loginModal'),input=document.getElementById('emailInput'),err=document.getElementById('loginErr');
+  function openModal(){err.textContent='';input.value='';modal.classList.add('open');setTimeout(function(){input.focus();},40);}
+  function closeModal(){modal.classList.remove('open');}
+  function tryLogin(){
+    var e=(input.value||'').trim().toLowerCase();
+    if(ALLOWED.indexOf(e)!==-1){localStorage.setItem('cb_auth',e);closeModal();applyAuth();
+      document.getElementById('members').scrollIntoView({behavior:'smooth',block:'start'});}
+    else{err.textContent='That email isn’t on the list.';}
+  }
+  document.getElementById('devBtn').onclick=function(){ if(authed()){localStorage.removeItem('cb_auth');applyAuth();} else openModal(); };
+  document.getElementById('goBtn').onclick=tryLogin;
+  document.getElementById('cancelBtn').onclick=closeModal;
+  input.addEventListener('keydown',function(ev){if(ev.key==='Enter')tryLogin();});
+  modal.addEventListener('click',function(ev){if(ev.target===modal)closeModal();});
+  applyAuth();
+</script>
 
 </body>
 </html>
