@@ -166,31 +166,36 @@ const PH={
   subhead:'NOHO’S MOST\nICONIC LOFT.\n$5.4M',
   address:'123 MAIN ST #1A, TRIBECA, NYC',
   price:'$0.0M', agent:'Agent Name',
+  beds:'2', baths:'2.5', sqft:'1,530',
   desc:'Editorial description — one or two sentences. Lead with the standout detail, keep brand and proper names, and let it read like a magazine caption.',
-  name:'Building or Neighborhood Name'
+  name:'Building or Neighborhood Name',
+  handle:'@handle', contact:'Contact the agent to schedule a tour.\nStreetEasy link in bio.'
 };
 
 // post status → badge text + teaser price lead-in (lead-in stays editable per teaser)
 const STATUSES={
   justlisted:{badge:'JUST LISTED', leadin:'Listed at'},
+  listed:{badge:'LISTED',       leadin:'Listed at'},
+  exclusive:{badge:'EXCLUSIVE',  leadin:'Offered at'},
   incontract:{badge:'IN CONTRACT', leadin:'In contract at'},
   justsold:{badge:'JUST SOLD',  leadin:'Sold for'},
   closed:{badge:'CLOSED',       leadin:'Acquired for'}
 };
-const STATUS_OPTS=[{v:'justlisted',t:'Just Listed'},{v:'incontract',t:'In Contract'},{v:'justsold',t:'Just Sold'},{v:'closed',t:'Closed'}];
+const STATUS_OPTS=[{v:'justlisted',t:'Just Listed'},{v:'listed',t:'Listed'},{v:'exclusive',t:'Exclusive'},{v:'incontract',t:'In Contract'},{v:'justsold',t:'Just Sold'},{v:'closed',t:'Closed'}];
 
 // ── slide factories ──
 function blankImg(){return{img:null,src:null,ox:0,oy:0,scale:1,border:false,bc:'#ffffff'};}
 function mkCover(){return{type:'cover',badge:'',badgeColor:'#0f0f0f',image:blankImg(),subhead:'',subColor:'#ffffff',subSize:82,subY:0.645,subAlign:'left'};}
-function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',leadin:'',image:blankImg(),descRuns:[]};}
+function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',leadin:'',beds:'',baths:'',sqft:'',image:blankImg(),descRuns:[]};}
 function mkSingleA(){return{type:'singleA',image:blankImg(),descRuns:[]};}
 function mkSingleB(){return{type:'singleB',image:blankImg(),descRuns:[],tx:0.055,ty:0.70,color:'#ffffff',align:'left'};}
 function mkDoubleA(){return{type:'doubleA',top:blankImg(),bottom:blankImg(),descRuns:[]};}
 function mkContext(kind){return{type:'context',kind:kind||'building',name:'',image:blankImg(),descRuns:[]};}
-function makeKind(t){if(t==='teaser')return mkTeaser();if(t==='singleA')return mkSingleA();if(t==='singleB')return mkSingleB();if(t==='doubleA')return mkDoubleA();if(t==='building')return mkContext('building');if(t==='neighborhood')return mkContext('neighborhood');return mkSingleA();}
+function mkEnd(){return{type:'end',address:'',price:'',agents:[{image:blankImg(),handle:''},{image:blankImg(),handle:''}],contact:''};}
+function makeKind(t){if(t==='teaser')return mkTeaser();if(t==='singleA')return mkSingleA();if(t==='singleB')return mkSingleB();if(t==='doubleA')return mkDoubleA();if(t==='building')return mkContext('building');if(t==='neighborhood')return mkContext('neighborhood');if(t==='end')return mkEnd();return mkSingleA();}
 
 const S={ accent:'#aaa3cf', showPlaceholders:true, status:'closed', cover:mkCover(),
-  mid:[ mkTeaser(), mkSingleA(), mkDoubleA(), mkContext('building'), mkSingleB() ] };
+  mid:[ mkTeaser(), mkSingleA(), mkDoubleA(), mkContext('building'), mkSingleB(), mkEnd() ] };
 let active=0, ACTIVE=null, ACTIVEIMG=null;
 
 // ── dispatcher ──
@@ -198,10 +203,10 @@ function slideCount(){return 1+S.mid.length;}
 function slideKind(i){return i===0?'cover':S.mid[i-1].type;}
 function midOf(i){return S.mid[i-1];}
 function slideObj(i){return i===0?S.cover:S.mid[i-1];}
-const KINDNAME={cover:'Cover',teaser:'Teaser',singleA:'Detail · Single A',singleB:'Detail · Single B',doubleA:'Detail · Double A',context:'Detail'};
+const KINDNAME={cover:'Cover',teaser:'Teaser',singleA:'Detail · Single A',singleB:'Detail · Single B',doubleA:'Detail · Double A',context:'Detail',end:'End · Contact'};
 function slideLabel(i){const k=slideKind(i);if(k==='cover')return'Cover';
   if(k==='context')return midOf(i).kind==='neighborhood'?'Neighborhood':'Building';
-  const map={teaser:'Teaser',singleA:'Single A',singleB:'Single B',doubleA:'Double A'};
+  const map={teaser:'Teaser',singleA:'Single A',singleB:'Single B',doubleA:'Double A',end:'End'};
   let n=0;for(let j=1;j<=i;j++){const s=S.mid[j-1];if(s.type===k&&!(k==='context'))n++;}
   return (map[k]||k)+(n>1?' '+n:'');}
 
@@ -308,8 +313,54 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
 function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTOP=315; // narrow measure → address wraps
   setLS(ctx,true);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   const addr=ph(t.address,PH.address),pr=ph(t.price,PH.price),ag=ph(t.agent,PH.agent);
+
+  // STATS MODE — when any of beds/baths/sqft is set, render the MLS-style header
+  // matching the "Just Listed" reference (status prefix + address LEFT, BD/BA + SF + price RIGHT).
+  if((t.beds||'').trim()||(t.baths||'').trim()||(t.sqft||'').trim()){
+    const stat=STATUSES[S.status]||STATUSES.closed;
+    const statusLabel=(stat.badge||'').trim();
+    const statusRuns=statusLabel?[{text:statusLabel+':',bold:false}]:null;
+    const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
+    const statusLines=statusRuns?drawRunsCount(statusRuns,MEAS,sz):0;
+    const addrLines=drawRunsCount(addrRuns,MEAS,sz);
+    const leftLines=statusLines+addrLines;
+    const rightLines=3;
+    const nLines=Math.max(leftLines,rightLines);
+    const yTop=Math.max(0,(IMGTOP-nLines*lh)/2);
+    // LEFT block (status prefix on its own line, then address below)
+    let yL=yTop;
+    if(statusRuns){const sr2=drawRuns(ctx,statusRuns,X,yL,MEAS,sz,lh,{justify:false,color:BODY});yL=sr2.bottom;}
+    const lr=drawRuns(ctx,addrRuns,X,yL,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
+    if(addr.t)hit('address',X,yL,MEAS,lr.lines*lh);
+    // RIGHT block (BD/BA, SF, price), right-aligned at W-57
+    const RX=W-57, beds=(t.beds||'').trim(), baths=(t.baths||'').trim(), sqft=(t.sqft||'').trim();
+    const bdraw=ph(beds,PH.beds), brraw=ph(baths,PH.baths), sfraw=ph(sqft,PH.sqft);
+    const bdLine=(bdraw.t?bdraw.t+' BD':'')+(bdraw.t&&brraw.t?', ':'')+(brraw.t?brraw.t+' BA':'');
+    const sfLine=sfraw.t?sfraw.t+' SF':'';
+    const prLine=pr.t||'';
+    const lines=[
+      {txt:bdLine, fid:'beds',  isph:bdraw.isph||brraw.isph},
+      {txt:sfLine, fid:'sqft',  isph:sfraw.isph},
+      {txt:prLine, fid:'price', isph:pr.isph}
+    ];
+    ctx.textAlign='right';ctx.font=f(800,sz);ctx.fillStyle=BODY;
+    let ry=yTop;
+    lines.forEach(L=>{
+      if(!L.txt)return;
+      ctx.globalAlpha=L.isph?0.4:1;
+      ctx.fillText(L.txt,RX,ry+sz*ASC);
+      ctx.globalAlpha=1;
+      const tw=ctx.measureText(L.txt).width;
+      hit(L.fid,RX-tw-5,ry,tw+10,sz*ASC);
+      ry+=lh;
+    });
+    ctx.textAlign='left';
+    setLS(ctx,false);
+    return yTop+nLines*lh;
+  }
+
+  // CLOSED-style (existing): address / "[lead-in] $price" / with agent
   const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
-  // center the whole block between the page top and the image frame (equidistant)
   const nLines=drawRunsCount(addrRuns,MEAS,sz)+2;
   let y=Math.max(0,(IMGTOP-nLines*lh)/2);
   const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
@@ -381,6 +432,40 @@ function drawContext(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.f
   drawDesc(ctx,s.descRuns,900);                              // desc @ Y=900
   drawLogo(ctx,666,1277,373,40,'#0f0f0f');}
 
+// ── END · CONTACT ──
+function drawBuildingIcon(ctx,cx,topY,w,h,color){ctx.save();setLS(ctx,false);ctx.fillStyle=color;
+  const cols=5,rows=6,gap=Math.max(2,Math.round(w*0.05));
+  const cw=(w-(cols-1)*gap)/cols, chh=(h-(rows-1)*gap)/rows, x0=cx-w/2, y0=topY;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ if(c===2&&r>=rows-2)continue; ctx.fillRect(x0+c*(cw+gap), y0+r*(chh+gap), cw, chh); }
+  const dx=x0+2*(cw+gap), dyTop=y0+(rows-2)*(chh+gap), dw=cw, rr=dw/2, bot=y0+h;
+  ctx.beginPath();ctx.moveTo(dx,bot);ctx.lineTo(dx,dyTop+rr);ctx.arc(dx+rr,dyTop+rr,rr,Math.PI,0);ctx.lineTo(dx+dw,bot);ctx.closePath();ctx.fill();
+  ctx.restore();}
+function drawEnd(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#0f0f0f';ctx.fillRect(0,0,W,H);
+  const TAUPE='#c7c0b7';
+  // address (top-left) + price (top-right) in taupe caps
+  setLS(ctx,true);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  const addr=ph(s.address,PH.address);
+  const ar=drawRuns(ctx,[{text:(addr.t||'').toUpperCase(),bold:true}],57,64,560,HEAD_SZ,HEAD_LH,{justify:false,color:TAUPE,isph:addr.isph});
+  if(addr.t||S.showPlaceholders)hit('address',57,64,560,ar.lines*HEAD_LH);
+  const pr=ph(s.price,PH.price),psz=76;ctx.font=f(800,psz);ctx.fillStyle=TAUPE;ctx.textAlign='right';ctx.globalAlpha=pr.isph?0.4:1;
+  ctx.fillText((pr.t||'').toUpperCase(),W-57,64+psz*CAPR);ctx.globalAlpha=1;
+  const pw=ctx.measureText((pr.t||'').toUpperCase()).width;hit('price',W-57-pw,64,pw,psz*CAPR);ctx.textAlign='left';setLS(ctx,false);
+  // agent headshots (1–2) + handles
+  const ags=(s.agents||[]).slice(0,2),n=Math.max(1,ags.length),SQ=300,GAP=40;
+  const total=n*SQ+(n-1)*GAP;let ax=(W-total)/2;const ay=440;
+  for(let i=0;i<n;i++){const a=ags[i];drawPic(ctx,a.image,ax,ay,SQ,SQ);
+    const hd=ph(a.handle,PH.handle);ctx.fillStyle='#ffffff';ctx.font=f(400,38);ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.globalAlpha=hd.isph?0.4:1;
+    ctx.fillText(hd.t,ax+SQ/2,ay+SQ+60);ctx.globalAlpha=1;const hw=ctx.measureText(hd.t).width;
+    hit('handle'+i,ax+SQ/2-hw/2,ay+SQ+60-38*0.8,hw,46);ax+=SQ+GAP;}
+  ctx.textAlign='left';
+  // contact line (centered, white)
+  const cr=ph(s.contact,PH.contact),cy=ay+SQ+128;
+  const r=drawRuns(ctx,[{text:cr.t,bold:false}],90,cy,W-180,46,52,{justify:false,align:'center',color:'#ffffff',isph:cr.isph});
+  if(cr.t||S.showPlaceholders)hit('contact',90,cy,W-180,r.lines*52);
+  // building mark + wordmark (white, centered)
+  drawBuildingIcon(ctx,W/2,1112,92,116,'#ffffff');
+  drawLogo(ctx,354,1262,373,40,'#ffffff');}
+
 // ── render dispatch ──
 function renderTo(ctx,i){const k=slideKind(i);
   if(k==='cover')drawCover(ctx);
@@ -388,7 +473,8 @@ function renderTo(ctx,i){const k=slideKind(i);
   else if(k==='singleA')drawSingleA(ctx,midOf(i));
   else if(k==='singleB')drawSingleB(ctx,midOf(i));
   else if(k==='doubleA')drawDoubleA(ctx,midOf(i));
-  else if(k==='context')drawContext(ctx,midOf(i));}
+  else if(k==='context')drawContext(ctx,midOf(i));
+  else if(k==='end')drawEnd(ctx,midOf(i));}
 
 const bigC=document.getElementById('big'),bigX=bigC.getContext('2d');
 function renderBig(){HITS=[];IMGS=[];RECORD=true;renderTo(bigX,active);RECORD=false;
@@ -399,7 +485,7 @@ function renderAll(){renderBig();renderFilm();}
 
 // images present on the active slide (for zoom binding)
 function slideImgs(i){const o=slideObj(i);const k=slideKind(i);
-  if(k==='doubleA')return[o.top,o.bottom];if(k==='cover'||k==='teaser'||k==='singleA'||k==='singleB'||k==='context')return[o.image];return[];}
+  if(k==='doubleA')return[o.top,o.bottom];if(k==='end')return (o.agents||[]).map(a=>a.image);if(k==='cover'||k==='teaser'||k==='singleA'||k==='singleB'||k==='context')return[o.image];return[];}
 function syncZoom(){const z=document.getElementById('zoomrow'),zi=document.getElementById('zoom');
   const imgs=slideImgs(active).filter(o=>o&&o.img);let tgt=null;
   if(ACTIVEIMG&&imgs.indexOf(ACTIVEIMG)>=0)tgt=ACTIVEIMG;else if(imgs.length)tgt=imgs[0];
@@ -465,6 +551,10 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     body.appendChild(fld('Address line',o.address,v=>{o.address=v;renderAll();},'71 BLEECKER ST #2E, NOHO, NYC','address'));
     body.appendChild(fld('Price lead-in',o.leadin,v=>{o.leadin=v;renderAll();},(STATUSES[S.status]||STATUSES.closed).leadin,null,'Defaults from the post status set on the cover (e.g. Listed at / Sold for). Edit to override.'));
     body.appendChild(fld('Price',o.price,v=>{o.price=v;renderAll();},'$5.4M','price'));
+    divlabel(body,'Listing specs (Listed / Just Listed posts) — fill any to switch the teaser to the MLS-style header.');
+    body.appendChild(fld('Beds',o.beds,v=>{o.beds=v;renderAll();},'2','beds'));
+    body.appendChild(fld('Baths',o.baths,v=>{o.baths=v;renderAll();},'2.5','beds'));
+    body.appendChild(fld('Sqft',o.sqft,v=>{o.sqft=v;renderAll();},'1,530','sqft'));
     body.appendChild(fld('With agent',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent'));
     imageBlock(body,'Photo',o.image,'1080×720. Drag on the canvas to reposition.');
     body.appendChild(richField('Description  ·  select text + Bold',o.descRuns,runs=>{o.descRuns=runs;renderAll();},'desc'));
@@ -498,6 +588,20 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     body.appendChild(delButton());
   }
 
+  else if(k==='end'){
+    body.appendChild(fld('Address line',o.address,v=>{o.address=v;renderAll();},'57 READE ST #8F, TRIBECA','address'));
+    body.appendChild(fld('Price',o.price,v=>{o.price=v;renderAll();},'$2.5M','price'));
+    o.agents.forEach((a,i)=>{
+      divlabel(body,'Agent '+(i+1));
+      body.appendChild(dzField('Headshot — uploaded as-is (pre-formatted square)',a.image,'Square crop on taupe, B&W. Used exactly as uploaded.'));
+      body.appendChild(fld('Instagram handle',a.handle,v=>{a.handle=v;renderAll();},'@handle','handle'+i));
+      if(o.agents.length>1){const rm=document.createElement('button');rm.className='delbtn';rm.style.marginTop='4px';rm.textContent='Remove agent '+(i+1);rm.onclick=()=>{o.agents.splice(i,1);buildEditor();renderAll();};body.appendChild(rm);}
+    });
+    if(o.agents.length<2){const add=document.createElement('button');add.className='delbtn';add.textContent='+ Add second agent';add.onclick=()=>{o.agents.push({image:blankImg(),handle:''});buildEditor();renderAll();};body.appendChild(add);}
+    body.appendChild(fld('Contact line',o.contact,v=>{o.contact=v;renderAll();},'Contact [agent] to schedule a tour. StreetEasy link in bio.','contact'));
+    body.appendChild(delButton());
+  }
+
   document.getElementById('navlbl').textContent=`Slide ${active+1} of ${slideCount()} · ${slideLabel(active)}`;
   syncZoom();
   if(ACTIVE){const w=document.querySelector(`.fld[data-fieldid="${ACTIVE}"]`);if(w)w.classList.add('active');}}
@@ -506,7 +610,7 @@ function delButton(){const del=document.createElement('button');del.className='d
   del.onclick=()=>{if(S.mid.length<=1){showToast('Keep at least one slide after the cover');return;}S.mid.splice(active-1,1);active=Math.max(1,Math.min(active,slideCount()-1));ACTIVE=null;ACTIVEIMG=null;buildFilm();buildEditor();renderAll();};return del;}
 
 // ── filmstrip + add buttons ──
-const ADDS=[['teaser','+ Teaser'],['singleA','+ Single A'],['singleB','+ Single B'],['doubleA','+ Double A'],['building','+ Building'],['neighborhood','+ Neighborhood']];
+const ADDS=[['teaser','+ Teaser'],['singleA','+ Single A'],['singleB','+ Single B'],['doubleA','+ Double A'],['building','+ Building'],['neighborhood','+ Neighborhood'],['end','+ End slide']];
 let dragMid=null;
 function buildFilm(){const fs=document.getElementById('filmstrip');fs.innerHTML='';
   for(let i=0;i<slideCount();i++){const i2=i,movable=i>=1;
