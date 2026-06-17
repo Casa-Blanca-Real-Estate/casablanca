@@ -42,16 +42,15 @@ export default async (req) => {
 
   let fc;
   try {
-    const res = await fetch('https://api.firecrawl.dev/v2/scrape', {
+    // Firecrawl v1 scrape + structured extract (same API the closed-carousel tool uses)
+    const res = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url,
         onlyMainContent: true,
-        formats: [
-          'markdown',
-          { type: 'json', prompt: 'Extract the real-estate listing details for a social post.', schema: LISTING_SCHEMA },
-        ],
+        formats: ['extract', 'markdown'],
+        extract: { schema: LISTING_SCHEMA },
       }),
     });
     fc = await res.json();
@@ -63,7 +62,7 @@ export default async (req) => {
   }
 
   const data = fc.data || fc || {};
-  const facts = data.json || data.extract || {};
+  const facts = data.extract || data.json || {};
 
   // Prefer photos the extractor found; otherwise pull image URLs out of the markdown.
   let photos = Array.isArray(facts.photos) ? facts.photos : [];

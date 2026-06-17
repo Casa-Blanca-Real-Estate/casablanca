@@ -585,7 +585,7 @@ function renderTray(photos){const tray=document.getElementById('imTray');tray.in
     grid.appendChild(im);});
 }
 
-function doImport(){if(!cbBackend()){cbSetBackend();if(!cbBackend())return;}
+function doImport(){
   const url=(document.getElementById('imUrl').value||'').trim();if(!url){imStatus('Paste a listing URL first',true);return;}
   imStatus('Importing…');
   fetch(cbBackend()+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})})
@@ -594,7 +594,7 @@ function doImport(){if(!cbBackend()){cbSetBackend();if(!cbBackend())return;}
       imStatus('✓ Imported. '+((j.photos||[]).length)+' photos found; fields filled.');}).catch(e=>imStatus('Import failed: '+e.message,true));
 }
 
-function doAI(){if(!cbBackend()){cbSetBackend();if(!cbBackend())return;}
+function doAI(){
   const facts=Object.assign({},IMPORTED||{});
   const t=S.mid.find(m=>m.type==='teaser');if(t){facts.address=facts.address||t.address;facts.price=facts.price||t.price;facts.agent=facts.agent||t.agent;}
   const slides=S.mid.filter(m=>m.type!=='teaser').map(m=>({kind:m.type}));
