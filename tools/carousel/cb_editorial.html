@@ -71,9 +71,9 @@ header .hname{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:
 .hint{font-size:10.5px;color:var(--cb-mid);margin-top:5px;line-height:1.4;}
 .tip{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--cb-mid);color:var(--cb-mid);font-size:9px;font-weight:800;cursor:help;position:relative;margin-left:5px;vertical-align:middle;}
 .tip:hover::after{content:attr(data-tip);position:absolute;left:20px;top:-6px;width:190px;background:var(--cb-black);color:#fff;font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;padding:8px 11px;border-radius:6px;z-index:20;line-height:1.45;box-shadow:0 6px 18px rgba(0,0,0,.22);}
-.thumb.add{display:flex;flex-direction:column;gap:5px;justify-content:center;}
-.thumb.add button{width:70px;height:41px;border:1px dashed var(--cb-border);background:var(--cb-bg);border-radius:4px;font-family:inherit;font-size:10px;font-weight:800;color:var(--cb-black);cursor:pointer;line-height:1;}
-.thumb.add button:hover{border-color:var(--cb-lavender);}
+.thumb.add{display:flex;align-items:center;justify-content:center;}
+.thumb.add select.addsel{width:70px;height:87.5px;border:1.5px dashed var(--cb-border);background:var(--cb-bg);border-radius:4px;font-family:inherit;font-size:11px;font-weight:800;color:var(--cb-black);cursor:pointer;text-align:center;text-align-last:center;padding:4px;}
+.thumb.add select.addsel:hover{border-color:var(--cb-lavender);}
 .thumb.drag-over canvas{border-color:var(--cb-lavender);border-style:dashed;}
 .thumb.dragging{opacity:.4;}
 .thumb.movable canvas{cursor:grab;}
@@ -145,7 +145,10 @@ const PT=3;                           // 1 InDesign pt  →  3 canvas px  (360×
 const LS='-0.05em';                   // VA = -50  →  -0.05em letter-spacing
 const MX=53, BODYW=W-2*MX;            // body left X=53, width 974
 const ASC=0.80;                       // cap-ascent fraction: top-of-box Y → first baseline
-const BODY_SZ=10*PT, BODY_LH=BODY_SZ*1.1;   // 10pt / 11pt
+const CAPR=0.74;                      // Object Sans 800 cap-height fraction (measured)
+// Type sizes measured pixel-for-pixel off the official 1080×1350 templates:
+const BODY_SZ=41.5, BODY_LH=46;       // body + subtitle ≈13.8pt, 46px line pitch
+const HEAD_SZ=50,  HEAD_LH=50;        // teaser top block ≈16.7pt
 const ACCENTS=[['#aaa3cf','Purple'],['#e3b462','Golden'],['#4e5b41','Green'],['#72878c','Marine'],['#e88f81','Pink'],['#d55554','Red']];
 
 const PH={
@@ -159,10 +162,10 @@ const PH={
 
 // ── slide factories ──
 function blankImg(){return{img:null,src:null,ox:0,oy:0,scale:1,border:false,bc:'#ffffff'};}
-function mkCover(){return{type:'cover',badge:'',badgeColor:'#0f0f0f',image:blankImg(),subhead:'',subColor:'#ffffff',subSize:60,subY:0.60,subAlign:'left'};}
+function mkCover(){return{type:'cover',badge:'',badgeColor:'#0f0f0f',image:blankImg(),subhead:'',subColor:'#ffffff',subSize:82,subY:0.645,subAlign:'left'};}
 function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',image:blankImg(),descRuns:[]};}
 function mkSingleA(){return{type:'singleA',image:blankImg(),descRuns:[]};}
-function mkSingleB(){return{type:'singleB',image:blankImg(),descRuns:[],tx:0.055,ty:0.86,color:'#ffffff',align:'left'};}
+function mkSingleB(){return{type:'singleB',image:blankImg(),descRuns:[],tx:0.055,ty:0.70,color:'#ffffff',align:'left'};}
 function mkDoubleA(){return{type:'doubleA',top:blankImg(),bottom:blankImg(),descRuns:[]};}
 function mkContext(kind){return{type:'context',kind:kind||'building',name:'',image:blankImg(),descRuns:[]};}
 function makeKind(t){if(t==='teaser')return mkTeaser();if(t==='singleA')return mkSingleA();if(t==='singleB')return mkSingleB();if(t==='doubleA')return mkDoubleA();if(t==='building')return mkContext('building');if(t==='neighborhood')return mkContext('neighborhood');return mkSingleA();}
@@ -199,8 +202,12 @@ function wmColored(hex){if(_wmCache[hex])return _wmCache[hex];if(!wmImg.naturalW
   const oc=document.createElement('canvas');oc.width=wmImg.naturalWidth;oc.height=wmImg.naturalHeight;const c=oc.getContext('2d');c.drawImage(wmImg,0,0);
   const id=c.getImageData(0,0,oc.width,oc.height),d=id.data,r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   for(let i=0;i<d.length;i+=4){const a=Math.max(d[i],d[i+1],d[i+2]);d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=a;}c.putImageData(id,0,0);_wmCache[hex]=oc;return oc;}
-// logo: 373W × 40H spec.  draw to exact target width, hit-able id 'logo'
-function drawLogo(ctx,x,y,wTarget,hTarget,hex){const src=wmColored(hex);if(!src)return;ctx.drawImage(src,x,y,wTarget,hTarget);}
+// wordmark ink bbox inside the 2000×240 source (measured) — drawing this sub-rect keeps true proportions
+const WM_INK={sx:35,sy:19,sw:1930,sh:203};
+// logo: draw at target ink width; height locked to the wordmark's real aspect ratio (no horizontal/vertical distortion)
+function drawLogo(ctx,x,y,wTarget,hTarget,hex){const src=wmColored(hex);if(!src)return;
+  const h=wTarget*WM_INK.sh/WM_INK.sw;
+  ctx.drawImage(src,WM_INK.sx,WM_INK.sy,WM_INK.sw,WM_INK.sh,x,y,wTarget,h);}
 
 // ── rich-text runs ──
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -260,15 +267,13 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
   // badge — 35pt(105px) max → 30pt(90px) min, fit to BODYW, anchored above image (bottom border @161)
   const bt=ph(c.badge,PH.badge),btxt=(bt.t||'').toUpperCase();
   if(btxt){setLS(ctx,true);
-    // Badge fills the strip above the image (height-driven, to match the reference cover),
-    // shrinking only if it would exceed the body width; min 30pt. (Reference PNG > literal 35pt spec.)
-    const CAP=0.72,padTop=22,padBot=12,strip=161;
-    let sz=(strip-padTop-padBot)/CAP;ctx.font=f(800,sz);
-    if(ctx.measureText(btxt).width>BODYW){sz=Math.max(30*PT,sz*BODYW/ctx.measureText(btxt).width);ctx.font=f(800,sz);}
-    const bw=ctx.measureText(btxt).width,capH=sz*CAP,baseY=strip-padBot;
+    // CLOSED badge: fixed cap-height 106px, top Y=54, centered (matches official template); shrinks only if wider than body
+    const capTop=54,capH=106;let sz=capH/CAPR;ctx.font=f(800,sz);
+    if(ctx.measureText(btxt).width>BODYW){sz*=BODYW/ctx.measureText(btxt).width;ctx.font=f(800,sz);}
+    const bw=ctx.measureText(btxt).width,baseY=capTop+sz*CAPR;
     ctx.fillStyle=c.badgeColor;ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.globalAlpha=bt.isph?0.4:1;
     ctx.fillText(btxt,W/2,baseY);ctx.globalAlpha=1;setLS(ctx,false);
-    hit('badge',W/2-bw/2,baseY-capH,bw,capH);}
+    hit('badge',W/2-bw/2,capTop,bw,sz*CAPR);}
   // subhead — over image, X=57, weight 800 caps, LS = 85% of font size, Y by slider
   const sr=ph(c.subhead,PH.subhead);
   if(sr.t){const sz=c.subSize,lh=sz*0.85;setLS(ctx,true);ctx.fillStyle=c.subColor;ctx.textBaseline='alphabetic';ctx.font=f(800,sz);ctx.globalAlpha=sr.isph?0.4:1;
@@ -281,25 +286,23 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
   drawLogo(ctx,354,1277,373,40,'#0f0f0f');}
 
 // ── TEASER (Closed variant) ──
-function drawTeaserHeader(ctx,t){const sz=12*PT,lh=sz; // 12pt, LS 100%
+function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTOP=315; // narrow measure → address wraps
   setLS(ctx,true);ctx.textAlign='left';ctx.textBaseline='alphabetic';
-  let y=48; // top of header box, X=57
-  const addr=ph(t.address,PH.address);
-  // address (plain, caps, wraps within body width)
-  const ar=drawRuns(ctx,[{text:addr.t.toUpperCase(),bold:false}],57,y,W-57-MX,sz,lh,{justify:false,color:BODY,isph:addr.isph});
-  if(addr.t)hit('address',57,y,W-57-MX,ar.lines*lh);y=ar.bottom;
-  // acquired-for line
-  const pr=ph(t.price,PH.price);
-  const r2=drawRuns(ctx,[{text:'Acquired for ',bold:false},{text:pr.t,bold:true}],57,y,W-57-MX,sz,lh,{justify:false,color:BODY,isph:pr.isph});
-  hit('price',57,y,W-57-MX,lh);y=r2.bottom;
-  // with-agent line
-  const ag=ph(t.agent,PH.agent);
-  const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],57,y,W-57-MX,sz,lh,{justify:false,color:BODY,isph:ag.isph});
-  hit('agent',57,y,W-57-MX,lh);y=r3.bottom;
+  const addr=ph(t.address,PH.address),pr=ph(t.price,PH.price),ag=ph(t.agent,PH.agent);
+  const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
+  // center the whole block between the page top and the image frame (equidistant)
+  const nLines=drawRunsCount(addrRuns,MEAS,sz)+2;
+  let y=Math.max(0,(IMGTOP-nLines*lh)/2);
+  const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
+  if(addr.t)hit('address',X,y,MEAS,ar.lines*lh);y=ar.bottom;
+  const r2=drawRuns(ctx,[{text:'Acquired for ',bold:false},{text:pr.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:pr.isph});
+  hit('price',X,y,MEAS,lh);y=r2.bottom;
+  const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:ag.isph});
+  hit('agent',X,y,MEAS,lh);y=r3.bottom;
   setLS(ctx,false);return y;}
 function drawTeaser(ctx,t){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
   drawTeaserHeader(ctx,t);
-  drawPic(ctx,t.image,0,290,1080,720);                       // image 1080×720 @ Y=290
+  drawPic(ctx,t.image,0,315,1080,720);                       // image 1080×720 @ Y=315
   drawDesc(ctx,t.descRuns,1050);                             // desc @ Y=1050
   drawLogo(ctx,666,1277,373,40,'#0f0f0f');}                  // logo @ X=666 Y=1277
 
@@ -313,15 +316,15 @@ function drawDesc(ctx,runs,topY,opt){opt=opt||{};const plain=runsPlain(runs);
 
 // ── DETAIL · SINGLE A ──
 function drawSingleA(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
-  drawPic(ctx,s.image,54,220,972,650);                       // image 972×650 @ Y=220, X=54
-  drawDesc(ctx,s.descRuns,928);                              // desc @ Y=928
+  drawPic(ctx,s.image,54,266,970,647);                       // image 970×647 @ Y=266, X=54
+  drawDesc(ctx,s.descRuns,998);                              // desc @ Y=998
   drawLogo(ctx,666,1277,373,40,'#0f0f0f');}
 
 // ── DETAIL · SINGLE B ──
 function drawSingleB(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
   drawPic(ctx,s.image,23,22,1034,1306);                      // image 1034×1306 centered
   const plain=runsPlain(s.descRuns);const show=plain||S.showPlaceholders;
-  if(show){const tx=Math.round(s.tx*W),ty=Math.round(s.ty*H),w=W-tx-MX;
+  if(show){const tx=Math.round(s.tx*W),ty=Math.round(s.ty*H),w=Math.min(470,W-tx-MX); // narrow column, wraps like the template
     const r=drawRuns(ctx,plain?s.descRuns:[{text:PH.desc,bold:false}],tx,ty,w,BODY_SZ,BODY_LH,{justify:false,align:s.align,color:s.color,isph:!plain});
     hit('desc',tx,ty,w,r.lines*BODY_LH);}
   drawLogo(ctx,50,50,373,40,'#ffffff');}                     // logo WHITE @ X=50 Y=50
@@ -352,9 +355,9 @@ function drawContext(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.f
   drawPic(ctx,s.image,54,54,972,705);                        // image 972×705 @ Y=54
   // subtitle @ Y=785 : bold label + plain name
   const label=(s.kind==='neighborhood'?'The Neighborhood: ':'The Building: ');
-  const nm=ph(s.name,PH.name);const sz=12*PT;
-  const r=drawRuns(ctx,[{text:label,bold:true},{text:nm.t,bold:false}],MX,785,BODYW,sz,sz*1.05,{justify:false,color:BODY,isph:nm.isph});
-  hit('subtitle',MX,785,BODYW,r.lines*sz*1.05);
+  const nm=ph(s.name,PH.name);const sz=BODY_SZ;
+  const r=drawRuns(ctx,[{text:label,bold:true},{text:nm.t,bold:false}],MX,785,BODYW,sz,BODY_LH,{justify:false,color:BODY,isph:nm.isph});
+  hit('subtitle',MX,785,BODYW,r.lines*BODY_LH);
   drawDesc(ctx,s.descRuns,900);                              // desc @ Y=900
   drawLogo(ctx,666,1277,373,40,'#0f0f0f');}
 
@@ -433,7 +436,7 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     imageBlock(body,'Cover photo',o.image,'1080×1076. Drag on the canvas to reposition.');
     body.appendChild(richField('Subhead  ·  line break = hard break',[{text:o.subhead,bold:false}].filter(r=>r.text),runs=>{o.subhead=runsPlain(runs);renderAll();},'subhead'));
     body.appendChild(seg('Subhead alignment',[{v:'left',t:'Left'},{v:'center',t:'Center'},{v:'right',t:'Right'}],o.subAlign,v=>{o.subAlign=v;renderAll();},'subhead'));
-    body.appendChild(slider('Subhead size',o.subSize,14*PT,20*PT,1,v=>{o.subSize=v;renderAll();},'subhead','14–20pt'));
+    body.appendChild(slider('Subhead size',o.subSize,60,104,1,v=>{o.subSize=v;renderAll();},'subhead','large display caps'));
     body.appendChild(slider('Subhead vertical position',o.subY,0.02,0.92,0.01,v=>{o.subY=v;renderAll();},'subhead'));
     body.appendChild(seg('Subhead color',[{v:'#ffffff',t:'White'},{v:'#0f0f0f',t:'Black'},{v:'__accent',t:'Accent'}],o.subColor===S.accent?'__accent':o.subColor,v=>{o.subColor=(v==='__accent')?S.accent:v;renderAll();},'subhead'));
   }
@@ -496,10 +499,12 @@ function buildFilm(){const fs=document.getElementById('filmstrip');fs.innerHTML=
       t.ondrop=e=>{e.preventDefault();t.classList.remove('drag-over');const to=i2-1;
         if(dragMid!==null&&dragMid!==to){const m=S.mid.splice(dragMid,1)[0];S.mid.splice(to,0,m);active=to+1;dragMid=null;buildFilm();buildEditor();renderAll();}};}
     fs.appendChild(t);}
-  // add-slide buttons
+  // add-slide control — single dropdown keeps the filmstrip tidy
   const addt=document.createElement('div');addt.className='thumb add';
-  ADDS.forEach(([type,label])=>{const b=document.createElement('button');b.textContent=label;
-    b.onclick=()=>{S.mid.push(makeKind(type));active=slideCount()-1;ACTIVE=null;ACTIVEIMG=null;buildFilm();buildEditor();renderAll();};addt.appendChild(b);});
+  const sel=document.createElement('select');sel.className='addsel';sel.title='Add a slide';
+  sel.innerHTML='<option value="">+ Add slide ▾</option>'+ADDS.map(([t,l])=>`<option value="${t}">${l.replace(/^\+\s*/,'')}</option>`).join('');
+  sel.onchange=()=>{const t=sel.value;if(!t)return;S.mid.push(makeKind(t));active=slideCount()-1;ACTIVE=null;ACTIVEIMG=null;buildFilm();buildEditor();renderAll();};
+  addt.appendChild(sel);
   fs.appendChild(addt);
   renderFilm();}
 

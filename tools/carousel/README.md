@@ -12,27 +12,29 @@ as base64 in the one file.
 
 ## What it does
 
-- **Cover + six middle slide kinds**, each matching the spec
-  (`SINGLE_EDITORIAL_LISTING_BUILDER_Positions`):
+- **Cover + six middle slide kinds.** All positions and type sizes below were measured
+  pixel-for-pixel off the official 1080×1350 templates (the "CLSD — 71 Bleecker 2E" set):
 
   | Kind | Image frame | Description | Wordmark |
   |---|---|---|---|
-  | **Cover** | 1080×1076 @ Y=161 | badge above (35→30pt), subhead over image (14–20pt, LS 85%) | black, centered @ Y=1277 |
-  | **Teaser** (Closed) | 1080×720 @ Y=290 | header 12pt @ X=57 Y=48, desc @ Y=1050 | black @ X=666 |
-  | **Single A** | 972×650 @ Y=220 | desc @ Y=928 | black @ X=666 |
-  | **Single B** | 1034×1306 centered | flex overlay text (white/accent) | white @ X=50 Y=50 |
+  | **Cover** | 1080×1076 @ Y=161 | CLOSED badge (cap-height 106px, top Y=54), subhead over image (~82px, LS 85%) | black, centered @ Y=1277 |
+  | **Teaser** (Closed) | 1080×720 @ Y=315 | header 50px @ X=57, address wraps (640px measure), block centered in band above photo; desc @ Y=1050 | black @ X=666 |
+  | **Single A** | 970×647 @ Y=266 | desc @ Y=998 | black @ X=666 |
+  | **Single B** | 1034×1306 centered | overlay text, narrow ~470px left column (white/accent) | white @ X=50 Y=50 |
   | **Double A** | two 972×520 @ Y=54 / Y=760 | desc centered in the gap | none |
   | **Building / Neighborhood** | 972×705 @ Y=54 | bold label + name @ Y=785, desc @ Y=900 | black @ X=666 |
 
-- Body text: 10pt / 11pt line height, letter-spacing −0.05em (VA −50), `#191919`, X=53,
-  width 974, justified — per spec. (Scale: 1 InDesign pt → 3 canvas px.)
+- Body + subtitle text: **41.5px (≈13.8pt), 46px line pitch**, letter-spacing −0.05em
+  (VA −50), `#191919`, X=53, width 974, justified.
+- Wordmark is drawn from its true ink bounding box (1930×203 within the 2000×240 source)
+  at locked aspect ratio — no horizontal/vertical distortion.
 
 ### Interactions
 - Click any text or photo on the canvas to focus its editor field.
 - Drag a photo to reposition within its frame; zoom slider for the active photo.
 - Click an empty frame to pick an image.
 - Filmstrip thumbnails with drag-to-reorder (cover is locked first).
-- Add-slide buttons: + Teaser / + Single A / + Single B / + Double A / + Building / + Neighborhood.
+- Add-slide **dropdown** (Teaser / Single A / Single B / Double A / Building / Neighborhood).
 - Placeholder toggle ghosts unfilled fields at 40%.
 - Inline **Bold** for emphasis (price, agent name, lead phrases) in any description.
 - Download one slide or all slides as PNGs (untainted — all assets are inline base64).
@@ -63,14 +65,6 @@ sibling tool; only the slide kinds were swapped for the editorial layouts.
 ### Netlify drag-and-drop (parity with the sibling tools)
 The file is self-contained — drag `cb_editorial.html` onto Netlify, or drop this folder.
 No `netlify.toml` required for a single static file.
-
----
-
-## Known discrepancy to confirm
-The **cover badge** renders at the spec size (35pt max → 30pt min). In the reference
-`Cover_Slide_-_CLSD.png` the "CLOSED" badge appears visibly larger (roughly half-again).
-Current build follows the written spec; bumping the max is a one-line change if you'd
-rather match the reference PNG exactly.
 
 ---
 
