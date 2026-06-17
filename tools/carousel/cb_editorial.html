@@ -166,6 +166,7 @@ const PH={
   subhead:'NOHO’S MOST\nICONIC LOFT.\n$5.4M',
   address:'123 MAIN ST #1A, TRIBECA, NYC',
   price:'$0.0M', agent:'Agent Name',
+  beds:'2', baths:'2.5', sqft:'1,530',
   desc:'Editorial description — one or two sentences. Lead with the standout detail, keep brand and proper names, and let it read like a magazine caption.',
   name:'Building or Neighborhood Name',
   handle:'@handle', contact:'Contact the agent to schedule a tour.\nStreetEasy link in bio.'
@@ -185,7 +186,7 @@ const STATUS_OPTS=[{v:'justlisted',t:'Just Listed'},{v:'listed',t:'Listed'},{v:'
 // ── slide factories ──
 function blankImg(){return{img:null,src:null,ox:0,oy:0,scale:1,border:false,bc:'#ffffff'};}
 function mkCover(){return{type:'cover',badge:'',badgeColor:'#0f0f0f',image:blankImg(),subhead:'',subColor:'#ffffff',subSize:82,subY:0.645,subAlign:'left'};}
-function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',leadin:'',image:blankImg(),descRuns:[]};}
+function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',leadin:'',beds:'',baths:'',sqft:'',image:blankImg(),descRuns:[]};}
 function mkSingleA(){return{type:'singleA',image:blankImg(),descRuns:[]};}
 function mkSingleB(){return{type:'singleB',image:blankImg(),descRuns:[],tx:0.055,ty:0.70,color:'#ffffff',align:'left'};}
 function mkDoubleA(){return{type:'doubleA',top:blankImg(),bottom:blankImg(),descRuns:[]};}
@@ -312,8 +313,54 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
 function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTOP=315; // narrow measure → address wraps
   setLS(ctx,true);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   const addr=ph(t.address,PH.address),pr=ph(t.price,PH.price),ag=ph(t.agent,PH.agent);
+
+  // STATS MODE — when any of beds/baths/sqft is set, render the MLS-style header
+  // matching the "Just Listed" reference (status prefix + address LEFT, BD/BA + SF + price RIGHT).
+  if((t.beds||'').trim()||(t.baths||'').trim()||(t.sqft||'').trim()){
+    const stat=STATUSES[S.status]||STATUSES.closed;
+    const statusLabel=(stat.badge||'').trim();
+    const statusRuns=statusLabel?[{text:statusLabel+':',bold:false}]:null;
+    const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
+    const statusLines=statusRuns?drawRunsCount(statusRuns,MEAS,sz):0;
+    const addrLines=drawRunsCount(addrRuns,MEAS,sz);
+    const leftLines=statusLines+addrLines;
+    const rightLines=3;
+    const nLines=Math.max(leftLines,rightLines);
+    const yTop=Math.max(0,(IMGTOP-nLines*lh)/2);
+    // LEFT block (status prefix on its own line, then address below)
+    let yL=yTop;
+    if(statusRuns){const sr2=drawRuns(ctx,statusRuns,X,yL,MEAS,sz,lh,{justify:false,color:BODY});yL=sr2.bottom;}
+    const lr=drawRuns(ctx,addrRuns,X,yL,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
+    if(addr.t)hit('address',X,yL,MEAS,lr.lines*lh);
+    // RIGHT block (BD/BA, SF, price), right-aligned at W-57
+    const RX=W-57, beds=(t.beds||'').trim(), baths=(t.baths||'').trim(), sqft=(t.sqft||'').trim();
+    const bdraw=ph(beds,PH.beds), brraw=ph(baths,PH.baths), sfraw=ph(sqft,PH.sqft);
+    const bdLine=(bdraw.t?bdraw.t+' BD':'')+(bdraw.t&&brraw.t?', ':'')+(brraw.t?brraw.t+' BA':'');
+    const sfLine=sfraw.t?sfraw.t+' SF':'';
+    const prLine=pr.t||'';
+    const lines=[
+      {txt:bdLine, fid:'beds',  isph:bdraw.isph||brraw.isph},
+      {txt:sfLine, fid:'sqft',  isph:sfraw.isph},
+      {txt:prLine, fid:'price', isph:pr.isph}
+    ];
+    ctx.textAlign='right';ctx.font=f(800,sz);ctx.fillStyle=BODY;
+    let ry=yTop;
+    lines.forEach(L=>{
+      if(!L.txt)return;
+      ctx.globalAlpha=L.isph?0.4:1;
+      ctx.fillText(L.txt,RX,ry+sz*ASC);
+      ctx.globalAlpha=1;
+      const tw=ctx.measureText(L.txt).width;
+      hit(L.fid,RX-tw-5,ry,tw+10,sz*ASC);
+      ry+=lh;
+    });
+    ctx.textAlign='left';
+    setLS(ctx,false);
+    return yTop+nLines*lh;
+  }
+
+  // CLOSED-style (existing): address / "[lead-in] $price" / with agent
   const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
-  // center the whole block between the page top and the image frame (equidistant)
   const nLines=drawRunsCount(addrRuns,MEAS,sz)+2;
   let y=Math.max(0,(IMGTOP-nLines*lh)/2);
   const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
@@ -504,6 +551,10 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     body.appendChild(fld('Address line',o.address,v=>{o.address=v;renderAll();},'71 BLEECKER ST #2E, NOHO, NYC','address'));
     body.appendChild(fld('Price lead-in',o.leadin,v=>{o.leadin=v;renderAll();},(STATUSES[S.status]||STATUSES.closed).leadin,null,'Defaults from the post status set on the cover (e.g. Listed at / Sold for). Edit to override.'));
     body.appendChild(fld('Price',o.price,v=>{o.price=v;renderAll();},'$5.4M','price'));
+    divlabel(body,'Listing specs (Listed / Just Listed posts) — fill any to switch the teaser to the MLS-style header.');
+    body.appendChild(fld('Beds',o.beds,v=>{o.beds=v;renderAll();},'2','beds'));
+    body.appendChild(fld('Baths',o.baths,v=>{o.baths=v;renderAll();},'2.5','beds'));
+    body.appendChild(fld('Sqft',o.sqft,v=>{o.sqft=v;renderAll();},'1,530','sqft'));
     body.appendChild(fld('With agent',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent'));
     imageBlock(body,'Photo',o.image,'1080×720. Drag on the canvas to reposition.');
     body.appendChild(richField('Description  ·  select text + Bold',o.descRuns,runs=>{o.descRuns=runs;renderAll();},'desc'));
