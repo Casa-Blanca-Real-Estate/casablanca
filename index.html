@@ -1,715 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casa Blanca — Switch to Real Estate. Change Your Life.</title>
-  <meta name="description" content="Casa Blanca is a boutique NYC brokerage that helps agents build real careers. Leads, tech, training, and support — all in one place." />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casa Blanca — Studio Tools</title>
+<meta name="description" content="The Casa Blanca toolkit — in-house creative tools for turning listings into editorial social content.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0f0f0f; --paper:#f4f3f0; --paper2:#e8e6e0;
+    --accent:#aaa3cf; --accent2:#b3acdc; --plum:#1e1a2e; --plum2:#2d2640;
+    --muted:#888680; --line:#dddbd5;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:'DM Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+  a{color:inherit;text-decoration:none}
+  .wm{font-weight:800;letter-spacing:.14em;text-transform:lowercase;font-size:15px}
+  .wm b{font-weight:800}
+  .tag{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--accent)}
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+  /* top bar */
+  header{position:sticky;top:0;z-index:10;background:rgba(15,15,15,.92);backdrop-filter:blur(8px);
+    color:#fff;display:flex;align-items:center;justify-content:space-between;
+    padding:16px clamp(20px,5vw,64px);border-bottom:1px solid rgba(255,255,255,.08)}
+  header .wm{color:#fff;display:flex;align-items:center;gap:10px}
+  header .dot{color:var(--accent)}
+  header nav a{font-size:13px;color:#cbc8c2;margin-left:26px;font-weight:500}
+  header nav a:hover{color:#fff}
 
-  <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/animations.css" />
+  /* hero */
+  .hero{background:var(--ink);color:#fff;padding:clamp(64px,12vw,140px) clamp(20px,5vw,64px) clamp(56px,9vw,110px);
+    border-bottom:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden}
+  .hero .glow{position:absolute;inset:auto -10% -40% auto;width:60vw;height:60vw;border-radius:50%;
+    background:radial-gradient(circle,rgba(170,163,207,.22),transparent 62%);pointer-events:none}
+  .hero .tag{margin-bottom:22px;display:block}
+  .hero h1{font-size:clamp(40px,7.5vw,84px);line-height:1.02;font-weight:800;letter-spacing:-.02em;margin:0 0 24px;max-width:16ch}
+  .hero h1 em{font-style:italic;font-weight:400;color:var(--accent)}
+  .hero p{font-size:clamp(16px,2.1vw,20px);color:#bdbab4;max-width:54ch;margin:0}
 
-  <style>
-    @font-face {
-      font-family: 'Object Sans';
-      src: url('assets/fonts/ObjectSans-Regular.woff2') format('woff2');
-      font-weight: 400;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: 'Object Sans';
-      src: url('assets/fonts/ObjectSans-Heavy.woff2') format('woff2');
-      font-weight: 800;
-      font-display: swap;
-    }
-    body {
-      font-family: 'Object Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
-    }
-  </style>
+  /* sections */
+  main{padding:clamp(48px,8vw,96px) clamp(20px,5vw,64px);max-width:1180px;margin:0 auto}
+  .sec-label{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);
+    border-top:1px solid var(--line);padding-top:16px;margin:0 0 28px}
+
+  /* featured tool */
+  .feature{display:grid;grid-template-columns:1.1fr .9fr;gap:0;border:1px solid var(--line);border-radius:18px;
+    overflow:hidden;background:#fff;margin-bottom:72px}
+  .feature .copy{padding:clamp(28px,4vw,52px)}
+  .feature .badge{display:inline-block;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--plum);background:var(--accent);padding:5px 11px;border-radius:999px;font-weight:700;margin-bottom:20px}
+  .feature h2{font-size:clamp(28px,4vw,42px);line-height:1.05;letter-spacing:-.02em;margin:0 0 16px;font-weight:800}
+  .feature p{color:#55514a;font-size:16px;margin:0 0 28px;max-width:46ch}
+  .feature ul{list-style:none;padding:0;margin:0 0 32px;display:flex;flex-wrap:wrap;gap:8px}
+  .feature li{font-size:13px;color:#55514a;background:var(--paper2);border-radius:999px;padding:6px 13px}
+  .feature .art{background:linear-gradient(150deg,var(--plum),#0f0f0f 70%);position:relative;min-height:300px;
+    display:flex;align-items:center;justify-content:center;padding:40px}
+  .feature .art .card{width:min(80%,260px);aspect-ratio:4/5;background:linear-gradient(160deg,#6b5f4f,#2b2620);
+    border-radius:10px;box-shadow:0 30px 60px -20px rgba(0,0,0,.6);position:relative;color:#fff;
+    padding:22px;display:flex;flex-direction:column;justify-content:flex-end}
+  .feature .art .card .k{position:absolute;top:18px;left:18px;font-size:10px;letter-spacing:.16em;font-weight:800}
+  .feature .art .card .h{font-size:20px;font-weight:800;line-height:1.05;letter-spacing:-.01em}
+  .feature .art .card .wm2{font-size:9px;letter-spacing:.18em;text-transform:lowercase;font-weight:800;margin-top:14px;opacity:.9}
+
+  .btn{display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:#fff;font-weight:700;
+    font-size:15px;padding:14px 26px;border-radius:10px;transition:transform .12s,background .12s}
+  .btn:hover{background:var(--plum2);transform:translateY(-1px)}
+  .btn .arr{transition:transform .15s}.btn:hover .arr{transform:translate(3px)}
+
+  /* tools grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+  .tool{border:1px solid var(--line);border-radius:14px;background:#fff;padding:26px;display:flex;
+    flex-direction:column;min-height:188px;transition:border-color .12s,transform .12s,box-shadow .12s}
+  .tool:not(.soon):hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 16px 30px -22px rgba(30,26,46,.5)}
+  .tool .num{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.1em}
+  .tool h3{font-size:21px;margin:10px 0 8px;font-weight:800;letter-spacing:-.01em}
+  .tool p{color:#55514a;font-size:14px;margin:0 0 18px;flex:1}
+  .tool .open{font-weight:700;font-size:14px;color:var(--plum);display:inline-flex;align-items:center;gap:7px}
+  .tool .open .arr{transition:transform .15s}.tool:hover .open .arr{transform:translate(3px)}
+  .tool.soon{opacity:.62;background:transparent;border-style:dashed}
+  .tool.soon .open{color:var(--muted)}
+
+  footer{background:var(--ink);color:#9a968f;text-align:center;padding:36px 20px;font-size:13px;
+    border-top:1px solid rgba(255,255,255,.06)}
+  footer .wm{color:#fff;display:block;margin-bottom:8px}
+  footer .dot{color:var(--accent)}
+
+  @media(max-width:760px){
+    .feature{grid-template-columns:1fr}.feature .art{order:-1;min-height:240px}
+    header nav a:first-child{margin-left:0}
+  }
+</style>
 </head>
 <body>
 
-  <!-- ── Navigation ── -->
-  <nav class="nav nav--dark" id="main-nav" aria-label="Main navigation">
-    <a href="/" class="nav__logo">Casa<span>·</span>Blanca</a>
-
-    <ul class="nav__links" id="nav-links">
-      <li><a href="#how-it-works">How It Works</a></li>
-      <li><a href="#tech">Tech</a></li>
-      <li><a href="agents/index.html">Our Agents</a></li>
-      <li><a href="#faq">FAQ</a></li>
-      <li><a href="#join" class="nav__cta">Join Casa Blanca</a></li>
-    </ul>
-
-    <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
+<header>
+  <a class="wm" href="./">casa<span class="dot">·</span>blanca</a>
+  <nav>
+    <a href="#tools">Tools</a>
+    <a href="tools/carousel/cb_editorial.html">Carousel builder</a>
   </nav>
+</header>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       HERO — Dark, full-bleed, split layout
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="hero">
-    <div class="hero__content">
-      <p class="hero__eyebrow hero-animate">New York City · Since 2006</p>
+<section class="hero">
+  <div class="glow"></div>
+  <span class="tag">Casa Blanca · Studio</span>
+  <h1>The toolkit behind <em>every</em> Casa Blanca post.</h1>
+  <p>In-house creative tools that turn a single listing into a finished, on-brand editorial carousel — and more on the way.</p>
+</section>
 
-      <h1 class="hero__headline">
-        <span class="hero-animate">
-          <em class="arrow">→</em>Switch to<br />real estate.
-        </span>
-        <span class="line2 hero-animate hero-animate--delay-1">Change<br />your life.</span>
-      </h1>
-
-      <p class="hero__sub hero-animate hero-animate--delay-2">
-        Open new doors in your real estate career. Casa Blanca gives agents the leads, tech, and training to build something real.
-      </p>
-
-      <div class="hero__actions hero-animate hero-animate--delay-3">
-        <a href="#join" class="btn btn--white btn--lg">Join Casa Blanca</a>
-        <a href="#how-it-works" class="btn btn--outline-white btn--lg">See how it works</a>
-      </div>
+<main>
+  <!-- Featured tool -->
+  <p class="sec-label">Flagship tool</p>
+  <div class="feature">
+    <div class="copy">
+      <span class="badge">Live</span>
+      <h2>Editorial Carousel Builder</h2>
+      <p>One listing in, a multi-slide Casa Blanca carousel out. Edit text and photos right on the slide, pick a status, and export print-ready PNGs.</p>
+      <ul>
+        <li>Just Listed · In Contract · Just Sold · Closed</li>
+        <li>StreetEasy import</li>
+        <li>AI-written captions</li>
+        <li>One-click export</li>
+      </ul>
+      <a class="btn" href="tools/carousel/cb_editorial.html">Open the builder <span class="arr">→</span></a>
     </div>
-
-    <div class="hero__photo">
-      <div class="hero__photo-placeholder">
-        <!-- Photo placeholder — replace with actual hero image -->
-        <svg class="hero__photo-silhouette" viewBox="0 0 260 380" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="130" cy="95" rx="52" ry="55" fill="rgba(170,163,207,0.3)"/>
-          <path d="M30 380 C30 280 60 220 130 220 C200 220 230 280 230 380Z" fill="rgba(170,163,207,0.25)"/>
-        </svg>
-        <div style="position:absolute;top:2rem;right:2rem;background:rgba(170,163,207,0.15);border:1px solid rgba(170,163,207,0.3);border-radius:0.75rem;padding:1rem 1.25rem;text-align:right;">
-          <div style="font-size:1.5rem;font-weight:800;color:#fff;">$54K</div>
-          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);letter-spacing:0.06em;text-transform:uppercase;">Avg. agent income</div>
-        </div>
-        <div style="position:absolute;bottom:8rem;left:2rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:100px;padding:0.5rem 1rem;display:flex;align-items:center;gap:0.5rem;">
-          <span style="color:#f4a829;font-size:0.875rem;">★★★★★</span>
-          <span style="font-size:0.8rem;color:rgba(255,255,255,0.6);">4.6 · 200+ agent reviews</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Marquee ── -->
-  <div class="marquee-wrap" aria-hidden="true">
-    <div class="marquee-track">
-      <div class="marquee-item">Upper West Side</div>
-      <div class="marquee-item">Tribeca</div>
-      <div class="marquee-item">West Village</div>
-      <div class="marquee-item">SoHo</div>
-      <div class="marquee-item">Park Slope</div>
-      <div class="marquee-item">Harlem</div>
-      <div class="marquee-item">Inwood</div>
-      <div class="marquee-item">Washington Heights</div>
-      <div class="marquee-item">Chelsea</div>
-      <div class="marquee-item">Midtown</div>
-      <div class="marquee-item">Flatiron</div>
-      <div class="marquee-item">Astoria</div>
-      <div class="marquee-item">Upper West Side</div>
-      <div class="marquee-item">Tribeca</div>
-      <div class="marquee-item">West Village</div>
-      <div class="marquee-item">SoHo</div>
-      <div class="marquee-item">Park Slope</div>
-      <div class="marquee-item">Harlem</div>
-      <div class="marquee-item">Inwood</div>
-      <div class="marquee-item">Washington Heights</div>
-      <div class="marquee-item">Chelsea</div>
-      <div class="marquee-item">Midtown</div>
-      <div class="marquee-item">Flatiron</div>
-      <div class="marquee-item">Astoria</div>
-    </div>
-  </div>
-
-  <!-- ── Social Proof Logos ── -->
-  <div class="logos-row bg-white">
-    <div class="container">
-      <div class="logos-row__inner">
-        <span class="logos-row__label">As seen on</span>
-        <div class="logos-row__items">
-          <span class="logo-item">StreetEasy</span>
-          <span class="logo-item">Zillow</span>
-          <span class="logo-item">The Real Deal</span>
-          <span class="logo-item">Brick Underground</span>
-          <span class="logo-item">Curbed NY</span>
-        </div>
+    <div class="art" aria-hidden="true">
+      <div class="card">
+        <span class="k">JUST LISTED</span>
+        <span class="h">NoHo's most<br>iconic loft.</span>
+        <span class="wm2">casa·blanca</span>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       PITCH STRIP — "Come for the leads. Stay for the ease."
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="pitch-strip bg-white">
-    <div class="container">
-      <div class="pitch-strip__inner">
-        <h2 class="pitch-strip__headline fade-in">
-          Come for the leads.<br /><em>Stay for the ease.</em>
-        </h2>
-        <div class="pitch-strip__grid fade-in">
-          <div class="pitch-cell">
-            <span class="pitch-cell__icon">📍</span>
-            <div class="pitch-cell__title">Exclusive lead pipeline</div>
-            <div class="pitch-cell__body">Listings and buyer leads assigned to you — no cold calling required.</div>
-          </div>
-          <div class="pitch-cell">
-            <span class="pitch-cell__icon">📊</span>
-            <div class="pitch-cell__title">Real-time dashboards</div>
-            <div class="pitch-cell__body">Know exactly where every deal stands, always.</div>
-          </div>
-          <div class="pitch-cell">
-            <span class="pitch-cell__icon">🤝</span>
-            <div class="pitch-cell__title">Mentorship from day one</div>
-            <div class="pitch-cell__body">Paired with a senior agent who's closed hundreds of deals in your market.</div>
-          </div>
-          <div class="pitch-cell">
-            <span class="pitch-cell__icon">💰</span>
-            <div class="pitch-cell__title">Competitive splits</div>
-            <div class="pitch-cell__body">Among the highest commission splits in New York City brokerage.</div>
-          </div>
-        </div>
-      </div>
+  <!-- Tools grid -->
+  <p class="sec-label" id="tools">All tools</p>
+  <div class="grid">
+
+    <a class="tool" href="tools/carousel/cb_editorial.html">
+      <span class="num">01</span>
+      <h3>Editorial Carousel Builder</h3>
+      <p>Turn a listing into a multi-slide editorial Instagram carousel.</p>
+      <span class="open">Open <span class="arr">→</span></span>
+    </a>
+
+    <!-- ───────────────────────────────────────────────────────────────
+         To add a tool hosted elsewhere (e.g. another Netlify site), copy
+         a card and set href to its URL. Drop the `soon` class to activate:
+
+         <a class="tool" href="https://your-tool.netlify.app">
+           <span class="num">02</span>
+           <h3>Tool name</h3>
+           <p>One-line description.</p>
+           <span class="open">Open <span class="arr">→</span></span>
+         </a>
+    ──────────────────────────────────────────────────────────────── -->
+
+    <div class="tool soon">
+      <span class="num">02</span>
+      <h3>Coming soon</h3>
+      <p>Another studio tool will live here — send me its link to wire it up.</p>
+      <span class="open">In the works</span>
     </div>
-  </section>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       BIG STATS
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="big-stats bg-cream">
-    <div class="container">
-      <div class="big-stats__top fade-in">
-        <p class="big-stats__eyebrow">The numbers speak</p>
-        <h2 class="big-stats__headline">
-          Real results for<br /><em>real agents.</em>
-        </h2>
-      </div>
-
-      <div class="big-stats__numbers fade-in">
-        <div>
-          <div class="big-stat-num count-up" data-target="54" data-prefix="$" data-suffix="K">$54K</div>
-          <div class="big-stat-label">Average agent income, year one</div>
-        </div>
-        <div>
-          <div class="big-stat-num big-stat-num--accent count-up" data-target="3" data-prefix="$" data-suffix="B">$3B</div>
-          <div class="big-stat-label">In total closed volume</div>
-        </div>
-      </div>
-
-      <div class="big-stats__row2 fade-in">
-        <div class="big-stat-small">
-          <div class="big-stat-small__num count-up" data-target="141" data-suffix="+">141+</div>
-          <div class="big-stat-small__label">Active agents on our platform</div>
-        </div>
-        <div class="big-stat-small">
-          <div class="big-stat-small__num count-up" data-target="42">42</div>
-          <div class="big-stat-small__label">NYC neighborhoods covered</div>
-        </div>
-        <div class="big-stat-small">
-          <div class="big-stat-small__num count-up" data-target="18" data-suffix=" yrs">18 yrs</div>
-          <div class="big-stat-small__label">In New York real estate</div>
-        </div>
-        <div class="big-stat-small">
-          <div class="big-stat-small__num count-up" data-target="98" data-suffix="%">98%</div>
-          <div class="big-stat-small__label">Agent retention rate</div>
-        </div>
-      </div>
+    <div class="tool soon">
+      <span class="num">03</span>
+      <h3>Coming soon</h3>
+      <p>Room for the next one.</p>
+      <span class="open">In the works</span>
     </div>
-  </section>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       HOW IT WORKS
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="how-it-works" id="how-it-works">
-    <div class="container">
-      <div class="how-it-works__top">
-        <div class="how-it-works__left">
-          <div class="how-it-works__eyebrow fade-in">
-            <span class="plus">+</span>
-            Here is how it works
-          </div>
-          <h2 class="how-it-works__headline fade-in">
-            Here is<br />how it<br />works.
-          </h2>
-          <p class="how-it-works__sub fade-in">
-            Getting started is simple. We make it easy to transition into real estate or grow the career you already have.
-          </p>
-          <div class="how-it-works__rating fade-in">
-            <span class="how-it-works__stars">★★★★★</span>
-            <span class="how-it-works__rating-num">4.6</span>
-            <span class="how-it-works__rating-label">from 200+ agent reviews</span>
-          </div>
-        </div>
+  </div>
+</main>
 
-        <div class="fade-in">
-          <div class="how-it-works__phone">
-            <div class="how-it-works__phone-inner">
-              <div class="phone-card">
-                <div class="phone-card__dot"></div>
-                <span class="phone-card__label">New lead assigned</span>
-              </div>
-              <div class="phone-card" style="opacity:0.7;">
-                <div class="phone-card__dot" style="background:#6cb97a;"></div>
-                <span class="phone-card__label">Showing confirmed</span>
-              </div>
-              <div class="phone-card" style="opacity:0.5;">
-                <div class="phone-card__dot" style="background:#f4a829;"></div>
-                <span class="phone-card__label">Offer received</span>
-              </div>
-              <div style="margin-top:0.5rem;text-align:center;">
-                <div style="font-size:0.65rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);">Casa Blanca App</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+<footer>
+  <span class="wm">casa<span class="dot">·</span>blanca</span>
+  Studio tools · built in-house
+</footer>
 
-      <div class="steps-grid fade-in-group">
-        <div class="step-card fade-in">
-          <div class="step-card__num">Step 01</div>
-          <span class="step-card__icon">📋</span>
-          <div class="step-card__title">Apply in 5 minutes</div>
-          <div class="step-card__body">Tell us about your background. No experience necessary — we've onboarded career changers from every field.</div>
-        </div>
-        <div class="step-card fade-in">
-          <div class="step-card__num">Step 02</div>
-          <span class="step-card__icon">🎓</span>
-          <div class="step-card__title">Get your license</div>
-          <div class="step-card__body">We'll walk you through the NYS licensing process step by step. Most agents are licensed within 6–8 weeks.</div>
-        </div>
-        <div class="step-card fade-in">
-          <div class="step-card__num">Step 03</div>
-          <span class="step-card__icon">🗺</span>
-          <div class="step-card__title">Pick your neighborhoods</div>
-          <div class="step-card__body">Choose 2–4 neighborhoods to specialize in. We'll assign you leads and a senior mentor who knows them cold.</div>
-        </div>
-        <div class="step-card fade-in">
-          <div class="step-card__num">Step 04</div>
-          <span class="step-card__icon">🔑</span>
-          <div class="step-card__title">Close your first deal</div>
-          <div class="step-card__body">Our average new agent closes their first deal within 60 days. Then it compounds from there.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       PURPLE FEATURES SECTION
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="purple-section">
-    <div class="container">
-      <div class="purple-section__top fade-in">
-        <p class="purple-section__eyebrow">Why agents choose us</p>
-        <h2 class="purple-section__headline">
-          Top-tier guidance helps you<br />start earning more, faster.
-        </h2>
-      </div>
-
-      <div class="feature-cards fade-in-group">
-        <div class="feature-card fade-in">
-          <div class="feature-card__img">
-            <div class="feature-card__img-placeholder" style="background:linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));">
-              <span style="font-size:3rem;">📍</span>
-            </div>
-          </div>
-          <div class="feature-card__body">
-            <span class="feature-card__icon">📍</span>
-            <div class="feature-card__title">Leads that close</div>
-            <p class="feature-card__body-text">The single biggest complaint about big brokerages is cold leads. Ours are warm, qualified, and assigned exclusively to you.</p>
-          </div>
-        </div>
-
-        <div class="feature-card fade-in">
-          <div class="feature-card__img">
-            <div class="feature-card__img-placeholder" style="background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));">
-              <span style="font-size:3rem;">🏙</span>
-            </div>
-          </div>
-          <div class="feature-card__body">
-            <span class="feature-card__icon">🏙</span>
-            <div class="feature-card__title">Neighborhood depth</div>
-            <p class="feature-card__body-text">We don't spread thin. Our agents own their blocks and buildings in a way that national brokerages never can.</p>
-          </div>
-        </div>
-
-        <div class="feature-card fade-in">
-          <div class="feature-card__img">
-            <div class="feature-card__img-placeholder" style="background:linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));">
-              <span style="font-size:3rem;">🤝</span>
-            </div>
-          </div>
-          <div class="feature-card__body">
-            <span class="feature-card__icon">🤝</span>
-            <div class="feature-card__title">Real mentorship</div>
-            <p class="feature-card__body-text">Every new agent is paired with a senior who's been there. Not just a manager — someone who closes deals alongside you.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       TECH PITCH (DARK)
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="tech-pitch" id="tech">
-    <div class="tech-pitch__accent"></div>
-    <div class="container">
-      <h2 class="tech-pitch__headline fade-in">
-        <span class="normal">Our top notch<br />tech lets you focus<br />on the fun part:</span><br />
-        <span class="big">Selling homes</span><br />
-        <span class="accent">&amp; getting paid.</span>
-      </h2>
-
-      <p class="tech-pitch__sub fade-in">
-        We built our platform so that admin, scheduling, and paperwork get out of your way. You spend time with clients, not spreadsheets.
-      </p>
-
-      <div class="tech-features fade-in-group">
-        <div class="tech-feature fade-in">
-          <span class="tech-feature__icon">📱</span>
-          <div class="tech-feature__title">Mobile-first deal tracking</div>
-          <p class="tech-feature__body">Manage every listing and rental from your phone. Offers, docs, and status updates all in one place.</p>
-        </div>
-        <div class="tech-feature fade-in">
-          <span class="tech-feature__icon">🤖</span>
-          <div class="tech-feature__title">AI-assisted pricing</div>
-          <p class="tech-feature__body">Comps, market trends, and pricing guidance built into every listing. Stop second-guessing your asks.</p>
-        </div>
-        <div class="tech-feature fade-in">
-          <span class="tech-feature__icon">✍️</span>
-          <div class="tech-feature__title">One-click contracts</div>
-          <p class="tech-feature__body">REBNY-compliant contracts generated and e-signed without a lawyer on speed dial.</p>
-        </div>
-        <div class="tech-feature fade-in">
-          <span class="tech-feature__icon">📣</span>
-          <div class="tech-feature__title">Marketing on autopilot</div>
-          <p class="tech-feature__body">Every listing auto-publishes to StreetEasy, Zillow, and our site. You just show up for the showings.</p>
-        </div>
-        <div class="tech-feature fade-in">
-          <span class="tech-feature__icon">📊</span>
-          <div class="tech-feature__title">Income forecasting</div>
-          <p class="tech-feature__body">See projected commission across your pipeline so you always know what's coming in next month.</p>
-        </div>
-        <div class="tech-feature fade-in">
-          <span class="tech-feature__icon">💬</span>
-          <div class="tech-feature__title">Client portal</div>
-          <p class="tech-feature__body">Keep clients informed with automated updates. Fewer check-in calls, more time for deals.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       AGENT SUCCESS / "We love helping our agents win"
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="agent-success">
-    <div class="container">
-      <div class="agent-success__inner">
-        <div>
-          <div class="agent-success__eyebrow fade-in">
-            <span class="star">★</span>
-            Agent success
-          </div>
-          <h2 class="agent-success__headline fade-in">
-            We love helping<br />our agents win.
-          </h2>
-          <p class="agent-success__body fade-in">
-            Every tool, every mentor, every lead we send — it's all in service of one thing: helping you build a sustainable real estate career in New York City. This isn't a place you pass through. It's a place you grow.
-          </p>
-
-          <ul class="benefit-list fade-in">
-            <li>
-              <span class="benefit-list__check">✓</span>
-              Dedicated onboarding coordinator for your first 90 days
-            </li>
-            <li>
-              <span class="benefit-list__check">✓</span>
-              Weekly group training on negotiation, pricing, and client management
-            </li>
-            <li>
-              <span class="benefit-list__check">✓</span>
-              Access to our private network of off-market listings
-            </li>
-            <li>
-              <span class="benefit-list__check">✓</span>
-              Health insurance options for full-time agents
-            </li>
-            <li>
-              <span class="benefit-list__check">✓</span>
-              Annual retreat + team events — we actually like each other
-            </li>
-          </ul>
-
-          <a href="#join" class="btn btn--black fade-in">Start your application</a>
-        </div>
-
-        <div class="fade-in">
-          <div class="testimonial-pull">
-            <div class="testimonial-pull__quote">"</div>
-            <p class="testimonial-pull__body">I came from hospitality with zero real estate experience. Casa Blanca walked me through licensing, gave me leads my first week, and paired me with Marcus who's been incredible. I closed four deals in my first four months. I don't think that happens anywhere else.</p>
-            <div class="testimonial-pull__author">
-              <div class="testimonial-pull__avatar">TN</div>
-              <div>
-                <div class="testimonial-pull__name">Tiana N.</div>
-                <div class="testimonial-pull__detail">Agent since 2023 · Washington Heights</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="testimonial-pull" style="margin-top:1rem;">
-            <div class="testimonial-pull__quote">"</div>
-            <p class="testimonial-pull__body">The tech alone is worth it. I was drowning in spreadsheets at my old brokerage. Here everything just works — docs, scheduling, listings, all of it. I spend my time with clients, not on admin.</p>
-            <div class="testimonial-pull__author">
-              <div class="testimonial-pull__avatar">RB</div>
-              <div>
-                <div class="testimonial-pull__name">Rafael B.</div>
-                <div class="testimonial-pull__detail">Agent since 2022 · Upper West Side</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       BUILD A BUSINESS (DARK)
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="build-biz">
-    <div class="container">
-      <div class="build-biz__inner">
-        <div>
-          <p class="build-biz__eyebrow fade-in">Your career. Your way.</p>
-          <h2 class="build-biz__headline fade-in">
-            We're here<br />to help you<br /><em>build a real</em><br />business.
-          </h2>
-          <p class="build-biz__body fade-in">
-            Hands-on help to take control of your career. Whether you're brand new or moving over from another brokerage, we meet you where you are.
-          </p>
-
-          <ul class="build-biz__list fade-in">
-            <li>Personal brand coaching and professional photography</li>
-            <li>Your own agent profile page on casa-blanca.com</li>
-            <li>Listing marketing budget — we cover it, you earn from it</li>
-            <li>In-house legal and compliance team so you never close blind</li>
-            <li>Referral network with agents in 12 other cities</li>
-          </ul>
-
-          <a href="#join" class="btn btn--white fade-in">Join the team</a>
-        </div>
-
-        <!-- Photo grid — placeholder tiles -->
-        <div class="photo-grid fade-in">
-          <div class="photo-grid__cell photo-grid__cell--tall" style="background:linear-gradient(135deg,#1e1a2e,#2d2640);">
-            <span style="font-size:3rem;opacity:0.4;">🏙</span>
-          </div>
-          <div class="photo-grid__cell" style="background:linear-gradient(135deg,#b3acdc,#9991c4);">
-            <span style="font-size:2rem;opacity:0.5;">🤝</span>
-          </div>
-          <div class="photo-grid__cell" style="background:linear-gradient(135deg,#2d2640,#1e1a2e);">
-            <span style="font-size:2rem;opacity:0.4;">📋</span>
-          </div>
-          <div class="photo-grid__cell photo-grid__cell--tall" style="background:linear-gradient(135deg,#1a2e1e,#2d4026);">
-            <span style="font-size:3rem;opacity:0.4;">🔑</span>
-          </div>
-          <div class="photo-grid__cell" style="background:linear-gradient(135deg,#2e1e1a,#402d2d);">
-            <span style="font-size:2rem;opacity:0.4;">💰</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       CAREER / FAQ
-  ════════════════════════════════════════════════════════════════ -->
-  <section class="career-section" id="faq">
-    <div class="container">
-      <div class="career-section__inner">
-        <div>
-          <p class="career-section__eyebrow fade-in">Questions answered</p>
-          <h2 class="career-section__headline fade-in">
-            Start your real estate<br />career the right way.
-          </h2>
-          <p class="career-section__body fade-in">
-            We hear the same questions from everyone who reaches out. Here are the honest answers.
-          </p>
-          <a href="#join" class="btn btn--black fade-in" style="margin-top:0.5rem;">Apply now</a>
-        </div>
-
-        <div class="faq-list fade-in" id="faq-list">
-          <div class="faq-item">
-            <button class="faq-item__trigger" aria-expanded="false">
-              Do I need experience to join Casa Blanca?
-              <span class="faq-item__icon">+</span>
-            </button>
-            <div class="faq-item__answer">
-              <div class="faq-item__answer-inner">
-                No experience required. Many of our best agents came from hospitality, finance, teaching, and other fields. What matters is drive and a willingness to learn. We provide all the training and mentorship you need.
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-item__trigger" aria-expanded="false">
-              What's the commission split?
-              <span class="faq-item__icon">+</span>
-            </button>
-            <div class="faq-item__answer">
-              <div class="faq-item__answer-inner">
-                Our splits are among the most competitive in New York. New agents start at 70/30 and move to 80/20 after their first six deals. We don't charge desk fees or monthly minimums.
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-item__trigger" aria-expanded="false">
-              How long does it take to get licensed in NY?
-              <span class="faq-item__icon">+</span>
-            </button>
-            <div class="faq-item__answer">
-              <div class="faq-item__answer-inner">
-                The NYS salesperson license requires 77 hours of coursework and a state exam. Most people complete it in 6–8 weeks while working another job. We'll guide you through the whole process.
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-item__trigger" aria-expanded="false">
-              What if I already have a license at another brokerage?
-              <span class="faq-item__icon">+</span>
-            </button>
-            <div class="faq-item__answer">
-              <div class="faq-item__answer-inner">
-                Transferring your license is straightforward. Reach out and we'll explain the process — it typically takes less than a week. We won't ask you to walk away from active deals you're working.
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-item__trigger" aria-expanded="false">
-              How does the lead assignment work?
-              <span class="faq-item__icon">+</span>
-            </button>
-            <div class="faq-item__answer">
-              <div class="faq-item__answer-inner">
-                Leads are assigned based on neighborhood specialty and availability. Buyer and rental leads come through our platform and are pushed directly to your phone. You have 24 hours to respond before they're reassigned.
-              </div>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <button class="faq-item__trigger" aria-expanded="false">
-              Is this full-time only?
-              <span class="faq-item__icon">+</span>
-            </button>
-            <div class="faq-item__answer">
-              <div class="faq-item__answer-inner">
-                We accept both full-time and part-time agents. That said, our most successful agents treat this like a business. If you're part-time, we'll set expectations up front so everyone's on the same page.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       FOOTER CTA — "JOIN CASA BLANCA. → JUMP START YOUR SALES."
-  ════════════════════════════════════════════════════════════════ -->
-  <footer class="footer-cta" id="join">
-    <div class="container">
-      <h2 class="footer-cta__headline fade-in">
-        Join Casa<br />Blanca.<br />
-        <span class="arrow">→</span> Jump start<br />
-        <span class="line2">your sales.</span>
-      </h2>
-
-      <div class="footer-cta__actions fade-in">
-        <a href="mailto:careers@casa-blanca.com" class="btn btn--white btn--lg">Apply now</a>
-        <a href="tel:+12125550100" class="btn btn--outline-white btn--lg">212-555-0100</a>
-      </div>
-
-      <div class="footer-cta__divider"></div>
-
-      <div class="footer-cta__bottom">
-        <div>
-          <div class="footer-logo">Casa<span>·</span>Blanca</div>
-          <p class="footer-tagline">A boutique NYC brokerage helping agents build careers since 2006.</p>
-        </div>
-
-        <div>
-          <div class="footer-col-title">Company</div>
-          <ul class="footer-col-links">
-            <li><a href="#how-it-works">How It Works</a></li>
-            <li><a href="#tech">Our Tech</a></li>
-            <li><a href="agents/index.html">Our Agents</a></li>
-            <li><a href="#faq">FAQ</a></li>
-          </ul>
-        </div>
-
-        <div>
-          <div class="footer-col-title">Neighborhoods</div>
-          <ul class="footer-col-links">
-            <li><a href="#">Upper West Side</a></li>
-            <li><a href="#">Harlem</a></li>
-            <li><a href="#">Washington Heights</a></li>
-            <li><a href="#">Tribeca</a></li>
-            <li><a href="#">West Village</a></li>
-            <li><a href="#">Park Slope</a></li>
-          </ul>
-        </div>
-
-        <div>
-          <div class="footer-col-title">Contact</div>
-          <ul class="footer-col-links">
-            <li><a href="mailto:careers@casa-blanca.com">careers@casa-blanca.com</a></li>
-            <li><a href="tel:+12125550100">212-555-0100</a></li>
-            <li style="color:rgba(255,255,255,0.25);font-size:0.875rem;line-height:1.7;margin-top:0.5rem;">
-              145 West 57th Street<br />New York, NY 10019
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="footer-legal">
-        <span>© 2025 Casa Blanca Real Estate LLC. All rights reserved. Licensed Real Estate Broker.</span>
-        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;justify-content:center;">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Use</a>
-          <a href="#">Fair Housing Notice</a>
-          <a href="#">REBNY Member</a>
-        </div>
-      </div>
-    </div>
-  </footer>
-
-  <script src="js/nav.js"></script>
-  <script src="js/scroll.js"></script>
-  <script>
-    // FAQ accordion
-    document.querySelectorAll('.faq-item__trigger').forEach(trigger => {
-      trigger.addEventListener('click', () => {
-        const item = trigger.closest('.faq-item');
-        const answer = item.querySelector('.faq-item__answer');
-        const isOpen = item.classList.contains('open');
-
-        // Close all
-        document.querySelectorAll('.faq-item').forEach(i => {
-          i.classList.remove('open');
-          i.querySelector('.faq-item__answer').style.maxHeight = '0';
-          i.querySelector('.faq-item__trigger').setAttribute('aria-expanded', 'false');
-        });
-
-        // Open clicked (if it was closed)
-        if (!isOpen) {
-          item.classList.add('open');
-          answer.style.maxHeight = answer.scrollHeight + 'px';
-          trigger.setAttribute('aria-expanded', 'true');
-        }
-      });
-    });
-  </script>
 </body>
 </html>
