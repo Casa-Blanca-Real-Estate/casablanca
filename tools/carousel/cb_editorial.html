@@ -110,6 +110,16 @@ header .hname{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:
     <div class="etop">
       <div class="toggle-row"><span>Show placeholder text</span><div class="sw-toggle on" id="phToggle"></div></div>
       <div class="accents" id="accents"></div>
+      <div class="impanel" id="impanel">
+        <button class="imhead" id="imToggle" type="button">Import &amp; AI<span id="imChevron">▾</span></button>
+        <div class="imbody" id="imbody" hidden>
+          <input id="imUrl" type="text" placeholder="Paste a StreetEasy listing URL">
+          <div class="imrow"><button class="btn dark" id="imImport" type="button">Import listing</button><button class="btn ghost" id="imAI" type="button">Write captions ✨</button></div>
+          <div class="imstatus" id="imStatus"></div>
+          <div class="imtray" id="imTray"></div>
+          <button class="imlink" id="imSetup" type="button">Set backend URL…</button>
+        </div>
+      </div>
     </div>
     <div class="ebody" id="ebody"></div>
   </div>
@@ -542,7 +552,84 @@ document.getElementById('dlOne').onclick=()=>{downloadCanvas(active);showToast('
 document.getElementById('dlAll').onclick=async()=>{for(let i=0;i<slideCount();i++){downloadCanvas(i);await new Promise(r=>setTimeout(r,350));}showToast('✓ Downloaded all');};
 
 let toastTimer=null;function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');if(toastTimer)clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
-function boot(){buildAccents();buildFilm();buildEditor();renderAll();}
+// ── Import & AI panel (talks to the Netlify backend) ──
+function cbBackend(){return (localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');}
+function cbSetBackend(){const cur=cbBackend();const v=prompt('Backend base URL (your Netlify site, e.g. https://your-site.netlify.app):',cur);if(v!==null){localStorage.setItem('cb_backend',v.trim());showToast('✓ Backend saved');}}
+function imStatus(msg,err){const el=document.getElementById('imStatus');if(!el)return;el.textContent=msg||'';el.className='imstatus'+(err?' err':'');}
+let IMPORTED=null;
+function imgURL(u){const b=cbBackend();return b?b+'/api/img?u='+encodeURIComponent(u):u;}
+
+// load a (proxied) photo URL into a slide image object, as base64 so canvas export stays untainted
+function loadUrlInto(o,url){return fetch(imgURL(url)).then(r=>{if(!r.ok)throw new Error('image '+r.status);return r.blob();})
+  .then(bl=>new Promise((res,rej)=>{const fr=new FileReader();fr.onerror=()=>rej(new Error('read failed'));fr.onload=()=>{const im=new Image();im.onload=()=>{o.img=im;o.src=fr.result;o.ox=0;o.oy=0;o.scale=1;ACTIVEIMG=o;renderAll();res();};im.onerror=()=>rej(new Error('decode failed'));im.src=fr.result;};fr.readAsDataURL(bl);}));}
+
+function targetImg(o){return o&&(o.image||o.top)||null;}
+
+function applyFacts(f){
+  const st={'for sale':'justlisted','in contract':'incontract','sold':'justsold','closed':'closed'};
+  const s=(f.status||'').toLowerCase();
+  for(const k in st){if(s.includes(k)){S.status=st[k];S.cover.badge=STATUSES[S.status].badge;break;}}
+  const lines=[];if(f.neighborhood)lines.push(String(f.neighborhood).toUpperCase());if(f.price)lines.push(f.price);
+  if(lines.length)S.cover.subhead=lines.join('\n');
+  const t=S.mid.find(m=>m.type==='teaser');
+  if(t){if(f.address)t.address=[f.address,f.neighborhood].filter(Boolean).join(', ');if(f.price)t.price=f.price;if(f.agent)t.agent=f.agent;if(f.description)t.descRuns=[{text:f.description,bold:false}];}
+  buildEditor();renderAll();
+}
+
+function renderTray(photos){const tray=document.getElementById('imTray');tray.innerHTML='';
+  if(!photos||!photos.length)return;
+  const hint=document.createElement('div');hint.className='imhint';hint.textContent='Tap a photo to drop it on the current slide:';tray.appendChild(hint);
+  const grid=document.createElement('div');grid.className='imgrid';tray.appendChild(grid);
+  photos.forEach(u=>{const im=document.createElement('img');im.src=imgURL(u);im.loading='lazy';im.title='Use on current slide';
+    im.onclick=()=>{const tgt=targetImg(slideObj(active));if(!tgt){showToast('This slide has no photo to replace');return;}imStatus('Loading photo…');loadUrlInto(tgt,u).then(()=>{buildEditor();imStatus('✓ Photo placed');}).catch(e=>imStatus('Photo failed: '+e.message,true));};
+    grid.appendChild(im);});
+}
+
+function doImport(){if(!cbBackend()){cbSetBackend();if(!cbBackend())return;}
+  const url=(document.getElementById('imUrl').value||'').trim();if(!url){imStatus('Paste a listing URL first',true);return;}
+  imStatus('Importing…');
+  fetch(cbBackend()+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})})
+    .then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'import failed');
+      IMPORTED=j.facts||{};applyFacts(IMPORTED);renderTray(j.photos||[]);
+      imStatus('✓ Imported. '+((j.photos||[]).length)+' photos found; fields filled.');}).catch(e=>imStatus('Import failed: '+e.message,true));
+}
+
+function doAI(){if(!cbBackend()){cbSetBackend();if(!cbBackend())return;}
+  const facts=Object.assign({},IMPORTED||{});
+  const t=S.mid.find(m=>m.type==='teaser');if(t){facts.address=facts.address||t.address;facts.price=facts.price||t.price;facts.agent=facts.agent||t.agent;}
+  const slides=S.mid.filter(m=>m.type!=='teaser').map(m=>({kind:m.type}));
+  imStatus('Writing captions…');
+  fetch(cbBackend()+'/api/copy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({facts,status:S.status,slides})})
+    .then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'copy failed');
+      if(j.coverSubhead)S.cover.subhead=j.coverSubhead;
+      const tt=S.mid.find(m=>m.type==='teaser');if(tt&&j.teaser)tt.descRuns=[{text:j.teaser,bold:false}];
+      const mids=S.mid.filter(m=>m.type!=='teaser');(j.slides||[]).forEach((c,i)=>{const m=mids[i];if(!m)return;const txt=((c.heading?c.heading+'. ':'')+(c.body||'')).trim();if('descRuns'in m)m.descRuns=[{text:txt,bold:false}];if('name'in m&&c.heading)m.name=c.heading;});
+      buildEditor();renderAll();imStatus('✓ Captions written');}).catch(e=>imStatus('AI failed: '+e.message,true));
+}
+
+function initImportPanel(){
+  const css=document.createElement('style');css.textContent=`
+    .impanel{margin-top:14px;border-top:1px solid #e7e3da;padding-top:12px}
+    .imhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;font:inherit;font-weight:600;cursor:pointer;color:#1a1a1a;padding:0}
+    .imhead #imChevron{transition:transform .15s}.imhead.open #imChevron{transform:rotate(180deg)}
+    .imbody{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+    #imUrl{width:100%;padding:8px 10px;border:1px solid #d8d3c8;border-radius:8px;font:inherit;box-sizing:border-box}
+    .imrow{display:flex;gap:8px}.imrow .btn{flex:1}
+    .imstatus{font-size:12px;color:#6b6457;min-height:14px}.imstatus.err{color:#b4452f}
+    .imlink{background:none;border:none;color:#8a8270;font-size:12px;text-decoration:underline;cursor:pointer;align-self:flex-start;padding:0}
+    .imhint{font-size:11px;color:#8a8270;margin-bottom:6px}
+    .imgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .imgrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;background:#eee}
+    .imgrid img:hover{border-color:#aaa3cf}`;
+  document.head.appendChild(css);
+  const tog=document.getElementById('imToggle'),bod=document.getElementById('imbody');
+  tog.onclick=()=>{const hidden=bod.hasAttribute('hidden');if(hidden){bod.removeAttribute('hidden');tog.classList.add('open');}else{bod.setAttribute('hidden','');tog.classList.remove('open');}};
+  document.getElementById('imImport').onclick=doImport;
+  document.getElementById('imAI').onclick=doAI;
+  document.getElementById('imSetup').onclick=cbSetBackend;
+}
+
+function boot(){buildAccents();buildFilm();buildEditor();renderAll();initImportPanel();}
 if(wmImg.complete&&wmImg.naturalWidth)boot();else{wmImg.onload=boot;setTimeout(()=>{if(!document.querySelector('.thumb'))boot();},1500);}
 
 </script>

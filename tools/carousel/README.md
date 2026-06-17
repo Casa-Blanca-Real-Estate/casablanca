@@ -34,6 +34,7 @@ as base64 in the one file.
 - Drag a photo to reposition within its frame; zoom slider for the active photo.
 - Click an empty frame to pick an image.
 - Filmstrip thumbnails with drag-to-reorder (cover is locked first).
+- **Import & AI** panel (sidebar): paste a StreetEasy URL → **Import listing** fills the address/price/agent/description and status, and shows a photo tray (tap a photo to drop it on the current slide); **Write captions ✨** drafts cover/teaser/slide copy in the Casa Blanca voice. Both call the Netlify backend in `netlify/functions/` — set its URL once via "Set backend URL…". Requires `FIRECRAWL_API_KEY` + `ANTHROPIC_API_KEY` in Netlify.
 - **Status selector** (cover): Just Listed / In Contract / Just Sold / Closed — sets the badge text and the teaser price lead-in ("Listed at" / "In contract at" / "Sold for" / "Acquired for"). Both stay editable.
 - Add-slide **dropdown** (Teaser / Single A / Single B / Double A / Building / Neighborhood).
 - Placeholder toggle ghosts unfilled fields at 40%.
