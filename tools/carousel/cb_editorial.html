@@ -678,10 +678,14 @@ function applyFacts(f){
   const st={'for sale':'justlisted','in contract':'incontract','sold':'justsold','closed':'closed'};
   const s=(f.status||'').toLowerCase();
   for(const k in st){if(s.includes(k)){S.status=st[k];S.cover.badge=STATUSES[S.status].badge;break;}}
-  const lines=[];if(f.neighborhood)lines.push(String(f.neighborhood).toUpperCase());if(f.price)lines.push(f.price);
-  if(lines.length)S.cover.subhead=lines.join('\n');
+  if(!(S.cover.subhead||'').trim()){const lines=[];if(f.neighborhood)lines.push(String(f.neighborhood).toUpperCase());if(f.price)lines.push(f.price);if(lines.length)S.cover.subhead=lines.join('\n');}
   const t=S.mid.find(m=>m.type==='teaser');
-  if(t){if(f.address)t.address=[f.address,f.neighborhood].filter(Boolean).join(', ');if(f.price)t.price=f.price;if(f.agent)t.agent=f.agent;if(f.description)t.descRuns=[{text:f.description,bold:false}];}
+  if(t){ // only fill EMPTY fields — never override what's already typed
+    if(f.address&&!(t.address||'').trim())t.address=[f.address,f.neighborhood].filter(Boolean).join(', ');
+    if(f.price&&!(t.price||'').trim())t.price=f.price;
+    if(f.agent&&!(t.agent||'').trim())t.agent=f.agent;
+    if(f.description&&!(t.descRuns&&t.descRuns.length))t.descRuns=[{text:f.description,bold:false}];
+  }
   buildEditor();renderAll();
 }
 
@@ -696,11 +700,14 @@ function renderTray(photos){const tray=document.getElementById('imTray');tray.in
 
 function doImport(){
   const url=(document.getElementById('imUrl').value||'').trim();if(!url){imStatus('Paste a listing URL first',true);return;}
-  imStatus('Importing…');
-  fetch(cbBackend()+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})})
+  const t0=Date.now(); const ti=setInterval(()=>imStatus('Importing… '+Math.round((Date.now()-t0)/1000)+'s'),250); imStatus('Importing… 0s');
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),95000);
+  fetch(cbBackend()+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:ctl.signal})
     .then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'import failed');
       IMPORTED=j.facts||{};applyFacts(IMPORTED);renderTray(j.photos||[]);
-      imStatus('✓ Imported. '+((j.photos||[]).length)+' photos found; fields filled.');}).catch(e=>imStatus('Import failed: '+e.message,true));
+      imStatus('✓ Imported. '+((j.photos||[]).length)+' photos found; empty fields filled.');})
+    .catch(e=>imStatus(e&&e.name==='AbortError'?'Import timed out (95s) — try again':('Import failed: '+e.message),true))
+    .finally(()=>{clearInterval(ti);clearTimeout(to);});
 }
 
 function doAI(){
