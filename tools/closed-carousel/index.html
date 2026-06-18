@@ -2487,6 +2487,7 @@ function addBulkRow() {
   row.className = 'bulk-row';
   row.innerHTML =
     '<div class="bulk-row-head">' +
+      '<span class="bulk-drag" draggable="true" title="Drag to reorder" style="cursor:grab;color:#888680;font-size:13px;user-select:none;padding:0 2px;">⠿</span>' +
       '<span class="bulk-row-num">#' + bulkRowCount + '</span>' +
       '<input type="text" class="bulk-se-url" placeholder="StreetEasy URL (optional)">' +
       '<button class="btn-s bulk-fetch">Fetch →</button>' +
@@ -2508,6 +2509,14 @@ function renumberBulkRows() {
     r.querySelector('.bulk-row-num').textContent = '#' + (i + 1);
   });
 }
+
+(function(){
+  var rowsEl=document.getElementById('bulk-rows'); if(!rowsEl||rowsEl.__dnd) return; rowsEl.__dnd=true; var dragRow=null;
+  rowsEl.addEventListener('dragstart',function(e){ var h=e.target.closest&&e.target.closest('.bulk-drag'); if(!h) return; dragRow=h.closest('.bulk-row'); e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain','');}catch(_){}; if(dragRow) dragRow.style.opacity='.5'; });
+  rowsEl.addEventListener('dragend',function(){ if(dragRow) dragRow.style.opacity=''; dragRow=null; renumberBulkRows(); });
+  rowsEl.addEventListener('dragover',function(e){ if(!dragRow) return; e.preventDefault(); var tgt=e.target.closest&&e.target.closest('.bulk-row'); if(!tgt||tgt===dragRow) return; var r=tgt.getBoundingClientRect(); var after=(e.clientY-r.top)>r.height/2; tgt.parentNode.insertBefore(dragRow, after?tgt.nextSibling:tgt); });
+  rowsEl.addEventListener('drop',function(e){ e.preventDefault(); });
+})();
 
 function openBulkModal() {
   const rows = document.getElementById('bulk-rows');
