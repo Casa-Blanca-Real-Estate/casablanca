@@ -17,7 +17,7 @@
     --muted:#888680; --line:#dddbd5; --mc:#ffe01b;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--paper);color:var(--ink);
+  body{margin:0;background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;
     font-family:'Object Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
   a{color:inherit;text-decoration:none}
 
@@ -32,7 +32,12 @@
   .hero h1 em{font-style:italic;font-weight:400;color:var(--accent)}
   .hero p{margin:0;color:#bdbab4;font-size:clamp(14px,1.7vw,16px);max-width:60ch}
 
-  main{padding:clamp(28px,4vw,48px) clamp(20px,5vw,56px) 48px;max-width:1200px;margin:0 auto}
+  main{padding:clamp(28px,4vw,48px) clamp(20px,5vw,56px) 48px;max-width:1200px;margin:0 auto;width:100%;flex:1 0 auto}
+  .group-title{font-size:clamp(21px,3vw,27px);font-weight:800;letter-spacing:-.015em;margin:44px 0 20px;
+    display:flex;align-items:baseline;gap:12px;border-top:1px solid var(--line);padding-top:22px}
+  .group:first-child .group-title{margin-top:6px}
+  .group-title .gn{font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--muted)}
+  .chip.pdf{color:#fff;background:#b4452f}
   .sec-label{display:flex;align-items:baseline;gap:12px;font-size:11px;letter-spacing:.28em;text-transform:uppercase;
     color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin:36px 0 24px}
   .sec-label .note{letter-spacing:.02em;text-transform:none;font-size:12px;color:#a9a59c}
@@ -104,7 +109,10 @@
 </section>
 
 <main>
-  <div class="grid">
+
+  <div class="group">
+    <h2 class="group-title">Instagram <span class="gn">— social carousels</span></h2>
+    <div class="grid">
 
     <a class="tool" href="tools/carousel/cb_editorial.html">
       <div class="thumb"><img src="assets/thumbs/editorial.jpg" alt="Editorial Carousel Builder preview" loading="lazy"></div>
@@ -136,6 +144,13 @@
       </div>
     </a>
 
+    </div>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">Internal <span class="gn">— brand assets &amp; guides</span></h2>
+    <div class="grid">
+
     <a class="tool" href="tools/business-card/">
       <div class="thumb"><img src="assets/thumbs/bizcard.jpg" alt="Business Card Generator preview" loading="lazy"></div>
       <div class="meta">
@@ -156,11 +171,25 @@
       </div>
     </a>
 
-    <a class="tool" href="https://docs.google.com/forms/d/e/1FAIpQLSeKggwwRk7MB2oidHKwZk6E-qVkhW3k2Ig0exbB8XCbxKX_Pw/viewform" target="_blank" rel="noopener">
-      <div class="thumb ph">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-        <span class="mcwm"><span class="d"></span>via Mailchimp</span>
+    <a class="tool" href="assets/biz-card-ordering-guide.pdf" target="_blank" rel="noopener">
+      <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span class="mcwm">PDF guide</span></div>
+      <div class="meta">
+        <div class="tags"><span class="chip internal">Internal</span><span class="chip pdf">PDF</span></div>
+        <h3>Business Card Ordering Guide</h3>
+        <p>How to order printed cards — specs and vendor steps (PDF).</p>
+        <span class="open">Open <span class="arr">→</span></span>
       </div>
+    </a>
+
+    </div>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">Forms <span class="gn">— intake</span></h2>
+    <div class="grid">
+
+    <a class="tool" href="https://docs.google.com/forms/d/e/1FAIpQLSeKggwwRk7MB2oidHKwZk6E-qVkhW3k2Ig0exbB8XCbxKX_Pw/viewform" target="_blank" rel="noopener">
+      <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="mcwm"><span class="d"></span>via Mailchimp</span></div>
       <div class="meta">
         <div class="tags"><span class="chip form">Form</span><span class="chip mc">Mailchimp</span></div>
         <h3>ISO Request Form</h3>
@@ -169,21 +198,24 @@
       </div>
     </a>
 
+    </div>
   </div>
 
   <!-- Members / dev — hidden until Dev sign-in -->
-  <section id="members" hidden>
-    <p class="sec-label">Members <span class="note">— signed in</span></p>
+  <section id="members" class="group" hidden>
+    <h2 class="group-title">Members <span class="gn">— signed in</span></h2>
     <div class="grid">
-      <a class="tool" href="tools/profile-pic/">
-        <div class="thumb"><img src="assets/thumbs/profilepic.jpg" alt="Profile Pic Generator preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip members">Members</span></div>
-          <h3>Profile Pic Generator</h3>
-          <p>Branded agent headshots — background removed in-browser.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
+
+    <a class="tool" href="tools/profile-pic/">
+      <div class="thumb"><img src="assets/thumbs/profilepic.jpg" alt="Profile Pic Generator preview" loading="lazy"></div>
+      <div class="meta">
+        <div class="tags"><span class="chip members">Members</span></div>
+        <h3>Profile Pic Generator</h3>
+        <p>Branded agent headshots — background removed in-browser.</p>
+        <span class="open">Open <span class="arr">→</span></span>
+      </div>
+    </a>
+
     </div>
   </section>
 </main>

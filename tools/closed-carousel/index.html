@@ -202,7 +202,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
 .dev-modal textarea { width:100%; box-sizing:border-box; min-height:200px; padding:10px; background:#111; color:var(--fg); border:1px solid var(--bdr); border-radius:6px; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:11px; line-height:1.5; resize:vertical; outline:none; }
 .dev-modal textarea:focus { border-color:var(--lav); }
 .bulk-modal { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:9999; display:flex; align-items:center; justify-content:center; padding:24px; }
-.bulk-modal-inner { background:var(--card); border:1px solid var(--bdr); border-radius:8px; max-width:1100px; width:100%; max-height:90vh; overflow-y:auto; padding:20px 24px; position:relative; }
+.bulk-modal-inner { background:#fff; box-shadow:0 40px 90px -30px rgba(0,0,0,.55); border:1px solid var(--bdr); border-radius:8px; max-width:1100px; width:100%; max-height:90vh; overflow-y:auto; padding:20px 24px; position:relative; }
 .bulk-modal-close { position:absolute; top:14px; right:14px; background:transparent; border:none; color:var(--fg); font-size:18px; cursor:pointer; padding:6px 10px; }
 .bulk-modal h3 { font-family:'ObjectSansHeavy',sans-serif; font-size:14px; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px 0; }
 .bulk-modal p { font-size:11px; color:var(--mid); margin:0 0 16px 0; line-height:1.5; }
@@ -1904,8 +1904,8 @@ async function loadSessions() {
   } catch(e) { return []; }
 }
 
-async function saveSession() {
-  const session = {
+function serializeSession() {
+  return {
     savedAt: new Date().toISOString(),
     date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
     accent: S.accent,
@@ -1917,6 +1917,9 @@ async function saveSession() {
       price: d.price||'', description: d.description||'',
     }))
   };
+}
+async function saveSession() {
+  const session = serializeSession();
   try {
     const res = await fetch('/.netlify/functions/sessions', {
       method: 'POST',
@@ -1940,9 +1943,8 @@ async function saveSession() {
   }
 }
 
-async function restoreSession(idx) {
-  const sessions = await loadSessions();
-  const s = sessions[idx]; if (!s) return;
+function applySession(s) {
+  if (!s) return;
   S.accent = s.accent || '#aaa3cf';
   S.coverSrc = s.coverSrc||''; S.coverOX = s.coverOX||0; S.coverOY = s.coverOY||0; S.coverScale = s.coverScale||1; S.coverSourceIdx = s.coverSourceIdx ?? 1;
   if (s.coverSrc) {
@@ -1966,6 +1968,11 @@ async function restoreSession(idx) {
   document.getElementById('cust-sw').value=S.accent;
   document.querySelectorAll('.sw').forEach(sw=>sw.classList.toggle('on',sw.dataset.c===S.accent));
   buildStrip(); showPanel(); syncForm();
+}
+async function restoreSession(idx) {
+  const sessions = await loadSessions();
+  const s = sessions[idx]; if (!s) return;
+  applySession(s);
   showToast(`✓ Session restored — ${S.deals.length} deal${S.deals.length!==1?'s':''}`);
 }
 
@@ -2258,13 +2265,18 @@ document.getElementById('btn-se-fetch').addEventListener('click', async () => {
 
   const btn = document.getElementById('btn-se-fetch');
   const oldTxt = btn.textContent;
-  btn.textContent = '⌛ Fetching…'; btn.disabled = true;
+  btn.disabled = true;
+  const _t0 = Date.now();
+  const _ti = setInterval(() => { btn.textContent = '⌛ ' + Math.round((Date.now()-_t0)/1000) + 's'; }, 250);
+  const _ctl = new AbortController();
+  const _to = setTimeout(() => _ctl.abort(), 90000);
 
   try {
     const res = await fetch('/.netlify/functions/streeteasy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url }),
+      signal: _ctl.signal
     });
 
     if (!res.ok) {
@@ -2282,13 +2294,16 @@ document.getElementById('btn-se-fetch').addEventListener('click', async () => {
     const d = activeDeal();
     if (!d) return;
 
-    let filled = [];
-    if (data.address) { d.address = data.address; document.getElementById('i-addr').value = data.address; filled.push('address'); }
-    if (data.neighborhood) { d.neighborhood = data.neighborhood; document.getElementById('i-nbr').value = data.neighborhood; filled.push('neighborhood'); }
-    if (data.price) { d.price = data.price; document.getElementById('i-price').value = data.price; filled.push('price'); }
-    if (data.description) { d.description = data.description; document.getElementById('i-desc').value = data.description; updateCharCount(); filled.push('description'); }
+    let filled = [], kept = [];
+    const aEl=document.getElementById('i-addr'), nEl=document.getElementById('i-nbr'),
+          pEl=document.getElementById('i-price'), dEl=document.getElementById('i-desc');
+    // Only fill EMPTY fields — never override what's already there.
+    if (data.address) { if(!aEl.value.trim()){ d.address=data.address; aEl.value=data.address; filled.push('address'); } else kept.push('address'); }
+    if (data.neighborhood) { if(!nEl.value.trim()){ d.neighborhood=data.neighborhood; nEl.value=data.neighborhood; filled.push('neighborhood'); } else kept.push('neighborhood'); }
+    if (data.price) { if(!pEl.value.trim()){ d.price=data.price; pEl.value=data.price; filled.push('price'); } else kept.push('price'); }
+    if (data.description) { if(!dEl.value.trim()){ d.description=data.description; dEl.value=data.description; updateCharCount(); filled.push('description'); } else kept.push('description'); }
 
-    if (data.heroImage) {
+    if (data.heroImage && !d.propImg) {
       const img = new Image();
       img.onload = () => {
         d.propImg = img; d.propSrc = data.heroImage;
@@ -2321,12 +2336,14 @@ document.getElementById('btn-se-fetch').addEventListener('click', async () => {
 
     renderCanvas(activeIdx);
     updateStripLabel(activeIdx);
-    showToast('✓ Filled: ' + (filled.length ? filled.join(', ') : 'nothing extracted'));
+    showToast(filled.length ? ('✓ Filled: ' + filled.join(', ') + (kept.length?' · kept '+kept.join(', '):'')) : (kept.length ? '✓ Kept existing: ' + kept.join(', ') : '✓ Nothing extracted'));
   } catch(e) {
     console.warn('SE fetch failed', e);
-    showToast('✗ Could not reach StreetEasy fetch endpoint');
+    showToast(e && e.name === 'AbortError'
+      ? '✗ Fetch timed out at 90s — StreetEasy/Firecrawl was too slow. Try again.'
+      : '✗ Could not reach StreetEasy fetch endpoint');
   } finally {
-    btn.textContent = oldTxt; btn.disabled = false;
+    clearInterval(_ti); clearTimeout(_to); btn.textContent = oldTxt; btn.disabled = false;
   }
 });
 
@@ -2506,11 +2523,16 @@ document.getElementById('bulk-rows').addEventListener('click', async (e) => {
     const url = row.querySelector('.bulk-se-url').value.trim();
     if (!url) { showToast('Paste a StreetEasy URL in that row first'); return; }
     const btn = e.target;
-    const oldTxt = btn.textContent; btn.textContent = '⌛'; btn.disabled = true;
+    const oldTxt = btn.textContent; btn.disabled = true;
+    const _t0 = Date.now();
+    const _ti = setInterval(() => { btn.textContent = '⌛ ' + Math.round((Date.now()-_t0)/1000) + 's'; }, 250);
+    const _ctl = new AbortController();
+    const _to = setTimeout(() => _ctl.abort(), 90000);
     try {
       const res = await fetch('/.netlify/functions/streeteasy', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url }),
+        signal: _ctl.signal
       });
       if (!res.ok) {
         let msg = 'fetch ' + res.status;
@@ -2518,17 +2540,21 @@ document.getElementById('bulk-rows').addEventListener('click', async (e) => {
         showToast('✗ ' + msg); return;
       }
       const data = await res.json();
-      if (data.address)      row.querySelector('.bulk-address').value = data.address;
-      if (data.neighborhood) row.querySelector('.bulk-nbr').value = data.neighborhood;
-      if (data.price)        row.querySelector('.bulk-price').value = data.price;
-      if (data.description)  row.querySelector('.bulk-desc').value = data.description;
-      // stash hero image on the row element for create step
-      row.dataset.heroImage = data.heroImage || '';
+      // Only fill EMPTY fields — never override what's already typed.
+      const _a=row.querySelector('.bulk-address'), _n=row.querySelector('.bulk-nbr'),
+            _p=row.querySelector('.bulk-price'), _d=row.querySelector('.bulk-desc');
+      if (data.address && !_a.value.trim())      _a.value = data.address;
+      if (data.neighborhood && !_n.value.trim()) _n.value = data.neighborhood;
+      if (data.price && !_p.value.trim())        _p.value = data.price;
+      if (data.description && !_d.value.trim())  _d.value = data.description;
+      if (data.heroImage && !row.dataset.heroImage) row.dataset.heroImage = data.heroImage;
       showToast('✓ Row filled from StreetEasy');
     } catch(err) {
-      showToast('✗ Could not reach StreetEasy endpoint');
+      showToast(err && err.name === 'AbortError'
+        ? '✗ Row timed out at 90s — try again'
+        : '✗ Could not reach StreetEasy endpoint');
     } finally {
-      btn.textContent = oldTxt; btn.disabled = false;
+      clearInterval(_ti); clearTimeout(_to); btn.textContent = oldTxt; btn.disabled = false;
     }
   }
 });
@@ -2638,6 +2664,33 @@ document.getElementById('btn-bulk').addEventListener('click', openBulkModal);
 document.getElementById('bulk-add-row').addEventListener('click', addBulkRow);
 document.getElementById('bulk-modal-close').addEventListener('click', closeBulkModal);
 document.getElementById('bulk-modal').addEventListener('click', (e) => { if (e.target.id === 'bulk-modal') closeBulkModal(); });
+
+// ── Auto-save (local, dev-only): persist unsaved work across reloads on this device ──
+const AUTOSAVE_KEY = 'cb_autosave_closed';
+const _AUTH = ['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+function devAuthed(){ return _AUTH.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase()) !== -1; }
+function autosaveHasContent(s){ return !!(s && ((s.deals && s.deals.some(d=>d.address||d.price||d.description||d.agentName||d.propSrc||d.agentSrc)) || s.coverSrc)); }
+function autosave(){
+  if(!devAuthed()) return;
+  let s; try{ s = serializeSession(); }catch(e){ return; }
+  if(!autosaveHasContent(s)){ try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(e){} return; }
+  try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }
+  catch(e){ // quota (base64 images too big) → keep text only
+    try{ s.coverSrc=''; s.deals.forEach(d=>{ d.agentSrc=''; d.propSrc=''; }); localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }catch(_){}
+  }
+}
+window.addEventListener('pagehide', autosave);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') autosave(); });
+setInterval(autosave, 15000);
+(function maybeAutoRestore(){
+  if(!devAuthed()) return;
+  let raw; try{ raw = localStorage.getItem(AUTOSAVE_KEY); }catch(e){ return; }
+  if(!raw) return;
+  let s; try{ s = JSON.parse(raw); }catch(e){ return; }
+  if(!autosaveHasContent(s)) return;
+  applySession(s);
+  setTimeout(()=>showToast('↩ Restored your last session on this device'), 400);
+})();
 
 document.fonts.ready.then(()=>{ if(readyCt>=3) renderAll(); });
 

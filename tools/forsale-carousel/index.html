@@ -470,6 +470,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
       <div class="lbl">Deal Info</div>
       <div class="ig">
         <div class="igrp ig-full">
+          <label for="i-posttitle">Post title <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— shows on every listing slide</span></label>
+          <input type="text" id="i-posttitle" placeholder="3 Upper East Side Apartments ~$400K">
+        </div>
+        <div class="igrp ig-full">
           <label for="i-se-url">StreetEasy URL <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— paste to auto-fill below</span></label>
           <div style="display:flex;gap:6px;">
             <input type="text" id="i-se-url" placeholder="https://streeteasy.com/building/..." style="flex:1;">
@@ -484,9 +488,13 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
           <label for="i-nbr">Neighborhood</label>
           <input type="text" id="i-nbr" placeholder="TRIBECA">
         </div>
-        <div class="igrp ig-full">
+        <div class="igrp">
           <label for="i-price">Price</label>
           <input type="text" id="i-price" placeholder="1.5M">
+        </div>
+        <div class="igrp">
+          <label for="i-beds">Beds / Baths</label>
+          <input type="text" id="i-beds" placeholder="Studio, 1 BA">
         </div>
         <div class="igrp ig-full">
           <label for="i-desc">Listing Description</label>
@@ -680,7 +688,7 @@ function makeDeal() {
   return {
     agentImg:null, agentSrc:'', agentName:'',
     propImg:null,  propSrc:'', propOX:0, propOY:0, propScale:1,
-    address:'', neighborhood:'', price:'', description:''
+    address:'', neighborhood:'', price:'', bedsBaths:'', description:''
   };
 }
 
@@ -688,6 +696,7 @@ const S = {
   accent:    '#aaa3cf',
   coverImg:  null, coverSrc:'',
   coverOX:0, coverOY:0, coverScale:1, coverSourceIdx:1,
+  postTitle: '',
   deals:     [makeDeal()],
 };
 let activeIdx = 1; // 0=cover, 1..N=deals, N+1=end
@@ -886,6 +895,8 @@ function syncForm() {
   document.getElementById('i-nbr').value   = d.neighborhood;
   document.getElementById('i-price').value = d.price;
   document.getElementById('i-desc').value  = d.description;
+  document.getElementById('i-beds').value  = d.bedsBaths||'';
+  document.getElementById('i-posttitle').value = S.postTitle||'';
   updateCharCount();
   syncDZ('dz-agent','th-agent', d.agentSrc);
   // Property: always clear first (fixes stale manip view when switching slides)
@@ -1017,7 +1028,7 @@ function drawWM(ctx, x, y, h, align='left') {
 // ═══════════════════════════════════════════════════
 const COV = {
   TX:50, TY:55, FONT_SZ:129, LINE_H:121, TRACK:-6.46,
-  SUB_X:108, SUB_Y:294, SUB_SZ:23, SUB_TRACK:-1.15,
+  SUB_X:108, SUB_Y:170, SUB_SZ:23, SUB_TRACK:-1.15,
   WM_X:359, WM_Y:1259, WM_W:363,
 };
 function drawCover(cv) {
@@ -1045,93 +1056,97 @@ const T = {
   ADDR_X:395,ADDR_Y:372,ADDR_LH:67,ADDR_MAX_W:656,
   DESC_SZ:31,DESC_LH:31,DESC_TRACK:-1.56,
 };
+function getWMB(){
+  if (getWMB._c) return getWMB._c;
+  const base=getWMT(); if(!base) return null;           // white glyphs on transparent
+  const oc=document.createElement('canvas'); oc.width=base.width; oc.height=base.height;
+  const c=oc.getContext('2d'); c.drawImage(base,0,0);
+  const id=c.getImageData(0,0,oc.width,oc.height), d=id.data;
+  for (let i=0;i<d.length;i+=4){ if (d[i+3]>10){ d[i]=15; d[i+1]=15; d[i+2]=15; } }  // → black glyphs
+  c.putImageData(id,0,0); getWMB._c=oc; return oc;
+}
 function drawDeal(cv, deal) {
   const ctx=cv.getContext('2d');
-  if (tmplImg.complete&&tmplImg.naturalWidth) ctx.drawImage(tmplImg,0,0,W,H);
-  else { ctx.fillStyle='#c7c0b7';ctx.fillRect(0,0,W,H); }
-  // Retarget the baked "CLOSED" + subtitle on the deal template to "FOR SALE"
-  // (For Sale roundup fork; logo+icon top-right are left untouched.)
-  ctx.save();
-  ctx.fillStyle = '#c7c0b7';
-  ctx.fillRect(0, 0, 800, 220);
-  try{ctx.letterSpacing='-0.05em';}catch(e){}
-  ctx.fillStyle = '#ffffff'; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
-  let sz = 150; ctx.font = f(800, sz);
-  const TXT = 'FOR SALE', MAXW = 680;
-  if (ctx.measureText(TXT).width > MAXW) {
-    sz = Math.floor(sz * MAXW / ctx.measureText(TXT).width);
-    ctx.font = f(800, sz);
-  }
-  ctx.fillText(TXT, 80, 30 + sz * 0.78);
-  try{ctx.letterSpacing='0px';}catch(e){}
-  ctx.font = f(800, 26);
-  ctx.fillText('a Casa Blanca announcement.', 80, 190);
-  ctx.restore();
-  // Agent photo — or gray placeholder
-  if (deal.agentImg) {
-    ctx.save();ctx.beginPath();ctx.rect(T.AGX,T.AGY,T.AGW,T.AGH);ctx.clip();
-    cropFit(ctx,deal.agentImg,T.AGX,T.AGY,T.AGW,T.AGH);
-    ctx.restore();
-  } else {
-    ctx.fillStyle='rgba(0,0,0,0.10)';
-    ctx.fillRect(T.AGX,T.AGY,T.AGW,T.AGH);
-    // Person icon hint
-    ctx.fillStyle='rgba(0,0,0,0.18)';
-    const cx=T.AGX+T.AGW/2, headR=T.AGW*0.18;
-    ctx.beginPath();ctx.arc(cx,T.AGY+T.AGH*0.35,headR,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(cx,T.AGY+T.AGH*0.72,T.AGW*0.26,T.AGH*0.22,0,Math.PI,0,true);
-    ctx.fill();
-  }
-  // Property photo — or gray placeholder
-  if (deal.propImg) {
-    ctx.save();ctx.beginPath();ctx.rect(T.PPX,T.PPY,T.PPW,T.PPH);ctx.clip();
-    cropFit(ctx,deal.propImg,T.PPX,T.PPY,T.PPW,T.PPH,deal.propOX,deal.propOY,deal.propScale);
-    ctx.restore();
-  } else {
-    ctx.fillStyle='rgba(0,0,0,0.10)';
-    ctx.fillRect(T.PPX,T.PPY,T.PPW,T.PPH);
-    // Landscape icon hint
-    ctx.fillStyle='rgba(0,0,0,0.18)';
-    const mX=T.PPX+T.PPW/2, mY=T.PPY+T.PPH/2;
-    const iW=T.PPW*0.18, iH=T.PPH*0.32;
-    ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=6;
-    ctx.strokeRect(mX-iW/2, mY-iH/2, iW, iH);
-    // Mountain shape inside
-    ctx.beginPath();
-    ctx.moveTo(mX-iW*0.45, mY+iH*0.38);
-    ctx.lineTo(mX-iW*0.05, mY-iH*0.1);
-    ctx.lineTo(mX+iW*0.2,  mY+iH*0.1);
-    ctx.lineTo(mX+iW*0.45, mY-iH*0.25);
-    ctx.lineTo(mX+iW*0.45, mY+iH*0.38);
-    ctx.closePath(); ctx.fill();
-    // Sun dot
-    ctx.beginPath();
-    ctx.arc(mX-iW*0.2, mY-iH*0.2, iH*0.1, 0, Math.PI*2);
-    ctx.fill();
-  }
-  // Append comma to address at render time — field stays clean
-  const addrDisplay = deal.address ? deal.address.trimEnd().replace(/,+$/, '') + ',' : '';
-  const priceDisplay = deal.price ? (deal.price.trim().startsWith('$') ? deal.price : '$' + deal.price) : '';
-  const lines=[addrDisplay,deal.neighborhood,priceDisplay].map(s=>(s||'').toUpperCase()).filter(Boolean);
-  if (lines.length) {
-    let sz=68;ctx.font=f(800,sz);
-    const widest=Math.max(...lines.map(l=>ctx.measureText(l).width));
-    if (widest>T.ADDR_MAX_W) sz=Math.floor(sz*T.ADDR_MAX_W/widest);
-    sz=Math.max(sz,28);
-    ctx.font=f(800,sz);ctx.fillStyle='#fff';ctx.textBaseline='alphabetic';ctx.letterSpacing=(sz*-0.05)+'px';
-    const addrLH=sz*(67/68);
-    lines.forEach((l,i)=>ctx.fillText(l,T.ADDR_X,T.ADDR_Y+i*addrLH));
+  const M=44, RX=W-M;
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='left'; ctx.textBaseline='top';
+
+  // top wordmark (black, centered)
+  const wmb=getWMB();
+  if (wmb){ const wh=28, ww=wmb.width*(wh/wmb.height); ctx.drawImage(wmb,(W-ww)/2,42,ww,wh); }
+
+  // post title (accent, centered, up to 2 lines, shrink to fit)
+  let y=92;
+  const post=(S.postTitle||'').trim().toUpperCase();
+  if (post){
+    ctx.fillStyle=S.accent; ctx.textAlign='center';
+    let ptsz=40; const maxW=W-2*M;
+    ctx.font=f(800,ptsz); let lines=wrap(ctx,post,maxW);
+    while (lines.length>2 && ptsz>26){ ptsz-=2; ctx.font=f(800,ptsz); lines=wrap(ctx,post,maxW); }
+    ctx.letterSpacing=(ptsz*-0.02)+'px';
+    const ptlh=ptsz*1.03;
+    lines.slice(0,2).forEach((l,i)=>ctx.fillText(l,W/2,y+i*ptlh));
+    y += Math.min(lines.length,2)*ptlh;
     ctx.letterSpacing='0px';
   }
-  if (deal.description.trim()) {
-    ctx.font=f(400,T.DESC_SZ);ctx.fillStyle='#fff';ctx.textBaseline='top';ctx.letterSpacing=T.DESC_TRACK+'px';
-    const dl=wrap(ctx,deal.description.trim(),T.DW);
-    const maxL=Math.floor(T.DH/T.DESC_LH);
+  ctx.textAlign='left';
+  const headTop = y + 30;
+
+  // RIGHT: price + beds/baths
+  ctx.fillStyle='#0f0f0f'; ctx.textAlign='right';
+  const priceDisp = deal.price ? (deal.price.trim().startsWith('$')?deal.price:'$'+deal.price) : '';
+  const prsz=56; ctx.font=f(800,prsz); ctx.letterSpacing=(prsz*-0.04)+'px';
+  if (priceDisp) ctx.fillText(priceDisp.toUpperCase(), RX, headTop);
+  ctx.letterSpacing='0px';
+  const bb=(deal.bedsBaths||'').trim();
+  const bbsz=33; ctx.font=f(800,bbsz);
+  if (bb) ctx.fillText(bb, RX, headTop + (priceDisp?prsz*1.04:0));
+
+  // LEFT: address + neighborhood (shrink to fit, leave room for the price block)
+  ctx.textAlign='left';
+  const addrDisp = deal.address ? deal.address.trimEnd().replace(/,+$/,'')+',' : '';
+  const addrLines=[addrDisp, deal.neighborhood].map(x=>(x||'').toUpperCase()).filter(Boolean);
+  let asz=52; ctx.font=f(800,asz);
+  const aMaxW = (priceDisp||bb) ? 600 : (W-2*M);
+  let widest=Math.max(0,...addrLines.map(l=>ctx.measureText(l).width));
+  if (widest>aMaxW){ asz=Math.floor(asz*aMaxW/widest); ctx.font=f(800,asz); }
+  const alh=asz*1.0;
+  ctx.letterSpacing=(asz*-0.04)+'px'; ctx.fillStyle='#0f0f0f';
+  addrLines.forEach((l,i)=>ctx.fillText(l, M, headTop + i*alh));
+  ctx.letterSpacing='0px';
+
+  // photo
+  const leftH = addrLines.length*alh;
+  const rightH = (priceDisp?prsz*1.04:0) + (bb?bbsz:0);
+  const PY = headTop + Math.max(leftH, rightH) + 30;
+  const PX=M, PW=W-2*M, PH=Math.max(360, Math.min(640, 1180 - PY));
+  ctx.fillStyle='#e8e4de'; ctx.fillRect(PX,PY,PW,PH);
+  if (deal.propImg){ ctx.save(); ctx.beginPath(); ctx.rect(PX,PY,PW,PH); ctx.clip(); cropFit(ctx,deal.propImg,PX,PY,PW,PH,deal.propOX,deal.propOY,deal.propScale); ctx.restore(); }
+  else { ctx.fillStyle='rgba(0,0,0,.22)'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=f(400,20); ctx.fillText('Drop a property photo', W/2, PY+PH/2); ctx.textAlign='left'; ctx.textBaseline='top'; }
+  const wmw=getWMT()||wmImg;
+  if (wmw){ const wh=24, ww=wmw.width*(wh/wmw.height); ctx.globalAlpha=.95; ctx.drawImage(wmw, PX+PW-ww-18, PY+PH-wh-16, ww, wh); ctx.globalAlpha=1; }
+
+  // description (justified black) below photo
+  const dy = PY+PH+26;
+  if (deal.description.trim()){
+    const dsz=30, dlh=37;
+    ctx.font=f(400,dsz); ctx.fillStyle='#0f0f0f'; ctx.textBaseline='top'; ctx.letterSpacing='-0.2px';
+    const dl=wrap(ctx,deal.description.trim(),PW);
+    const maxL=Math.max(1, Math.floor((H-96-dy)/dlh));
     const vis=dl.slice(0,maxL);
-    vis.forEach((l,i)=>justified(ctx,l,T.DX,T.DY+i*T.DESC_LH,T.DW,i===vis.length-1));
-    ctx.textBaseline='alphabetic';ctx.letterSpacing='0px';
+    vis.forEach((l,i)=>justified(ctx,l,M,dy+i*dlh,PW,i===vis.length-1));
+    ctx.letterSpacing='0px';
   }
+
+  // AGENT line
+  ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+  if (deal.agentName.trim()){
+    const ay=H-58, agsz=29; ctx.font=f(800,agsz);
+    ctx.fillStyle='#888680'; ctx.fillText('AGENT: ', M, ay);
+    const lw=ctx.measureText('AGENT: ').width;
+    ctx.fillStyle=S.accent; ctx.fillText(deal.agentName.toUpperCase(), M+lw, ay);
+  }
+  ctx.textBaseline='top';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1813,13 +1828,14 @@ setupDZ('dz-cover','f-cover','th-cover',(img,src)=>{
 // ═══════════════════════════════════════════════════
 // TEXT INPUTS
 // ═══════════════════════════════════════════════════
-[['i-addr','address'],['i-nbr','neighborhood'],['i-price','price'],['i-desc','description']].forEach(([id,key])=>{
+[['i-addr','address'],['i-nbr','neighborhood'],['i-price','price'],['i-beds','bedsBaths'],['i-desc','description']].forEach(([id,key])=>{
   document.getElementById(id).addEventListener('input',function(){
     const d=activeDeal(); if(!d) return;
     d[key]=this.value; renderCanvas(activeIdx);
     if (key==='description') updateCharCount();
   });
 });
+document.getElementById('i-posttitle').addEventListener('input',function(){ S.postTitle=this.value; renderAll(); });
 function updateCharCount(){
   const n=document.getElementById('i-desc').value.length;
   const el=document.getElementById('char-cnt');
@@ -1921,19 +1937,22 @@ async function loadSessions() {
   } catch(e) { return []; }
 }
 
-async function saveSession() {
-  const session = {
+function serializeSession() {
+  return {
     savedAt: new Date().toISOString(),
     date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
-    accent: S.accent,
+    accent: S.accent, postTitle: S.postTitle||'',
     coverSrc: S.coverSrc||'', coverOX: S.coverOX, coverOY: S.coverOY, coverScale: S.coverScale, coverSourceIdx: S.coverSourceIdx,
     deals: S.deals.map(d => ({
       agentSrc: d.agentSrc||'', agentName: d.agentName||'',
       propSrc: d.propSrc||'', propOX: d.propOX, propOY: d.propOY, propScale: d.propScale,
-      address: d.address||'', neighborhood: d.neighborhood||'',
+      address: d.address||'', neighborhood: d.neighborhood||'', bedsBaths: d.bedsBaths||'',
       price: d.price||'', description: d.description||'',
     }))
   };
+}
+async function saveSession() {
+  const session = serializeSession();
   try {
     const res = await fetch('/.netlify/functions/sessions', {
       method: 'POST',
@@ -1957,10 +1976,10 @@ async function saveSession() {
   }
 }
 
-async function restoreSession(idx) {
-  const sessions = await loadSessions();
-  const s = sessions[idx]; if (!s) return;
+function applySession(s) {
+  if (!s) return;
   S.accent = s.accent || '#aaa3cf';
+  S.postTitle = s.postTitle||'';
   S.coverSrc = s.coverSrc||''; S.coverOX = s.coverOX||0; S.coverOY = s.coverOY||0; S.coverScale = s.coverScale||1; S.coverSourceIdx = s.coverSourceIdx ?? 1;
   if (s.coverSrc) {
     const img = new Image();
@@ -1971,7 +1990,7 @@ async function restoreSession(idx) {
     const deal = makeDeal();
     deal.agentName=d.agentName||''; deal.address=d.address||'';
     deal.neighborhood=d.neighborhood||''; deal.price=d.price||'';
-    deal.description=d.description||'';
+    deal.bedsBaths=d.bedsBaths||''; deal.description=d.description||'';
     deal.agentSrc=d.agentSrc||''; deal.propSrc=d.propSrc||'';
     deal.propOX=d.propOX||0; deal.propOY=d.propOY||0; deal.propScale=d.propScale||1;
     if (d.agentSrc) { const img=new Image(); img.src=d.agentSrc; deal.agentImg=img; img.onload=()=>{ const i=S.deals.indexOf(deal)+1; renderCanvas(i); }; }
@@ -1983,6 +2002,11 @@ async function restoreSession(idx) {
   document.getElementById('cust-sw').value=S.accent;
   document.querySelectorAll('.sw').forEach(sw=>sw.classList.toggle('on',sw.dataset.c===S.accent));
   buildStrip(); showPanel(); syncForm();
+}
+async function restoreSession(idx) {
+  const sessions = await loadSessions();
+  const s = sessions[idx]; if (!s) return;
+  applySession(s);
   showToast(`✓ Session restored — ${S.deals.length} deal${S.deals.length!==1?'s':''}`);
 }
 
@@ -2109,7 +2133,7 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
   activeIdx=1;
   document.getElementById('cust-sw').value='#aaa3cf';
   document.querySelectorAll('.sw').forEach((s,i)=>s.classList.toggle('on',i===0));
-  ['i-addr','i-nbr','i-price','i-desc'].forEach(id=>document.getElementById(id).value='');
+  ['i-addr','i-nbr','i-price','i-beds','i-desc'].forEach(id=>document.getElementById(id).value='');
   ['dz-cover','dz-agent','dz-prop'].forEach(id=>{
     const dz=document.getElementById(id);
     clearManipView(dz); // remove any manip overlay first
@@ -2655,6 +2679,31 @@ document.getElementById('btn-bulk').addEventListener('click', openBulkModal);
 document.getElementById('bulk-add-row').addEventListener('click', addBulkRow);
 document.getElementById('bulk-modal-close').addEventListener('click', closeBulkModal);
 document.getElementById('bulk-modal').addEventListener('click', (e) => { if (e.target.id === 'bulk-modal') closeBulkModal(); });
+
+// ── Auto-save (local, dev-only): persist unsaved work across reloads on this device ──
+const AUTOSAVE_KEY = 'cb_autosave_forsale';
+const _AUTH = ['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+function devAuthed(){ return _AUTH.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase()) !== -1; }
+function autosaveHasContent(s){ return !!(s && ((s.deals && s.deals.some(d=>d.address||d.price||d.description||d.agentName||d.propSrc||d.agentSrc)) || s.coverSrc)); }
+function autosave(){
+  if(!devAuthed()) return;
+  let s; try{ s = serializeSession(); }catch(e){ return; }
+  if(!autosaveHasContent(s)){ try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(e){} return; }
+  try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }
+  catch(e){ try{ s.coverSrc=''; s.deals.forEach(d=>{ d.agentSrc=''; d.propSrc=''; }); localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }catch(_){} }
+}
+window.addEventListener('pagehide', autosave);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') autosave(); });
+setInterval(autosave, 15000);
+(function maybeAutoRestore(){
+  if(!devAuthed()) return;
+  let raw; try{ raw = localStorage.getItem(AUTOSAVE_KEY); }catch(e){ return; }
+  if(!raw) return;
+  let s; try{ s = JSON.parse(raw); }catch(e){ return; }
+  if(!autosaveHasContent(s)) return;
+  applySession(s);
+  setTimeout(()=>showToast('↩ Restored your last session on this device'), 400);
+})();
 
 document.fonts.ready.then(()=>{ if(readyCt>=3) renderAll(); });
 
