@@ -393,6 +393,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
     <button class="btn-s" id="btn-quick-save" title="Save session to history without downloading">☰ Save</button>
     <button class="btn-s" id="btn-quick-dl" title="Download all slides">↓ All</button>
     <button class="btn-s" id="btn-bulk" title="Create multiple deals at once">✚ Bulk Create</button>
+    <button class="btn-s" id="btn-clear" title="Clear all slides and start fresh">⟲ New</button>
+    <span class="save-status" id="save-status" style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#888680;align-self:center;margin-left:2px;">✓ Saved</span>
     <span class="strip-hint">click to select &nbsp;·&nbsp; hover to ↓ or 🗑 &nbsp;·&nbsp; drag to reorder</span>
   </div>
 </div>
@@ -667,6 +669,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
     <button class="bulk-modal-close" id="bulk-modal-close">✕</button>
     <h3>Bulk Create Deals</h3>
     <p>One row per deal. Paste a StreetEasy URL and hit Fetch to auto-fill that row, or type fields manually. Descriptions are condensed on create. Agent names matching your library get their photo attached automatically.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-start;"><textarea id="bulk-paste" rows="2" placeholder="Paste StreetEasy URLs — one per line — then Add rows" style="flex:1;padding:8px 10px;border:1px solid var(--bdr);border-radius:5px;font:inherit;font-size:11px;resize:vertical;"></textarea><button class="btn-s" id="bulk-paste-add" style="white-space:nowrap;">+ Add rows</button></div>
     <div id="bulk-rows"></div>
     <button class="btn-s" id="bulk-add-row" style="margin-top:4px;">＋ Add Row</button>
     <div class="bulk-modal-actions">
@@ -2696,6 +2699,7 @@ function autosave(){
   if(!autosaveHasContent(s)){ try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(e){} return; }
   try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }
   catch(e){ try{ s.coverSrc=''; s.deals.forEach(d=>{ d.agentSrc=''; d.propSrc=''; }); localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }catch(_){} }
+  if(typeof markSaved==='function') markSaved();
 }
 window.addEventListener('pagehide', autosave);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') autosave(); });
@@ -2713,6 +2717,48 @@ setInterval(autosave, 15000);
 document.fonts.ready.then(()=>{ if(readyCt>=3) renderAll(); });
 
 renderHistoryPanel();
+
+// ── QoL: Saved/Unsaved indicator, Clear, Paste-URLs, keyboard ──
+function sessionSig(){ try{ var s=serializeSession(); return JSON.stringify([S.accent, S.postTitle||'', (S.coverSrc||'').length, s.deals.map(function(d){return [d.address,d.price,d.neighborhood,d.bedsBaths||'',d.description,d.agentName,(d.propSrc||'').length,(d.agentSrc||'').length];})]); }catch(e){ return 'sig-'+Date.now(); } }
+var _savedSig = sessionSig();
+function markSaved(){ _savedSig = sessionSig(); refreshSaveStatus(); }
+function refreshSaveStatus(){ var el=document.getElementById('save-status'); if(!el) return; if(!devAuthed()){ el.textContent='Not signed in'; el.style.color='#b4452f'; return; } var dirty = sessionSig()!==_savedSig; el.textContent = dirty ? '• Unsaved' : '✓ Saved'; el.style.color = dirty ? '#b4452f' : '#888680'; }
+setInterval(refreshSaveStatus, 1500); refreshSaveStatus();
+
+var _btnClear=document.getElementById('btn-clear');
+if(_btnClear) _btnClear.addEventListener('click', function(){
+  if(!confirm('Start fresh? This clears all current slides on this device.')) return;
+  try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(e){}
+  S.accent='#aaa3cf'; S.coverImg=null; S.coverSrc=''; S.coverOX=0; S.coverOY=0; S.coverScale=1; S.coverSourceIdx=1;
+  if('postTitle' in S) S.postTitle='';
+  S.deals=[makeDeal()]; activeIdx=1;
+  buildStrip(); showPanel(); syncForm(); if(typeof updateDlBtn==='function') updateDlBtn(); if(typeof renderAll==='function') renderAll();
+  markSaved(); showToast('✓ Started fresh');
+});
+
+var _pasteAdd=document.getElementById('bulk-paste-add');
+if(_pasteAdd) _pasteAdd.addEventListener('click', function(){
+  var ta=document.getElementById('bulk-paste'); if(!ta) return;
+  var urls=ta.value.split(/\n+/).map(function(x){return x.trim();}).filter(function(x){return /^https?:\/\//i.test(x);});
+  if(!urls.length){ showToast('Paste one StreetEasy URL per line'); return; }
+  urls.forEach(function(u){
+    var rows=Array.prototype.slice.call(document.querySelectorAll('#bulk-rows .bulk-row'));
+    var row=rows.filter(function(r){ return !r.querySelector('.bulk-se-url').value.trim(); })[0];
+    if(!row){ addBulkRow(); row=document.querySelector('#bulk-rows .bulk-row:last-child'); }
+    row.querySelector('.bulk-se-url').value=u;
+  });
+  ta.value=''; showToast('✓ Added '+urls.length+' row'+(urls.length!==1?'s':''));
+});
+
+document.addEventListener('keydown', function(e){
+  var t=e.target, inField = t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
+  if(e.key==='Escape'){ var m=document.getElementById('bulk-modal'); if(m && !m.classList.contains('hidden')){ closeBulkModal(); return; } }
+  if(!inField && !e.metaKey && !e.ctrlKey && (e.key==='ArrowLeft'||e.key==='ArrowRight')){
+    var n=2+S.deals.length, i=activeIdx + (e.key==='ArrowRight'?1:-1);
+    if(i<0||i>=n) return; e.preventDefault(); activeIdx=i; buildStrip(); showPanel(); syncForm(); if(typeof updateDlBtn==='function') updateDlBtn();
+  }
+});
+
 
 // ═══════════════════════════════════════════════════
 // AI HELPERS — Claude API (Haiku, fast + cheap)
