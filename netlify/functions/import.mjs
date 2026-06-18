@@ -40,22 +40,44 @@ export default async (req) => {
   const url = (body?.url || '').trim();
   if (!/^https?:\/\//i.test(url)) return json({ error: 'Provide a listing URL (https://…)' }, 400);
 
+  // Firecrawl v1 scrape + structured extract (same API the closed-carousel tool uses).
+  // withActions clicks a "read more" expander so the full description loads; if that
+  // selector isn't present Firecrawl errors and we retry cleanly without actions.
+  const mkBody = (withActions) => ({
+    url,
+    onlyMainContent: true,
+    waitFor: 2500,
+    formats: ['extract', 'markdown'],
+    extract: {
+      schema: LISTING_SCHEMA,
+      prompt: 'Extract the listing fields. For "description" return the COMPLETE listing text — every paragraph in full, including anything hidden behind a "read more"/"see more" expander. Never return a truncated preview.',
+    },
+    ...(withActions ? {
+      actions: [
+        { type: 'wait', milliseconds: 1800 },
+        { type: 'click', selector: 'button[aria-expanded="false"]' },
+        { type: 'wait', milliseconds: 1000 },
+      ],
+    } : {}),
+  });
   let fc;
   try {
-    // Firecrawl v1 scrape + structured extract (same API the closed-carousel tool uses)
-    const res = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    let res = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url,
-        onlyMainContent: true,
-        formats: ['extract', 'markdown'],
-        extract: { schema: LISTING_SCHEMA },
-      }),
+      body: JSON.stringify(mkBody(true)),
     });
     fc = await res.json();
     if (!res.ok || fc?.success === false) {
-      return json({ error: 'Firecrawl request failed', detail: fc }, 502);
+      res = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(mkBody(false)),
+      });
+      fc = await res.json();
+      if (!res.ok || fc?.success === false) {
+        return json({ error: 'Firecrawl request failed', detail: fc }, 502);
+      }
     }
   } catch (e) {
     return json({ error: 'Could not reach Firecrawl', detail: String(e) }, 502);
