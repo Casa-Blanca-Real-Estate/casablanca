@@ -103,6 +103,9 @@ header .hname{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:
 .thumb.on .lbl{color:var(--cb-black);}
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--cb-black);color:#fff;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;padding:12px 24px;border-radius:var(--rsm);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:820px){.wrap{flex-direction:column}.editor{width:100%;flex:none;border-right:none;border-bottom:1px solid var(--cb-border)}.ebody{max-height:46vh}}
+@media(max-width:560px){header .hname{display:none}}
 </style>
 </head>
 <body>
