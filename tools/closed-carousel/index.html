@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="../../assets/studio-header.js" defer></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 
 <script>
@@ -371,8 +372,6 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
 </style>
 </head>
 <body>
-<a href="../../" class="cb-home" title="Back to Creative Studio" aria-label="Back to Creative Studio"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Studio</a>
-<style>.cb-home{position:fixed;top:11px;left:14px;z-index:100000;display:inline-flex;align-items:center;gap:6px;background:rgba(15,15,15,.9);color:#fff;border:1px solid rgba(255,255,255,.22);font:800 10px/1 'ObjectSans','Object Sans','Helvetica Neue',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;padding:8px 11px;border-radius:8px;text-decoration:none;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:background .12s}.cb-home:hover{background:rgba(30,26,46,.96)}body>header,header:first-of-type{padding-left:122px}</style>
 
 
 <header>
@@ -663,7 +662,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
     <p>One row per deal. Paste a StreetEasy URL and hit Fetch to auto-fill that row, or type fields manually. Descriptions are condensed on create. Agent names matching your library get their photo attached automatically.</p>
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-start;"><textarea id="bulk-paste" rows="2" placeholder="Paste StreetEasy URLs — one per line — then Add rows" style="flex:1;padding:8px 10px;border:1px solid var(--bdr);border-radius:5px;font:inherit;font-size:11px;resize:vertical;"></textarea><button class="btn-s" id="bulk-paste-add" style="white-space:nowrap;">+ Add rows</button></div>
     <div id="bulk-rows"></div>
-    <button class="btn-s" id="bulk-add-row" style="margin-top:4px;">＋ Add Row</button>
+    <button class="btn-s" id="bulk-add-row" style="margin-top:4px;">＋ Add Row</button><button class="btn-s" id="bulk-fetch-all" style="margin-top:4px;margin-left:6px;" title="Fetch every row that has a URL">⚡ Fetch all URLs</button>
     <div class="bulk-modal-actions">
       <span id="bulk-status" class="bulk-status"></span>
       <button class="btn-p" id="bulk-create-btn">Create Deals</button>
@@ -2527,6 +2526,46 @@ function openBulkModal() {
   document.getElementById('bulk-modal').classList.remove('hidden');
 }
 function closeBulkModal() { document.getElementById('bulk-modal').classList.add('hidden'); }
+
+// Fetch one bulk row (no-override fill + timer + abort); returns {ok|skipped|msg}
+async function bulkFetchOne(row){
+  var urlEl=row.querySelector('.bulk-se-url'); var url=(urlEl.value||'').trim();
+  if(!url) return {skipped:true};
+  var btn=row.querySelector('.bulk-fetch'); var oldTxt=btn?btn.textContent:''; if(btn) btn.disabled=true;
+  var t0=Date.now(); var ti=btn?setInterval(function(){btn.textContent='⌛ '+Math.round((Date.now()-t0)/1000)+'s';},250):null;
+  var ctl=new AbortController(); var to=setTimeout(function(){ctl.abort();},90000);
+  try{
+    var res=await fetch('/.netlify/functions/streeteasy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:ctl.signal});
+    if(!res.ok){ var msg='fetch '+res.status; try{var er=await res.json(); if(er.message)msg+=': '+er.message;}catch(e){} return {ok:false,msg:msg}; }
+    var data=await res.json();
+    var _a=row.querySelector('.bulk-address'),_n=row.querySelector('.bulk-nbr'),_p=row.querySelector('.bulk-price'),_d=row.querySelector('.bulk-desc');
+    if(data.address&&!_a.value.trim())_a.value=data.address;
+    if(data.neighborhood&&!_n.value.trim())_n.value=data.neighborhood;
+    if(data.price&&!_p.value.trim())_p.value=data.price;
+    if(data.description&&!_d.value.trim())_d.value=data.description;
+    if(data.heroImage&&!row.dataset.heroImage)row.dataset.heroImage=data.heroImage;
+    return {ok:true};
+  }catch(err){ return {ok:false,msg:(err&&err.name==='AbortError')?'timed out':'unreachable'}; }
+  finally{ if(ti)clearInterval(ti); clearTimeout(to); if(btn){btn.textContent=oldTxt;btn.disabled=false;} }
+}
+(function(){
+  var fa=document.getElementById('bulk-fetch-all'); if(!fa) return;
+  fa.addEventListener('click', async function(){
+    var rows=Array.prototype.slice.call(document.querySelectorAll('#bulk-rows .bulk-row')).filter(function(r){return r.querySelector('.bulk-se-url').value.trim();});
+    if(!rows.length){ showToast('No rows have a URL yet'); return; }
+    var st=document.getElementById('bulk-status'); var oldd=fa.textContent; fa.disabled=true;
+    var done=0, fail=0, i=0, CONC=Math.min(2,rows.length);
+    function upd(){ var t='Fetching '+done+'/'+rows.length+'…'; fa.textContent=t; if(st) st.textContent=t; }
+    upd();
+    async function worker(){ while(i<rows.length){ var r=await bulkFetchOne(rows[i++]); done++; if(r&&r.ok===false&&!r.skipped) fail++; upd(); } }
+    var pool=[]; for(var k=0;k<CONC;k++) pool.push(worker());
+    await Promise.all(pool);
+    fa.disabled=false; fa.textContent=oldd;
+    var msg='✓ Fetched '+rows.length+' row'+(rows.length!==1?'s':'')+(fail?(' · '+fail+' failed'):'');
+    if(st) st.textContent=msg; showToast(msg);
+  });
+})();
+
 
 // Per-row fetch (event delegation)
 document.getElementById('bulk-rows').addEventListener('click', async (e) => {
