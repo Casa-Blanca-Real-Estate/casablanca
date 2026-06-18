@@ -77,6 +77,16 @@
     padding:8px 18px;border-radius:8px;cursor:pointer;transition:border-color .12s,color .12s}
   .devbtn:hover{border-color:var(--accent);color:#fff}
   .devbtn.on{border-color:var(--accent);color:var(--accent)}
+  .whatsnew{margin-left:10px;position:relative}
+  .whatsnew .dot{position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent);display:none}
+  .whatsnew.unseen .dot{display:block}
+  .modal .box.cl{max-width:520px;max-height:80vh;overflow:auto;text-align:left}
+  .cl-entry{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+  .cl-entry:first-child{border-top:none;margin-top:0;padding-top:0}
+  .cl-entry .d{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:800}
+  .cl-entry h3{margin:4px 0 8px;font-size:17px;font-weight:800}
+  .cl-entry ul{margin:0;padding-left:18px;color:#55514a;font-size:13.5px}
+  .cl-entry li{margin-bottom:4px}
 
   /* login modal */
   .modal{position:fixed;inset:0;background:rgba(10,9,15,.62);backdrop-filter:blur(3px);
@@ -224,8 +234,17 @@
 <footer>
   <img src="assets/cb-logo-white.png" alt="Casa Blanca">
   Creative Studio · built in-house
-  <div><button class="devbtn" id="devBtn" type="button">Dev</button></div>
+  <div><button class="devbtn whatsnew" id="whatsnewBtn" type="button">What’s new<span class="dot"></span></button><button class="devbtn" id="devBtn" type="button">Dev</button></div>
 </footer>
+
+<div class="modal" id="clModal">
+  <div class="box cl">
+    <h2>What’s new</h2>
+    <p>Recent updates to the Creative Studio.</p>
+    <div id="clList"></div>
+    <div class="row" style="margin-top:18px;"><button class="go" id="clClose" type="button">Close</button></div>
+  </div>
+</div>
 
 <div class="modal" id="loginModal">
   <div class="box">
@@ -269,5 +288,46 @@
   applyAuth();
 </script>
 
+<script type="application/json" id="cl-data">
+[
+  { "date": "2026-06-18", "title": "Quality-of-life pass", "items": [
+    "Every tool now has a \u2039 Studio home button + a signed-in chip",
+    "Auto-save in every builder \u2014 your work is restored on this device",
+    "Bulk Create: paste a list of URLs, \u26a1 Fetch all, drag-to-reorder rows, solid side panel",
+    "Keyboard: Esc closes the panel, \u2190/\u2192 move between slides",
+    "Fuller StreetEasy descriptions (expands \u201cread more\u201d before scraping)",
+    "Favicon + tidier browser-tab titles"
+  ]},
+  { "date": "2026-06-17", "title": "For Sale Roundup builder", "items": [
+    "New multi-listing \u201cFor Sale\u201d carousel builder",
+    "Editorial: end/contact slide, listing-stats teaser, Listed & Exclusive statuses",
+    "Members area behind a quick Dev sign-in"
+  ]},
+  { "date": "2026-06-16", "title": "Creative Studio launch", "items": [
+    "All tools brought onto one platform with the real brand font + logo",
+    "Editorial carousel builder with StreetEasy import + AI captions"
+  ]}
+]
+</script>
+<script>
+(function(){
+  var btn=document.getElementById('whatsnewBtn'), modal=document.getElementById('clModal'),
+      list=document.getElementById('clList'), close=document.getElementById('clClose');
+  var SEEN='cb_changelog_seen';
+  function open(){ modal.classList.add('open'); try{ if(window.__clLatest) localStorage.setItem(SEEN, window.__clLatest); }catch(e){} btn.classList.remove('unseen'); }
+  function shut(){ modal.classList.remove('open'); }
+  btn.onclick=open; close.onclick=shut; modal.addEventListener('click',function(e){ if(e.target===modal) shut(); });
+  var entries=[]; try{ entries=JSON.parse(document.getElementById('cl-data').textContent); }catch(e){}
+  if(!Array.isArray(entries)||!entries.length){ list.innerHTML='<p style="color:#888">No updates yet.</p>'; }
+  else {
+    window.__clLatest=entries[0].date;
+    list.innerHTML=entries.map(function(e){
+      var items=(e.items||[]).map(function(it){return '<li>'+it.replace(/</g,'&lt;')+'</li>';}).join('');
+      return '<div class="cl-entry"><span class="d">'+e.date+'</span><h3>'+e.title.replace(/</g,'&lt;')+'</h3><ul>'+items+'</ul></div>';
+    }).join('');
+    try{ if(localStorage.getItem(SEEN)!==window.__clLatest) btn.classList.add('unseen'); }catch(e){}
+  }
+})();
+</script>
 </body>
 </html>
