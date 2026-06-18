@@ -1904,8 +1904,8 @@ async function loadSessions() {
   } catch(e) { return []; }
 }
 
-async function saveSession() {
-  const session = {
+function serializeSession() {
+  return {
     savedAt: new Date().toISOString(),
     date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
     accent: S.accent,
@@ -1917,6 +1917,9 @@ async function saveSession() {
       price: d.price||'', description: d.description||'',
     }))
   };
+}
+async function saveSession() {
+  const session = serializeSession();
   try {
     const res = await fetch('/.netlify/functions/sessions', {
       method: 'POST',
@@ -1940,9 +1943,8 @@ async function saveSession() {
   }
 }
 
-async function restoreSession(idx) {
-  const sessions = await loadSessions();
-  const s = sessions[idx]; if (!s) return;
+function applySession(s) {
+  if (!s) return;
   S.accent = s.accent || '#aaa3cf';
   S.coverSrc = s.coverSrc||''; S.coverOX = s.coverOX||0; S.coverOY = s.coverOY||0; S.coverScale = s.coverScale||1; S.coverSourceIdx = s.coverSourceIdx ?? 1;
   if (s.coverSrc) {
@@ -1966,6 +1968,11 @@ async function restoreSession(idx) {
   document.getElementById('cust-sw').value=S.accent;
   document.querySelectorAll('.sw').forEach(sw=>sw.classList.toggle('on',sw.dataset.c===S.accent));
   buildStrip(); showPanel(); syncForm();
+}
+async function restoreSession(idx) {
+  const sessions = await loadSessions();
+  const s = sessions[idx]; if (!s) return;
+  applySession(s);
   showToast(`✓ Session restored — ${S.deals.length} deal${S.deals.length!==1?'s':''}`);
 }
 
@@ -2657,6 +2664,33 @@ document.getElementById('btn-bulk').addEventListener('click', openBulkModal);
 document.getElementById('bulk-add-row').addEventListener('click', addBulkRow);
 document.getElementById('bulk-modal-close').addEventListener('click', closeBulkModal);
 document.getElementById('bulk-modal').addEventListener('click', (e) => { if (e.target.id === 'bulk-modal') closeBulkModal(); });
+
+// ── Auto-save (local, dev-only): persist unsaved work across reloads on this device ──
+const AUTOSAVE_KEY = 'cb_autosave_closed';
+const _AUTH = ['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+function devAuthed(){ return _AUTH.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase()) !== -1; }
+function autosaveHasContent(s){ return !!(s && ((s.deals && s.deals.some(d=>d.address||d.price||d.description||d.agentName||d.propSrc||d.agentSrc)) || s.coverSrc)); }
+function autosave(){
+  if(!devAuthed()) return;
+  let s; try{ s = serializeSession(); }catch(e){ return; }
+  if(!autosaveHasContent(s)){ try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(e){} return; }
+  try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }
+  catch(e){ // quota (base64 images too big) → keep text only
+    try{ s.coverSrc=''; s.deals.forEach(d=>{ d.agentSrc=''; d.propSrc=''; }); localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(s)); }catch(_){}
+  }
+}
+window.addEventListener('pagehide', autosave);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') autosave(); });
+setInterval(autosave, 15000);
+(function maybeAutoRestore(){
+  if(!devAuthed()) return;
+  let raw; try{ raw = localStorage.getItem(AUTOSAVE_KEY); }catch(e){ return; }
+  if(!raw) return;
+  let s; try{ s = JSON.parse(raw); }catch(e){ return; }
+  if(!autosaveHasContent(s)) return;
+  applySession(s);
+  setTimeout(()=>showToast('↩ Restored your last session on this device'), 400);
+})();
 
 document.fonts.ready.then(()=>{ if(readyCt>=3) renderAll(); });
 
