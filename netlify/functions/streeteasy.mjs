@@ -71,7 +71,10 @@ export default async (req) => {
       formats: ['extract', 'markdown'], // markdown lets us detect a bot-wall page vs. a real listing
       onlyMainContent: true,
       waitFor: 2500, // StreetEasy is JS-heavy — a little time to render, but kept short
-      timeout: 13000, // hard server-side cap so worst case (fast stealth reject → bare retry → images) stays under the 26s function budget
+      // Firecrawl's own cap. The primary stealth call gets the lion's share (StreetEasy
+      // render + LLM extract needs ~15-20s); the bare fallback only runs after a fast
+      // stealth reject, so it gets a smaller slice to keep the total under Netlify's 26s.
+      timeout: opts.withProxy ? 22000 : 12000,
       extract: { schema: SCHEMA, prompt: EXTRACT_PROMPT },
       // StreetEasy always blocks the basic proxy, so go straight to stealth (skipping
       // 'auto' avoids wasting an internal basic attempt). If the plan rejects stealth it
@@ -139,7 +142,7 @@ export default async (req) => {
     // real listing photos are tens to hundreds of KB), so junk can't become the hero.
     async function toDataUrl(u) {
       const ctl = new AbortController();
-      const to = setTimeout(() => ctl.abort(), 5000); // bound each image so the phase can't run long
+      const to = setTimeout(() => ctl.abort(), 3500); // bound each image so the (parallel) phase can't run long
       try {
         const imgRes = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 CB-Carousel-Builder' }, signal: ctl.signal });
         if (!imgRes.ok) return null;
@@ -159,7 +162,7 @@ export default async (req) => {
     if (ex.heroImageUrl) urls.push(ex.heroImageUrl);
     if (Array.isArray(ex.photos)) for (const p of ex.photos) if (typeof p === 'string') urls.push(p);
     const seen = new Set();
-    const ordered = urls.filter((u) => looksLikePhoto(u) && !seen.has(u) && seen.add(u)).slice(0, 6);
+    const ordered = urls.filter((u) => looksLikePhoto(u) && !seen.has(u) && seen.add(u)).slice(0, 5);
     const photos = (await Promise.all(ordered.map(toDataUrl))).filter(Boolean);
     const heroImage = photos[0] || null;
 
