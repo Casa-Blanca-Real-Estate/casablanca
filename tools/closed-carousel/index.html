@@ -1365,9 +1365,8 @@ async function renderLibraryCurrent() {
   if (!agents.length) { el.innerHTML = '<p class="lib-status">No agents yet.</p>'; return; }
   el.innerHTML = agents.map(a => `
     <div class="lib-current-item">
-      <img class="lib-current-thumb" src="/.netlify/functions/agents?image=${encodeURIComponent(a.key)}" alt="${a.name}" loading="lazy" onerror="this.style.opacity='.2'">
+      <img class="lib-current-thumb" src="${a.src}" alt="${a.name}" loading="lazy" onerror="this.style.opacity='.2'">
       <span class="lib-current-name">${a.name}</span>
-      <button class="lib-current-rm" onclick="removeAgentFromLibrary('${a.key}','${a.name}')" title="Remove">✕</button>
     </div>
   `).join('');
 }
@@ -1400,28 +1399,18 @@ let agentLibrary = [];      // [{key, name}] loaded from Netlify Blobs
 let filteredAgents = [];    // current search results
 
 async function loadAgentLibrary() {
+  // Static, in-repo agent library (assets/agents/agents.json) — works on GitHub Pages, no backend
   try {
-    const res = await fetch('/.netlify/functions/agents');
-    if (!res.ok) {
-      let errBody = '';
-      try { errBody = await res.text(); } catch(e) {}
-      console.warn('agents endpoint HTTP', res.status, errBody);
-      let errMsg = 'agents fn ' + res.status;
-      try {
-        const parsed = JSON.parse(errBody);
-        if (parsed.message) errMsg += ': ' + parsed.message;
-      } catch(e) {}
-      showToast('✗ ' + errMsg);
-      agentLibrary = [];
-      return;
-    }
-    agentLibrary = await res.json();
+    const res = await fetch('../../assets/agents/agents.json', { cache: 'no-cache' });
+    if (!res.ok) { agentLibrary = []; return; }
+    const list = await res.json();
+    agentLibrary = (Array.isArray(list) ? list : []).map(a => ({
+      key: a.file.replace(/^.*\//, '').replace(/\.[^.]+$/, ''),
+      name: a.name,
+      src: '../../assets/agents/' + a.file
+    }));
     console.log('Agent library loaded:', agentLibrary.length, 'agents');
-  } catch(e) {
-    console.warn('Agent library fetch failed', e);
-    showToast('✗ Could not reach agents endpoint');
-    agentLibrary = [];
-  }
+  } catch(e) { agentLibrary = []; }
 }
 
 function searchAgents(q) {
@@ -1438,9 +1427,8 @@ function renderAgentResults(results) {
   } else {
     el.innerHTML = results.map((a, i) => `
       <div class="agent-result" data-idx="${i}">
-        <img class="agent-result-thumb" src="/.netlify/functions/agents?image=${encodeURIComponent(a.key)}" alt="${a.name}" loading="lazy" onerror="this.style.opacity='.3'">
+        <img class="agent-result-thumb" src="${a.src}" alt="${a.name}" loading="lazy" onerror="this.style.opacity='.3'">
         <span class="agent-result-name">${a.name}</span>
-        <button class="agent-result-remove" data-remove="${a.key}" title="Remove from library" onclick="event.stopPropagation();removeAgentFromLibrary('${a.key}','${a.name}')">✕</button>
       </div>
     `).join('');
   }
@@ -1454,24 +1442,22 @@ function hideAgentResults() {
 
 async function applyAgentFromLibrary(key, name) {
   hideAgentResults();
-  showToast('⌛ Loading…');
-  try {
-    const res = await fetch(`/.netlify/functions/agents?key=${encodeURIComponent(key)}`);
-    const data = await res.json();
-    const d = activeDeal(); if (!d) return;
-    const img = new Image();
-    img.onload = () => {
-      d.agentImg = img; d.agentSrc = data.src;
-      d.agentName = name;
-      updateStripLabel(activeIdx);
-      syncDZ('dz-agent', 'th-agent', data.src);
-      document.getElementById('btn-save-agent').style.display = 'block';
-      if (activeIdx === 1) tryDetectAccent(img);
-      renderCanvas(activeIdx);
-      showToast('✓ ' + name + ' applied');
-    };
-    img.src = data.src;
-  } catch(e) { showToast('✗ Failed to load agent photo'); }
+  const entry = agentLibrary.find(a => a.key === key);
+  if (!entry) { showToast('✗ Agent not found'); return; }
+  const d = activeDeal(); if (!d) return;
+  const img = new Image();
+  img.onload = () => {
+    d.agentImg = img; d.agentSrc = entry.src;
+    d.agentName = name;
+    updateStripLabel(activeIdx);
+    syncDZ('dz-agent', 'th-agent', entry.src);
+    var sa = document.getElementById('btn-save-agent'); if (sa) sa.style.display = 'none';
+    if (activeIdx === 1) tryDetectAccent(img);
+    renderCanvas(activeIdx);
+    showToast('✓ ' + name + ' applied');
+  };
+  img.onerror = () => showToast('✗ Failed to load agent photo');
+  img.src = entry.src;
 }
 
 async function removeAgentFromLibrary(key, name) {
@@ -2691,12 +2677,8 @@ document.getElementById('bulk-create-btn').addEventListener('click', async () =>
       const match = agentLibrary.find(a => a.name.toLowerCase() === job.agent.toLowerCase());
       if (match) {
         try {
-          const ares = await fetch('/.netlify/functions/agents?key=' + encodeURIComponent(match.key));
-          if (ares.ok) {
-            const adata = await ares.json();
-            const aimg = await loadImagePromise(adata.src);
-            if (aimg) { deal.agentImg = aimg; deal.agentSrc = adata.src; }
-          }
+          const aimg = await loadImagePromise(match.src);
+          if (aimg) { deal.agentImg = aimg; deal.agentSrc = match.src; }
         } catch(e) {}
       }
     }
@@ -2752,6 +2734,7 @@ setInterval(autosave, 15000);
 })();
 
 document.fonts.ready.then(()=>{ if(readyCt>=3) renderAll(); });
+loadAgentLibrary();
 
 renderHistoryPanel();
 
