@@ -2,6 +2,7 @@
    Include once per tool:  <script src="../../assets/studio-header.js" defer></script>
    Injects the "‹ Studio" home button + a "signed in" chip, and reserves header space. */
 (function () {
+  var FB_SRC = (document.currentScript && document.currentScript.src || '').replace(/studio-header\.js.*$/, 'feedback.js') || 'feedback.js';
   var ALLOWED = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
   function email() { return (localStorage.getItem('cb_auth') || '').trim().toLowerCase(); }
   function authed() { return ALLOWED.indexOf(email()) !== -1; }
@@ -33,6 +34,13 @@
       who.textContent = '● ' + email();
       who.onclick = function () { if (confirm('Sign out of Dev on this device?')) { localStorage.removeItem('cb_auth'); location.reload(); } };
       document.body.appendChild(who);
+    }
+
+    if (!document.querySelector('script[data-cb-feedback]')) {
+      var fb = document.createElement('script');
+      fb.src = FB_SRC;
+      fb.defer = true; fb.setAttribute('data-cb-feedback', '1');
+      document.head.appendChild(fb);
     }
   }
   if (document.body) mount();
