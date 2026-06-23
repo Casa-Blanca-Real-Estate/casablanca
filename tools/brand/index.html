@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casa Blanca — Brand Assets</title>
+<meta name="description" content="Casa Blanca brand assets — logos, fonts, colors and guidelines, in one place.">
+<style>
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Slanted.otf') format('opentype');font-weight:400;font-style:italic;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-style:normal;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-HeavySlanted.otf') format('opentype');font-weight:800;font-style:italic;font-display:swap}
+
+  :root{
+    --ink:#0f0f0f; --paper:#f4f3f0; --paper2:#e8e6e0; --soft:#faf9fd;
+    --accent:#aaa3cf; --plum:#1e1a2e; --plum2:#2d2640;
+    --muted:#888680; --line:#dddbd5; --mc:#ffe01b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;
+    font-family:'Object Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+  a{color:inherit;text-decoration:none}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:20px;
+    background:var(--ink);color:#fff;padding:18px clamp(20px,5vw,56px)}
+  header img{height:22px;width:auto;display:block}
+  header .stax{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
+
+  .hero{background:var(--ink);color:#fff;padding:8px clamp(20px,5vw,56px) clamp(28px,4vw,40px);
+    border-bottom:1px solid rgba(255,255,255,.07)}
+  .hero h1{margin:0 0 8px;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em}
+  .hero h1 em{font-style:italic;font-weight:400;color:var(--accent)}
+  .hero p{margin:0;color:#bdbab4;font-size:clamp(14px,1.7vw,16px);max-width:62ch}
+
+  /* Tabs */
+  .tabs{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
+    padding:0 clamp(20px,5vw,56px);display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab{flex:none;background:none;border:none;font-family:inherit;font-size:13px;font-weight:800;letter-spacing:.02em;
+    color:var(--muted);padding:16px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+  .tab:hover{color:var(--ink)}
+  .tab.on{color:var(--plum);border-bottom-color:var(--accent)}
+
+  main{padding:clamp(24px,3.5vw,40px) clamp(20px,5vw,56px) 48px;max-width:1100px;margin:0 auto;width:100%;flex:1 0 auto}
+  .panel{display:none}.panel.on{display:block}
+  .lead{color:#55514a;font-size:14px;margin:0 0 22px;max-width:64ch}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+  .card{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .card .prev{aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .card .prev img{max-width:78%;max-height:78%;object-fit:contain;display:block}
+  .card .body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
+  .card h3{margin:0 0 4px;font-size:15px;font-weight:800;letter-spacing:-.01em}
+  .card .sub{margin:0 0 12px;font-size:12px;color:#8a877f;flex:1}
+  .fmts{display:flex;gap:6px;flex-wrap:wrap}
+  .dl{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--plum);background:var(--paper2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  .dl:hover{border-color:var(--accent);background:#fff}
+  .del{margin-left:auto;color:#b4452f;background:none;border:none;font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+  .del:hover{text-decoration:underline}
+  .cardfoot{display:flex;align-items:center;gap:8px;margin-top:10px}
+
+  /* Colors */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+  .sw{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .1s,box-shadow .1s}
+  .sw:hover{transform:translateY(-2px);box-shadow:0 14px 26px -18px rgba(30,26,46,.5)}
+  .sw .chip{height:78px}
+  .sw .lab{padding:10px 12px}
+  .sw .lab .n{font-size:13px;font-weight:800}
+  .sw .lab .h{font-size:12px;color:#8a877f;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
+  .sw .lab .copied{color:var(--plum);font-weight:800}
+
+  .palbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px}
+
+  /* Typography specimen */
+  .spec{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:16px}
+  .spec .nm{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:8px}
+  .spec .big{font-size:clamp(28px,6vw,52px);letter-spacing:-.02em;margin:0 0 6px}
+  .spec .aa{font-size:18px;color:#55514a;margin:0 0 14px;word-break:break-word}
+  .reg{font-weight:400;font-style:normal}.regi{font-weight:400;font-style:italic}
+  .hvy{font-weight:800;font-style:normal}.hvyi{font-weight:800;font-style:italic}
+
+  /* Dev add tools */
+  .devzone{margin-top:30px;border-top:1px dashed var(--line);padding-top:22px}
+  .devzone[hidden]{display:none}
+  .devzone h4{margin:0 0 4px;font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--plum)}
+  .devzone p{margin:0 0 14px;font-size:12px;color:#8a877f}
+  .form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld label{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .fld input,.fld select{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+  .fld.grow{flex:1;min-width:160px}
+  .btn{font-family:inherit;font-weight:800;font-size:13px;padding:10px 18px;border-radius:9px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:#fff}
+  .btn:hover{background:var(--plum2)}
+  .btn:disabled{opacity:.55;cursor:default}
+  .stat{font-size:12px;color:#8a877f;min-height:16px;width:100%;margin-top:4px}
+  .empty{color:#8a877f;font-size:13px;padding:8px 0}
+
+  footer{background:var(--ink);color:#9a968f;text-align:center;padding:26px 20px 32px;font-size:12px}
+  footer img{height:18px;opacity:.92;display:block;margin:0 auto 8px}
+  @media(max-width:760px){ header .stax{display:none} }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="../../assets/cb-logo-white.png" alt="Casa Blanca">
+  <span class="stax">Brand Assets</span>
+</header>
+
+<section class="hero">
+  <h1>Casa Blanca <em>Brand</em> Assets.</h1>
+  <p>Everything on-brand in one place — logos, fonts, colors and guidelines. Download what you need, in the format you need. Signed-in devs can add and update assets, and changes show up here for everyone.</p>
+</section>
+
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-tab="logos">Logos</button>
+  <button class="tab" data-tab="colors">Colors</button>
+  <button class="tab" data-tab="type">Typography</button>
+  <button class="tab" data-tab="guidelines">Guidelines</button>
+  <button class="tab" data-tab="templates">Templates &amp; more</button>
+</nav>
+
+<main>
+
+  <!-- LOGOS -->
+  <section class="panel on" id="p-logos">
+    <p class="lead">Primary marks and lockups. Use the white logo on dark backgrounds. Need another color or vector? A dev can drop it in below.</p>
+    <div class="grid" id="grid-logos"></div>
+    <div class="devzone" data-dev>
+      <h4>Add a logo</h4>
+      <p>Upload PNG, SVG, JPG, PDF or EPS. Name groups formats together (e.g. "Primary Logo").</p>
+      <div class="form">
+        <div class="fld grow"><label>Name</label><input type="text" data-name placeholder="Primary Logo (white)"></div>
+        <div class="fld grow"><label>File</label><input type="file" data-file accept="image/*,.svg,.pdf,.eps,.ai"></div>
+        <button class="btn" data-upload="logo">Add logo</button>
+        <div class="stat" data-stat></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLORS -->
+  <section class="panel" id="p-colors">
+    <p class="lead">The Casa Blanca palette. Click any swatch to copy its hex. Download the whole palette for design tools or code.</p>
+    <div class="palbar">
+      <button class="dl" id="dlCss">Download CSS variables</button>
+      <button class="dl" id="dlJson">Download palette.json</button>
+      <button class="dl" id="dlSheet">Download swatch sheet (PNG)</button>
+    </div>
+    <div class="swatches" id="swatches"></div>
+    <div class="devzone" data-dev>
+      <h4>Add a color</h4>
+      <p>Add a named brand color. It joins the palette and the downloads for everyone.</p>
+      <div class="form">
+        <div class="fld grow"><label>Name</label><input type="text" data-cname placeholder="Sand"></div>
+        <div class="fld"><label>Hex</label><input type="text" data-chex placeholder="#e8e6e0" maxlength="9"></div>
+        <button class="btn" data-addcolor>Add color</button>
+        <div class="stat" data-cstat></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TYPOGRAPHY -->
+  <section class="panel" id="p-type">
+    <p class="lead">Object Sans is the Casa Blanca typeface. Regular for body, Heavy for headlines; slanted variants for emphasis. Download the OpenType files below.</p>
+    <div class="spec">
+      <div class="nm">Object Sans · Regular</div>
+      <div class="big reg">Casa Blanca</div>
+      <div class="aa reg">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</div>
+      <div class="cardfoot"><a class="dl" href="../../assets/fonts/ObjectSans-Regular.otf" download>Download .otf</a></div>
+    </div>
+    <div class="spec">
+      <div class="nm">Object Sans · Slanted</div>
+      <div class="big regi">Casa Blanca</div>
+      <div class="aa regi">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</div>
+      <div class="cardfoot"><a class="dl" href="../../assets/fonts/ObjectSans-Slanted.otf" download>Download .otf</a></div>
+    </div>
+    <div class="spec">
+      <div class="nm">Object Sans · Heavy</div>
+      <div class="big hvy">Casa Blanca</div>
+      <div class="aa hvy">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</div>
+      <div class="cardfoot"><a class="dl" href="../../assets/fonts/ObjectSans-Heavy.otf" download>Download .otf</a></div>
+    </div>
+    <div class="spec">
+      <div class="nm">Object Sans · Heavy Slanted</div>
+      <div class="big hvyi">Casa Blanca</div>
+      <div class="aa hvyi">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</div>
+      <div class="cardfoot"><a class="dl" href="../../assets/fonts/ObjectSans-HeavySlanted.otf" download>Download .otf</a></div>
+    </div>
+    <div class="grid" id="grid-font" style="margin-top:16px"></div>
+    <div class="devzone" data-dev>
+      <h4>Add a font file</h4>
+      <p>Add web formats (woff2, woff, ttf) or extra weights for download here.</p>
+      <div class="form">
+        <div class="fld grow"><label>Name</label><input type="text" data-name placeholder="Object Sans · Medium"></div>
+        <div class="fld grow"><label>File</label><input type="file" data-file accept=".otf,.ttf,.woff,.woff2"></div>
+        <button class="btn" data-upload="font">Add font</button>
+        <div class="stat" data-stat></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GUIDELINES -->
+  <section class="panel" id="p-guidelines">
+    <p class="lead">Brand guidelines, voice and how-to docs. Read before you make something for the brand.</p>
+    <div class="grid" id="grid-guideline"></div>
+    <div class="devzone" data-dev>
+      <h4>Add a guideline doc</h4>
+      <p>PDFs or images. Brand book, voice guide, do/don't sheets, etc.</p>
+      <div class="form">
+        <div class="fld grow"><label>Name</label><input type="text" data-name placeholder="Brand Guidelines 2026"></div>
+        <div class="fld grow"><label>File</label><input type="file" data-file accept=".pdf,image/*"></div>
+        <button class="btn" data-upload="guideline">Add guideline</button>
+        <div class="stat" data-stat></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEMPLATES & MORE -->
+  <section class="panel" id="p-templates">
+    <p class="lead">Templates, patterns, icons and anything else on-brand that agents grab regularly.</p>
+    <div class="grid" id="grid-template"></div>
+    <div class="grid" id="grid-other" style="margin-top:16px"></div>
+    <div class="devzone" data-dev>
+      <h4>Add an asset</h4>
+      <p>Any file the team needs — templates, graphics, icons, decks.</p>
+      <div class="form">
+        <div class="fld grow"><label>Name</label><input type="text" data-name placeholder="Story template"></div>
+        <div class="fld grow"><label>File</label><input type="file" data-file></div>
+        <div class="fld"><label>Category</label>
+          <select data-cat><option value="template">Template</option><option value="other">Other</option></select>
+        </div>
+        <button class="btn" data-upload="template">Add asset</button>
+        <div class="stat" data-stat></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <img src="../../assets/cb-logo-white.png" alt="Casa Blanca">
+  Brand Assets · Casa Blanca Creative Studio
+</footer>
+
+<script src="../../assets/studio-header.js" defer></script>
+<script>
+(function(){
+  var BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
+  var API=BACKEND+'/.netlify/functions/brand';
+  var ALLOWED=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+  function authed(){return ALLOWED.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase())!==-1;}
+
+  /* ---- Tabs ---- */
+  var tabs=document.getElementById('tabs');
+  tabs.addEventListener('click',function(e){
+    var b=e.target.closest('.tab'); if(!b) return;
+    [].forEach.call(tabs.children,function(t){t.classList.toggle('on',t===b);});
+    var id=b.getAttribute('data-tab');
+    [].forEach.call(document.querySelectorAll('.panel'),function(p){p.classList.toggle('on',p.id==='p-'+id);});
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+  });
+  (function(){ var h=location.hash.slice(1); var b=h&&tabs.querySelector('[data-tab="'+h+'"]'); if(b) b.click(); })();
+
+  /* ---- Built-in (repo) assets shown alongside live ones ---- */
+  var BUILTIN={
+    logo:[{name:'Primary Logo (white)',sub:'PNG · for dark backgrounds',url:'../../assets/cb-logo-white.png',img:'../../assets/cb-logo-white.png',fmt:'PNG',filename:'casa-blanca-logo-white.png'},
+          {name:'Favicon',sub:'SVG · browser tab mark',url:'../../assets/favicon.svg',img:'../../assets/favicon.svg',fmt:'SVG',filename:'casa-blanca-favicon.svg'}],
+    guideline:[{name:'Business Card Ordering Guide',sub:'PDF · specs + vendor steps',url:'../../assets/biz-card-ordering-guide.pdf',fmt:'PDF',filename:'biz-card-ordering-guide.pdf'}],
+    font:[],template:[],other:[]
+  };
+
+  /* ---- Color palette (built-in, from the studio CSS) ---- */
+  var PALETTE=[
+    {name:'Ink',hex:'#0f0f0f'},{name:'Paper',hex:'#f4f3f0'},{name:'Paper 2',hex:'#e8e6e0'},
+    {name:'Soft',hex:'#faf9fd'},{name:'Accent',hex:'#aaa3cf'},{name:'Plum',hex:'#1e1a2e'},
+    {name:'Plum 2',hex:'#2d2640'},{name:'Muted',hex:'#888680'},{name:'Line',hex:'#dddbd5'},
+    {name:'Mailchimp Yellow',hex:'#ffe01b'}
+  ];
+
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function fileUrl(key){return API+'?file='+encodeURIComponent(key);}
+
+  /* ---- Render asset cards (built-in + live) ---- */
+  function cardHTML(a){
+    var prev = a.img
+      ? '<div class="prev" style="background:#0f0f0f"><img src="'+esc(a.img)+'" alt="'+esc(a.name)+'"></div>'
+      : '<div class="prev" style="background:radial-gradient(120% 120% at 30% 10%,#2d2640,#0f0f0f 70%);color:#fff">'+
+        '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></div>';
+    var del = (a.key && authed()) ? '<button class="del" data-del="'+esc(a.key)+'">Delete</button>' : '';
+    var fmt = a.fmt ? '<span class="dl" style="cursor:default;color:#8a877f">'+esc(a.fmt)+'</span>' : '';
+    return '<div class="card">'+prev+'<div class="body"><h3>'+esc(a.name)+'</h3>'+
+      '<p class="sub">'+esc(a.sub||'')+'</p>'+
+      '<div class="cardfoot"><a class="dl" href="'+esc(a.url)+'" download="'+esc(a.filename||'')+'">Download</a>'+fmt+del+'</div></div></div>';
+  }
+
+  function renderCategory(cat){
+    var grid=document.getElementById('grid-'+cat); if(!grid) return;
+    var items=(BUILTIN[cat]||[]).slice();
+    (window.__live[cat]||[]).forEach(function(a){
+      items.push({
+        key:a.key,name:a.name,
+        sub:(a.format?a.format.toUpperCase():'')+(a.note?(a.format?' · ':'')+a.note:''),
+        url:fileUrl(a.key),
+        img:/^(png|jpg|jpeg|gif|webp|svg)$/.test((a.format||'').toLowerCase())?fileUrl(a.key):'',
+        fmt:(a.format||'').toUpperCase(),filename:a.filename||a.name
+      });
+    });
+    grid.innerHTML = items.length ? items.map(cardHTML).join('')
+      : '<div class="empty">Nothing here yet'+(authed()?' — add one below.':'.')+'</div>';
+  }
+
+  /* ---- Colors ---- */
+  function renderColors(){
+    var box=document.getElementById('swatches');
+    var all=PALETTE.concat((window.__live.color||[]).map(function(c){return {name:c.name,hex:c.hex,key:c.key};}));
+    box.innerHTML=all.map(function(c){
+      var del=(c.key&&authed())?'<button class="del" data-del="'+esc(c.key)+'" title="Delete">×</button>':'';
+      return '<div class="sw" data-hex="'+esc(c.hex)+'"><div class="chip" style="background:'+esc(c.hex)+'"></div>'+
+        '<div class="lab"><div class="n">'+esc(c.name)+'</div><div class="h"><span class="hx">'+esc(c.hex)+'</span> '+del+'</div></div></div>';
+    }).join('');
+  }
+  document.getElementById('swatches').addEventListener('click',function(e){
+    if(e.target.closest('[data-del]')) return; // handled by global delete
+    var sw=e.target.closest('.sw'); if(!sw) return;
+    var hex=sw.getAttribute('data-hex'); var lab=sw.querySelector('.h');
+    navigator.clipboard&&navigator.clipboard.writeText(hex);
+    var old=lab.innerHTML; lab.innerHTML='<span class="copied">Copied '+esc(hex)+'</span>';
+    setTimeout(function(){lab.innerHTML=old;},1100);
+  });
+
+  function currentPalette(){
+    return PALETTE.concat((window.__live.color||[]).map(function(c){return {name:c.name,hex:c.hex};}));
+  }
+  function download(name,text,type){
+    var blob=new Blob([text],{type:type||'text/plain'});var u=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},2000);
+  }
+  document.getElementById('dlCss').onclick=function(){
+    var css=':root{\n'+currentPalette().map(function(c){return '  --'+c.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+': '+c.hex+';';}).join('\n')+'\n}\n';
+    download('casa-blanca-palette.css',css,'text/css');
+  };
+  document.getElementById('dlJson').onclick=function(){
+    download('casa-blanca-palette.json',JSON.stringify(currentPalette(),null,2),'application/json');
+  };
+  document.getElementById('dlSheet').onclick=function(){
+    var pal=currentPalette(),cols=Math.min(5,pal.length||1),rows=Math.ceil(pal.length/cols);
+    var cw=220,ch=160,pad=0,c=document.createElement('canvas');c.width=cols*cw;c.height=rows*ch;
+    var x=c.getContext('2d');x.fillStyle='#f4f3f0';x.fillRect(0,0,c.width,c.height);
+    pal.forEach(function(p,i){var cx=(i%cols)*cw,cy=Math.floor(i/cols)*ch;
+      x.fillStyle=p.hex;x.fillRect(cx+14,cy+14,cw-28,ch-64);
+      x.fillStyle='#0f0f0f';x.font='800 16px Object Sans, Arial';x.fillText(p.name,cx+16,cy+ch-26);
+      x.fillStyle='#888680';x.font='14px Object Sans, Arial';x.fillText(p.hex,cx+16,cy+ch-8);});
+    c.toBlob(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='casa-blanca-swatches.png';a.click();setTimeout(function(){URL.revokeObjectURL(u);},2000);});
+  };
+
+  /* ---- Load live assets from backend ---- */
+  window.__live={logo:[],font:[],color:[],guideline:[],template:[],other:[]};
+  function renderAll(){
+    ['logo','font','guideline','template','other'].forEach(renderCategory);
+    renderColors();
+  }
+  function load(){
+    fetch(API).then(function(r){return r.json();}).then(function(list){
+      if(!Array.isArray(list)) return;
+      var buckets={logo:[],font:[],color:[],guideline:[],template:[],other:[]};
+      list.forEach(function(a){(buckets[a.category]||buckets.other).push(a);});
+      window.__live=buckets; renderAll();
+    }).catch(function(){ /* backend offline — built-ins still render */ renderAll(); });
+  }
+
+  /* ---- Dev: show add zones when signed in ---- */
+  function applyDev(){var on=authed();[].forEach.call(document.querySelectorAll('[data-dev]'),function(z){z.hidden=!on;});}
+
+  /* ---- Dev: upload a file asset ---- */
+  function readFile(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=rej;r.readAsDataURL(f);});}
+  document.querySelectorAll('[data-upload]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var zone=btn.closest('.devzone');
+      var nameEl=zone.querySelector('[data-name]'),fileEl=zone.querySelector('[data-file]'),stat=zone.querySelector('[data-stat]');
+      var catSel=zone.querySelector('[data-cat]');
+      var category=catSel?catSel.value:btn.getAttribute('data-upload');
+      var name=(nameEl.value||'').trim(),file=fileEl.files&&fileEl.files[0];
+      if(!name){stat.textContent='Add a name.';return;}
+      if(!file){stat.textContent='Choose a file.';return;}
+      btn.disabled=true;stat.textContent='Uploading…';
+      readFile(file).then(function(src){
+        return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({name:name,category:category,src:src,filename:file.name})});
+      }).then(function(r){return r.json();}).then(function(d){
+        btn.disabled=false;
+        if(d&&d.ok){stat.textContent='Added ✓';nameEl.value='';fileEl.value='';load();}
+        else{stat.textContent='Error: '+((d&&d.error)||'upload failed');}
+      }).catch(function(){btn.disabled=false;stat.textContent='Network error — is the backend reachable?';});
+    });
+  });
+
+  /* ---- Dev: add a color ---- */
+  var addColor=document.querySelector('[data-addcolor]');
+  if(addColor) addColor.addEventListener('click',function(){
+    var zone=addColor.closest('.devzone'),stat=zone.querySelector('[data-cstat]');
+    var name=(zone.querySelector('[data-cname]').value||'').trim();
+    var hex=(zone.querySelector('[data-chex]').value||'').trim();
+    if(!name){stat.textContent='Add a name.';return;}
+    if(!/^#?[0-9a-fA-F]{3,8}$/.test(hex)){stat.textContent='Enter a valid hex like #aaa3cf.';return;}
+    addColor.disabled=true;stat.textContent='Saving…';
+    fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,category:'color',hex:hex})})
+      .then(function(r){return r.json();}).then(function(d){
+        addColor.disabled=false;
+        if(d&&d.ok){stat.textContent='Added ✓';zone.querySelector('[data-cname]').value='';zone.querySelector('[data-chex]').value='';load();}
+        else{stat.textContent='Error: '+((d&&d.error)||'failed');}
+      }).catch(function(){addColor.disabled=false;stat.textContent='Network error.';});
+  });
+
+  /* ---- Dev: delete (event delegation across all grids + swatches) ---- */
+  document.addEventListener('click',function(e){
+    var d=e.target.closest('[data-del]'); if(!d) return;
+    e.preventDefault();
+    if(!authed()) return;
+    if(!confirm('Delete this asset for everyone?')) return;
+    var key=d.getAttribute('data-del');
+    fetch(API,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key})})
+      .then(function(r){return r.json();}).then(function(){load();})
+      .catch(function(){alert('Could not delete — backend unreachable.');});
+  });
+
+  applyDev();
+  renderAll();
+  load();
+})();
+</script>
+</body>
+</html>

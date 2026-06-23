@@ -21,6 +21,20 @@ GitHub Pages and call these functions on the Netlify origin (CORS is open).
 | `GET/POST/DELETE` | `/.netlify/functions/agents`   | Agent headshot library (Netlify Blobs store `agents`) |
 | `GET/POST` | `/.netlify/functions/sessions` | Saved sessions (Netlify Blobs store `cb-sessions`, last 3) |
 
+**Brand Assets** (`/tools/brand/`)
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`  | `/.netlify/functions/brand` | List asset metadata (no file bytes; colors include hex) |
+| `GET`  | `/.netlify/functions/brand?file=KEY` | Raw bytes for one file asset (for `<img>` / download) |
+| `GET`  | `/.netlify/functions/brand?key=KEY` | Full metadata JSON for one asset |
+| `POST` | `/.netlify/functions/brand` | Add an asset — file: `{name,category,src(dataURL),filename}`; color: `{name,category:"color",hex}` |
+| `DELETE` | `/.netlify/functions/brand` | `{key}` — remove an asset |
+
+Categories: `logo`, `font`, `color`, `guideline`, `template`, `other`. Stored in Netlify
+Blobs store `brand`. Logos, the Object Sans fonts and the palette ship as static
+repo files (built-ins shown alongside live ones); dev-added assets persist in Blobs
+and propagate to everyone.
+
 ## Setup (one time)
 
 1. **Environment variables** — Netlify → Site settings → Environment variables:
