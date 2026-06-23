@@ -35,6 +35,26 @@ Blobs store `brand`. Logos, the Object Sans fonts and the palette ship as static
 repo files (built-ins shown alongside live ones); dev-added assets persist in Blobs
 and propagate to everyone.
 
+**Home page live content** (`/`)
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`  | `/.netlify/functions/site` | `{ workshop, changelog }` (strongly-consistent single-blob read) |
+| `POST` | `/.netlify/functions/site` | Update: `{workshop}` (full object), `{entry}` (prepend a changelog entry), `{changelog}` (full array), or `{deleteChangelogDate}` |
+
+Stored in Blobs store `cb-site` under key `config`. The home page hydrates the next-workshop
+card and the "What's new" changelog from this on load and falls back to the inline JSON
+blocks in `index.html` if the backend is unreachable. Signed-in devs edit both in-platform.
+
+## Propagation note (important)
+
+Live edits (brand assets, workshop, changelog) are written to Netlify Blobs by the
+Functions above, so they only reach visitors who load the site **from the Netlify origin**
+(same origin as the functions). If the site is also served from GitHub Pages, those
+visitors will see only the static repo content (built-in logos/fonts/palette + the inline
+workshop/changelog defaults) — `/.netlify/functions/*` does not exist there. To have
+in-platform edits reach everyone, point agents at the Netlify URL (or set
+`localStorage.cb_backend` to the Netlify origin on the Pages site).
+
 ## Setup (one time)
 
 1. **Environment variables** — Netlify → Site settings → Environment variables:
