@@ -523,6 +523,24 @@ function pickImage(o){const inp=document.createElement('input');inp.type='file';
 function wireDZ(el,o){el.onclick=()=>pickImage(o);
   el.ondragover=e=>{e.preventDefault();el.classList.add('drag');};el.ondragleave=()=>el.classList.remove('drag');
   el.ondrop=e=>{e.preventDefault();el.classList.remove('drag');const file=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(file)loadInto(o,file);};}
+let TAUPE_AGENTS=[];
+function loadTaupeAgents(){ fetch('../../assets/agents/agents-taupe.json',{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(d=>{TAUPE_AGENTS=Array.isArray(d)?d:[];}).catch(()=>{TAUPE_AGENTS=[];}); }
+function loadAgentInto(o,src){const im=new Image();im.onload=()=>{o.img=im;o.src=src;o.ox=0;o.oy=0;o.scale=1;ACTIVEIMG=o;renderAll();buildEditor();};im.onerror=()=>showToast('Could not load headshot');im.src=src;}
+function agentPicker(a){
+  const d=document.createElement('div'); d.className='fld';
+  d.innerHTML=L('Pick from agent library','Search a name to drop the taupe headshot.')+
+    '<input type="text" class="ap-inp" placeholder="Search agent…" autocomplete="off" style="width:100%;padding:8px 10px;border:1px solid #d8d3c8;border-radius:8px;font:inherit;box-sizing:border-box">'+
+    '<div class="ap-res" style="display:none;border:1px solid #e7e3da;border-radius:8px;margin-top:4px;max-height:200px;overflow:auto;background:#fff"></div>';
+  const inp=d.querySelector('.ap-inp'), res=d.querySelector('.ap-res');
+  function close(){res.style.display='none';res.innerHTML='';}
+  inp.addEventListener('input',()=>{const q=inp.value.trim().toLowerCase();if(!q){close();return;}
+    const hits=TAUPE_AGENTS.filter(x=>x.name.toLowerCase().includes(q)).slice(0,40);
+    res.style.display='block';
+    res.innerHTML=hits.length?hits.map(x=>`<div class="ap-row" data-src="../../assets/agents/${x.file}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer"><img src="../../assets/agents/${x.file}" style="width:30px;height:30px;object-fit:cover;border-radius:4px" loading="lazy"><span style="font-size:12px;font-weight:700">${x.name}</span></div>`).join(''):'<div style="padding:8px 10px;color:#888;font-size:12px">No match</div>';
+  });
+  res.addEventListener('click',e=>{const row=e.target.closest('.ap-row');if(!row)return;loadAgentInto(a.image,row.dataset.src);inp.value='';close();showToast('✓ Headshot placed');});
+  return d;
+}
 function dzField(label,o,hint){const d=document.createElement('div');d.className='fld';const has=o.src;
   d.innerHTML=L(label,hint)+`<div class="dz ${has?'has':''}">${has?`<img src="${o.src}"><button class="clear">remove</button>`:'Click or drop image'}</div>`;
   const dz=d.querySelector('.dz');wireDZ(dz,o);const clr=d.querySelector('.clear');
@@ -602,7 +620,8 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     body.appendChild(fld('Price',o.price,v=>{o.price=v;renderAll();},'$2.5M','price'));
     o.agents.forEach((a,i)=>{
       divlabel(body,'Agent '+(i+1));
-      body.appendChild(dzField('Headshot — uploaded as-is (pre-formatted square)',a.image,'Square crop on taupe, B&W. Used exactly as uploaded.'));
+      body.appendChild(agentPicker(a));
+      body.appendChild(dzField('…or upload your own (pre-formatted square)',a.image,'Square crop on taupe, B&W. Used exactly as uploaded.'));
       body.appendChild(fld('Instagram handle',a.handle,v=>{a.handle=v;renderAll();},'@handle','handle'+i));
       if(o.agents.length>1){const rm=document.createElement('button');rm.className='delbtn';rm.style.marginTop='4px';rm.textContent='Remove agent '+(i+1);rm.onclick=()=>{o.agents.splice(i,1);buildEditor();renderAll();};body.appendChild(rm);}
     });
@@ -670,7 +689,7 @@ function cbBackend(){return (localStorage.getItem('cb_backend')||'').replace(/\/
 function cbSetBackend(){const cur=cbBackend();const v=prompt('Backend base URL (your Netlify site, e.g. https://your-site.netlify.app):',cur);if(v!==null){localStorage.setItem('cb_backend',v.trim());showToast('✓ Backend saved');}}
 function imStatus(msg,err){const el=document.getElementById('imStatus');if(!el)return;el.textContent=msg||'';el.className='imstatus'+(err?' err':'');}
 let IMPORTED=null;
-function imgURL(u){const b=cbBackend();return b?b+'/api/img?u='+encodeURIComponent(u):u;}
+function imgURL(u){const b=cbBackend();return (b||'')+'/.netlify/functions/img?u='+encodeURIComponent(u);}
 
 // load a (proxied) photo URL into a slide image object, as base64 so canvas export stays untainted
 function loadUrlInto(o,url){return fetch(imgURL(url)).then(r=>{if(!r.ok)throw new Error('image '+r.status);return r.blob();})
@@ -706,8 +725,8 @@ function doImport(){
   const url=(document.getElementById('imUrl').value||'').trim();if(!url){imStatus('Paste a listing URL first',true);return;}
   const t0=Date.now(); const ti=setInterval(()=>imStatus('Importing… '+Math.round((Date.now()-t0)/1000)+'s'),250); imStatus('Importing… 0s');
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),95000);
-  fetch(cbBackend()+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:ctl.signal})
-    .then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'import failed');
+  fetch(cbBackend()+'/.netlify/functions/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:ctl.signal})
+    .then(r=>r.text().then(tx=>{let j;try{j=JSON.parse(tx);}catch(_){throw new Error('backend not reachable (HTTP '+r.status+') — on GitHub Pages click "Set backend URL…"');}return{ok:r.ok,j};})).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'import failed');
       IMPORTED=j.facts||{};applyFacts(IMPORTED);renderTray(j.photos||[]);
       imStatus('✓ Imported. '+((j.photos||[]).length)+' photos found; empty fields filled.');})
     .catch(e=>imStatus(e&&e.name==='AbortError'?'Import timed out (95s) — try again':('Import failed: '+e.message),true))
@@ -719,8 +738,8 @@ function doAI(){
   const t=S.mid.find(m=>m.type==='teaser');if(t){facts.address=facts.address||t.address;facts.price=facts.price||t.price;facts.agent=facts.agent||t.agent;}
   const slides=S.mid.filter(m=>m.type!=='teaser').map(m=>({kind:m.type}));
   imStatus('Writing captions…');
-  fetch(cbBackend()+'/api/copy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({facts,status:S.status,slides})})
-    .then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'copy failed');
+  fetch(cbBackend()+'/.netlify/functions/copy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({facts,status:S.status,slides})})
+    .then(r=>r.text().then(tx=>{let j;try{j=JSON.parse(tx);}catch(_){throw new Error('backend not reachable (HTTP '+r.status+') — on GitHub Pages click "Set backend URL…"');}return{ok:r.ok,j};})).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'copy failed');
       if(j.coverSubhead)S.cover.subhead=j.coverSubhead;
       const tt=S.mid.find(m=>m.type==='teaser');if(tt&&j.teaser)tt.descRuns=[{text:j.teaser,bold:false}];
       const mids=S.mid.filter(m=>m.type!=='teaser');(j.slides||[]).forEach((c,i)=>{const m=mids[i];if(!m)return;const txt=((c.heading?c.heading+'. ':'')+(c.body||'')).trim();if('descRuns'in m)m.descRuns=[{text:txt,bold:false}];if('name'in m&&c.heading)m.name=c.heading;});
@@ -792,7 +811,7 @@ function initEditorialAutosave(){
   edMaybeRestore(); _edSavedSig=edSig(); edRefreshStatus();
 }
 
-function boot(){buildAccents();buildFilm();buildEditor();renderAll();initImportPanel();initEditorialAutosave();}
+function boot(){buildAccents();buildFilm();buildEditor();renderAll();initImportPanel();initEditorialAutosave();loadTaupeAgents();}
 if(wmImg.complete&&wmImg.naturalWidth)boot();else{wmImg.onload=boot;setTimeout(()=>{if(!document.querySelector('.thumb'))boot();},1500);}
 
 </script>
