@@ -10,7 +10,7 @@ const SCHEMA = {
   properties: {
     address: {
       type: 'string',
-      description: 'Street address only without apt/unit number, city, state, or ZIP. E.g. "10 Hubert St" not "10 Hubert St, Apt 4B, New York, NY 10013"',
+      description: 'Street address INCLUDING apt/unit number if present, but no city, state, or ZIP. E.g. "304 E 73rd St #1C" or "10 Hubert St".',
     },
     neighborhood: {
       type: 'string',
@@ -20,9 +20,18 @@ const SCHEMA = {
       type: 'string',
       description: 'Listing price in shorthand format like "1.5M" or "850K" (no dollar sign). Convert $1,500,000 to "1.5M" and $850,000 to "850K"',
     },
+    beds: { type: 'string', description: 'Bedroom COUNT only — digits, or the word "Studio". No "BD"/"bed" suffix. E.g. "2" or "Studio". Empty if unknown.' },
+    baths: { type: 'string', description: 'Bathroom COUNT only — digits, may be decimal. No "BA"/"bath" suffix. E.g. "1" or "2.5". Empty if unknown.' },
+    sqft: { type: 'string', description: 'Interior square footage with commas, digits only (no "sqft"). E.g. "1,530". Empty if unknown.' },
+    agent: { type: 'string', description: 'Primary listing agent full name, if shown. Empty if unknown.' },
     description: {
       type: 'string',
       description: 'The COMPLETE "About this home" / listing description — every paragraph, in full. If a "read more"/"see more"/"show more" expander truncates it on the page, still return the entire description, never the shortened preview. Do not summarize or cut it off.',
+    },
+    photos: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Full-resolution listing photo image URLs, in display order (the first is the hero). Full https:// URLs.',
     },
     heroImageUrl: {
       type: 'string',
@@ -81,36 +90,40 @@ export default async (req) => {
     const data = res.j;
     const ex = data.data?.extract || data.extract || {};
 
-    // Fetch the hero image server-side and convert to base64 (bypasses browser CORS)
-    let heroImage = null;
-    if (ex.heroImageUrl) {
+    // Fetch listing photos server-side and base64 them (bypasses browser CORS / hotlink blocks).
+    async function toDataUrl(u) {
       try {
-        const imgRes = await fetch(ex.heroImageUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 CB-Carousel-Builder' },
-        });
-        if (imgRes.ok) {
-          const buf = await imgRes.arrayBuffer();
-          const u8 = new Uint8Array(buf);
-          let s = '';
-          const chunk = 8192;
-          for (let i = 0; i < u8.length; i += chunk) {
-            s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
-          }
-          const b64 = btoa(s);
-          const mime = imgRes.headers.get('content-type') || 'image/jpeg';
-          heroImage = 'data:' + mime + ';base64,' + b64;
-        }
-      } catch (e) {
-        console.warn('hero image fetch failed:', e);
-      }
+        const imgRes = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 CB-Carousel-Builder' } });
+        if (!imgRes.ok) return null;
+        const ct = imgRes.headers.get('content-type') || 'image/jpeg';
+        if (!ct.startsWith('image/')) return null;
+        const u8 = new Uint8Array(await imgRes.arrayBuffer());
+        let s = ''; const chunk = 8192;
+        for (let i = 0; i < u8.length; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+        return 'data:' + ct + ';base64,' + btoa(s);
+      } catch (e) { return null; }
     }
+
+    // Build an ordered, deduped URL list (hero first), cap at 6, base64 each.
+    const urls = [];
+    if (ex.heroImageUrl) urls.push(ex.heroImageUrl);
+    if (Array.isArray(ex.photos)) for (const p of ex.photos) if (typeof p === 'string') urls.push(p);
+    const seen = new Set();
+    const ordered = urls.filter((u) => /^https?:\/\//i.test(u) && !seen.has(u) && seen.add(u)).slice(0, 6);
+    const photos = (await Promise.all(ordered.map(toDataUrl))).filter(Boolean);
+    const heroImage = photos[0] || null;
 
     return json({
       address: ex.address || '',
       neighborhood: ex.neighborhood || '',
       price: ex.price || '',
+      beds: ex.beds || '',
+      baths: ex.baths || '',
+      sqft: ex.sqft || '',
+      agent: ex.agent || '',
       description: ex.description || '',
-      heroImage,
+      heroImage,   // back-compat: first photo (base64)
+      photos,      // base64 data URLs, hero first
       sourceUrl: url,
     });
   } catch (e) {
