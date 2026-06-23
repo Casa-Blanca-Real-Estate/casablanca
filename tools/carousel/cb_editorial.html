@@ -123,7 +123,7 @@ header .hname{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:
           <div class="imhint">Import fills the address, price, beds/baths/sqft &amp; description and loads the photos below. “Write captions” drafts the slide copy with AI.</div>
           <div class="imstatus" id="imStatus"></div>
           <div class="imtray" id="imTray"></div>
-          <div class="imfoot"><button class="imlink" id="edFresh" type="button">Start fresh</button><span id="ed-save-status"></span></div>
+          <div class="imfoot"><button class="imlink" id="edSave" type="button">Save now</button><button class="imlink" id="edFresh" type="button">Start fresh</button><span id="ed-save-status"></span></div>
         </div>
       </div>
       <div class="toggle-row"><span>Show placeholder text</span><div class="sw-toggle on" id="phToggle"></div></div>
@@ -379,8 +379,9 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
   const lead=(t.leadin||(STATUSES[S.status]||STATUSES.closed).leadin);
   const r2=drawRuns(ctx,[{text:lead+' ',bold:false},{text:pr.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:pr.isph});
   hit('price',X,y,MEAS,lh);y=r2.bottom;
-  const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:ag.isph});
-  hit('agent',X,y,MEAS,lh);y=r3.bottom;
+  const AGENTW=W-X-57; // agent name uses near-full width — the narrow MEAS is only to wrap the address
+  const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,AGENTW,sz,lh,{justify:false,color:BODY,isph:ag.isph});
+  hit('agent',X,y,AGENTW,lh);y=r3.bottom;
   setLS(ctx,false);return y;}
 function drawTeaser(ctx,t){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
   drawTeaserHeader(ctx,t);
@@ -444,12 +445,23 @@ function drawContext(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.f
   drawLogo(ctx,666,1277,373,40,'#0f0f0f');}
 
 // ── END · CONTACT ──
-function drawBuildingIcon(ctx,cx,topY,w,h,color){ctx.save();setLS(ctx,false);ctx.fillStyle=color;
-  const cols=5,rows=6,gap=Math.max(2,Math.round(w*0.05));
-  const cw=(w-(cols-1)*gap)/cols, chh=(h-(rows-1)*gap)/rows, x0=cx-w/2, y0=topY;
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ if(c===2&&r>=rows-2)continue; ctx.fillRect(x0+c*(cw+gap), y0+r*(chh+gap), cw, chh); }
-  const dx=x0+2*(cw+gap), dyTop=y0+(rows-2)*(chh+gap), dw=cw, rr=dw/2, bot=y0+h;
-  ctx.beginPath();ctx.moveTo(dx,bot);ctx.lineTo(dx,dyTop+rr);ctx.arc(dx+rr,dyTop+rr,rr,Math.PI,0);ctx.lineTo(dx+dw,bot);ctx.closePath();ctx.fill();
+// Casa Blanca building mark — line-art tower: a 5×7 grid of outlined window panes with
+// an arched entrance in the centre-bottom (matches the brand logo, not solid blocks).
+function drawBuildingIcon(ctx,cx,topY,w,h,color){ctx.save();setLS(ctx,false);
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineCap='butt';ctx.lineJoin='miter';
+  const cols=5,rows=7,lw=Math.max(3,Math.round(w*0.052));ctx.lineWidth=lw;
+  const x0=cx-w/2,y0=topY,cw=w/cols,rh=h/rows;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(c===2&&r>=rows-2)continue; // centre column, bottom two rows → arched entrance
+    ctx.strokeRect(x0+c*cw+lw/2,y0+r*rh+lw/2,cw-lw,rh-lw);
+  }
+  const ax=x0+2*cw,aTop=y0+(rows-2)*rh,aBot=y0+h,cxx=ax+cw/2,rr=(cw-lw)/2;
+  ctx.beginPath();
+  ctx.moveTo(ax+lw/2,aBot);
+  ctx.lineTo(ax+lw/2,aTop+cw/2);
+  ctx.arc(cxx,aTop+cw/2,rr,Math.PI,0);
+  ctx.lineTo(ax+cw-lw/2,aBot);
+  ctx.stroke();
   ctx.restore();}
 function drawEnd(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#0f0f0f';ctx.fillRect(0,0,W,H);
   const TAUPE='#c7c0b7';
@@ -474,7 +486,7 @@ function drawEnd(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#0f0f0f';ctx.fillR
   const r=drawRuns(ctx,[{text:cr.t,bold:false}],90,cy,W-180,46,52,{justify:false,align:'center',color:'#ffffff',isph:cr.isph});
   if(cr.t||S.showPlaceholders)hit('contact',90,cy,W-180,r.lines*52);
   // building mark + wordmark (white, centered)
-  drawBuildingIcon(ctx,W/2,1112,92,116,'#ffffff');
+  drawBuildingIcon(ctx,W/2,1066,96,150,'#ffffff');
   drawLogo(ctx,354,1262,373,40,'#ffffff');}
 
 // ── render dispatch ──
@@ -874,8 +886,14 @@ function edStartFresh(){ if(!confirm('Start fresh? This clears the current edito
   // also clear the Import & AI panel (URL field, imported facts, photo tray)
   IMPORTED=null; const _u=document.getElementById('imUrl'); if(_u)_u.value=''; const _t=document.getElementById('imTray'); if(_t)_t.innerHTML=''; imStatus('');
   buildAccents(); buildFilm(); buildEditor(); renderAll(); edMarkSaved(); showToast('✓ Started fresh'); }
+function edSaveNow(){
+  if(!devAuthed()){ showToast('Sign in as Dev to save on this device'); return; }
+  if(!editorialHasContent()){ showToast('Nothing to save yet'); return; }
+  edAutosave(); edMarkSaved(); showToast('✓ Saved to this device');
+}
 function initEditorialAutosave(){
   const fb=document.getElementById('edFresh'); if(fb) fb.onclick=edStartFresh;
+  const sb=document.getElementById('edSave'); if(sb) sb.onclick=edSaveNow;
   window.addEventListener('pagehide', edAutosave);
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') edAutosave(); });
   setInterval(edAutosave, 15000); setInterval(edRefreshStatus, 1500);
