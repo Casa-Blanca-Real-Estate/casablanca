@@ -115,20 +115,19 @@ header .hname{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:
 <div class="wrap">
   <div class="editor">
     <div class="etop">
-      <div class="toggle-row"><span>Show placeholder text</span><div class="sw-toggle on" id="phToggle"></div></div>
-      <div class="accents" id="accents"></div>
-      <div class="impanel" id="impanel">
-        <button class="imhead" id="imToggle" type="button">Import &amp; AI<span id="imChevron">▾</span></button>
-        <div class="imbody" id="imbody" hidden>
-          <input id="imUrl" type="text" placeholder="Paste a StreetEasy listing URL">
+      <div class="impanel impanel-top" id="impanel">
+        <button class="imhead open" id="imToggle" type="button">1 · Import from StreetEasy<span id="imChevron">▾</span></button>
+        <div class="imbody" id="imbody">
+          <input id="imUrl" type="text" placeholder="Paste a StreetEasy listing URL, then Import">
           <div class="imrow"><button class="btn dark" id="imImport" type="button">Import listing</button><button class="btn ghost" id="imAI" type="button">Write captions ✨</button></div>
+          <div class="imhint">Import fills the address, price, beds/baths/sqft &amp; description and loads the photos below. “Write captions” drafts the slide copy with AI.</div>
           <div class="imstatus" id="imStatus"></div>
           <div class="imtray" id="imTray"></div>
-          <button class="imlink" id="imSetup" type="button">Set backend URL…</button>
-          <button class="imlink" id="edFresh" type="button" style="margin-left:10px;">Start fresh</button>
-          <span id="ed-save-status" style="font-size:11px;font-weight:800;letter-spacing:.06em;margin-left:10px;color:#8a8270;"></span>
+          <div class="imfoot"><button class="imlink" id="imSetup" type="button">Set backend URL…</button><button class="imlink" id="edFresh" type="button">Start fresh</button><span id="ed-save-status"></span></div>
         </div>
       </div>
+      <div class="toggle-row"><span>Show placeholder text</span><div class="sw-toggle on" id="phToggle"></div></div>
+      <div class="accents" id="accents"></div>
     </div>
     <div class="ebody" id="ebody"></div>
   </div>
@@ -344,7 +343,10 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
     // RIGHT block (BD/BA, SF, price), right-aligned at W-57
     const RX=W-57, beds=(t.beds||'').trim(), baths=(t.baths||'').trim(), sqft=(t.sqft||'').trim();
     const bdraw=ph(beds,PH.beds), brraw=ph(baths,PH.baths), sfraw=ph(sqft,PH.sqft);
-    const bdLine=(bdraw.t?bdraw.t+' BD':'')+(bdraw.t&&brraw.t?', ':'')+(brraw.t?brraw.t+' BA':'');
+    // "Studio" (or any non-numeric value) renders as-is; numeric counts get the BD/BA suffix.
+    const bdTxt=bdraw.t?(/^\d+(\.\d+)?$/.test(bdraw.t.trim())?bdraw.t+' BD':bdraw.t):'';
+    const brTxt=brraw.t?(/^\d+(\.\d+)?$/.test(brraw.t.trim())?brraw.t+' BA':brraw.t):'';
+    const bdLine=bdTxt+(bdTxt&&brTxt?', ':'')+brTxt;
     const sfLine=sfraw.t?sfraw.t+' SF':'';
     const prLine=pr.t||'';
     const lines=[
@@ -512,6 +514,10 @@ function L(label,tip){return `<label>${label}${tip?` <span class="tip" data-tip=
 function fld(label,value,oninput,phs,fieldid,tip){const d=document.createElement('div');d.className='fld';
   d.innerHTML=L(label,tip)+`<input type="text" value="${(value||'').replace(/"/g,'&quot;')}" placeholder="${phs||''}">`;
   d.querySelector('input').oninput=e=>oninput(e.target.value);return W_wrap(fieldid,d);}
+// multi-line plain-text field — Enter inserts a real newline (preserved verbatim, unlike richField/runsPlain)
+function taField(label,value,oninput,phs,fieldid,tip){const d=document.createElement('div');d.className='fld';
+  d.innerHTML=L(label,tip)+`<textarea rows="3" placeholder="${(phs||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid #d8d3c8;border-radius:8px;font:inherit;box-sizing:border-box;resize:vertical;line-height:1.4">${(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>`;
+  d.querySelector('textarea').oninput=e=>oninput(e.target.value);return W_wrap(fieldid,d);}
 function richField(label,runs,onchange,fieldid){const d=document.createElement('div');d.className='fld';
   d.innerHTML=`<label>${label}</label><div class="richtool"><button class="boldbtn" type="button">Bold</button></div><div class="rich" contenteditable="true"></div>`;
   const ed=d.querySelector('.rich');ed.innerHTML=runsToHTML(runs);
@@ -568,7 +574,7 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     body.appendChild(fld('Badge',o.badge,v=>{o.badge=v;renderAll();},(STATUSES[S.status]||STATUSES.closed).badge,'badge','All caps, sits above the cover photo. Status sets this; edit freely.'));
     body.appendChild(seg('Badge color',[{v:'#0f0f0f',t:'Black'},{v:'#ffffff',t:'White'},{v:'__accent',t:'Accent'}],o.badgeColor===S.accent?'__accent':o.badgeColor,v=>{o.badgeColor=(v==='__accent')?S.accent:v;renderAll();}));
     imageBlock(body,'Cover photo',o.image,'1080×1076. Drag on the canvas to reposition.');
-    body.appendChild(richField('Subhead  ·  line break = hard break',[{text:o.subhead,bold:false}].filter(r=>r.text),runs=>{o.subhead=runsPlain(runs);renderAll();},'subhead'));
+    body.appendChild(taField('Subhead  ·  press Enter for a hard line break',o.subhead,v=>{o.subhead=v;renderAll();},PH.subhead,'subhead','Each line becomes its own ALL-CAPS line on the cover.'));
     body.appendChild(seg('Subhead alignment',[{v:'left',t:'Left'},{v:'center',t:'Center'},{v:'right',t:'Right'}],o.subAlign,v=>{o.subAlign=v;renderAll();},'subhead'));
     body.appendChild(slider('Subhead size',o.subSize,60,104,1,v=>{o.subSize=v;renderAll();},'subhead','large display caps'));
     body.appendChild(slider('Subhead vertical position',o.subY,0.02,0.92,0.01,v=>{o.subY=v;renderAll();},'subhead'));
@@ -585,6 +591,7 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     body.appendChild(fld('With agent',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent'));
     imageBlock(body,'Photo',o.image,'1080×720. Drag on the canvas to reposition.');
     body.appendChild(richField('Description  ·  select text + Bold',o.descRuns,runs=>{o.descRuns=runs;renderAll();},'desc'));
+    const cond=document.createElement('button');cond.className='delbtn';cond.style.cssText='background:#f3f0ff;border-color:#cfc7f0;color:#5a4fa3;margin-bottom:6px';cond.textContent='✨ Condense description with AI';cond.onclick=condenseDescription;body.appendChild(cond);
     body.appendChild(delButton());
   }
   else if(k==='singleA'){
@@ -689,23 +696,26 @@ function cbBackend(){return (localStorage.getItem('cb_backend')||'').replace(/\/
 function cbSetBackend(){const cur=cbBackend();const v=prompt('Backend base URL (your Netlify site, e.g. https://your-site.netlify.app):',cur);if(v!==null){localStorage.setItem('cb_backend',v.trim());showToast('✓ Backend saved');}}
 function imStatus(msg,err){const el=document.getElementById('imStatus');if(!el)return;el.textContent=msg||'';el.className='imstatus'+(err?' err':'');}
 let IMPORTED=null;
-function imgURL(u){const b=cbBackend();return (b||'')+'/.netlify/functions/img?u='+encodeURIComponent(u);}
-
-// load a (proxied) photo URL into a slide image object, as base64 so canvas export stays untainted
-function loadUrlInto(o,url){return fetch(imgURL(url)).then(r=>{if(!r.ok)throw new Error('image '+r.status);return r.blob();})
-  .then(bl=>new Promise((res,rej)=>{const fr=new FileReader();fr.onerror=()=>rej(new Error('read failed'));fr.onload=()=>{const im=new Image();im.onload=()=>{o.img=im;o.src=fr.result;o.ox=0;o.oy=0;o.scale=1;ACTIVEIMG=o;renderAll();res();};im.onerror=()=>rej(new Error('decode failed'));im.src=fr.result;};fr.readAsDataURL(bl);}));}
+// Photos come back from the importer already base64-encoded (server-side), so canvas
+// export stays untainted and there's no CORS/hotlink proxy hop to fail with a 502.
+function placePhoto(o,src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{o.img=im;o.src=src;o.ox=0;o.oy=0;o.scale=1;ACTIVEIMG=o;renderAll();res();};im.onerror=()=>rej(new Error('decode failed'));im.src=src;});}
 
 function targetImg(o){return o&&(o.image||o.top)||null;}
 
+function fmtPrice(p){p=(p||'').trim();return p?(p[0]==='$'?p:'$'+p):'';}
 function applyFacts(f){
   const st={'for sale':'justlisted','in contract':'incontract','sold':'justsold','closed':'closed'};
   const s=(f.status||'').toLowerCase();
   for(const k in st){if(s.includes(k)){S.status=st[k];S.cover.badge=STATUSES[S.status].badge;break;}}
-  if(!(S.cover.subhead||'').trim()){const lines=[];if(f.neighborhood)lines.push(String(f.neighborhood).toUpperCase());if(f.price)lines.push(f.price);if(lines.length)S.cover.subhead=lines.join('\n');}
+  const price=fmtPrice(f.price);
+  if(!(S.cover.subhead||'').trim()){const lines=[];if(f.neighborhood)lines.push(String(f.neighborhood).toUpperCase());if(price)lines.push(price);if(lines.length)S.cover.subhead=lines.join('\n');}
   const t=S.mid.find(m=>m.type==='teaser');
   if(t){ // only fill EMPTY fields — never override what's already typed
     if(f.address&&!(t.address||'').trim())t.address=[f.address,f.neighborhood].filter(Boolean).join(', ');
-    if(f.price&&!(t.price||'').trim())t.price=f.price;
+    if(price&&!(t.price||'').trim())t.price=price;
+    if(f.beds&&!(t.beds||'').trim())t.beds=f.beds;
+    if(f.baths&&!(t.baths||'').trim())t.baths=f.baths;
+    if(f.sqft&&!(t.sqft||'').trim())t.sqft=f.sqft;
     if(f.agent&&!(t.agent||'').trim())t.agent=f.agent;
     if(f.description&&!(t.descRuns&&t.descRuns.length))t.descRuns=[{text:f.description,bold:false}];
   }
@@ -716,8 +726,8 @@ function renderTray(photos){const tray=document.getElementById('imTray');tray.in
   if(!photos||!photos.length)return;
   const hint=document.createElement('div');hint.className='imhint';hint.textContent='Tap a photo to drop it on the current slide:';tray.appendChild(hint);
   const grid=document.createElement('div');grid.className='imgrid';tray.appendChild(grid);
-  photos.forEach(u=>{const im=document.createElement('img');im.src=imgURL(u);im.loading='lazy';im.title='Use on current slide';
-    im.onclick=()=>{const tgt=targetImg(slideObj(active));if(!tgt){showToast('This slide has no photo to replace');return;}imStatus('Loading photo…');loadUrlInto(tgt,u).then(()=>{buildEditor();imStatus('✓ Photo placed');}).catch(e=>imStatus('Photo failed: '+e.message,true));};
+  photos.forEach(u=>{const im=document.createElement('img');im.src=u;im.loading='lazy';im.title='Use on current slide'; // u is a base64 data URL
+    im.onclick=()=>{const tgt=targetImg(slideObj(active));if(!tgt){showToast('This slide has no photo to replace');return;}imStatus('Placing photo…');placePhoto(tgt,u).then(()=>{buildEditor();imStatus('✓ Photo placed');}).catch(e=>imStatus('Photo failed: '+e.message,true));};
     grid.appendChild(im);});
 }
 
@@ -725,33 +735,90 @@ function doImport(){
   const url=(document.getElementById('imUrl').value||'').trim();if(!url){imStatus('Paste a listing URL first',true);return;}
   const t0=Date.now(); const ti=setInterval(()=>imStatus('Importing… '+Math.round((Date.now()-t0)/1000)+'s'),250); imStatus('Importing… 0s');
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),95000);
-  fetch(cbBackend()+'/.netlify/functions/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:ctl.signal})
+  fetch(cbBackend()+'/.netlify/functions/streeteasy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:ctl.signal})
     .then(r=>r.text().then(tx=>{let j;try{j=JSON.parse(tx);}catch(_){throw new Error('backend not reachable (HTTP '+r.status+') — on GitHub Pages click "Set backend URL…"');}return{ok:r.ok,j};})).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'import failed');
-      IMPORTED=j.facts||{};applyFacts(IMPORTED);renderTray(j.photos||[]);
-      imStatus('✓ Imported. '+((j.photos||[]).length)+' photos found; empty fields filled.');})
+      IMPORTED={address:j.address||'',neighborhood:j.neighborhood||'',price:j.price||'',beds:j.beds||'',baths:j.baths||'',sqft:j.sqft||'',agent:j.agent||'',description:j.description||''};
+      const photos=Array.isArray(j.photos)?j.photos:[];
+      applyFacts(IMPORTED);renderTray(photos);
+      if(j.warning){imStatus('⚠ '+j.warning,true);return;}
+      imStatus('✓ Imported. '+photos.length+(photos.length===1?' photo':' photos')+' found; empty fields filled.');})
     .catch(e=>imStatus(e&&e.name==='AbortError'?'Import timed out (95s) — try again':('Import failed: '+e.message),true))
     .finally(()=>{clearInterval(ti);clearTimeout(to);});
 }
 
+// strip ``` / ```json fences a model sometimes wraps JSON in
+function stripFences(s){return String(s||'').replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();}
+function aiError(j){return (j&&j.error&&(j.error.message||j.error))||'AI request failed';}
+
 function doAI(){
   const facts=Object.assign({},IMPORTED||{});
-  const t=S.mid.find(m=>m.type==='teaser');if(t){facts.address=facts.address||t.address;facts.price=facts.price||t.price;facts.agent=facts.agent||t.agent;}
-  const slides=S.mid.filter(m=>m.type!=='teaser').map(m=>({kind:m.type}));
+  const t=S.mid.find(m=>m.type==='teaser');
+  if(t){ // backfill from anything typed into the teaser
+    facts.address=facts.address||t.address;facts.price=facts.price||t.price;
+    facts.beds=facts.beds||t.beds;facts.baths=facts.baths||t.baths;facts.sqft=facts.sqft||t.sqft;facts.agent=facts.agent||t.agent;
+    if((!facts.description||!facts.description.trim())&&t.descRuns&&t.descRuns.length)facts.description=runsPlain(t.descRuns);
+  }
+  const mids=S.mid.filter(m=>m.type!=='teaser'&&m.type!=='end'); // end slide has no caption to write
+  const slides=mids.map(m=>({kind:m.type}));
+  const statusLabel={justlisted:'Just Listed',incontract:'In Contract',justsold:'Just Sold',closed:'Closed (off-market sale)'}[S.status]||S.status;
+  const prompt=`You are the copywriter for Casa Blanca, a New York City luxury real-estate brand.
+Voice: understated, confident, editorial — like a design magazine, not a hype ad. Present tense. No exclamation marks, no emoji, no hashtags. Concrete and specific over superlatives. Never invent facts that aren't supported by the listing details below.
+
+Listing facts (JSON):
+${JSON.stringify(facts,null,2)}
+
+Post status: ${statusLabel}.
+The carousel has ${slides.length} mid slide(s) after the cover and teaser. Their kinds, in order:
+${slides.map((s,i)=>`  ${i+1}. ${s.kind}`).join('\n')||'  (none)'}
+
+Return ONLY a JSON object (no markdown fences, no commentary) with this exact shape:
+{
+  "coverSubhead": "2-3 short lines for the cover; use \\n between lines. For a Closed/Just Sold post the last line is usually the price.",
+  "teaser": "one or two sentence teaser line for the second slide",
+  "slides": [ { "heading": "short Title-Case heading", "body": "1-3 sentences of body copy" } ]
+}
+"slides" must contain exactly ${slides.length} item(s), one per mid slide above, each on a different angle (the architecture, the neighborhood, a standout room/detail, the building).`;
   imStatus('Writing captions…');
-  fetch(cbBackend()+'/.netlify/functions/copy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({facts,status:S.status,slides})})
-    .then(r=>r.text().then(tx=>{let j;try{j=JSON.parse(tx);}catch(_){throw new Error('backend not reachable (HTTP '+r.status+') — on GitHub Pages click "Set backend URL…"');}return{ok:r.ok,j};})).then(({ok,j})=>{if(!ok||j.error)throw new Error(j.error||'copy failed');
-      if(j.coverSubhead)S.cover.subhead=j.coverSubhead;
-      const tt=S.mid.find(m=>m.type==='teaser');if(tt&&j.teaser)tt.descRuns=[{text:j.teaser,bold:false}];
-      const mids=S.mid.filter(m=>m.type!=='teaser');(j.slides||[]).forEach((c,i)=>{const m=mids[i];if(!m)return;const txt=((c.heading?c.heading+'. ':'')+(c.body||'')).trim();if('descRuns'in m)m.descRuns=[{text:txt,bold:false}];if('name'in m&&c.heading)m.name=c.heading;});
-      buildEditor();renderAll();imStatus('✓ Captions written');}).catch(e=>imStatus('AI failed: '+e.message,true));
+  fetch(cbBackend()+'/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:1500,messages:[{role:'user',content:prompt}]})})
+    .then(r=>r.text().then(tx=>{let j;try{j=JSON.parse(tx);}catch(_){throw new Error('backend not reachable (HTTP '+r.status+') — on GitHub Pages click "Set backend URL…"');}return{ok:r.ok,j};})).then(({ok,j})=>{
+      if(!ok||j.error||j.type==='error')throw new Error(aiError(j));
+      let data;try{data=JSON.parse(stripFences((j.content&&j.content[0]&&j.content[0].text)||''));}catch(_){throw new Error('AI did not return valid JSON');}
+      if(data.coverSubhead)S.cover.subhead=data.coverSubhead;
+      const tt=S.mid.find(m=>m.type==='teaser');if(tt&&data.teaser)tt.descRuns=[{text:data.teaser,bold:false}];
+      (data.slides||[]).forEach((c,i)=>{const m=mids[i];if(!m)return;const txt=((c.heading?c.heading+'. ':'')+(c.body||'')).trim();if('descRuns'in m)m.descRuns=[{text:txt,bold:false}];if('name'in m&&c.heading)m.name=c.heading;});
+      buildEditor();renderAll();imStatus('✓ Captions written');
+    }).catch(e=>imStatus('AI failed: '+e.message,true));
+}
+
+// teaser-only: condense the (often long, imported) description into a tight editorial line
+function condenseDescription(){
+  const t=S.mid.find(m=>m.type==='teaser');if(!t)return;
+  const cur=runsPlain(t.descRuns||[]);
+  if(!cur.trim()){showToast('Add or import a description first');return;}
+  showToast('Condensing description…');
+  const prompt=`Condense the following NYC luxury real-estate listing description into ONE or TWO tight, editorial sentences for an Instagram carousel teaser. Voice: understated, confident, present tense — like a design magazine. No exclamation marks, no emoji, no hashtags. Do not invent facts. Return ONLY the condensed text — no quotes, no labels, no markdown.
+
+Description:
+${cur}`;
+  fetch(cbBackend()+'/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:400,messages:[{role:'user',content:prompt}]})})
+    .then(r=>r.text().then(tx=>{let j;try{j=JSON.parse(tx);}catch(_){throw new Error('backend not reachable (HTTP '+r.status+')');}return{ok:r.ok,j};})).then(({ok,j})=>{
+      if(!ok||j.error||j.type==='error')throw new Error(aiError(j));
+      const out=stripFences((j.content&&j.content[0]&&j.content[0].text)||'').replace(/^["']+|["']+$/g,'').trim();
+      if(!out)throw new Error('empty response');
+      t.descRuns=[{text:out,bold:false}];buildEditor();renderAll();showToast('✓ Description condensed');
+    }).catch(e=>showToast('Condense failed: '+e.message));
 }
 
 function initImportPanel(){
   const css=document.createElement('style');css.textContent=`
     .impanel{margin-top:14px;border-top:1px solid #e7e3da;padding-top:12px}
-    .imhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;font:inherit;font-weight:600;cursor:pointer;color:#1a1a1a;padding:0}
+    .impanel-top{margin-top:0;border-top:none;padding-top:0;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e7e3da}
+    .imfoot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:2px}
+    #ed-save-status{font-size:11px;font-weight:800;letter-spacing:.06em;color:#8a8270}
+    .imhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;font:inherit;font-weight:800;cursor:pointer;color:#1a1a1a;padding:0}
     .imhead #imChevron{transition:transform .15s}.imhead.open #imChevron{transform:rotate(180deg)}
     .imbody{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+    .imbody[hidden]{display:none}/* class selector beat the UA [hidden] rule, so collapse never worked */
     #imUrl{width:100%;padding:8px 10px;border:1px solid #d8d3c8;border-radius:8px;font:inherit;box-sizing:border-box}
     .imrow{display:flex;gap:8px}.imrow .btn{flex:1}
     .imstatus{font-size:12px;color:#6b6457;min-height:14px}.imstatus.err{color:#b4452f}
@@ -802,7 +869,10 @@ function edSig(){ try{ return serializeEditorial().length+'|'+(S.cover.subhead||
 let _edSavedSig='';
 function edMarkSaved(){ _edSavedSig=edSig(); edRefreshStatus(); }
 function edRefreshStatus(){ const el=document.getElementById('ed-save-status'); if(!el)return; if(!devAuthed()){el.textContent='';return;} const dirty=edSig()!==_edSavedSig; el.textContent=dirty?'• Unsaved':'✓ Saved'; el.style.color=dirty?'#b4452f':'#8a8270'; }
-function edStartFresh(){ if(!confirm('Start fresh? This clears the current editorial post on this device.'))return; try{localStorage.removeItem(ED_AUTOSAVE_KEY);}catch(e){} S.accent='#aaa3cf'; S.status='closed'; S.cover=mkCover(); S.mid=[mkTeaser(),mkSingleA(),mkDoubleA(),mkContext('building'),mkSingleB(),mkEnd()]; active=0; ACTIVE=null; ACTIVEIMG=null; buildAccents(); buildFilm(); buildEditor(); renderAll(); edMarkSaved(); showToast('✓ Started fresh'); }
+function edStartFresh(){ if(!confirm('Start fresh? This clears the current editorial post on this device.'))return; try{localStorage.removeItem(ED_AUTOSAVE_KEY);}catch(e){} S.accent='#aaa3cf'; S.status='closed'; S.cover=mkCover(); S.mid=[mkTeaser(),mkSingleA(),mkDoubleA(),mkContext('building'),mkSingleB(),mkEnd()]; active=0; ACTIVE=null; ACTIVEIMG=null;
+  // also clear the Import & AI panel (URL field, imported facts, photo tray)
+  IMPORTED=null; const _u=document.getElementById('imUrl'); if(_u)_u.value=''; const _t=document.getElementById('imTray'); if(_t)_t.innerHTML=''; imStatus('');
+  buildAccents(); buildFilm(); buildEditor(); renderAll(); edMarkSaved(); showToast('✓ Started fresh'); }
 function initEditorialAutosave(){
   const fb=document.getElementById('edFresh'); if(fb) fb.onclick=edStartFresh;
   window.addEventListener('pagehide', edAutosave);

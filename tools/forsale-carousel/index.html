@@ -2357,7 +2357,8 @@ document.getElementById('btn-se-fetch').addEventListener('click', async () => {
 
     renderCanvas(activeIdx);
     updateStripLabel(activeIdx);
-    showToast('✓ Filled: ' + (filled.length ? filled.join(', ') : 'nothing extracted'));
+    if (data.warning) showToast('⚠ ' + data.warning);
+    else showToast('✓ Filled: ' + (filled.length ? filled.join(', ') : 'nothing extracted'));
   } catch(e) {
     console.warn('SE fetch failed', e);
     showToast('✗ Could not reach StreetEasy fetch endpoint');
