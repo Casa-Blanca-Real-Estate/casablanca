@@ -93,4 +93,3 @@ Return only the structured JSON.`;
   return json({ ok: true, ...data });
 };
 
-export const config = { path: '/api/copy' };

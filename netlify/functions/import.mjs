@@ -97,4 +97,3 @@ export default async (req) => {
   return json({ ok: true, facts, photos });
 };
 
-export const config = { path: '/api/import' };
