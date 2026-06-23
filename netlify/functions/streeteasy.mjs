@@ -61,29 +61,22 @@ export default async (req) => {
     const apiKey = process.env.FIRECRAWL_API_KEY;
     if (!apiKey) return json({ error: 'FIRECRAWL_API_KEY not configured in Netlify env vars' }, 500);
 
-    // Body builder. `withActions` clicks a "read more" expander before scraping so the
-    // full description loads; if the selector isn't present Firecrawl errors and we
-    // transparently retry without actions (so we're never worse off than before).
-    // opts: { withActions, withProxy }
+    // One lean call per attempt. We dropped the "read-more" click actions — they added
+    // ~4s of scripted waiting per attempt (×3 attempts), which was the main cause of the
+    // 504; the og/main-content description is enough. `timeout` makes Firecrawl abort
+    // server-side *before* Netlify's function cap, so a slow scrape returns a clean error
+    // instead of a gateway 504. opts: { withProxy }
     const mkBody = (opts = {}) => ({
       url,
       formats: ['extract', 'markdown'], // markdown lets us detect a bot-wall page vs. a real listing
       onlyMainContent: true,
-      waitFor: 4000, // StreetEasy is JS-heavy — give the listing time to fully render
+      waitFor: 2500, // StreetEasy is JS-heavy — a little time to render, but kept short
+      timeout: 13000, // hard server-side cap so worst case (fast stealth reject → bare retry → images) stays under the 26s function budget
       extract: { schema: SCHEMA, prompt: EXTRACT_PROMPT },
-      // StreetEasy aggressively blocks bots; without a stealthier proxy it serves a
-      // stripped/anti-bot page whose only "image" is the SE logo and whose listing
-      // details never render (you get the og: description but no address/beds/baths).
-      // 'auto' starts on the basic proxy and transparently retries via stealth on a
-      // block. We gate it so we can fall back to a bare request if the plan rejects it.
-      ...(opts.withProxy ? { proxy: 'auto', blockAds: true } : {}),
-      ...(opts.withActions ? {
-        actions: [
-          { type: 'wait', milliseconds: 2500 },
-          { type: 'click', selector: 'button[aria-expanded="false"]' }, // common "read more" expander
-          { type: 'wait', milliseconds: 1200 },
-        ],
-      } : {}),
+      // StreetEasy always blocks the basic proxy, so go straight to stealth (skipping
+      // 'auto' avoids wasting an internal basic attempt). If the plan rejects stealth it
+      // fails fast and we fall back to a bare request below.
+      ...(opts.withProxy ? { proxy: 'stealth', blockAds: true } : {}),
     });
 
     const attempts = [];
@@ -99,11 +92,13 @@ export default async (req) => {
       return { ok, status: r.status, j };
     }
 
-    // Best case first (stealth proxy + read-more click), then progressively simpler so
-    // we're never worse off than a bare scrape if an option/selector isn't supported.
-    let res = await call({ withActions: true, withProxy: true });
-    if (!res.ok) res = await call({ withActions: false, withProxy: true });
-    if (!res.ok) res = await call({ withActions: false, withProxy: false });
+    // Single stealth attempt (best shot at StreetEasy), then a *fast-failure-only* bare
+    // fallback: if stealth was rejected quickly (e.g. the plan doesn't include it) we
+    // retry without a proxy; if stealth ran long and failed (timeout/wall) we stop rather
+    // than risk a second slow call blowing the function budget into a 504.
+    const t0 = Date.now();
+    let res = await call({ withProxy: true });
+    if (!res.ok && Date.now() - t0 < 7000) res = await call({ withProxy: false });
     if (!res.ok) {
       // Surface the actual reason. The most common one in practice: the Firecrawl plan
       // doesn't allow the stealth proxy needed to get past StreetEasy's bot wall.
@@ -143,8 +138,10 @@ export default async (req) => {
     // blocks). Returns null for non-images and for tiny files (logos/icons are small —
     // real listing photos are tens to hundreds of KB), so junk can't become the hero.
     async function toDataUrl(u) {
+      const ctl = new AbortController();
+      const to = setTimeout(() => ctl.abort(), 5000); // bound each image so the phase can't run long
       try {
-        const imgRes = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 CB-Carousel-Builder' } });
+        const imgRes = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 CB-Carousel-Builder' }, signal: ctl.signal });
         if (!imgRes.ok) return null;
         const ct = imgRes.headers.get('content-type') || 'image/jpeg';
         if (!ct.startsWith('image/') || /svg/i.test(ct)) return null;
@@ -154,6 +151,7 @@ export default async (req) => {
         for (let i = 0; i < u8.length; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
         return 'data:' + ct + ';base64,' + btoa(s);
       } catch (e) { return null; }
+      finally { clearTimeout(to); }
     }
 
     // Build an ordered, deduped, junk-filtered URL list (hero first), cap at 8, base64 each.
@@ -161,7 +159,7 @@ export default async (req) => {
     if (ex.heroImageUrl) urls.push(ex.heroImageUrl);
     if (Array.isArray(ex.photos)) for (const p of ex.photos) if (typeof p === 'string') urls.push(p);
     const seen = new Set();
-    const ordered = urls.filter((u) => looksLikePhoto(u) && !seen.has(u) && seen.add(u)).slice(0, 8);
+    const ordered = urls.filter((u) => looksLikePhoto(u) && !seen.has(u) && seen.add(u)).slice(0, 6);
     const photos = (await Promise.all(ordered.map(toDataUrl))).filter(Boolean);
     const heroImage = photos[0] || null;
 
