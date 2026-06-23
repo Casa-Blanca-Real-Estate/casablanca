@@ -2331,7 +2331,8 @@ document.getElementById('btn-se-fetch').addEventListener('click', async () => {
 
     renderCanvas(activeIdx);
     updateStripLabel(activeIdx);
-    showToast(filled.length ? ('✓ Filled: ' + filled.join(', ') + (kept.length?' · kept '+kept.join(', '):'')) : (kept.length ? '✓ Kept existing: ' + kept.join(', ') : '✓ Nothing extracted'));
+    if (data.warning) { showToast('⚠ ' + data.warning); }
+    else showToast(filled.length ? ('✓ Filled: ' + filled.join(', ') + (kept.length?' · kept '+kept.join(', '):'')) : (kept.length ? '✓ Kept existing: ' + kept.join(', ') : '✓ Nothing extracted'));
   } catch(e) {
     console.warn('SE fetch failed', e);
     showToast(e && e.name === 'AbortError'

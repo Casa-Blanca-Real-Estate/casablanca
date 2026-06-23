@@ -31,16 +31,24 @@ const SCHEMA = {
     photos: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Full-resolution listing photo image URLs, in display order (the first is the hero). Full https:// URLs.',
+      description: 'URLs of the actual PROPERTY photographs from the listing\'s photo gallery/carousel, in display order (the first is the hero). Full https:// URLs of real interior/exterior listing photos only. NEVER include the StreetEasy logo, site navigation/UI icons, agent headshots or avatars, neighborhood maps, floor-plan thumbnails, or advertisement images.',
     },
     heroImageUrl: {
       type: 'string',
-      description: 'Complete URL of the primary/first hero photo of the listing. Should be a full https:// URL.',
+      description: 'Complete https:// URL of the primary/first PROPERTY photo of the listing (the large hero image in the gallery). Must be a real listing photograph — never the StreetEasy logo, a UI icon, an agent headshot, or a map.',
     },
   },
 };
 const EXTRACT_PROMPT =
-  'Extract the listing fields. For "description", return the COMPLETE listing / "About this home" text — every paragraph in full, including any text hidden behind a "read more" / "see more" / "show more" expander. Never return a truncated preview.';
+  'Extract every field from this real-estate listing page. ' +
+  'address: the street address with apt/unit if present (no city/state/zip). ' +
+  'neighborhood: the NYC neighborhood name. ' +
+  'price: the listing price. ' +
+  'beds / baths / sqft: read these from the listing\'s key-details / specs row (bedroom count, bathroom count, interior square footage). ' +
+  'agent: the listing agent\'s name. ' +
+  'description: the COMPLETE "About this home" text — every paragraph in full, including anything hidden behind a "read more"/"see more"/"show more" expander; never return a truncated preview. ' +
+  'photos: the real property photographs from the gallery (NOT the logo, icons, agent headshots, maps, or ads). ' +
+  'If a field genuinely is not on the page, leave it empty — do not guess.';
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
@@ -56,33 +64,43 @@ export default async (req) => {
     // Body builder. `withActions` clicks a "read more" expander before scraping so the
     // full description loads; if the selector isn't present Firecrawl errors and we
     // transparently retry without actions (so we're never worse off than before).
-    const mkBody = (withActions) => ({
+    // opts: { withActions, withProxy }
+    const mkBody = (opts = {}) => ({
       url,
       formats: ['extract'],
       onlyMainContent: true,
-      waitFor: 2500, // let the listing fully render
+      waitFor: 4000, // StreetEasy is JS-heavy — give the listing time to fully render
       extract: { schema: SCHEMA, prompt: EXTRACT_PROMPT },
-      ...(withActions ? {
+      // StreetEasy aggressively blocks bots; without a stealthier proxy it serves a
+      // stripped/anti-bot page whose only "image" is the SE logo and whose listing
+      // details never render (you get the og: description but no address/beds/baths).
+      // 'auto' starts on the basic proxy and transparently retries via stealth on a
+      // block. We gate it so we can fall back to a bare request if the plan rejects it.
+      ...(opts.withProxy ? { proxy: 'auto', blockAds: true } : {}),
+      ...(opts.withActions ? {
         actions: [
-          { type: 'wait', milliseconds: 1800 },
+          { type: 'wait', milliseconds: 2500 },
           { type: 'click', selector: 'button[aria-expanded="false"]' }, // common "read more" expander
-          { type: 'wait', milliseconds: 1000 },
+          { type: 'wait', milliseconds: 1200 },
         ],
       } : {}),
     });
 
-    async function call(withActions) {
+    async function call(opts) {
       const r = await fetch('https://api.firecrawl.dev/v1/scrape', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify(mkBody(withActions)),
+        body: JSON.stringify(mkBody(opts)),
       });
       const j = await r.json().catch(() => null);
       return { ok: r.ok && j && j.success !== false, status: r.status, j };
     }
 
-    let res = await call(true);
-    if (!res.ok) res = await call(false); // expander click missing/failed → clean retry
+    // Best case first (stealth proxy + read-more click), then progressively simpler so
+    // we're never worse off than a bare scrape if an option/selector isn't supported.
+    let res = await call({ withActions: true, withProxy: true });
+    if (!res.ok) res = await call({ withActions: false, withProxy: true });
+    if (!res.ok) res = await call({ withActions: false, withProxy: false });
     if (!res.ok) {
       return json({ error: 'Firecrawl ' + res.status, message: JSON.stringify(res.j || '').slice(0, 500) }, 502);
     }
@@ -90,28 +108,42 @@ export default async (req) => {
     const data = res.j;
     const ex = data.data?.extract || data.extract || {};
 
-    // Fetch listing photos server-side and base64 them (bypasses browser CORS / hotlink blocks).
+    // URL-level junk filter: drop logos, UI sprites/icons, avatars, maps, SVGs, etc.
+    // before we even fetch them — these are what slip through as a bogus "hero".
+    const JUNK = /(logo|sprite|favicon|\bicon\b|\/icons?\/|placeholder|avatar|headshot|\bmap\b|\bads?\b|advert|badge|watermark|pixel|\.svg(\?|$))/i;
+    const looksLikePhoto = (u) => /^https?:\/\//i.test(u) && !JUNK.test(u);
+
+    // Fetch listing photos server-side and base64 them (bypasses browser CORS / hotlink
+    // blocks). Returns null for non-images and for tiny files (logos/icons are small —
+    // real listing photos are tens to hundreds of KB), so junk can't become the hero.
     async function toDataUrl(u) {
       try {
         const imgRes = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 CB-Carousel-Builder' } });
         if (!imgRes.ok) return null;
         const ct = imgRes.headers.get('content-type') || 'image/jpeg';
-        if (!ct.startsWith('image/')) return null;
+        if (!ct.startsWith('image/') || /svg/i.test(ct)) return null;
         const u8 = new Uint8Array(await imgRes.arrayBuffer());
+        if (u8.length < 12000) return null; // ~12KB floor → filters logos/icons/spacers
         let s = ''; const chunk = 8192;
         for (let i = 0; i < u8.length; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
         return 'data:' + ct + ';base64,' + btoa(s);
       } catch (e) { return null; }
     }
 
-    // Build an ordered, deduped URL list (hero first), cap at 6, base64 each.
+    // Build an ordered, deduped, junk-filtered URL list (hero first), cap at 8, base64 each.
     const urls = [];
     if (ex.heroImageUrl) urls.push(ex.heroImageUrl);
     if (Array.isArray(ex.photos)) for (const p of ex.photos) if (typeof p === 'string') urls.push(p);
     const seen = new Set();
-    const ordered = urls.filter((u) => /^https?:\/\//i.test(u) && !seen.has(u) && seen.add(u)).slice(0, 6);
+    const ordered = urls.filter((u) => looksLikePhoto(u) && !seen.has(u) && seen.add(u)).slice(0, 8);
     const photos = (await Promise.all(ordered.map(toDataUrl))).filter(Boolean);
     const heroImage = photos[0] || null;
+
+    // If essentially nothing came back, StreetEasy most likely served an anti-bot wall.
+    const gotFacts = !!(ex.address || ex.beds || ex.baths || ex.price);
+    const warning = (!gotFacts && !photos.length)
+      ? 'StreetEasy may have blocked this scrape (no details or photos came back). Try importing again, or check the URL is a single listing page.'
+      : '';
 
     return json({
       address: ex.address || '',
@@ -124,6 +156,7 @@ export default async (req) => {
       description: ex.description || '',
       heroImage,   // back-compat: first photo (base64)
       photos,      // base64 data URLs, hero first
+      warning,
       sourceUrl: url,
     });
   } catch (e) {
