@@ -1,14 +1,23 @@
 # Agent headshot library
 
-Drop individual agent headshot image files into this folder (GitHub → Add file →
-Upload files works one-or-many at a time, no local clone needed).
+Static, in-repo agent library — read by the Closed and For Sale carousel builders'
+"Agent Library" / search (and matched automatically on bulk-create by agent name).
+Works on GitHub Pages with no backend.
 
-**Naming:** `firstname-lastname.jpg` (lowercase, hyphens). Examples:
-`ashley-epstein.jpg`, `sam-valk.jpg`. PNG/JPG/WebP all fine.
+## Layout
+- `accent/` — accent-background headshots (the set used on deal slides). **In use.**
+- `taupe/`  — taupe-background headshots (for editorial / end slides). *Empty for now.*
+- `agents.json` — generated manifest: `[{ "name": "Frankie D.", "file": "accent/frankie-d.jpg" }, …]`
 
-Two sets are coming:
-- `accent/`  — the existing accent-color background headshots (closed + for-sale per-listing use the name as text, end slide uses these)
-- `taupe/`   — the taupe-background set (editorial / for-sale end slide)
+## Naming convention
+`firstname-lastinitial.ext` (lowercase, hyphens), e.g. `frankie-d.jpg`, `julius-b.png`.
+Display name is "First L." (period added for single-letter last initials).
 
-For now just drop files at the top level or under `accent/` — I'll generate the
-`agents.json` manifest and wire the tools to read it (works on GitHub Pages, no backend).
+## Adding / changing agents
+Drop a file into `accent/` (or `taupe/`) following the convention, then regenerate
+`agents.json` (ask Claude, or run the rename/manifest step). The tools read the
+manifest on load, so new agents appear in search + bulk auto-match.
+
+> Note: one duplicate was detected on import — two "Brittany F." photos, kept as
+> `brittany-f.jpg` and `brittany-f-2.jpg`. Delete one if it's redundant and
+> regenerate the manifest.
