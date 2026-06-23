@@ -11,13 +11,17 @@
 
     var css = document.createElement('style');
     css.textContent =
-      ".cb-fb-btn{position:fixed;top:11px;left:112px;z-index:100000;" +
+      // Base pill look (studio-header.js also styles .cb-fb-btn — kept here so the
+      // widget still works standalone). The button is docked into #cb-chrome-r on the
+      // RIGHT next to the account chip; .cb-fb-btn--float is only the fallback for
+      // pages that have no dock.
+      ".cb-fb-btn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;" +
       "background:rgba(15,15,15,.9);color:#fff;border:1px solid rgba(255,255,255,.22);" +
       "font:800 10px/1 'ObjectSans','Object Sans','Helvetica Neue',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;" +
-      "padding:8px 11px;border-radius:8px;cursor:pointer;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:background .12s}" +
+      "padding:8px 11px;border-radius:8px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:background .12s}" +
       ".cb-fb-btn:hover{background:rgba(30,26,46,.96)}" +
-      "@media(max-width:560px){.cb-fb-btn{top:11px;left:auto;right:62px}}" +
-      ".cb-fb-tray{position:fixed;top:46px;left:14px;width:300px;max-width:calc(100vw - 28px);z-index:100001;" +
+      ".cb-fb-btn--float{position:fixed;top:11px;right:14px;z-index:100000}" +
+      ".cb-fb-tray{position:fixed;top:46px;right:14px;width:300px;max-width:calc(100vw - 28px);z-index:100001;" +
       "background:#fff;border-radius:12px;box-shadow:0 18px 40px -16px rgba(0,0,0,.45);padding:16px;" +
       "font-family:'ObjectSans','Object Sans','Helvetica Neue',Arial,sans-serif;color:#0f0f0f;box-sizing:border-box}" +
       ".cb-fb-tray *{box-sizing:border-box}" +
@@ -37,7 +41,11 @@
     btn.className = 'cb-fb-btn';
     btn.textContent = 'Feedback';
     btn.setAttribute('aria-label', 'Share feedback');
-    document.body.appendChild(btn);
+    // Dock into the shared right-side cluster (before the account chip) if present;
+    // otherwise float it top-right as a standalone fallback.
+    var dock = document.getElementById('cb-chrome-r');
+    if (dock) dock.insertBefore(btn, dock.firstChild);
+    else { btn.classList.add('cb-fb-btn--float'); document.body.appendChild(btn); }
 
     var tray = null;
 
