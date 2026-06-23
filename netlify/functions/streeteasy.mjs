@@ -100,14 +100,14 @@ export default async (req) => {
     let res = await call({ withProxy: true });
     if (!res.ok && Date.now() - t0 < 7000) res = await call({ withProxy: false });
     if (!res.ok) {
-      // Surface the actual reason. The most common one in practice: the Firecrawl plan
-      // doesn't allow the stealth proxy needed to get past StreetEasy's bot wall.
-      const blob = JSON.stringify(attempts).toLowerCase();
-      const proxyDenied = /proxy|stealth|not.*(allow|support|enabl)|upgrade|payment|quota|insufficient/.test(blob);
-      const msg = proxyDenied
-        ? 'Firecrawl rejected the request — StreetEasy needs the “stealth” proxy, which this Firecrawl plan may not include. Enable stealth/auto proxy on the Firecrawl account, or enter the listing details manually.'
-        : 'The import backend (Firecrawl) could not fetch this page.';
-      return json({ error: msg, attempts }, 502);
+      // Echo Firecrawl's actual error verbatim (no guessing) so the real cause is
+      // visible in the tool's status line — e.g. credits, an invalid option, or a true
+      // plan limit — instead of a misleading paraphrase.
+      const detail = attempts
+        .map((a) => (a.opts.withProxy ? 'stealth' : 'no-proxy') + ' → ' +
+          (typeof a.error === 'string' ? a.error : JSON.stringify(a.error)))
+        .join('  |  ');
+      return json({ error: 'StreetEasy import failed. Firecrawl said: ' + detail.slice(0, 500), attempts }, 502);
     }
 
     const data = res.j;
