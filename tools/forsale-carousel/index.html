@@ -670,7 +670,6 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
     <button class="bulk-modal-close" id="bulk-modal-close">✕</button>
     <h3>Bulk Create Deals</h3>
     <p>One row per deal. Paste a StreetEasy URL and hit Fetch to auto-fill that row, or type fields manually. Descriptions are condensed on create. Agent names matching your library get their photo attached automatically.</p>
-    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-start;"><textarea id="bulk-paste" rows="2" placeholder="Paste StreetEasy URLs — one per line — then Add rows" style="flex:1;padding:8px 10px;border:1px solid var(--bdr);border-radius:5px;font:inherit;font-size:11px;resize:vertical;"></textarea><button class="btn-s" id="bulk-paste-add" style="white-space:nowrap;">+ Add rows</button></div>
     <div id="bulk-rows"></div>
     <button class="btn-s" id="bulk-add-row" style="margin-top:4px;">＋ Add Row</button><button class="btn-s" id="bulk-fetch-all" style="margin-top:4px;margin-left:6px;" title="Fetch every row that has a URL">⚡ Fetch all URLs</button>
     <div class="bulk-modal-actions">
@@ -2768,20 +2767,6 @@ if(_btnClear) _btnClear.addEventListener('click', function(){
   S.deals=[makeDeal()]; activeIdx=1;
   buildStrip(); showPanel(); syncForm(); if(typeof updateDlBtn==='function') updateDlBtn(); if(typeof renderAll==='function') renderAll();
   markSaved(); showToast('✓ Started fresh');
-});
-
-var _pasteAdd=document.getElementById('bulk-paste-add');
-if(_pasteAdd) _pasteAdd.addEventListener('click', function(){
-  var ta=document.getElementById('bulk-paste'); if(!ta) return;
-  var urls=ta.value.split(/\n+/).map(function(x){return x.trim();}).filter(function(x){return /^https?:\/\//i.test(x);});
-  if(!urls.length){ showToast('Paste one StreetEasy URL per line'); return; }
-  urls.forEach(function(u){
-    var rows=Array.prototype.slice.call(document.querySelectorAll('#bulk-rows .bulk-row'));
-    var row=rows.filter(function(r){ return !r.querySelector('.bulk-se-url').value.trim(); })[0];
-    if(!row){ addBulkRow(); row=document.querySelector('#bulk-rows .bulk-row:last-child'); }
-    row.querySelector('.bulk-se-url').value=u;
-  });
-  ta.value=''; showToast('✓ Added '+urls.length+' row'+(urls.length!==1?'s':''));
 });
 
 document.addEventListener('keydown', function(e){

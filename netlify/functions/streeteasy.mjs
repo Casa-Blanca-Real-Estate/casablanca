@@ -67,7 +67,7 @@ export default async (req) => {
     // opts: { withActions, withProxy }
     const mkBody = (opts = {}) => ({
       url,
-      formats: ['extract'],
+      formats: ['extract', 'markdown'], // markdown lets us detect a bot-wall page vs. a real listing
       onlyMainContent: true,
       waitFor: 4000, // StreetEasy is JS-heavy — give the listing time to fully render
       extract: { schema: SCHEMA, prompt: EXTRACT_PROMPT },
@@ -86,6 +86,7 @@ export default async (req) => {
       } : {}),
     });
 
+    const attempts = [];
     async function call(opts) {
       const r = await fetch('https://api.firecrawl.dev/v1/scrape', {
         method: 'POST',
@@ -93,7 +94,9 @@ export default async (req) => {
         body: JSON.stringify(mkBody(opts)),
       });
       const j = await r.json().catch(() => null);
-      return { ok: r.ok && j && j.success !== false, status: r.status, j };
+      const ok = r.ok && j && j.success !== false;
+      if (!ok) attempts.push({ opts, status: r.status, error: (j && (j.error || j.details)) || ('HTTP ' + r.status) });
+      return { ok, status: r.status, j };
     }
 
     // Best case first (stealth proxy + read-more click), then progressively simpler so
@@ -102,11 +105,34 @@ export default async (req) => {
     if (!res.ok) res = await call({ withActions: false, withProxy: true });
     if (!res.ok) res = await call({ withActions: false, withProxy: false });
     if (!res.ok) {
-      return json({ error: 'Firecrawl ' + res.status, message: JSON.stringify(res.j || '').slice(0, 500) }, 502);
+      // Surface the actual reason. The most common one in practice: the Firecrawl plan
+      // doesn't allow the stealth proxy needed to get past StreetEasy's bot wall.
+      const blob = JSON.stringify(attempts).toLowerCase();
+      const proxyDenied = /proxy|stealth|not.*(allow|support|enabl)|upgrade|payment|quota|insufficient/.test(blob);
+      const msg = proxyDenied
+        ? 'Firecrawl rejected the request — StreetEasy needs the “stealth” proxy, which this Firecrawl plan may not include. Enable stealth/auto proxy on the Firecrawl account, or enter the listing details manually.'
+        : 'The import backend (Firecrawl) could not fetch this page.';
+      return json({ error: msg, attempts }, 502);
     }
 
     const data = res.j;
     const ex = data.data?.extract || data.extract || {};
+
+    // Detect a bot-wall / interstitial. StreetEasy (PerimeterX) serves a "verify you are
+    // human" page that often still lists *other* (featured) properties — which is how the
+    // extractor used to hand back a totally different listing. If we see wall markers, we
+    // refuse to return data rather than return the wrong listing.
+    const md = (data.data?.markdown || data.markdown || '');
+    const meta = data.data?.metadata || data.metadata || {};
+    const pageText = (md + ' ' + (meta.title || '') + ' ' + (meta.description || '')).toLowerCase();
+    const WALL = /(pardon our interruption|access to this page has been denied|verify (you are|you're) (a )?human|are you a human|press & hold|enable javascript and cookies to continue|unusual activity|perimeterx|px-captcha|\bcaptcha\b)/i;
+    if (WALL.test(pageText)) {
+      return json({
+        error: 'StreetEasy blocked this fetch with a "verify you are human" wall, so no listing data could be read. Try again in a moment, or enter the details manually.',
+        blocked: true,
+        finalUrl: meta.sourceURL || meta.url || url,
+      }, 502);
+    }
 
     // URL-level junk filter: drop logos, UI sprites/icons, avatars, maps, SVGs, etc.
     // before we even fetch them — these are what slip through as a bogus "hero".
@@ -141,9 +167,20 @@ export default async (req) => {
 
     // If essentially nothing came back, StreetEasy most likely served an anti-bot wall.
     const gotFacts = !!(ex.address || ex.beds || ex.baths || ex.price);
-    const warning = (!gotFacts && !photos.length)
-      ? 'StreetEasy may have blocked this scrape (no details or photos came back). Try importing again, or check the URL is a single listing page.'
-      : '';
+    // Soft sanity check: a real extract's street number should appear in the page text.
+    // If it doesn't, the extractor may have latched onto a featured/related listing —
+    // we still return it (manual fix beats nothing) but flag it so the user double-checks.
+    const addrNum = (String(ex.address || '').match(/\d{1,5}/) || [''])[0];
+    const addrSuspect = !!ex.address && !!addrNum && pageText && !pageText.includes(addrNum.toLowerCase());
+
+    let warning = '';
+    if (!gotFacts && !photos.length) {
+      warning = 'StreetEasy returned no listing details or photos — it may have blocked the fetch. Try again, confirm the URL is a single listing page, or enter the details manually.';
+    } else if (addrSuspect) {
+      warning = 'Heads up: the imported address wasn’t found on the fetched page, so these details may be from the wrong listing — please double-check them against the URL.';
+    } else if (!photos.length) {
+      warning = 'Details imported, but no listing photos came through. You can add photos manually.';
+    }
 
     return json({
       address: ex.address || '',
@@ -158,6 +195,7 @@ export default async (req) => {
       photos,      // base64 data URLs, hero first
       warning,
       sourceUrl: url,
+      finalUrl: meta.sourceURL || meta.url || url,
     });
   } catch (e) {
     console.error('streeteasy fn error:', e);
