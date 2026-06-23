@@ -104,6 +104,19 @@
   .modal .cancel{background:#fff;color:#55514a}
   .modal .err{color:#b4452f;font-size:12.5px;min-height:16px;margin-top:4px}
 
+  /* Next-workshop banner */
+  .workshop{display:flex;align-items:center;gap:16px;background:linear-gradient(100% 100% at 0 0,var(--plum2),var(--plum));
+    color:#fff;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 20px;margin:0 0 8px}
+  .workshop .cal{flex:none;width:46px;height:46px;border-radius:10px;background:var(--accent);color:var(--plum);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-weight:800}
+  .workshop .cal .mo{font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+  .workshop .cal .dy{font-size:20px;margin-top:2px}
+  .workshop .wtxt{flex:1;min-width:0}
+  .workshop .wkr{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:800}
+  .workshop .wtitle{font-size:clamp(15px,2.1vw,18px);font-weight:800;letter-spacing:-.01em;margin:3px 0 2px}
+  .workshop .wmeta{font-size:13px;color:#cfccd8}
+  @media(max-width:560px){.workshop .cal{display:none}}
+
   @media(max-width:760px){ header .stax{display:none} }
 </style>
 </head>
@@ -120,6 +133,16 @@
 </section>
 
 <main>
+
+  <!-- Next workshop. To update: edit the values in the #workshop-data script block below. -->
+  <div class="workshop" id="workshop" hidden>
+    <div class="cal"><span class="mo" id="wMonth"></span><span class="dy" id="wDay"></span></div>
+    <div class="wtxt">
+      <div class="wkr">Next workshop</div>
+      <div class="wtitle">Social Media &amp; Content Workshop</div>
+      <div class="wmeta" id="wMeta"></div>
+    </div>
+  </div>
 
   <div class="group">
     <h2 class="group-title">Instagram <span class="gn">— social carousels</span></h2>
@@ -288,8 +311,40 @@
   applyAuth();
 </script>
 
+<!-- EDIT ME: the next Social Media & Content Workshop. Change "date" (YYYY-MM-DD) and the rest as needed. -->
+<script type="application/json" id="workshop-data">
+{ "date": "2026-07-02", "time": "11:00 AM", "location": "the office", "cadence": "every other Thursday" }
+</script>
+<script>
+(function(){
+  var el=document.getElementById('workshop'); if(!el) return;
+  var cfg={}; try{ cfg=JSON.parse(document.getElementById('workshop-data').textContent); }catch(e){ return; }
+  if(!cfg.date) return;
+  var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var parts=cfg.date.split('-'); var d=new Date(+parts[0], +parts[1]-1, +parts[2]); // local midnight
+  if(isNaN(d)) return;
+  var today=new Date(); today.setHours(0,0,0,0);
+  document.getElementById('wMonth').textContent=MO[d.getMonth()];
+  document.getElementById('wDay').textContent=d.getDate();
+  var dateStr=DAY[d.getDay()]+', '+MO[d.getMonth()]+' '+d.getDate();
+  var bits=[dateStr]; if(cfg.time) bits.push(cfg.time); if(cfg.location) bits.push('at '+cfg.location);
+  var meta=bits.join(' · ');
+  if(d<today){ meta='Next date TBA — check with the team.'+(cfg.cadence?' (Usually '+cfg.cadence+'.)':''); }
+  else if(cfg.cadence){ meta+='  ·  '+cfg.cadence; }
+  document.getElementById('wMeta').textContent=meta;
+  el.hidden=false;
+})();
+</script>
+
 <script type="application/json" id="cl-data">
 [
+  { "date": "2026-06-23", "title": "Editorial fixes + feedback", "items": [
+    "Feedback button in every tool header — send suggestions, bugs and ideas",
+    "Stronger StreetEasy import: stealth scraping so listings (address, beds/baths, photos) load reliably, and the site logo no longer slips in as a photo",
+    "Editorial builder: photos now drop in, address/price/beds/baths/sqft fill, cover subhead wraps on Enter, AI captions + a “condense description” button, and the import panel opens up front",
+    "Next Social Media & Content Workshop now shown on the home page"
+  ]},
   { "date": "2026-06-23", "title": "Agent library", "items": [
     "Agent headshots are built in \u2014 search the Agent Library in the Closed & For Sale builders, or it auto-matches on bulk create",
     "Editorial end slide: pick an agent headshot from the library",
