@@ -69,6 +69,10 @@
   .sw .lab .n{font-size:13px;font-weight:800}
   .sw .lab .h{font-size:12px;color:#8a877f;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
   .sw .lab .copied{color:var(--plum);font-weight:800}
+  .cacts{display:flex;gap:6px;margin-top:8px}
+  .cact{font-family:inherit;font-weight:800;font-size:11px;border-radius:7px;padding:5px 9px;cursor:pointer;border:1px solid var(--line);background:#fff}
+  .cact.repl{color:var(--plum)}.cact.repl:hover{border-color:var(--accent)}
+  .cact.del{color:#b4452f;line-height:1;padding:5px 10px}.cact.del:hover{border-color:#b4452f}
 
   .palbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px}
 
@@ -263,19 +267,33 @@
   (function(){ var h=location.hash.slice(1); var b=h&&tabs.querySelector('[data-tab="'+h+'"]'); if(b) b.click(); })();
 
   /* ---- Built-in (repo) assets shown alongside live ones ---- */
+  // Built-in repo assets. Entries with opt:true are "slots" — if the file isn't in
+  // the repo yet they hide themselves, and appear automatically once it's added to
+  // assets/brand/. Drop the real files there (see assets/brand/README.md).
   var BUILTIN={
-    logo:[{name:'Primary Logo (white)',sub:'PNG · for dark backgrounds',url:'../../assets/cb-logo-white.png',img:'../../assets/cb-logo-white.png',fmt:'PNG',filename:'casa-blanca-logo-white.png'},
-          {name:'Favicon',sub:'SVG · browser tab mark',url:'../../assets/favicon.svg',img:'../../assets/favicon.svg',fmt:'SVG',filename:'casa-blanca-favicon.svg'}],
+    logo:[
+      {name:'Wordmark + mark (black)',sub:'PNG · stacked, light backgrounds',url:'../../assets/brand/casa-blanca-stacked-black.png',img:'../../assets/brand/casa-blanca-stacked-black.png',fmt:'PNG',filename:'casa-blanca-stacked-black.png',opt:true},
+      {name:'Wordmark + mark (white)',sub:'PNG · stacked, dark backgrounds',url:'../../assets/brand/casa-blanca-stacked-white.png',img:'../../assets/brand/casa-blanca-stacked-white.png',fmt:'PNG',filename:'casa-blanca-stacked-white.png',opt:true},
+      {name:'Wordmark (black)',sub:'PNG · "casa blanca" only',url:'../../assets/brand/casa-blanca-wordmark-black.png',img:'../../assets/brand/casa-blanca-wordmark-black.png',fmt:'PNG',filename:'casa-blanca-wordmark-black.png',opt:true},
+      {name:'Wordmark (white)',sub:'PNG · "casa blanca" only',url:'../../assets/brand/casa-blanca-wordmark-white.png',img:'../../assets/brand/casa-blanca-wordmark-white.png',fmt:'PNG',filename:'casa-blanca-wordmark-white.png',opt:true},
+      {name:'Building mark (black)',sub:'PNG · icon only',url:'../../assets/brand/casa-blanca-mark-black.png',img:'../../assets/brand/casa-blanca-mark-black.png',fmt:'PNG',filename:'casa-blanca-mark-black.png',opt:true},
+      {name:'Logo (white, horizontal)',sub:'PNG · header lockup',url:'../../assets/cb-logo-white.png',img:'../../assets/cb-logo-white.png',fmt:'PNG',filename:'casa-blanca-logo-white.png'},
+      {name:'Favicon',sub:'SVG · browser tab mark',url:'../../assets/favicon.svg',img:'../../assets/favicon.svg',fmt:'SVG',filename:'casa-blanca-favicon.svg'}
+    ],
     guideline:[{name:'Business Card Ordering Guide',sub:'PDF · specs + vendor steps',url:'../../assets/biz-card-ordering-guide.pdf',fmt:'PDF',filename:'biz-card-ordering-guide.pdf'}],
     font:[],template:[],other:[]
   };
 
-  /* ---- Color palette (built-in, from the studio CSS) ---- */
+  /* ---- Color palette (official brand colors per Casa Blanca Brand Guidelines,
+     plus the UI tints the studio uses). Devs can edit/remove these in-platform. ---- */
   var PALETTE=[
-    {name:'Ink',hex:'#0f0f0f'},{name:'Paper',hex:'#f4f3f0'},{name:'Paper 2',hex:'#e8e6e0'},
-    {name:'Soft',hex:'#faf9fd'},{name:'Accent',hex:'#aaa3cf'},{name:'Plum',hex:'#1e1a2e'},
-    {name:'Plum 2',hex:'#2d2640'},{name:'Muted',hex:'#888680'},{name:'Line',hex:'#dddbd5'},
-    {name:'Mailchimp Yellow',hex:'#ffe01b'}
+    {name:'Casa Lavender',hex:'#aaa3cf'},
+    {name:'Casa Sand',hex:'#c0c2b5'},
+    {name:'Casa Black',hex:'#0f0f0f'},
+    {name:'Casa White',hex:'#cfcfcf'},
+    {name:'Plum (UI)',hex:'#1e1a2e'},
+    {name:'Paper (UI)',hex:'#f4f3f0'},
+    {name:'Line (UI)',hex:'#dddbd5'}
   ];
 
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -283,8 +301,11 @@
 
   /* ---- Render asset cards (built-in + live) ---- */
   function cardHTML(a){
+    // optional built-in slots hide their whole card if the file isn't in the repo yet
+    var onerr = a.opt ? ' onerror="var c=this.closest(\'.card\');if(c)c.style.display=\'none\'"' : '';
+    var bg = /(white)/i.test(a.name) ? '#3a3550' : '#0f0f0f';
     var prev = a.img
-      ? '<div class="prev" style="background:#0f0f0f"><img src="'+esc(a.img)+'" alt="'+esc(a.name)+'"></div>'
+      ? '<div class="prev" style="background:'+bg+'"><img src="'+esc(a.img)+'" alt="'+esc(a.name)+'"'+onerr+'></div>'
       : '<div class="prev" style="background:radial-gradient(120% 120% at 30% 10%,#2d2640,#0f0f0f 70%);color:#fff">'+
         '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></div>';
     var del = (a.key && authed()) ? '<button class="del" data-del="'+esc(a.key)+'">Delete</button>' : '';
@@ -310,28 +331,39 @@
       : '<div class="empty">Nothing here yet'+(authed()?' — add one below.':'.')+'</div>';
   }
 
-  /* ---- Colors ---- */
+  /* ---- Colors ----
+     Once a dev has signed in, the palette lives in the backend (seeded from the
+     built-in defaults below) so it can be edited/removed and propagates to all.
+     Before any dev seeds it, the built-in defaults render read-only. */
+  function colorList(){
+    var live=window.__live.color||[];
+    if(live.length) return live.map(function(c){return {name:c.name,hex:c.hex,key:c.key};});
+    return PALETTE.map(function(c){return {name:c.name,hex:c.hex,key:null};});
+  }
   function renderColors(){
     var box=document.getElementById('swatches');
-    var all=PALETTE.concat((window.__live.color||[]).map(function(c){return {name:c.name,hex:c.hex,key:c.key};}));
-    box.innerHTML=all.map(function(c){
-      var del=(c.key&&authed())?'<button class="del" data-del="'+esc(c.key)+'" title="Delete">×</button>':'';
+    box.innerHTML=colorList().map(function(c){
+      var actions='';
+      if(c.key&&authed()){
+        actions='<button class="cact repl" data-replace="'+esc(c.key)+'" data-rname="'+esc(c.name)+'" data-rhex="'+esc(c.hex)+'" title="Replace">Replace</button>'+
+                '<button class="cact del" data-del="'+esc(c.key)+'" title="Remove">×</button>';
+      }
       return '<div class="sw" data-hex="'+esc(c.hex)+'"><div class="chip" style="background:'+esc(c.hex)+'"></div>'+
-        '<div class="lab"><div class="n">'+esc(c.name)+'</div><div class="h"><span class="hx">'+esc(c.hex)+'</span> '+del+'</div></div></div>';
+        '<div class="lab"><div class="n">'+esc(c.name)+'</div>'+
+        '<div class="h"><span class="hx">'+esc(c.hex)+'</span></div>'+
+        (actions?'<div class="cacts">'+actions+'</div>':'')+'</div></div>';
     }).join('');
   }
   document.getElementById('swatches').addEventListener('click',function(e){
-    if(e.target.closest('[data-del]')) return; // handled by global delete
+    if(e.target.closest('[data-del]')||e.target.closest('[data-replace]')) return; // handled elsewhere
     var sw=e.target.closest('.sw'); if(!sw) return;
-    var hex=sw.getAttribute('data-hex'); var lab=sw.querySelector('.h');
+    var hex=sw.getAttribute('data-hex'); var hx=sw.querySelector('.hx');
     navigator.clipboard&&navigator.clipboard.writeText(hex);
-    var old=lab.innerHTML; lab.innerHTML='<span class="copied">Copied '+esc(hex)+'</span>';
-    setTimeout(function(){lab.innerHTML=old;},1100);
+    var old=hx.textContent; hx.textContent='Copied!'; sw.querySelector('.lab').style.opacity='.7';
+    setTimeout(function(){hx.textContent=old;sw.querySelector('.lab').style.opacity='';},1000);
   });
 
-  function currentPalette(){
-    return PALETTE.concat((window.__live.color||[]).map(function(c){return {name:c.name,hex:c.hex};}));
-  }
+  function currentPalette(){ return colorList().map(function(c){return {name:c.name,hex:c.hex};}); }
   function download(name,text,type){
     var blob=new Blob([text],{type:type||'text/plain'});var u=URL.createObjectURL(blob);
     var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},2000);
@@ -360,12 +392,27 @@
     ['logo','font','guideline','template','other'].forEach(renderCategory);
     renderColors();
   }
+  var seededColors=false;
+  function seedDefaultColors(){
+    if(seededColors||!authed()) return;
+    seededColors=true;
+    // Push the built-in palette into the backend so it becomes editable/removable.
+    var chain=Promise.resolve();
+    PALETTE.forEach(function(c){
+      chain=chain.then(function(){
+        return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({name:c.name,category:'color',hex:c.hex})}).catch(function(){});
+      });
+    });
+    chain.then(function(){ load(); });
+  }
   function load(){
     fetch(API).then(function(r){return r.json();}).then(function(list){
       if(!Array.isArray(list)) return;
       var buckets={logo:[],font:[],color:[],guideline:[],template:[],other:[]};
       list.forEach(function(a){(buckets[a.category]||buckets.other).push(a);});
       window.__live=buckets; renderAll();
+      if(!buckets.color.length) seedDefaultColors(); // first dev visit seeds the palette
     }).catch(function(){ /* backend offline — built-ins still render */ renderAll(); });
   }
 
@@ -384,18 +431,34 @@
       if(!name){stat.textContent='Add a name.';return;}
       if(!file){stat.textContent='Choose a file.';return;}
       btn.disabled=true;stat.textContent='Uploading…';
+      var fmt=(file.name.split('.').pop()||'').toLowerCase();
       readFile(file).then(function(src){
         return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({name:name,category:category,src:src,filename:file.name})});
       }).then(function(r){return r.json();}).then(function(d){
         btn.disabled=false;
-        if(d&&d.ok){stat.textContent='Added ✓';nameEl.value='';fileEl.value='';load();}
+        if(d&&d.ok){
+          stat.textContent='Added ✓';nameEl.value='';fileEl.value='';
+          // Optimistic insert so it shows immediately (Blobs list() is eventually
+          // consistent, so a re-fetch can briefly miss a just-written asset).
+          (window.__live[category]=window.__live[category]||[]).unshift(
+            {key:d.key,name:name,category:category,kind:'file',format:fmt,filename:file.name,note:'',ts:Date.now()});
+          renderAll();
+          setTimeout(load,1200); // reconcile with the server shortly after
+        }
         else{stat.textContent='Error: '+((d&&d.error)||'upload failed');}
       }).catch(function(){btn.disabled=false;stat.textContent='Network error — is the backend reachable?';});
     });
   });
 
-  /* ---- Dev: add a color ---- */
+  /* ---- Dev: add / replace a color ---- */
+  var replaceColorKey=null;
+  function colorZone(){ return document.querySelector('[data-addcolor]').closest('.devzone'); }
+  function setColorMode(){
+    var z=colorZone(); var btn=z.querySelector('[data-addcolor]'); var h=z.querySelector('h4');
+    if(replaceColorKey){ btn.textContent='Save replacement'; h.textContent='Replace color'; }
+    else{ btn.textContent='Add color'; h.textContent='Add a color'; }
+  }
   var addColor=document.querySelector('[data-addcolor]');
   if(addColor) addColor.addEventListener('click',function(){
     var zone=addColor.closest('.devzone'),stat=zone.querySelector('[data-cstat]');
@@ -403,14 +466,38 @@
     var hex=(zone.querySelector('[data-chex]').value||'').trim();
     if(!name){stat.textContent='Add a name.';return;}
     if(!/^#?[0-9a-fA-F]{3,8}$/.test(hex)){stat.textContent='Enter a valid hex like #aaa3cf.';return;}
-    addColor.disabled=true;stat.textContent='Saving…';
+    var oldKey=replaceColorKey;
+    addColor.disabled=true;stat.textContent=oldKey?'Replacing…':'Saving…';
     fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name:name,category:'color',hex:hex})})
       .then(function(r){return r.json();}).then(function(d){
         addColor.disabled=false;
-        if(d&&d.ok){stat.textContent='Added ✓';zone.querySelector('[data-cname]').value='';zone.querySelector('[data-chex]').value='';load();}
+        if(d&&d.ok){
+          // If replacing and the name changed, the key changed — remove the old one.
+          var done=(oldKey&&oldKey!==d.key)
+            ? fetch(API,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:oldKey})}).catch(function(){})
+            : Promise.resolve();
+          done.then(function(){
+            stat.textContent=oldKey?'Replaced ✓':'Added ✓';
+            zone.querySelector('[data-cname]').value='';zone.querySelector('[data-chex]').value='';
+            replaceColorKey=null; setColorMode(); load();
+          });
+        }
         else{stat.textContent='Error: '+((d&&d.error)||'failed');}
       }).catch(function(){addColor.disabled=false;stat.textContent='Network error.';});
+  });
+
+  /* ---- Dev: click "Replace" on a swatch → prefill the color form ---- */
+  document.getElementById('swatches').addEventListener('click',function(e){
+    var r=e.target.closest('[data-replace]'); if(!r||!authed()) return;
+    e.preventDefault();
+    replaceColorKey=r.getAttribute('data-replace');
+    var z=colorZone();
+    z.querySelector('[data-cname]').value=r.getAttribute('data-rname')||'';
+    z.querySelector('[data-chex]').value=r.getAttribute('data-rhex')||'';
+    z.querySelector('[data-cstat]').textContent='Editing — change the name or hex, then Save.';
+    setColorMode();
+    z.scrollIntoView({behavior:'smooth',block:'center'});
   });
 
   /* ---- Dev: delete (event delegation across all grids + swatches) ---- */
@@ -418,11 +505,16 @@
     var d=e.target.closest('[data-del]'); if(!d) return;
     e.preventDefault();
     if(!authed()) return;
-    if(!confirm('Delete this asset for everyone?')) return;
+    if(!confirm('Remove this for everyone?')) return;
     var key=d.getAttribute('data-del');
+    // optimistic removal
+    Object.keys(window.__live).forEach(function(cat){
+      window.__live[cat]=(window.__live[cat]||[]).filter(function(a){return a.key!==key;});
+    });
+    renderAll();
     fetch(API,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key})})
-      .then(function(r){return r.json();}).then(function(){load();})
-      .catch(function(){alert('Could not delete — backend unreachable.');});
+      .then(function(r){return r.json();}).then(function(){setTimeout(load,1000);})
+      .catch(function(){alert('Could not delete — backend unreachable.');load();});
   });
 
   applyDev();
