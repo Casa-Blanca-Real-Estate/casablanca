@@ -21,6 +21,40 @@ GitHub Pages and call these functions on the Netlify origin (CORS is open).
 | `GET/POST/DELETE` | `/.netlify/functions/agents`   | Agent headshot library (Netlify Blobs store `agents`) |
 | `GET/POST` | `/.netlify/functions/sessions` | Saved sessions (Netlify Blobs store `cb-sessions`, last 3) |
 
+**Brand Assets** (`/tools/brand/`)
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`  | `/.netlify/functions/brand` | List asset metadata (no file bytes; colors include hex) |
+| `GET`  | `/.netlify/functions/brand?file=KEY` | Raw bytes for one file asset (for `<img>` / download) |
+| `GET`  | `/.netlify/functions/brand?key=KEY` | Full metadata JSON for one asset |
+| `POST` | `/.netlify/functions/brand` | Add an asset — file: `{name,category,src(dataURL),filename}`; color: `{name,category:"color",hex}` |
+| `DELETE` | `/.netlify/functions/brand` | `{key}` — remove an asset |
+
+Categories: `logo`, `font`, `color`, `guideline`, `template`, `other`. Stored in Netlify
+Blobs store `brand`. Logos, the Object Sans fonts and the palette ship as static
+repo files (built-ins shown alongside live ones); dev-added assets persist in Blobs
+and propagate to everyone.
+
+**Home page live content** (`/`)
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`  | `/.netlify/functions/site` | `{ workshop, changelog }` (strongly-consistent single-blob read) |
+| `POST` | `/.netlify/functions/site` | Update: `{workshop}` (full object), `{entry}` (prepend a changelog entry), `{changelog}` (full array), or `{deleteChangelogDate}` |
+
+Stored in Blobs store `cb-site` under key `config`. The home page hydrates the next-workshop
+card and the "What's new" changelog from this on load and falls back to the inline JSON
+blocks in `index.html` if the backend is unreachable. Signed-in devs edit both in-platform.
+
+## Propagation note (important)
+
+Live edits (brand assets, workshop, changelog) are written to Netlify Blobs by the
+Functions above, so they only reach visitors who load the site **from the Netlify origin**
+(same origin as the functions). If the site is also served from GitHub Pages, those
+visitors will see only the static repo content (built-in logos/fonts/palette + the inline
+workshop/changelog defaults) — `/.netlify/functions/*` does not exist there. To have
+in-platform edits reach everyone, point agents at the Netlify URL (or set
+`localStorage.cb_backend` to the Netlify origin on the Pages site).
+
 ## Setup (one time)
 
 1. **Environment variables** — Netlify → Site settings → Environment variables:

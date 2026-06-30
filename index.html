@@ -24,24 +24,32 @@
 
   header{display:flex;align-items:center;justify-content:space-between;gap:20px;
     background:var(--ink);color:#fff;padding:18px clamp(20px,5vw,56px)}
+  header .lhs{display:flex;align-items:center;gap:14px}
   header img{height:22px;width:auto;display:block}
   header .stax{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
+  .brandpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--plum);background:var(--accent);padding:8px 14px;border-radius:999px;transition:filter .12s}
+  .brandpill:hover{filter:brightness(1.08)}
+  .brandpill svg{width:13px;height:13px}
 
-  .hero{background:var(--ink);color:#fff;padding:8px clamp(20px,5vw,56px) clamp(34px,5vw,52px);
+  .hero{background:var(--ink);color:#fff;padding:8px clamp(20px,5vw,56px) clamp(26px,4vw,40px);
     border-bottom:1px solid rgba(255,255,255,.07)}
   .hero h1{margin:0 0 8px;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em}
   .hero h1 em{font-style:italic;font-weight:400;color:var(--accent)}
   .hero p{margin:0;color:#bdbab4;font-size:clamp(14px,1.7vw,16px);max-width:60ch}
 
-  main{padding:clamp(28px,4vw,48px) clamp(20px,5vw,56px) 48px;max-width:1200px;margin:0 auto;width:100%;flex:1 0 auto}
-  .group-title{font-size:clamp(21px,3vw,27px);font-weight:800;letter-spacing:-.015em;margin:44px 0 20px;
-    display:flex;align-items:baseline;gap:12px;border-top:1px solid var(--line);padding-top:22px}
-  .group:first-child .group-title{margin-top:6px}
-  .group-title .gn{font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--muted)}
-  .chip.pdf{color:#fff;background:#b4452f}
-  .sec-label{display:flex;align-items:baseline;gap:12px;font-size:11px;letter-spacing:.28em;text-transform:uppercase;
-    color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin:36px 0 24px}
-  .sec-label .note{letter-spacing:.02em;text-transform:none;font-size:12px;color:#a9a59c}
+  /* Tabs */
+  .tabs{position:sticky;top:0;z-index:30;background:var(--paper);border-bottom:1px solid var(--line);
+    padding:0 clamp(20px,5vw,56px);display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab{flex:none;background:none;border:none;font-family:inherit;font-size:13.5px;font-weight:800;letter-spacing:.01em;
+    color:var(--muted);padding:16px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+  .tab:hover{color:var(--ink)}
+  .tab.on{color:var(--plum);border-bottom-color:var(--accent)}
+  .tab[hidden]{display:none}
+
+  main{padding:clamp(24px,3.5vw,40px) clamp(20px,5vw,56px) 48px;max-width:1200px;margin:0 auto;width:100%;flex:1 0 auto}
+  .panel{display:none}.panel.on{display:block}
+  .panel-intro{font-size:13px;letter-spacing:.02em;color:var(--muted);margin:0 0 22px}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:22px}
   .tool{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;
@@ -63,12 +71,23 @@
   .chip.members{color:#fff;background:var(--plum)}
   .chip.form{color:#5a554c;background:var(--paper2)}
   .chip.mc{color:#1a1a1a;background:var(--mc)}
+  .chip.pdf{color:#fff;background:#b4452f}
   .meta h3{margin:0 0 6px;font-size:18px;font-weight:800;letter-spacing:-.01em}
   .meta p{margin:0 0 14px;font-size:13.5px;color:#55514a;flex:1}
   .meta .open{font-size:13px;font-weight:800;color:var(--plum);display:inline-flex;align-items:center;gap:7px}
   .meta .open .arr{transition:transform .15s}.tool:hover .open .arr{transform:translateX(3px)}
 
-  #members[hidden]{display:none}
+  /* Brand tab feature */
+  .feature{display:flex;gap:26px;flex-wrap:wrap;align-items:center;background:linear-gradient(100% 100% at 0 0,var(--plum2),var(--plum));
+    color:#fff;border-radius:18px;padding:30px clamp(22px,4vw,40px);margin-bottom:24px}
+  .feature .ftxt{flex:1;min-width:240px}
+  .feature h2{margin:0 0 8px;font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.015em}
+  .feature p{margin:0 0 18px;color:#d7d4e0;font-size:14.5px;max-width:52ch}
+  .feature .cta{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--plum);
+    font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px}
+  .feature .cta:hover{filter:brightness(1.07)}
+  .palpeek{display:flex;gap:8px;flex-wrap:wrap}
+  .palpeek .s{width:46px;height:46px;border-radius:10px;border:1px solid rgba(255,255,255,.18)}
 
   footer{background:var(--ink);color:#9a968f;text-align:center;padding:30px 20px 36px;font-size:12px}
   footer img{height:18px;opacity:.92;display:block;margin:0 auto 8px}
@@ -81,14 +100,16 @@
   .whatsnew .dot{position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent);display:none}
   .whatsnew.unseen .dot{display:block}
   .modal .box.cl{max-width:520px;max-height:80vh;overflow:auto;text-align:left}
-  .cl-entry{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+  .cl-entry{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;position:relative}
   .cl-entry:first-child{border-top:none;margin-top:0;padding-top:0}
   .cl-entry .d{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:800}
   .cl-entry h3{margin:4px 0 8px;font-size:17px;font-weight:800}
   .cl-entry ul{margin:0;padding-left:18px;color:#55514a;font-size:13.5px}
   .cl-entry li{margin-bottom:4px}
+  .cl-del{position:absolute;top:0;right:0;background:none;border:none;color:#b4452f;font-weight:800;font-size:12px;cursor:pointer}
+  .cl-del:hover{text-decoration:underline}
 
-  /* login modal */
+  /* login + edit modals */
   .modal{position:fixed;inset:0;background:rgba(10,9,15,.62);backdrop-filter:blur(3px);
     display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
   .modal.open{display:flex}
@@ -96,17 +117,21 @@
     box-shadow:0 40px 80px -30px rgba(0,0,0,.5)}
   .modal h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.01em}
   .modal p{margin:0 0 18px;color:#55514a;font-size:13.5px}
-  .modal input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;margin-bottom:12px}
+  .modal label{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+  .modal input,.modal textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font:inherit;margin-bottom:12px}
+  .modal textarea{resize:vertical;min-height:84px}
   .modal .row{display:flex;gap:10px}
   .modal .row button{flex:1;font-family:inherit;font-weight:800;font-size:14px;padding:12px;border-radius:10px;cursor:pointer;border:1px solid var(--line)}
   .modal .go{background:var(--ink);color:#fff;border-color:var(--ink)}
   .modal .go:hover{background:var(--plum2)}
   .modal .cancel{background:#fff;color:#55514a}
   .modal .err{color:#b4452f;font-size:12.5px;min-height:16px;margin-top:4px}
+  .modal .box.wide{max-width:460px}
+  .two{display:flex;gap:10px}.two>div{flex:1}
 
   /* Next-workshop banner */
   .workshop{display:flex;align-items:center;gap:16px;background:linear-gradient(100% 100% at 0 0,var(--plum2),var(--plum));
-    color:#fff;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 20px;margin:0 0 8px}
+    color:#fff;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 20px;margin:0 0 24px;position:relative}
   .workshop .cal{flex:none;width:46px;height:46px;border-radius:10px;background:var(--accent);color:var(--plum);
     display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-weight:800}
   .workshop .cal .mo{font-size:9px;letter-spacing:.14em;text-transform:uppercase}
@@ -115,6 +140,11 @@
   .workshop .wkr{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:800}
   .workshop .wtitle{font-size:clamp(15px,2.1vw,18px);font-weight:800;letter-spacing:-.01em;margin:3px 0 2px}
   .workshop .wmeta{font-size:13px;color:#cfccd8}
+  .wedit{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+    color:#fff;font-family:inherit;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    padding:6px 11px;border-radius:7px;cursor:pointer}
+  .wedit:hover{background:rgba(255,255,255,.22)}
+  .wedit[hidden]{display:none}
   @media(max-width:560px){.workshop .cal{display:none}}
 
   @media(max-width:760px){ header .stax{display:none} }
@@ -122,9 +152,18 @@
 </head>
 <body>
 
+<!-- Reusable Instagram glyph (defined once, referenced by every IG chip) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <radialGradient id="ig" cx="30%" cy="107%" r="135%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient>
+  <symbol id="igGlyph" viewBox="0 0 24 24"><path fill="url(#ig)" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.67.93 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.33 1.35 20.66.93 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0z"/><path fill="url(#ig)" d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle fill="url(#ig)" cx="18.41" cy="5.59" r="1.44"/></symbol>
+</defs></svg>
+
 <header>
-  <img src="assets/cb-logo-white.png" alt="Casa Blanca">
-  <span class="stax">Creative Studio</span>
+  <div class="lhs">
+    <img src="assets/cb-logo-white.png" alt="Casa Blanca">
+    <span class="stax">Creative Studio</span>
+  </div>
+  <a class="brandpill" href="tools/brand/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2a10 10 0 1 0 0 20c1.7 0 2-1.5 1-2.6-1-1.2-.4-2.9 1.2-2.9H17a5 5 0 0 0 5-5c0-5-4.5-9.5-10-9.5z"/></svg>Brand Assets</a>
 </header>
 
 <section class="hero">
@@ -132,136 +171,220 @@
   <p>In-house tools for the brand — carousels, cards, watermarks, headshots and more.</p>
 </section>
 
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-tab="home">Home</button>
+  <button class="tab" data-tab="instagram">Instagram &amp; Content</button>
+  <button class="tab" data-tab="internal">Internal Tools</button>
+  <button class="tab" data-tab="brand">Brand</button>
+  <button class="tab" data-tab="members" id="membersTab" hidden>Members</button>
+</nav>
+
 <main>
 
-  <!-- Next workshop. To update: edit the values in the #workshop-data script block below. -->
-  <div class="workshop" id="workshop" hidden>
-    <div class="cal"><span class="mo" id="wMonth"></span><span class="dy" id="wDay"></span></div>
-    <div class="wtxt">
-      <div class="wkr">Next workshop</div>
-      <div class="wtitle">Social Media &amp; Content Workshop</div>
-      <div class="wmeta" id="wMeta"></div>
+  <!-- HOME -->
+  <section class="panel on" id="p-home">
+    <div class="workshop" id="workshop" hidden>
+      <div class="cal"><span class="mo" id="wMonth"></span><span class="dy" id="wDay"></span></div>
+      <div class="wtxt">
+        <div class="wkr">Next workshop</div>
+        <div class="wtitle" id="wTitle">Social Media &amp; Content Workshop</div>
+        <div class="wmeta" id="wMeta"></div>
+      </div>
+      <button class="wedit" id="wEdit" type="button" hidden>Edit</button>
     </div>
-  </div>
 
-  <div class="group">
-    <h2 class="group-title">Instagram <span class="gn">— social carousels</span></h2>
+    <p class="panel-intro">Most used — jump straight in.</p>
     <div class="grid">
 
-    <a class="tool" href="tools/carousel/cb_editorial.html">
-      <div class="thumb"><img src="assets/thumbs/editorial.jpg" alt="Editorial Carousel Builder preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><defs><radialGradient id="ig" cx="30%" cy="107%" r="135%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><path fill="url(#ig)" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.67.93 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.33 1.35 20.66.93 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0z"/><path fill="url(#ig)" d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle fill="url(#ig)" cx="18.41" cy="5.59" r="1.44"/></svg>Instagram</span></div>
-        <h3>Editorial Carousel Builder</h3>
-        <p>One listing → a multi-slide editorial carousel. Import, caption, export.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
+      <a class="tool" href="tools/carousel/cb_editorial.html">
+        <div class="thumb"><img src="assets/thumbs/editorial.jpg" alt="Editorial Carousel Builder preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
+          <h3>Editorial Carousel Builder</h3>
+          <p>One listing → a multi-slide editorial carousel. Import, caption, export.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
 
-    <a class="tool" href="tools/closed-carousel/">
-      <div class="thumb"><img src="assets/thumbs/closed.jpg" alt="Closed Carousel Builder preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><defs><radialGradient id="ig" cx="30%" cy="107%" r="135%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><path fill="url(#ig)" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.67.93 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.33 1.35 20.66.93 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0z"/><path fill="url(#ig)" d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle fill="url(#ig)" cx="18.41" cy="5.59" r="1.44"/></svg>Instagram</span></div>
-        <h3>Closed Carousel Builder</h3>
-        <p>Multi-closing announcement carousel — one slide per deal.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
+      <a class="tool" href="tools/closed-carousel/">
+        <div class="thumb"><img src="assets/thumbs/closed.jpg" alt="Closed Carousel Builder preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
+          <h3>Closed Carousel Builder</h3>
+          <p>Multi-closing announcement carousel — one slide per deal.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
 
-    <a class="tool" href="tools/forsale-carousel/">
-      <div class="thumb"><img src="assets/thumbs/forsale.jpg" alt="For Sale Roundup Builder preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><defs><radialGradient id="ig" cx="30%" cy="107%" r="135%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><path fill="url(#ig)" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.67.93 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.33 1.35 20.66.93 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0z"/><path fill="url(#ig)" d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle fill="url(#ig)" cx="18.41" cy="5.59" r="1.44"/></svg>Instagram</span></div>
-        <h3>For Sale Roundup Builder</h3>
-        <p>Multi-listing "for sale" announcement carousel — one slide per listing.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
-
-    <a class="tool" href="tools/incontract-carousel/">
-      <div class="thumb"><img src="assets/brand/incontract-template-ref.png" alt="In Contract Roundup Builder preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><defs><radialGradient id="ig2" cx="30%" cy="107%" r="135%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><path fill="url(#ig2)" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.67.93 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.33 1.35 20.66.93 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0z"/><path fill="url(#ig2)" d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle fill="url(#ig2)" cx="18.41" cy="5.59" r="1.44"/></svg>Instagram</span></div>
-        <h3>In Contract Roundup Builder</h3>
-        <p>Two-listing "in contract" announcement slides — measured pixel-perfect from the brand template.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
-
-    </div>
-  </div>
-
-  <div class="group">
-    <h2 class="group-title">Internal <span class="gn">— brand assets &amp; guides</span></h2>
-    <div class="grid">
-
-    <a class="tool" href="tools/business-card/">
-      <div class="thumb"><img src="assets/thumbs/bizcard.jpg" alt="Business Card Generator preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip internal">Internal</span></div>
-        <h3>Business Card Generator</h3>
-        <p>Generate on-brand business cards for agents, print-ready.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
-
-    <a class="tool" href="tools/watermarker/">
-      <div class="thumb"><img src="assets/thumbs/watermarker.jpg" alt="Watermarker preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip internal">Internal</span></div>
-        <h3>Watermarker</h3>
-        <p>Stamp the Casa Blanca watermark onto photos and graphics.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
-
-    <a class="tool" href="assets/biz-card-ordering-guide.pdf" target="_blank" rel="noopener">
-      <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span class="mcwm">PDF guide</span></div>
-      <div class="meta">
-        <div class="tags"><span class="chip internal">Internal</span><span class="chip pdf">PDF</span></div>
-        <h3>Business Card Ordering Guide</h3>
-        <p>How to order printed cards — specs and vendor steps (PDF).</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
-
-    </div>
-  </div>
-
-  <div class="group">
-    <h2 class="group-title">Forms <span class="gn">— intake</span></h2>
-    <div class="grid">
-
-    <a class="tool" href="https://docs.google.com/forms/d/e/1FAIpQLSeKggwwRk7MB2oidHKwZk6E-qVkhW3k2Ig0exbB8XCbxKX_Pw/viewform" target="_blank" rel="noopener">
-      <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="mcwm"><span class="d"></span>via Mailchimp</span></div>
-      <div class="meta">
-        <div class="tags"><span class="chip form">Form</span><span class="chip mc">Mailchimp</span></div>
-        <h3>ISO Request Form</h3>
-        <p>Submit an "in search of" buyer request to the team.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
-
-    </div>
-  </div>
-
-  <!-- Members / dev — hidden until Dev sign-in -->
-  <section id="members" class="group" hidden>
-    <h2 class="group-title">Members <span class="gn">— signed in</span></h2>
-    <div class="grid">
-
-    <a class="tool" href="tools/profile-pic/">
-      <div class="thumb"><img src="assets/thumbs/profilepic.jpg" alt="Profile Pic Generator preview" loading="lazy"></div>
-      <div class="meta">
-        <div class="tags"><span class="chip members">Members</span></div>
-        <h3>Profile Pic Generator</h3>
-        <p>Branded agent headshots — background removed in-browser.</p>
-        <span class="open">Open <span class="arr">→</span></span>
-      </div>
-    </a>
+      <a class="tool" href="tools/brand/">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 1 0 0 20c1.7 0 2-1.5 1-2.6-1-1.2-.4-2.9 1.2-2.9H17a5 5 0 0 0 5-5c0-5-4.5-9.5-10-9.5z"/></svg><span class="mcwm">Brand kit</span></div>
+        <div class="meta">
+          <div class="tags"><span class="chip internal">Internal</span></div>
+          <h3>Brand Assets</h3>
+          <p>Logos, fonts, colors and guidelines — download what you need, any format.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
 
     </div>
   </section>
+
+  <!-- INSTAGRAM & CONTENT -->
+  <section class="panel" id="p-instagram">
+    <p class="panel-intro">Social carousels &amp; content builders.</p>
+    <div class="grid">
+
+      <a class="tool" href="tools/carousel/cb_editorial.html">
+        <div class="thumb"><img src="assets/thumbs/editorial.jpg" alt="Editorial Carousel Builder preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
+          <h3>Editorial Carousel Builder</h3>
+          <p>One listing → a multi-slide editorial carousel. Import, caption, export.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+      <a class="tool" href="tools/closed-carousel/">
+        <div class="thumb"><img src="assets/thumbs/closed.jpg" alt="Closed Carousel Builder preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
+          <h3>Closed Carousel Builder</h3>
+          <p>Multi-closing announcement carousel — one slide per deal.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+      <a class="tool" href="tools/forsale-carousel/">
+        <div class="thumb"><img src="assets/thumbs/forsale.jpg" alt="For Sale Roundup Builder preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
+          <h3>For Sale Roundup Builder</h3>
+          <p>Multi-listing "for sale" announcement carousel — one slide per listing.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+      <a class="tool" href="tools/incontract-carousel/">
+        <div class="thumb"><img src="assets/brand/incontract-template-ref.png" alt="In Contract Roundup Builder preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
+          <h3>In Contract Roundup Builder</h3>
+          <p>Two-listing "in contract" announcement slides — measured pixel-perfect from the brand template.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- INTERNAL TOOLS -->
+  <section class="panel" id="p-internal">
+    <p class="panel-intro">Brand assets &amp; production utilities.</p>
+    <div class="grid">
+
+      <a class="tool" href="tools/brand/">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 1 0 0 20c1.7 0 2-1.5 1-2.6-1-1.2-.4-2.9 1.2-2.9H17a5 5 0 0 0 5-5c0-5-4.5-9.5-10-9.5z"/></svg><span class="mcwm">Brand kit</span></div>
+        <div class="meta">
+          <div class="tags"><span class="chip internal">Internal</span></div>
+          <h3>Brand Assets</h3>
+          <p>Logos, fonts, colors and guidelines — download what you need, any format.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+      <a class="tool" href="tools/business-card/">
+        <div class="thumb"><img src="assets/thumbs/bizcard.jpg" alt="Business Card Generator preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip internal">Internal</span></div>
+          <h3>Business Card Generator</h3>
+          <p>Generate on-brand business cards for agents, print-ready.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+      <a class="tool" href="tools/watermarker/">
+        <div class="thumb"><img src="assets/thumbs/watermarker.jpg" alt="Watermarker preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip internal">Internal</span></div>
+          <h3>Watermarker</h3>
+          <p>Stamp the Casa Blanca watermark onto photos and graphics.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+      <a class="tool" href="assets/biz-card-ordering-guide.pdf" target="_blank" rel="noopener">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span class="mcwm">PDF guide</span></div>
+        <div class="meta">
+          <div class="tags"><span class="chip internal">Internal</span><span class="chip pdf">PDF</span></div>
+          <h3>Business Card Ordering Guide</h3>
+          <p>How to order printed cards — specs and vendor steps (PDF).</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+      <a class="tool" href="https://docs.google.com/forms/d/e/1FAIpQLSeKggwwRk7MB2oidHKwZk6E-qVkhW3k2Ig0exbB8XCbxKX_Pw/viewform" target="_blank" rel="noopener">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="mcwm"><span class="d"></span>via Mailchimp</span></div>
+        <div class="meta">
+          <div class="tags"><span class="chip form">Form</span><span class="chip mc">Mailchimp</span></div>
+          <h3>ISO Request Form</h3>
+          <p>Submit an "in search of" buyer request to the team.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- BRAND -->
+  <section class="panel" id="p-brand">
+    <div class="feature">
+      <div class="ftxt">
+        <h2>The Casa Blanca brand kit.</h2>
+        <p>Logos, the Object Sans typeface, the color palette and brand guidelines — all in one place, downloadable in the formats agents need. Signed-in devs can add and update assets, and changes show up here for everyone.</p>
+        <a class="cta" href="tools/brand/">Open Brand Assets <span>→</span></a>
+      </div>
+      <div class="palpeek" aria-hidden="true">
+        <span class="s" style="background:#0f0f0f"></span><span class="s" style="background:#aaa3cf"></span>
+        <span class="s" style="background:#1e1a2e"></span><span class="s" style="background:#f4f3f0"></span>
+        <span class="s" style="background:#e8e6e0"></span><span class="s" style="background:#ffe01b"></span>
+      </div>
+    </div>
+    <div class="grid">
+      <a class="tool" href="tools/brand/#logos">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"/></svg><span class="mcwm">Logos</span></div>
+        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Logos</h3><p>Primary marks &amp; lockups, multiple formats.</p><span class="open">Open <span class="arr">→</span></span></div>
+      </a>
+      <a class="tool" href="tools/brand/#colors">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="1.4" fill="currentColor"/><circle cx="15" cy="9" r="1.4" fill="currentColor"/><circle cx="9.5" cy="15" r="1.4" fill="currentColor"/></svg><span class="mcwm">Colors</span></div>
+        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Colors</h3><p>The palette — copy hex, download CSS/JSON.</p><span class="open">Open <span class="arr">→</span></span></div>
+      </a>
+      <a class="tool" href="tools/brand/#type">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg><span class="mcwm">Type</span></div>
+        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Typography</h3><p>Object Sans — specimens &amp; font downloads.</p><span class="open">Open <span class="arr">→</span></span></div>
+      </a>
+      <a class="tool" href="tools/brand/#guidelines">
+        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span class="mcwm">Guidelines</span></div>
+        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Guidelines</h3><p>Brand book, voice &amp; how-to docs.</p><span class="open">Open <span class="arr">→</span></span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- MEMBERS — shown only when signed in -->
+  <section class="panel" id="p-members">
+    <p class="panel-intro">Signed-in members &amp; dev tools.</p>
+    <div class="grid">
+      <a class="tool" href="tools/profile-pic/">
+        <div class="thumb"><img src="assets/thumbs/profilepic.jpg" alt="Profile Pic Generator preview" loading="lazy"></div>
+        <div class="meta">
+          <div class="tags"><span class="chip members">Members</span></div>
+          <h3>Profile Pic Generator</h3>
+          <p>Branded agent headshots — background removed in-browser.</p>
+          <span class="open">Open <span class="arr">→</span></span>
+        </div>
+      </a>
+    </div>
+  </section>
+
 </main>
 
 <footer>
@@ -274,6 +397,14 @@
   <div class="box cl">
     <h2>What’s new</h2>
     <p>Recent updates to the Creative Studio.</p>
+    <div id="clAdd" hidden style="background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px">
+      <label>Add an update (date · title)</label>
+      <div class="two"><div><input id="clDate" type="date"></div><div><input id="clTitle" type="text" placeholder="Title"></div></div>
+      <label>Items — one per line</label>
+      <textarea id="clItems" placeholder="What changed…"></textarea>
+      <div class="row"><button class="go" id="clSave" type="button">Publish update</button></div>
+      <div class="err" id="clErr"></div>
+    </div>
     <div id="clList"></div>
     <div class="row" style="margin-top:18px;"><button class="go" id="clClose" type="button">Close</button></div>
   </div>
@@ -292,63 +423,39 @@
   </div>
 </div>
 
-<script>
-  // Casual, client-side email gate. Not security — just keeps casual clickers out.
-  var ALLOWED=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
-  function currentEmail(){return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}
-  function authed(){return ALLOWED.indexOf(currentEmail())!==-1;}
-  function applyAuth(){
-    var on=authed();
-    document.getElementById('members').hidden=!on;
-    var btn=document.getElementById('devBtn');
-    btn.textContent=on?'Signed in · Log out':'Dev';
-    btn.classList.toggle('on',on);
-  }
-  var modal=document.getElementById('loginModal'),input=document.getElementById('emailInput'),err=document.getElementById('loginErr');
-  function openModal(){err.textContent='';input.value='';modal.classList.add('open');setTimeout(function(){input.focus();},40);}
-  function closeModal(){modal.classList.remove('open');}
-  function tryLogin(){
-    var e=(input.value||'').trim().toLowerCase();
-    if(ALLOWED.indexOf(e)!==-1){localStorage.setItem('cb_auth',e);closeModal();applyAuth();
-      document.getElementById('members').scrollIntoView({behavior:'smooth',block:'start'});}
-    else{err.textContent='That email isn’t on the list.';}
-  }
-  document.getElementById('devBtn').onclick=function(){ if(authed()){localStorage.removeItem('cb_auth');applyAuth();} else openModal(); };
-  document.getElementById('goBtn').onclick=tryLogin;
-  document.getElementById('cancelBtn').onclick=closeModal;
-  input.addEventListener('keydown',function(ev){if(ev.key==='Enter')tryLogin();});
-  modal.addEventListener('click',function(ev){if(ev.target===modal)closeModal();});
-  applyAuth();
-</script>
+<div class="modal" id="wsModal">
+  <div class="box wide">
+    <h2>Edit next workshop</h2>
+    <p>Saved to the platform — everyone sees this update.</p>
+    <label>Title</label>
+    <input id="wsTitle" type="text" placeholder="Social Media &amp; Content Workshop">
+    <div class="two">
+      <div><label>Date</label><input id="wsDate" type="date"></div>
+      <div><label>Time</label><input id="wsTime" type="text" placeholder="11:00 AM"></div>
+    </div>
+    <div class="two">
+      <div><label>Location</label><input id="wsLoc" type="text" placeholder="the office"></div>
+      <div><label>Cadence</label><input id="wsCad" type="text" placeholder="every other Thursday"></div>
+    </div>
+    <div class="err" id="wsErr"></div>
+    <div class="row">
+      <button class="cancel" id="wsCancel" type="button">Cancel</button>
+      <button class="go" id="wsSave" type="button">Save</button>
+    </div>
+  </div>
+</div>
 
-<!-- EDIT ME: the next Social Media & Content Workshop. Change "date" (YYYY-MM-DD) and the rest as needed. -->
+<!-- Offline/default fallback content (used if the live backend is unreachable) -->
 <script type="application/json" id="workshop-data">
-{ "date": "2026-07-02", "time": "11:00 AM", "location": "the office", "cadence": "every other Thursday" }
+{ "title": "Social Media & Content Workshop", "date": "2026-07-02", "time": "11:00 AM", "location": "the office", "cadence": "every other Thursday" }
 </script>
-<script>
-(function(){
-  var el=document.getElementById('workshop'); if(!el) return;
-  var cfg={}; try{ cfg=JSON.parse(document.getElementById('workshop-data').textContent); }catch(e){ return; }
-  if(!cfg.date) return;
-  var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var parts=cfg.date.split('-'); var d=new Date(+parts[0], +parts[1]-1, +parts[2]); // local midnight
-  if(isNaN(d)) return;
-  var today=new Date(); today.setHours(0,0,0,0);
-  document.getElementById('wMonth').textContent=MO[d.getMonth()];
-  document.getElementById('wDay').textContent=d.getDate();
-  var dateStr=DAY[d.getDay()]+', '+MO[d.getMonth()]+' '+d.getDate();
-  var bits=[dateStr]; if(cfg.time) bits.push(cfg.time); if(cfg.location) bits.push('at '+cfg.location);
-  var meta=bits.join(' · ');
-  if(d<today){ meta='Next date TBA — check with the team.'+(cfg.cadence?' (Usually '+cfg.cadence+'.)':''); }
-  else if(cfg.cadence){ meta+='  ·  '+cfg.cadence; }
-  document.getElementById('wMeta').textContent=meta;
-  el.hidden=false;
-})();
-</script>
-
 <script type="application/json" id="cl-data">
 [
+  { "date": "2026-06-23", "title": "Brand Assets + tabbed home", "items": [
+    "New Brand Assets page — logos, fonts, colors and guidelines in one place, downloadable in any format",
+    "Home page is now tabbed: Home, Instagram & Content, Internal Tools and Brand",
+    "Devs can edit the workshop and post updates right from the platform — changes show for everyone"
+  ]},
   { "date": "2026-06-23", "title": "Editorial fixes + feedback", "items": [
     "Feedback button in every tool header — send suggestions, bugs and ideas",
     "Stronger StreetEasy import: stealth scraping so listings (address, beds/baths, photos) load reliably, and the site logo no longer slips in as a photo",
@@ -356,21 +463,21 @@
     "Next Social Media & Content Workshop now shown on the home page"
   ]},
   { "date": "2026-06-23", "title": "Agent library", "items": [
-    "Agent headshots are built in \u2014 search the Agent Library in the Closed & For Sale builders, or it auto-matches on bulk create",
+    "Agent headshots are built in — search the Agent Library in the Closed & For Sale builders, or it auto-matches on bulk create",
     "Editorial end slide: pick an agent headshot from the library",
-    "Anonymous usage analytics (Members \u2192 Usage Analytics)",
+    "Anonymous usage analytics (Members → Usage Analytics)",
     "Fixed StreetEasy import on the Editorial builder"
   ]},
   { "date": "2026-06-18", "title": "Quality-of-life pass", "items": [
-    "Every tool now has a \u2039 Studio home button + a signed-in chip",
-    "Auto-save in every builder \u2014 your work is restored on this device",
-    "Bulk Create: paste a list of URLs, \u26a1 Fetch all, drag-to-reorder rows, solid side panel",
-    "Keyboard: Esc closes the panel, \u2190/\u2192 move between slides",
-    "Fuller StreetEasy descriptions (expands \u201cread more\u201d before scraping)",
+    "Every tool now has a ‹ Studio home button + a signed-in chip",
+    "Auto-save in every builder — your work is restored on this device",
+    "Bulk Create: paste a list of URLs, ⚡ Fetch all, drag-to-reorder rows, solid side panel",
+    "Keyboard: Esc closes the panel, ←/→ move between slides",
+    "Fuller StreetEasy descriptions (expands “read more” before scraping)",
     "Favicon + tidier browser-tab titles"
   ]},
   { "date": "2026-06-17", "title": "For Sale Roundup builder", "items": [
-    "New multi-listing \u201cFor Sale\u201d carousel builder",
+    "New multi-listing “For Sale” carousel builder",
     "Editorial: end/contact slide, listing-stats teaser, Listed & Exclusive statuses",
     "Members area behind a quick Dev sign-in"
   ]},
@@ -380,24 +487,155 @@
   ]}
 ]
 </script>
+
 <script>
 (function(){
-  var btn=document.getElementById('whatsnewBtn'), modal=document.getElementById('clModal'),
-      list=document.getElementById('clList'), close=document.getElementById('clClose');
-  var SEEN='cb_changelog_seen';
-  function open(){ modal.classList.add('open'); try{ if(window.__clLatest) localStorage.setItem(SEEN, window.__clLatest); }catch(e){} btn.classList.remove('unseen'); }
-  function shut(){ modal.classList.remove('open'); }
-  btn.onclick=open; close.onclick=shut; modal.addEventListener('click',function(e){ if(e.target===modal) shut(); });
-  var entries=[]; try{ entries=JSON.parse(document.getElementById('cl-data').textContent); }catch(e){}
-  if(!Array.isArray(entries)||!entries.length){ list.innerHTML='<p style="color:#888">No updates yet.</p>'; }
-  else {
-    window.__clLatest=entries[0].date;
-    list.innerHTML=entries.map(function(e){
-      var items=(e.items||[]).map(function(it){return '<li>'+it.replace(/</g,'&lt;')+'</li>';}).join('');
-      return '<div class="cl-entry"><span class="d">'+e.date+'</span><h3>'+e.title.replace(/</g,'&lt;')+'</h3><ul>'+items+'</ul></div>';
-    }).join('');
-    try{ if(localStorage.getItem(SEEN)!==window.__clLatest) btn.classList.add('unseen'); }catch(e){}
+  /* ---------- shared ---------- */
+  var BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
+  var SITE=BACKEND+'/.netlify/functions/site';
+  var ALLOWED=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+  function currentEmail(){return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}
+  function authed(){return ALLOWED.indexOf(currentEmail())!==-1;}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function $(id){return document.getElementById(id);}
+
+  /* ---------- tabs ---------- */
+  var tabs=$('tabs');
+  function showTab(id){
+    [].forEach.call(tabs.children,function(t){t.classList.toggle('on',t.getAttribute('data-tab')===id);});
+    [].forEach.call(document.querySelectorAll('.panel'),function(p){p.classList.toggle('on',p.id==='p-'+id);});
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
   }
+  tabs.addEventListener('click',function(e){var b=e.target.closest('.tab');if(b)showTab(b.getAttribute('data-tab'));});
+
+  /* ---------- auth / dev ---------- */
+  var loginModal=$('loginModal'),input=$('emailInput'),err=$('loginErr');
+  function applyAuth(){
+    var on=authed();
+    $('membersTab').hidden=!on;
+    if(!on && tabs.querySelector('.tab.on').getAttribute('data-tab')==='members') showTab('home');
+    var btn=$('devBtn'); btn.textContent=on?'Signed in · Log out':'Dev'; btn.classList.toggle('on',on);
+    $('wEdit').hidden=!on;
+    $('clAdd').hidden=!on;
+    renderChangelog(); // re-render to add/remove delete buttons
+  }
+  function openLogin(){err.textContent='';input.value='';loginModal.classList.add('open');setTimeout(function(){input.focus();},40);}
+  function closeLogin(){loginModal.classList.remove('open');}
+  function tryLogin(){
+    var e=(input.value||'').trim().toLowerCase();
+    if(ALLOWED.indexOf(e)!==-1){localStorage.setItem('cb_auth',e);closeLogin();applyAuth();showTab('members');}
+    else{err.textContent='That email isn’t on the list.';}
+  }
+  $('devBtn').onclick=function(){ if(authed()){localStorage.removeItem('cb_auth');applyAuth();} else openLogin(); };
+  $('goBtn').onclick=tryLogin; $('cancelBtn').onclick=closeLogin;
+  input.addEventListener('keydown',function(ev){if(ev.key==='Enter')tryLogin();});
+  loginModal.addEventListener('click',function(ev){if(ev.target===loginModal)closeLogin();});
+
+  /* ---------- workshop (live + editable) ---------- */
+  var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var workshop=null;
+  try{ workshop=JSON.parse($('workshop-data').textContent); }catch(e){ workshop={}; }
+
+  function renderWorkshop(){
+    var el=$('workshop'); var cfg=workshop||{};
+    if(!cfg.date){ el.hidden=true; return; }
+    var parts=String(cfg.date).split('-'); var d=new Date(+parts[0],+parts[1]-1,+parts[2]);
+    if(isNaN(d)){ el.hidden=true; return; }
+    var today=new Date(); today.setHours(0,0,0,0);
+    $('wTitle').textContent=cfg.title||'Social Media & Content Workshop';
+    $('wMonth').textContent=MO[d.getMonth()];
+    $('wDay').textContent=d.getDate();
+    var dateStr=DAY[d.getDay()]+', '+MO[d.getMonth()]+' '+d.getDate();
+    var bits=[dateStr]; if(cfg.time) bits.push(cfg.time); if(cfg.location) bits.push('at '+cfg.location);
+    var meta=bits.join(' · ');
+    if(d<today){ meta='Next date TBA — check with the team.'+(cfg.cadence?' (Usually '+cfg.cadence+'.)':''); }
+    else if(cfg.cadence){ meta+='  ·  '+cfg.cadence; }
+    $('wMeta').textContent=meta;
+    el.hidden=false;
+  }
+
+  var wsModal=$('wsModal');
+  $('wEdit').onclick=function(){
+    var c=workshop||{};
+    $('wsTitle').value=c.title||'Social Media & Content Workshop';
+    $('wsDate').value=c.date||''; $('wsTime').value=c.time||'';
+    $('wsLoc').value=c.location||''; $('wsCad').value=c.cadence||'';
+    $('wsErr').textContent=''; wsModal.classList.add('open');
+  };
+  $('wsCancel').onclick=function(){wsModal.classList.remove('open');};
+  wsModal.addEventListener('click',function(e){if(e.target===wsModal)wsModal.classList.remove('open');});
+  $('wsSave').onclick=function(){
+    var next={ title:$('wsTitle').value.trim(), date:$('wsDate').value.trim(),
+      time:$('wsTime').value.trim(), location:$('wsLoc').value.trim(), cadence:$('wsCad').value.trim() };
+    if(!next.date){ $('wsErr').textContent='Pick a date.'; return; }
+    $('wsSave').disabled=true; $('wsErr').textContent='Saving…';
+    fetch(SITE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workshop:next})})
+      .then(function(r){return r.json();}).then(function(d){
+        $('wsSave').disabled=false;
+        if(d&&d.ok){ workshop=(d.config&&d.config.workshop)||next; renderWorkshop(); wsModal.classList.remove('open'); }
+        else{ $('wsErr').textContent='Error: '+((d&&d.error)||'save failed'); }
+      }).catch(function(){ $('wsSave').disabled=false; $('wsErr').textContent='Network error — backend unreachable.'; });
+  };
+
+  /* ---------- changelog (live + editable) ---------- */
+  var clModal=$('clModal'),clList=$('clList'),SEEN='cb_changelog_seen';
+  var changelog=[]; try{ changelog=JSON.parse($('cl-data').textContent)||[]; }catch(e){ changelog=[]; }
+
+  function renderChangelog(){
+    if(!Array.isArray(changelog)||!changelog.length){ clList.innerHTML='<p style="color:#888">No updates yet.</p>'; return; }
+    window.__clLatest=changelog[0].date;
+    var canEdit=authed();
+    clList.innerHTML=changelog.map(function(e){
+      var items=(e.items||[]).map(function(it){return '<li>'+esc(it)+'</li>';}).join('');
+      var del=canEdit?'<button class="cl-del" data-cldel="'+esc(e.date)+'" data-cltitle="'+esc(e.title)+'">Delete</button>':'';
+      return '<div class="cl-entry"><span class="d">'+esc(e.date)+'</span>'+del+'<h3>'+esc(e.title)+'</h3><ul>'+items+'</ul></div>';
+    }).join('');
+    try{ if(localStorage.getItem(SEEN)!==window.__clLatest) $('whatsnewBtn').classList.add('unseen'); }catch(e){}
+  }
+  function openCl(){ clModal.classList.add('open'); try{ if(window.__clLatest) localStorage.setItem(SEEN,window.__clLatest); }catch(e){} $('whatsnewBtn').classList.remove('unseen'); }
+  function shutCl(){ clModal.classList.remove('open'); }
+  $('whatsnewBtn').onclick=openCl; $('clClose').onclick=shutCl;
+  clModal.addEventListener('click',function(e){ if(e.target===clModal) shutCl(); });
+
+  $('clSave').onclick=function(){
+    var date=$('clDate').value.trim(), title=$('clTitle').value.trim();
+    var items=$('clItems').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+    if(!date||!title){ $('clErr').textContent='Add a date and title.'; return; }
+    var entry={date:date,title:title,items:items};
+    $('clSave').disabled=true; $('clErr').textContent='Publishing…';
+    fetch(SITE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry:entry})})
+      .then(function(r){return r.json();}).then(function(d){
+        $('clSave').disabled=false;
+        if(d&&d.ok){ changelog=(d.config&&d.config.changelog)||[entry].concat(changelog); renderChangelog();
+          $('clDate').value='';$('clTitle').value='';$('clItems').value='';$('clErr').textContent='Published ✓'; }
+        else{ $('clErr').textContent='Error: '+((d&&d.error)||'failed'); }
+      }).catch(function(){ $('clSave').disabled=false; $('clErr').textContent='Network error — backend unreachable.'; });
+  };
+  clList.addEventListener('click',function(e){
+    var b=e.target.closest('[data-cldel]'); if(!b||!authed()) return;
+    var date=b.getAttribute('data-cldel');
+    if(!confirm('Delete the “'+b.getAttribute('data-cltitle')+'” update for everyone?')) return;
+    fetch(SITE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deleteChangelogDate:date})})
+      .then(function(r){return r.json();}).then(function(d){
+        if(d&&d.config&&Array.isArray(d.config.changelog)){ changelog=d.config.changelog; renderChangelog(); }
+      }).catch(function(){ alert('Could not delete — backend unreachable.'); });
+  });
+
+  /* ---------- hydrate from live backend (fall back to inline defaults) ---------- */
+  function hydrate(){
+    fetch(SITE,{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
+      if(cfg&&cfg.workshop&&cfg.workshop.date){ workshop=cfg.workshop; renderWorkshop(); }
+      if(cfg&&Array.isArray(cfg.changelog)&&cfg.changelog.length){ changelog=cfg.changelog; renderChangelog(); }
+    }).catch(function(){ /* offline — inline defaults already rendered */ });
+  }
+
+  /* ---------- boot ---------- */
+  (function(){ var h=location.hash.slice(1); var valid=h&&tabs.querySelector('[data-tab="'+h+'"]:not([hidden])'); if(valid) showTab(h); })();
+  renderWorkshop();
+  renderChangelog();
+  applyAuth();
+  hydrate();
 })();
 </script>
 </body>
