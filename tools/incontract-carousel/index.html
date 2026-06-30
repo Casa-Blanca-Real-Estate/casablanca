@@ -442,6 +442,17 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
 
   <!-- DEAL PANEL -->
   <div id="p-deal" class="hidden">
+    <div class="card" id="ic-slot-card">
+      <div class="lbl">Editing</div>
+      <div id="ic-slot-row" style="display:flex;gap:6px;align-items:stretch;">
+        <button type="button" class="btn-s" data-slot="A" id="ic-slot-A" style="flex:1;">Top deal</button>
+        <button type="button" class="btn-s" data-slot="B" id="ic-slot-B" style="flex:1;">Bottom deal</button>
+      </div>
+      <div class="lbl" style="margin-top:10px;">Slide header <span style="font-weight:400;color:var(--mid);font-size:9px;letter-spacing:0;text-transform:none;">— shown under "IN CONTRACT:" on this slide (set on the top deal)</span></div>
+      <input type="text" id="i-slidehdr" placeholder="e.g. EAST WILLIAMSBURG" autocomplete="off">
+      <div class="lbl" style="margin-top:10px;">Accent color <span style="font-weight:400;color:var(--mid);font-size:9px;letter-spacing:0;text-transform:none;">— frames this deal's photo + agent square</span></div>
+      <div id="ic-accent-row" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
     <div class="card">
       <div class="lbl">Photos</div>
       <div class="up-grid">
@@ -688,7 +699,10 @@ function makeDeal() {
   return {
     agentImg:null, agentSrc:'', agentName:'',
     propImg:null,  propSrc:'', propOX:0, propOY:0, propScale:1,
-    address:'', neighborhood:'', price:'', description:''
+    address:'', neighborhood:'', price:'', description:'',
+    // In-contract additions: per-deal accent (drives the photo + agent-square frame
+    // color) and slideHeader (only read off the upper deal of each pair-slide).
+    accent:'#aaa3cf', slideHeader:''
   };
 }
 
@@ -700,14 +714,25 @@ const S = {
 };
 let activeIdx = 1; // 0=cover, 1..N=deals, N+1=end
 
-function stripLen()  { return 2 + S.deals.length; }
+// In-contract pair model: middle slides are pair-slides (2 deals each, solo for odd last).
+// activeIdx: 0=cover, 1..slideCount()=pair-slides, last=end.
+function stripLen()  { return 2 + slideCount(); }
 function endIdx()    { return stripLen() - 1; }
 function activeType(){
   if (activeIdx === 0) return 'cover';
   if (activeIdx === endIdx()) return 'end';
-  return 'deal';
+  return 'pair';
 }
-function activeDeal(){ return S.deals[activeIdx - 1]; }
+// activeSlide returns the slide index within the pair range (1..slideCount()).
+function activeSlide(){ return activeIdx; }
+// Within a pair-slide, the panel edits one of two slots: 'A' (top) or 'B' (bottom).
+// Switching slides resets to 'A' so the user always starts on the top deal.
+let activeSlot = 'A';
+function activeDeal(){
+  const pair = dealsForSlide(activeIdx);
+  return activeSlot === 'B' ? (pair[1] || pair[0]) : pair[0];
+}
+function activeDealPair(){ return dealsForSlide(activeIdx); }
 
 // ═══════════════════════════════════════════════════
 // ASSET PRELOAD
@@ -715,6 +740,18 @@ function activeDeal(){ return S.deals[activeIdx - 1]; }
 const wmImg   = new Image();
 const tmplImg = new Image();
 const endImg  = new Image();
+// Official Casa Blanca building mark (black on transparent). Recolored via canvas
+// composite to whatever color is requested. Re-renders the strip when it loads.
+const bldgMarkImg = new Image();
+bldgMarkImg.onload = ()=>{ try{ if(typeof renderAll==='function') renderAll(); }catch(e){} };
+bldgMarkImg.src = '../../assets/brand/casa-blanca-mark-black.png';
+const _bldgCache = {};
+function bldgTinted(hex){ if(_bldgCache[hex]) return _bldgCache[hex];
+  if(!bldgMarkImg.naturalWidth) return null;
+  const oc=document.createElement('canvas');oc.width=bldgMarkImg.naturalWidth;oc.height=bldgMarkImg.naturalHeight;
+  const c=oc.getContext('2d');c.drawImage(bldgMarkImg,0,0);
+  c.globalCompositeOperation='source-in';c.fillStyle=hex;c.fillRect(0,0,oc.width,oc.height);
+  _bldgCache[hex]=oc;return oc; }
 let readyCt = 0;
 function onAsset(){ if (++readyCt >= 3) { buildStrip(); showPanel(); } }
 wmImg.onload   = onAsset;
@@ -872,22 +909,44 @@ function removeDealAt(stripIdx) {
 // ═══════════════════════════════════════════════════
 function showPanel() {
   const t = activeType();
+  // 'pair' is the in-contract version of the legacy 'deal' panel — same UI, same fields.
+  const isDealLike = (t === 'pair' || t === 'deal');
   document.getElementById('p-cover').classList.toggle('hidden', t !== 'cover');
-  document.getElementById('p-deal').classList.toggle('hidden',  t !== 'deal');
+  document.getElementById('p-deal').classList.toggle('hidden',  !isDealLike);
   document.getElementById('p-end').classList.toggle('hidden',   t !== 'end');
-  // sw-section only shows for end slide — cover has embedded swatches, deal hides it
   document.getElementById('sw-section').classList.toggle('hidden', t !== 'end');
-  // Caption panel only on cover and end slides (not middle deal slides)
-  document.querySelector('.caption-panel').classList.toggle('hidden', t === 'deal');
-  // Hide accent-detected when switching slides
-  if (t !== 'deal') document.getElementById('accent-detected').classList.add('hidden');
-  // Sync cover DZ whenever navigating to cover panel
+  document.querySelector('.caption-panel').classList.toggle('hidden', isDealLike);
+  if (!isDealLike) document.getElementById('accent-detected').classList.add('hidden');
   if (t === 'cover') syncCoverPanel();
 }
 
+let _lastActiveIdx = activeIdx;
 function syncForm() {
-  if (activeType() !== 'deal') return;
+  const t = activeType();
+  if (t !== 'pair' && t !== 'deal') return;
+  // Default to the top deal whenever we navigate to a different slide.
+  if (activeIdx !== _lastActiveIdx) { activeSlot = 'A'; _lastActiveIdx = activeIdx; }
+  // In-contract slot UI: highlight A/B, show/hide based on whether a bottom deal exists,
+  // populate slide-header from the top deal of the pair, mark the active accent swatch.
+  const pair = dealsForSlide(activeIdx);
+  const hasB = !!pair[1];
+  const slotRow = document.getElementById('ic-slot-row');
+  if (slotRow) slotRow.style.display = (t === 'pair') ? 'flex' : 'none';
+  if (activeSlot === 'B' && !hasB) activeSlot = 'A';
+  const aBtn = document.getElementById('ic-slot-A'), bBtn = document.getElementById('ic-slot-B');
+  if (aBtn) aBtn.style.opacity = activeSlot === 'A' ? '1' : '0.55';
+  if (bBtn) { bBtn.style.opacity = activeSlot === 'B' ? '1' : '0.55'; bBtn.style.visibility = hasB ? 'visible' : 'hidden'; }
+  const hdrInp = document.getElementById('i-slidehdr');
+  if (hdrInp) hdrInp.value = (pair[0] && pair[0].slideHeader) || '';
+  const arow = document.getElementById('ic-accent-row');
+  if (arow) {
+    const d0 = activeDeal();
+    arow.querySelectorAll('button[data-c]').forEach(b => {
+      b.style.borderColor = (d0 && d0.accent === b.dataset.c) ? '#0f0f0f' : '#d5d2cb';
+    });
+  }
   const d = activeDeal();
+  if (!d) return;
   // Show/hide save-to-library button based on whether this deal has an agent photo
   document.getElementById('btn-save-agent').style.display = d.agentSrc ? 'block' : 'none';
   document.getElementById('i-addr').value  = d.address;
@@ -951,9 +1010,13 @@ const W = 1080, H = 1350;
 
 function renderCanvas(i) {
   const cv = cvs[i]; if (!cv) return;
-  if (i === 0)          drawCover(cv);
+  if (i === 0)             drawCover(cv);
   else if (i === endIdx()) drawEnd(cv);
-  else                  drawDeal(cv, S.deals[i-1]);
+  else {
+    const [a, b] = dealsForSlide(i);
+    const hdr = a && a.slideHeader || '';
+    drawPairSlide(cv, a, b, hdr);
+  }
 }
 
 function renderAll() { for (let i = 0; i < stripLen(); i++) renderCanvas(i); }
@@ -1047,83 +1110,143 @@ function drawCover(cv) {
 // ═══════════════════════════════════════════════════
 // SLIDE 2: DEAL
 // ═══════════════════════════════════════════════════
+// IN-CONTRACT pair-slide layout — measured pixel-perfect from
+// assets/brand/incontract-template-ref.png at 1080x1350.
+// Each slide stacks two deals (or one centered "solo" deal if the deal count is odd).
+// "Upper" deal: photo on the LEFT, address+last-ask text + agent square on the RIGHT.
+// "Lower" deal: mirrored — address+last-ask + agent square on the LEFT, photo on the RIGHT.
 const T = {
-  AGX:29,AGY:236,AGW:338,AGH:338,
-  PPX:29,PPY:610,PPW:1020,PPH:541,
-  DX:32,DY:1168,DW:1015,DH:128,
-  ADDR_X:395,ADDR_Y:372,ADDR_LH:67,ADDR_MAX_W:656,
-  DESC_SZ:31,DESC_LH:31,DESC_TRACK:-1.56,
+  // Header band (building mark + IN CONTRACT: line + neighborhood line)
+  ICON_X:34, ICON_Y:28, ICON_W:70, ICON_H:115,
+  HDR_X:140, HDR_Y:47, HDR_FONT:38, HDR_LH:37,
+  // Upper deal (photo on the left, agent + text on the right)
+  U_PHOTO_X:33,  U_PHOTO_Y:200, PHOTO_W:617, PHOTO_H:470,
+  U_TEXT_X:682,  U_TEXT_Y:202,
+  U_AGENT_X:678, U_AGENT_Y:300, AGENT_W:369, AGENT_H:369,
+  // Lower deal (mirrored)
+  L_PHOTO_X:432, L_PHOTO_Y:747,
+  L_TEXT_X:47,   L_TEXT_Y:747,
+  L_AGENT_X:34,  L_AGENT_Y:849,
+  // Address / Last-Ask shared
+  TXT_FONT:38, TXT_LH:37,
+  // Frame thickness around photo + agent square (the accent stroke).
+  FRAME_T:6,
+  // Agent name overlay (white bold caps, bottom-left of agent square)
+  NAME_FONT:48, NAME_PAD_X:22, NAME_PAD_Y:24,
+  // Wordmark (cb_wordmark_black) — right-aligned at the bottom
+  WM_X_RIGHT:1042, WM_Y:1281, WM_H:32,
 };
-function drawDeal(cv, deal) {
-  const ctx=cv.getContext('2d');
-  if (tmplImg.complete&&tmplImg.naturalWidth) ctx.drawImage(tmplImg,0,0,W,H);
-  else { ctx.fillStyle='#c7c0b7';ctx.fillRect(0,0,W,H); }
-  // Agent photo — or gray placeholder
-  if (deal.agentImg) {
-    ctx.save();ctx.beginPath();ctx.rect(T.AGX,T.AGY,T.AGW,T.AGH);ctx.clip();
-    cropFit(ctx,deal.agentImg,T.AGX,T.AGY,T.AGW,T.AGH);
+
+// Brand accents — pulled from the reference. Yellow is a slight warm gold.
+const ACCENTS = ['#aaa3cf','#dcb45a','#c0c2b5','#9aa890','#b8a392','#0f0f0f'];
+
+// Pair model: deals[] is flat; pair-slide K (1..ceil(N/2)) renders deals[2(K-1)] + deals[2(K-1)+1].
+function slideCount(){ return Math.max(1, Math.ceil(S.deals.length / 2)); }
+function dealsForSlide(k){ const i=2*(k-1); return [S.deals[i]||null, S.deals[i+1]||null]; }
+
+// --- helpers ---
+function drawFramedPhoto(ctx, img, x, y, w, h, accent, t){
+  ctx.save();
+  if (img) {
+    ctx.save(); ctx.beginPath(); ctx.rect(x+t, y+t, w-2*t, h-2*t); ctx.clip();
+    cropFit(ctx, img, x+t, y+t, w-2*t, h-2*t);
     ctx.restore();
   } else {
-    ctx.fillStyle='rgba(0,0,0,0.10)';
-    ctx.fillRect(T.AGX,T.AGY,T.AGW,T.AGH);
-    // Person icon hint
-    ctx.fillStyle='rgba(0,0,0,0.18)';
-    const cx=T.AGX+T.AGW/2, headR=T.AGW*0.18;
-    ctx.beginPath();ctx.arc(cx,T.AGY+T.AGH*0.35,headR,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(cx,T.AGY+T.AGH*0.72,T.AGW*0.26,T.AGH*0.22,0,Math.PI,0,true);
-    ctx.fill();
+    ctx.fillStyle = '#eceae5'; ctx.fillRect(x+t, y+t, w-2*t, h-2*t);
+    ctx.fillStyle = '#a9a59d'; ctx.font = f(800, 22);
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('DROP IMAGE', x+w/2, y+h/2);
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   }
-  // Property photo — or gray placeholder
-  if (deal.propImg) {
-    ctx.save();ctx.beginPath();ctx.rect(T.PPX,T.PPY,T.PPW,T.PPH);ctx.clip();
-    cropFit(ctx,deal.propImg,T.PPX,T.PPY,T.PPW,T.PPH,deal.propOX,deal.propOY,deal.propScale);
-    ctx.restore();
-  } else {
-    ctx.fillStyle='rgba(0,0,0,0.10)';
-    ctx.fillRect(T.PPX,T.PPY,T.PPW,T.PPH);
-    // Landscape icon hint
-    ctx.fillStyle='rgba(0,0,0,0.18)';
-    const mX=T.PPX+T.PPW/2, mY=T.PPY+T.PPH/2;
-    const iW=T.PPW*0.18, iH=T.PPH*0.32;
-    ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=6;
-    ctx.strokeRect(mX-iW/2, mY-iH/2, iW, iH);
-    // Mountain shape inside
-    ctx.beginPath();
-    ctx.moveTo(mX-iW*0.45, mY+iH*0.38);
-    ctx.lineTo(mX-iW*0.05, mY-iH*0.1);
-    ctx.lineTo(mX+iW*0.2,  mY+iH*0.1);
-    ctx.lineTo(mX+iW*0.45, mY-iH*0.25);
-    ctx.lineTo(mX+iW*0.45, mY+iH*0.38);
-    ctx.closePath(); ctx.fill();
-    // Sun dot
-    ctx.beginPath();
-    ctx.arc(mX-iW*0.2, mY-iH*0.2, iH*0.1, 0, Math.PI*2);
-    ctx.fill();
-  }
-  // Append comma to address at render time — field stays clean
-  const addrDisplay = deal.address ? deal.address.trimEnd().replace(/,+$/, '') + ',' : '';
-  const priceDisplay = deal.price ? (deal.price.trim().startsWith('$') ? deal.price : '$' + deal.price) : '';
-  const lines=[addrDisplay,deal.neighborhood,priceDisplay].map(s=>(s||'').toUpperCase()).filter(Boolean);
-  if (lines.length) {
-    let sz=68;ctx.font=f(800,sz);
-    const widest=Math.max(...lines.map(l=>ctx.measureText(l).width));
-    if (widest>T.ADDR_MAX_W) sz=Math.floor(sz*T.ADDR_MAX_W/widest);
-    sz=Math.max(sz,28);
-    ctx.font=f(800,sz);ctx.fillStyle='#fff';ctx.textBaseline='alphabetic';ctx.letterSpacing=(sz*-0.05)+'px';
-    const addrLH=sz*(67/68);
-    lines.forEach((l,i)=>ctx.fillText(l,T.ADDR_X,T.ADDR_Y+i*addrLH));
-    ctx.letterSpacing='0px';
-  }
-  if (deal.description.trim()) {
-    ctx.font=f(400,T.DESC_SZ);ctx.fillStyle='#fff';ctx.textBaseline='top';ctx.letterSpacing=T.DESC_TRACK+'px';
-    const dl=wrap(ctx,deal.description.trim(),T.DW);
-    const maxL=Math.floor(T.DH/T.DESC_LH);
-    const vis=dl.slice(0,maxL);
-    vis.forEach((l,i)=>justified(ctx,l,T.DX,T.DY+i*T.DESC_LH,T.DW,i===vis.length-1));
-    ctx.textBaseline='alphabetic';ctx.letterSpacing='0px';
-  }
+  // Accent frame (thick stroke around the photo, drawn as 4 rects so corners stay crisp)
+  ctx.fillStyle = accent;
+  ctx.fillRect(x,        y,        w, t);            // top
+  ctx.fillRect(x,        y+h-t,    w, t);            // bottom
+  ctx.fillRect(x,        y+t,      t, h-2*t);        // left
+  ctx.fillRect(x+w-t,    y+t,      t, h-2*t);        // right
+  ctx.restore();
 }
+
+// "[address]" / "LAST ASK: $price" — black bold caps, 2 lines, top-aligned at (x,y)
+function drawDealText(ctx, deal, x, y){
+  ctx.save();
+  ctx.fillStyle = '#000';
+  ctx.font = f(800, T.TXT_FONT);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  const addr = (deal.address || '').toUpperCase().trim() || 'ADDRESS';
+  const price = (deal.price || '').trim();
+  ctx.fillText(addr, x, y);
+  // Line 2: "LAST ASK: $price" — "LAST ASK:" lighter, price bold heavy
+  const lasklbl = 'LAST ASK: ';
+  ctx.font = f(700, T.TXT_FONT);
+  const lw = ctx.measureText(lasklbl).width;
+  ctx.fillText(lasklbl, x, y + T.TXT_LH);
+  ctx.font = f(900, T.TXT_FONT);
+  ctx.fillText(price || '—', x + lw, y + T.TXT_LH);
+  ctx.restore();
+}
+
+// Agent name overlay — white bold caps, bottom-left INSIDE the agent square
+function drawAgentName(ctx, name, ax, ay, aw, ah){
+  if (!name || !name.trim()) return;
+  ctx.save();
+  ctx.fillStyle = '#fff';
+  ctx.font = f(900, T.NAME_FONT);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText(name.trim().toUpperCase() + '.', ax + T.NAME_PAD_X, ay + ah - T.NAME_PAD_Y);
+  ctx.restore();
+}
+
+// Pair-slide renderer — used by renderCanvas for every middle slide.
+function drawPairSlide(cv, dealA, dealB, slideHeader){
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+
+  // Header band — building icon + 2-line header text
+  drawBuildingIcon(ctx, T.ICON_X + T.ICON_W/2, T.ICON_Y, T.ICON_W, T.ICON_H, '#000');
+  ctx.save();
+  ctx.fillStyle = '#000';
+  ctx.font = f(900, T.HDR_FONT);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('IN CONTRACT:', T.HDR_X, T.HDR_Y);
+  const sub = (slideHeader || dealA?.neighborhood || 'NEIGHBORHOOD').toUpperCase();
+  ctx.fillText(sub, T.HDR_X, T.HDR_Y + T.HDR_LH);
+  ctx.restore();
+
+  // Solo case (one deal centered as the upper position)
+  const solo = !dealB;
+  const A = dealA, accA = A?.accent || ACCENTS[0];
+  drawFramedPhoto(ctx, A?.propImg, T.U_PHOTO_X, T.U_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
+  drawDealText  (ctx, A,            T.U_TEXT_X,  T.U_TEXT_Y);
+  drawFramedPhoto(ctx, A?.agentImg, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H, accA, T.FRAME_T);
+  drawAgentName (ctx, A?.agentName, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H);
+
+  if (!solo) {
+    const B = dealB, accB = B?.accent || ACCENTS[1];
+    drawDealText  (ctx, B,            T.L_TEXT_X,  T.L_TEXT_Y);
+    drawFramedPhoto(ctx, B?.agentImg, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H, accB, T.FRAME_T);
+    drawAgentName (ctx, B?.agentName, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H);
+    drawFramedPhoto(ctx, B?.propImg,  T.L_PHOTO_X, T.L_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
+  }
+
+  // Wordmark — right-aligned at bottom (cb_wordmark_black). Use existing wmImg helper.
+  drawWM(ctx, T.WM_X_RIGHT, T.WM_Y, T.WM_H, 'right');
+}
+
+// Building mark — prefers the official PNG, recolored; falls back to a coarse silhouette
+// while the image loads. Same approach as the editorial end slide.
+function drawBuildingIcon(ctx, cx, topY, w, h, color){
+  const tinted = bldgTinted(color);
+  if (tinted){
+    const ar = tinted.width / tinted.height;
+    let dw, dh; if (w/h > ar){ dh = h; dw = dh*ar; } else { dw = w; dh = dw/ar; }
+    ctx.drawImage(tinted, Math.round(cx-dw/2), Math.round(topY+(h-dh)/2), Math.round(dw), Math.round(dh));
+    return;
+  }
+  ctx.save(); ctx.fillStyle = color; ctx.fillRect(cx-w/2, topY, w, h); ctx.restore();
+}
+// Legacy drawDeal removed; in-contract pair-slide rendering is handled by drawPairSlide
+// (defined above). renderCanvas dispatches middle slides to drawPairSlide directly.
 
 // ═══════════════════════════════════════════════════
 // SLIDE 3: END
@@ -1797,6 +1920,30 @@ setupDZ('dz-cover','f-cover','th-cover',(img,src)=>{
     if (key==='description') updateCharCount();
   });
 });
+// In-contract additions: slide-header field (always written to the top deal of the pair,
+// regardless of which slot is active), accent picker (per-deal), and slot toggle (A/B).
+(function(){
+  const slidehdr = document.getElementById('i-slidehdr');
+  if (slidehdr) slidehdr.addEventListener('input', function(){
+    const top = dealsForSlide(activeIdx)[0]; if(!top) return;
+    top.slideHeader = this.value; renderCanvas(activeIdx);
+  });
+  const arow = document.getElementById('ic-accent-row');
+  if (arow) {
+    arow.innerHTML = ACCENTS.map(c =>
+      `<button type="button" data-c="${c}" title="${c}" style="width:28px;height:28px;border-radius:6px;border:2px solid #d5d2cb;background:${c};cursor:pointer;"></button>`
+    ).join('');
+    arow.addEventListener('click', e=>{
+      const b = e.target.closest('button[data-c]'); if(!b) return;
+      const d = activeDeal(); if(!d) return;
+      d.accent = b.dataset.c; syncForm(); renderCanvas(activeIdx);
+    });
+  }
+  const a = document.getElementById('ic-slot-A'), bn = document.getElementById('ic-slot-B');
+  function pickSlot(slot){ activeSlot = slot; syncForm(); }
+  if (a)  a.addEventListener('click', ()=>pickSlot('A'));
+  if (bn) bn.addEventListener('click', ()=>pickSlot('B'));
+})();
 function updateCharCount(){
   const n=document.getElementById('i-desc').value.length;
   const el=document.getElementById('char-cnt');
@@ -2760,7 +2907,7 @@ document.addEventListener('keydown', function(e){
   var t=e.target, inField = t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
   if(e.key==='Escape'){ var m=document.getElementById('bulk-modal'); if(m && !m.classList.contains('hidden')){ closeBulkModal(); return; } }
   if(!inField && !e.metaKey && !e.ctrlKey && (e.key==='ArrowLeft'||e.key==='ArrowRight')){
-    var n=2+S.deals.length, i=activeIdx + (e.key==='ArrowRight'?1:-1);
+    var n=stripLen(), i=activeIdx + (e.key==='ArrowRight'?1:-1);
     if(i<0||i>=n) return; e.preventDefault(); activeIdx=i; buildStrip(); showPanel(); syncForm(); if(typeof updateDlBtn==='function') updateDlBtn();
   }
 });
