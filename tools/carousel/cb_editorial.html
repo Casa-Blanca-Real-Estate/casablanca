@@ -445,24 +445,42 @@ function drawContext(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.f
   drawLogo(ctx,666,1277,373,40,'#0f0f0f');}
 
 // ── END · CONTACT ──
-// Casa Blanca building mark — line-art tower: a 5×7 grid of outlined window panes with
-// an arched entrance in the centre-bottom (matches the brand logo, not solid blocks).
-function drawBuildingIcon(ctx,cx,topY,w,h,color){ctx.save();setLS(ctx,false);
-  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineCap='butt';ctx.lineJoin='miter';
-  const cols=5,rows=7,lw=Math.max(3,Math.round(w*0.052));ctx.lineWidth=lw;
-  const x0=cx-w/2,y0=topY,cw=w/cols,rh=h/rows;
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    if(c===2&&r>=rows-2)continue; // centre column, bottom two rows → arched entrance
-    ctx.strokeRect(x0+c*cw+lw/2,y0+r*rh+lw/2,cw-lw,rh-lw);
+// Casa Blanca building mark — silhouette with cut-outs (matches the brand icon).
+// 5 cols × 8 rows: rows 1-6 are outlined windows, row 7-8 form the entrance band with two
+// flanking rectangular doorways (cols 2/4) and a tall rounded central arch (col 3). The
+// corner cells in the entrance band are still windows. Drawn offscreen, then composited so
+// the cut-outs let whatever slide bg is behind it show through.
+function drawBuildingIcon(ctx,cx,topY,w,h,color){
+  const COLS=5,ROWS=8,cw=w/COLS,ch=h/ROWS,fr=Math.max(2,Math.round(cw*0.16));
+  const off=document.createElement('canvas');off.width=Math.round(w);off.height=Math.round(h);
+  const o=off.getContext('2d');
+  o.fillStyle=color;o.fillRect(0,0,off.width,off.height);
+  o.globalCompositeOperation='destination-out';
+  o.fillStyle='#000';
+  // Rows 1-6: full grid of windows
+  for(let r=0;r<6;r++)for(let c=0;c<COLS;c++){
+    o.fillRect(c*cw+fr, r*ch+fr, cw-2*fr, ch-2*fr);
   }
-  const ax=x0+2*cw,aTop=y0+(rows-2)*rh,aBot=y0+h,cxx=ax+cw/2,rr=(cw-lw)/2;
-  ctx.beginPath();
-  ctx.moveTo(ax+lw/2,aBot);
-  ctx.lineTo(ax+lw/2,aTop+cw/2);
-  ctx.arc(cxx,aTop+cw/2,rr,Math.PI,0);
-  ctx.lineTo(ax+cw-lw/2,aBot);
-  ctx.stroke();
-  ctx.restore();}
+  // Row 7 + 8: entrance band. Cols 0 and 4 are windows in row 7 only (row 8 corners are window-shaped too).
+  const r7=6*ch, r8=7*ch;
+  for(const c of [0,4]){
+    o.fillRect(c*cw+fr, r7+fr, cw-2*fr, ch-2*fr);          // row 7 corner window
+    o.fillRect(c*cw+fr, r8+fr, cw-2*fr, ch-fr);            // row 8 corner window, open at building base
+  }
+  // Cols 1 + 3: tall rectangular doorways spanning rows 7-8
+  for(const c of [1,3]){
+    o.fillRect(c*cw+fr, r7+fr, cw-2*fr, 2*ch-fr);          // span 2 rows, open at the bottom
+  }
+  // Col 2: central arch — rounded top in row 7, rectangular shaft through row 8, open at base.
+  const ax=2*cw+fr, ay=r7+fr, aw=cw-2*fr, ah=2*ch-fr, rr=aw/2;
+  o.beginPath();
+  o.moveTo(ax, ay+ah);
+  o.lineTo(ax, ay+rr);
+  o.arc(ax+rr, ay+rr, rr, Math.PI, 0);
+  o.lineTo(ax+aw, ay+ah);
+  o.closePath();
+  o.fill();
+  ctx.drawImage(off, Math.round(cx-w/2), Math.round(topY));}
 function drawEnd(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#0f0f0f';ctx.fillRect(0,0,W,H);
   const TAUPE='#c7c0b7';
   // address (top-left) + price (top-right) in taupe caps
