@@ -745,6 +745,11 @@ const endImg  = new Image();
 const bldgMarkImg = new Image();
 bldgMarkImg.onload = ()=>{ try{ if(typeof renderAll==='function') renderAll(); }catch(e){} };
 bldgMarkImg.src = '../../assets/brand/casa-blanca-mark-black.png';
+// Official Casa Blanca wordmark in black — overrides the inherited white-on-dark wmImg
+// for the in-contract slides (which are white-bg, so the wordmark needs to be black).
+const wmBlackImg = new Image();
+wmBlackImg.onload = ()=>{ try{ if(typeof renderAll==='function') renderAll(); }catch(e){} };
+wmBlackImg.src = '../../assets/brand/cb_wordmark_black.png';
 const _bldgCache = {};
 function bldgTinted(hex){ if(_bldgCache[hex]) return _bldgCache[hex];
   if(!bldgMarkImg.naturalWidth) return null;
@@ -1144,56 +1149,70 @@ const ACCENTS = ['#aaa3cf','#dcb45a','#c0c2b5','#9aa890','#b8a392','#0f0f0f'];
 function slideCount(){ return Math.max(1, Math.ceil(S.deals.length / 2)); }
 function dealsForSlide(k){ const i=2*(k-1); return [S.deals[i]||null, S.deals[i+1]||null]; }
 
+// Brand kerning: Object Sans is set at -50/1000 em across the whole template.
+// Convert to a px letterSpacing string for canvas at a given font size.
+function trackPx(sz){ return (sz * -0.05).toFixed(2) + 'px'; }
+
 // --- helpers ---
+// drawFramedPhoto: t=0 → no border, photo fills (x,y,w,h) edge-to-edge.
+// t>0 → photo is inset by t and an accent border of thickness t is painted around it.
 function drawFramedPhoto(ctx, img, x, y, w, h, accent, t){
   ctx.save();
+  const ix = x + t, iy = y + t, iw = w - 2*t, ih = h - 2*t;
   if (img) {
-    ctx.save(); ctx.beginPath(); ctx.rect(x+t, y+t, w-2*t, h-2*t); ctx.clip();
-    cropFit(ctx, img, x+t, y+t, w-2*t, h-2*t);
+    ctx.save(); ctx.beginPath(); ctx.rect(ix, iy, iw, ih); ctx.clip();
+    cropFit(ctx, img, ix, iy, iw, ih);
     ctx.restore();
   } else {
-    ctx.fillStyle = '#eceae5'; ctx.fillRect(x+t, y+t, w-2*t, h-2*t);
+    ctx.fillStyle = '#eceae5'; ctx.fillRect(ix, iy, iw, ih);
     ctx.fillStyle = '#a9a59d'; ctx.font = f(800, 22);
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('DROP IMAGE', x+w/2, y+h/2);
     ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   }
-  // Accent frame (thick stroke around the photo, drawn as 4 rects so corners stay crisp)
-  ctx.fillStyle = accent;
-  ctx.fillRect(x,        y,        w, t);            // top
-  ctx.fillRect(x,        y+h-t,    w, t);            // bottom
-  ctx.fillRect(x,        y+t,      t, h-2*t);        // left
-  ctx.fillRect(x+w-t,    y+t,      t, h-2*t);        // right
+  if (t > 0) {
+    ctx.fillStyle = accent;
+    ctx.fillRect(x,     y,     w, t);
+    ctx.fillRect(x,     y+h-t, w, t);
+    ctx.fillRect(x,     y+t,   t, h-2*t);
+    ctx.fillRect(x+w-t, y+t,   t, h-2*t);
+  }
   ctx.restore();
 }
 
-// "[address]" / "LAST ASK: $price" — black bold caps, 2 lines, top-aligned at (x,y)
+// Address (bold caps) + "Last Ask:" (regular) + price (heavy) — 2 lines, top-aligned at (x,y).
+// All text uses the brand -50/1000 em kerning.
 function drawDealText(ctx, deal, x, y){
   ctx.save();
   ctx.fillStyle = '#000';
-  ctx.font = f(800, T.TXT_FONT);
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.letterSpacing = trackPx(T.TXT_FONT);
   const addr = (deal.address || '').toUpperCase().trim() || 'ADDRESS';
   const price = (deal.price || '').trim();
+  // Line 1: address — bold caps
+  ctx.font = f(800, T.TXT_FONT);
   ctx.fillText(addr, x, y);
-  // Line 2: "LAST ASK: $price" — "LAST ASK:" lighter, price bold heavy
-  const lasklbl = 'LAST ASK: ';
-  ctx.font = f(700, T.TXT_FONT);
+  // Line 2: "Last Ask:" regular weight, then the price heavy.
+  const lasklbl = 'Last Ask: ';
+  ctx.font = f(400, T.TXT_FONT);
   const lw = ctx.measureText(lasklbl).width;
   ctx.fillText(lasklbl, x, y + T.TXT_LH);
   ctx.font = f(900, T.TXT_FONT);
   ctx.fillText(price || '—', x + lw, y + T.TXT_LH);
+  ctx.letterSpacing = '0px';
   ctx.restore();
 }
 
-// Agent name overlay — white bold caps, bottom-left INSIDE the agent square
+// Agent name overlay — white bold caps with brand kerning, bottom-left INSIDE the agent square.
 function drawAgentName(ctx, name, ax, ay, aw, ah){
   if (!name || !name.trim()) return;
   ctx.save();
   ctx.fillStyle = '#fff';
   ctx.font = f(900, T.NAME_FONT);
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.letterSpacing = trackPx(T.NAME_FONT);
   ctx.fillText(name.trim().toUpperCase() + '.', ax + T.NAME_PAD_X, ay + ah - T.NAME_PAD_Y);
+  ctx.letterSpacing = '0px';
   ctx.restore();
 }
 
@@ -1202,35 +1221,44 @@ function drawPairSlide(cv, dealA, dealB, slideHeader){
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
 
-  // Header band — building icon + 2-line header text
+  // Header band — building icon + 2-line header text. Both lines use brand kerning;
+  // "IN CONTRACT:" stays bold, the neighborhood line below is set in regular weight.
   drawBuildingIcon(ctx, T.ICON_X + T.ICON_W/2, T.ICON_Y, T.ICON_W, T.ICON_H, '#000');
   ctx.save();
   ctx.fillStyle = '#000';
-  ctx.font = f(900, T.HDR_FONT);
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.letterSpacing = trackPx(T.HDR_FONT);
+  ctx.font = f(900, T.HDR_FONT);
   ctx.fillText('IN CONTRACT:', T.HDR_X, T.HDR_Y);
+  ctx.font = f(400, T.HDR_FONT);
   const sub = (slideHeader || dealA?.neighborhood || 'NEIGHBORHOOD').toUpperCase();
   ctx.fillText(sub, T.HDR_X, T.HDR_Y + T.HDR_LH);
+  ctx.letterSpacing = '0px';
   ctx.restore();
 
-  // Solo case (one deal centered as the upper position)
+  // Solo case (one deal centered as the upper position).
+  // Agent squares are rendered with NO accent stroke (the photos already carry their
+  // own colored bg + B&W treatment); only the property photos get the accent border.
   const solo = !dealB;
   const A = dealA, accA = A?.accent || ACCENTS[0];
-  drawFramedPhoto(ctx, A?.propImg, T.U_PHOTO_X, T.U_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
+  drawFramedPhoto(ctx, A?.propImg,  T.U_PHOTO_X, T.U_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
   drawDealText  (ctx, A,            T.U_TEXT_X,  T.U_TEXT_Y);
-  drawFramedPhoto(ctx, A?.agentImg, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H, accA, T.FRAME_T);
+  drawFramedPhoto(ctx, A?.agentImg, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H, accA, 0);
   drawAgentName (ctx, A?.agentName, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H);
 
   if (!solo) {
     const B = dealB, accB = B?.accent || ACCENTS[1];
     drawDealText  (ctx, B,            T.L_TEXT_X,  T.L_TEXT_Y);
-    drawFramedPhoto(ctx, B?.agentImg, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H, accB, T.FRAME_T);
+    drawFramedPhoto(ctx, B?.agentImg, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H, accB, 0);
     drawAgentName (ctx, B?.agentName, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H);
     drawFramedPhoto(ctx, B?.propImg,  T.L_PHOTO_X, T.L_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
   }
 
-  // Wordmark — right-aligned at bottom (cb_wordmark_black). Use existing wmImg helper.
-  drawWM(ctx, T.WM_X_RIGHT, T.WM_Y, T.WM_H, 'right');
+  // Wordmark — official cb_wordmark_black.png, right-aligned at the bottom.
+  if (wmBlackImg.naturalWidth) {
+    const dw = wmBlackImg.naturalWidth * (T.WM_H / wmBlackImg.naturalHeight);
+    ctx.drawImage(wmBlackImg, T.WM_X_RIGHT - dw, T.WM_Y, dw, T.WM_H);
+  }
 }
 
 // Building mark — prefers the official PNG, recolored; falls back to a coarse silhouette
