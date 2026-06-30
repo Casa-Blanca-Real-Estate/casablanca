@@ -462,6 +462,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <span class="dz-lbl">Drop or click</span>
             <span class="dz-hint">Pre-composited with name</span>
           </div>
+          <div class="agent-lib-wrap" data-slot="A" style="margin-top:6px;">
+            <input type="text" id="agent-search-A" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
+            <div id="agent-results-A" class="agent-results hidden"></div>
+          </div>
         </div>
         <div class="up-block">
           <div class="lbl">Property photo</div>
@@ -494,6 +498,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <img class="dz-th" id="th-agent-B" alt="">
             <span class="dz-lbl">Drop or click</span>
             <span class="dz-hint">Pre-composited with name</span>
+          </div>
+          <div class="agent-lib-wrap" data-slot="B" style="margin-top:6px;">
+            <input type="text" id="agent-search-B" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
+            <div id="agent-results-B" class="agent-results hidden"></div>
           </div>
         </div>
         <div class="up-block">
@@ -1592,19 +1600,30 @@ function hideAgentResults() {
   document.getElementById('agent-search').value = '';
 }
 
-async function applyAgentFromLibrary(key, name) {
+async function applyAgentFromLibrary(key, name, slot) {
   hideAgentResults();
   const entry = agentLibrary.find(a => a.key === key);
   if (!entry) { showToast('✗ Agent not found'); return; }
-  const d = activeDeal(); if (!d) return;
+  // Slot-aware: write into the per-slot deal of the active pair-slide. Falls back to the
+  // top deal when slot is omitted (preserves the closed-carousel call sites).
+  const targetSlot = (slot === 'A' || slot === 'B') ? slot : 'A';
+  const pair = (typeof dealsForSlide === 'function') ? dealsForSlide(activeIdx) : [activeDeal()];
+  let d = pair[targetSlot === 'B' ? 1 : 0];
+  if (targetSlot === 'B' && !d && typeof ensureSlotB === 'function') d = ensureSlotB();
+  if (!d) return;
   const img = new Image();
   img.onload = () => {
     d.agentImg = img; d.agentSrc = entry.src;
     d.agentName = name;
-    updateStripLabel(activeIdx);
-    syncDZ('dz-agent', 'th-agent', entry.src);
+    if (typeof updateStripLabel === 'function') updateStripLabel(activeIdx);
+    // Update the correct per-slot dropzone thumbnail.
+    if (typeof dealsForSlide === 'function') {
+      syncDZ('dz-agent-' + targetSlot, 'th-agent-' + targetSlot, entry.src);
+    } else {
+      syncDZ('dz-agent', 'th-agent', entry.src);
+    }
     var sa = document.getElementById('btn-save-agent'); if (sa) sa.style.display = 'none';
-    if (activeIdx === 1) tryDetectAccent(img);
+    if (activeIdx === 1 && typeof tryDetectAccent === 'function') tryDetectAccent(img);
     renderCanvas(activeIdx);
     showToast('✓ ' + name + ' applied');
   };
@@ -2009,6 +2028,46 @@ document.getElementById('i-slidehdr').addEventListener('input', function(){
     const d = dealForSlot(slot); if (!d) return;
     d.propImg = img; d.propSrc = src; d.propOX = 0; d.propOY = 0; d.propScale = 1;
     renderCanvas(activeIdx);
+  });
+});
+
+// Per-slot agent library search. Each slot has its own input + results dropdown so
+// they never collide. Reuses searchAgents() from the inherited closed-carousel code.
+function renderAgentResultsInto(elId, slot, results){
+  const el = document.getElementById(elId); if (!el) return;
+  if (!results.length) {
+    el.innerHTML = '<div class="agent-results-empty">No agents found</div>';
+  } else {
+    el.innerHTML = results.map(a => `
+      <div class="agent-result" data-key="${a.key}" data-name="${a.name}" data-slot="${slot}">
+        <img class="agent-result-thumb" src="${a.src}" alt="${a.name}" loading="lazy" onerror="this.style.opacity='.3'">
+        <span class="agent-result-name">${a.name}</span>
+      </div>
+    `).join('');
+  }
+  el.classList.remove('hidden');
+}
+['A','B'].forEach(slot => {
+  const inp = document.getElementById('agent-search-' + slot);
+  const res = document.getElementById('agent-results-' + slot);
+  if (inp) inp.addEventListener('input', function(){
+    const q = this.value;
+    if (!q.trim()) { res.classList.add('hidden'); return; }
+    renderAgentResultsInto('agent-results-' + slot, slot, searchAgents(q));
+  });
+  if (res) res.addEventListener('click', e => {
+    const row = e.target.closest('.agent-result'); if (!row) return;
+    applyAgentFromLibrary(row.dataset.key, row.dataset.name, slot);
+    if (inp) inp.value = '';
+    res.classList.add('hidden');
+  });
+});
+// Hide either dropdown on an outside click.
+document.addEventListener('click', e => {
+  document.querySelectorAll('.agent-lib-wrap[data-slot]').forEach(w => {
+    if (!w.contains(e.target)) {
+      const r = w.querySelector('.agent-results'); if (r) r.classList.add('hidden');
+    }
   });
 });
 
