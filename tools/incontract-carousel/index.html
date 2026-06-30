@@ -118,6 +118,7 @@ textarea{resize:vertical;min-height:82px;font-weight:400;line-height:1.6;}
 input[type=color]{width:26px;height:26px;border-radius:50%;border:2px solid var(--bdr);cursor:pointer;padding:0;background:none;flex-shrink:0;}
 input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
 input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
+.ic-accent-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
 .sw-note{font-size:10px;color:var(--mid);line-height:1.6;}
 
 /* ── SESSION HISTORY ────────────────────────────── */
@@ -440,83 +441,106 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
     </div>
   </div>
 
-  <!-- DEAL PANEL -->
+  <!-- DEAL PANEL — slide header + two deal cards (Top + Bottom) shown simultaneously -->
   <div id="p-deal" class="hidden">
-    <div class="card" id="ic-slot-card">
-      <div class="lbl">Editing</div>
-      <div id="ic-slot-row" style="display:flex;gap:6px;align-items:stretch;">
-        <button type="button" class="btn-s" data-slot="A" id="ic-slot-A" style="flex:1;">Top deal</button>
-        <button type="button" class="btn-s" data-slot="B" id="ic-slot-B" style="flex:1;">Bottom deal</button>
-      </div>
-      <div class="lbl" style="margin-top:10px;">Slide header <span style="font-weight:400;color:var(--mid);font-size:9px;letter-spacing:0;text-transform:none;">— shown under "IN CONTRACT:" on this slide (set on the top deal)</span></div>
-      <input type="text" id="i-slidehdr" placeholder="e.g. EAST WILLIAMSBURG" autocomplete="off">
-      <div class="lbl" style="margin-top:10px;">Accent color <span style="font-weight:400;color:var(--mid);font-size:9px;letter-spacing:0;text-transform:none;">— frames this deal's photo + agent square</span></div>
-      <div id="ic-accent-row" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-    </div>
+
     <div class="card">
-      <div class="lbl">Photos</div>
-      <div class="up-grid">
+      <div class="lbl">Slide header <span style="font-weight:400;color:var(--mid);font-size:9px;letter-spacing:0;text-transform:none;">— shown under "IN CONTRACT:"</span></div>
+      <input type="text" id="i-slidehdr" placeholder="e.g. EAST WILLIAMSBURG" autocomplete="off">
+    </div>
+
+    <div class="card" id="ic-deal-A">
+      <div class="lbl">Top deal</div>
+      <div class="lbl" style="margin-top:8px;">Accent</div>
+      <div id="ic-accent-row-A" class="ic-accent-row"></div>
+      <div class="up-grid" style="margin-top:10px;">
         <div class="up-block">
-          <div class="lbl">Agent Photo</div>
-          <div class="dz" id="dz-agent">
-            <input type="file" id="f-agent" accept="image/*">
-            <img class="dz-th" id="th-agent" alt="">
+          <div class="lbl">Agent photo</div>
+          <div class="dz" id="dz-agent-A">
+            <input type="file" id="f-agent-A" accept="image/*">
+            <img class="dz-th" id="th-agent-A" alt="">
             <span class="dz-lbl">Drop or click</span>
-            <span class="dz-hint">Square w/ name</span>
+            <span class="dz-hint">Pre-composited with name</span>
           </div>
-          <button id="btn-save-agent" class="btn-s agent-save-btn">＋ Save to library</button>
-          <div class="agent-lib-wrap">
-            <input type="text" id="agent-search" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
-            <div id="agent-results" class="agent-results hidden"></div>
-          </div>
-          <div class="accent-detected hidden" id="accent-detected">
-            <div class="accent-dot" id="accent-dot"></div>
-            <span id="accent-detected-txt">Accent detected</span>
+          <div class="agent-lib-wrap" data-slot="A" style="margin-top:6px;">
+            <input type="text" id="agent-search-A" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
+            <div id="agent-results-A" class="agent-results hidden"></div>
           </div>
         </div>
         <div class="up-block">
-          <div class="lbl">Property Photo</div>
-          <div class="dz" id="dz-prop">
-            <input type="file" id="f-prop" accept="image/*">
-            <img class="dz-th" id="th-prop" alt="">
+          <div class="lbl">Property photo</div>
+          <div class="dz" id="dz-prop-A">
+            <input type="file" id="f-prop-A" accept="image/*">
+            <img class="dz-th" id="th-prop-A" alt="">
             <span class="dz-lbl">Drop or click</span>
             <span class="dz-hint">Drop, click, or paste</span>
           </div>
         </div>
       </div>
+      <div class="ig" style="margin-top:10px;">
+        <div class="igrp ig-full"><label for="i-addr-A">Address</label><input type="text" id="i-addr-A" placeholder="10 HUBERT ST"></div>
+        <div class="igrp ig-full"><label for="i-price-A">Price <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— $ baked in, just type "800K"</span></label><input type="text" id="i-price-A" placeholder="800K"></div>
+      </div>
     </div>
-    <div class="card">
-      <div class="lbl">Deal Info</div>
-      <div class="ig">
-        <div class="igrp ig-full">
-          <label for="i-se-url">StreetEasy URL <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— paste to auto-fill below</span></label>
-          <div style="display:flex;gap:6px;">
-            <input type="text" id="i-se-url" placeholder="https://streeteasy.com/building/..." style="flex:1;">
-            <button class="btn-s" id="btn-se-fetch" style="white-space:nowrap;padding:6px 14px;">Fetch →</button>
+
+    <div class="card" id="ic-deal-B">
+      <div class="lbl" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Bottom deal</span>
+        <button type="button" class="btn-s" id="ic-remove-B" title="Remove bottom deal from this slide" style="font-size:10px;padding:4px 10px;">Remove</button>
+      </div>
+      <div class="lbl" style="margin-top:8px;">Accent</div>
+      <div id="ic-accent-row-B" class="ic-accent-row"></div>
+      <div class="up-grid" style="margin-top:10px;">
+        <div class="up-block">
+          <div class="lbl">Agent photo</div>
+          <div class="dz" id="dz-agent-B">
+            <input type="file" id="f-agent-B" accept="image/*">
+            <img class="dz-th" id="th-agent-B" alt="">
+            <span class="dz-lbl">Drop or click</span>
+            <span class="dz-hint">Pre-composited with name</span>
+          </div>
+          <div class="agent-lib-wrap" data-slot="B" style="margin-top:6px;">
+            <input type="text" id="agent-search-B" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
+            <div id="agent-results-B" class="agent-results hidden"></div>
           </div>
         </div>
-        <div class="igrp">
-          <label for="i-addr">Address</label>
-          <input type="text" id="i-addr" placeholder="10 HUBERT ST">
-        </div>
-        <div class="igrp">
-          <label for="i-nbr">Neighborhood</label>
-          <input type="text" id="i-nbr" placeholder="TRIBECA">
-        </div>
-        <div class="igrp ig-full">
-          <label for="i-price">Price</label>
-          <input type="text" id="i-price" placeholder="1.5M">
-        </div>
-        <div class="igrp ig-full">
-          <label for="i-desc">Listing Description</label>
-          <textarea id="i-desc" rows="4" placeholder="Spacious Tribeca loft with high ceilings…"></textarea>
-          <div class="ai-row">
-            <span class="char-hint" id="char-cnt">0 / 280 chars</span>
-            <button class="btn-ai" id="btn-condense" title="Condense with AI to fit 4 lines">✦ Condense</button>
+        <div class="up-block">
+          <div class="lbl">Property photo</div>
+          <div class="dz" id="dz-prop-B">
+            <input type="file" id="f-prop-B" accept="image/*">
+            <img class="dz-th" id="th-prop-B" alt="">
+            <span class="dz-lbl">Drop or click</span>
+            <span class="dz-hint">Drop, click, or paste</span>
           </div>
         </div>
       </div>
+      <div class="ig" style="margin-top:10px;">
+        <div class="igrp ig-full"><label for="i-addr-B">Address</label><input type="text" id="i-addr-B" placeholder="60 COLLISTER ST"></div>
+        <div class="igrp ig-full"><label for="i-price-B">Price <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— $ baked in, just type "800K"</span></label><input type="text" id="i-price-B" placeholder="800K"></div>
+      </div>
     </div>
+
+    <button type="button" class="btn-s" id="ic-add-B" style="width:100%;margin-top:6px;">＋ Add bottom deal to this slide</button>
+  </div>
+
+  <!-- Hidden legacy fields kept as no-op stubs so handlers wired earlier don't blow up. -->
+  <div style="display:none">
+    <input type="text" id="i-addr">
+    <input type="text" id="i-nbr">
+    <input type="text" id="i-price">
+    <textarea id="i-desc"></textarea>
+    <input type="file" id="f-agent" accept="image/*">
+    <input type="file" id="f-prop" accept="image/*">
+    <div id="dz-agent"><img id="th-agent"></div>
+    <div id="dz-prop"><img id="th-prop"></div>
+    <input type="text" id="i-se-url">
+    <input type="text" id="agent-search">
+    <div id="agent-results"></div>
+    <div id="accent-detected"><div id="accent-dot"></div><span id="accent-detected-txt"></span></div>
+    <button id="btn-save-agent"></button>
+    <button id="btn-se-fetch"></button>
+    <button id="btn-condense"></button>
+    <span id="char-cnt"></span>
   </div>
 
   <!-- END PANEL -->
@@ -930,64 +954,36 @@ function syncForm() {
   const t = activeType();
   if (t !== 'pair' && t !== 'deal') return;
   // Default to the top deal whenever we navigate to a different slide.
-  if (activeIdx !== _lastActiveIdx) { activeSlot = 'A'; _lastActiveIdx = activeIdx; }
-  // In-contract slot UI: highlight A/B, show/hide based on whether a bottom deal exists,
-  // populate slide-header from the top deal of the pair, mark the active accent swatch.
+  // Populate the dual-slot panel: slide header (top deal), per-slot accents, addresses,
+  // prices and photo dropzones. Show/hide the bottom-deal card + add/remove buttons.
   const pair = dealsForSlide(activeIdx);
   const hasB = !!pair[1];
-  const slotRow = document.getElementById('ic-slot-row');
-  if (slotRow) slotRow.style.display = (t === 'pair') ? 'flex' : 'none';
-  if (activeSlot === 'B' && !hasB) activeSlot = 'A';
-  const aBtn = document.getElementById('ic-slot-A'), bBtn = document.getElementById('ic-slot-B');
-  if (aBtn) aBtn.style.opacity = activeSlot === 'A' ? '1' : '0.55';
-  if (bBtn) { bBtn.style.opacity = activeSlot === 'B' ? '1' : '0.55'; bBtn.style.visibility = hasB ? 'visible' : 'hidden'; }
+
+  // Slide header (set on the top deal)
   const hdrInp = document.getElementById('i-slidehdr');
   if (hdrInp) hdrInp.value = (pair[0] && pair[0].slideHeader) || '';
-  const arow = document.getElementById('ic-accent-row');
-  if (arow) {
-    const d0 = activeDeal();
-    arow.querySelectorAll('button[data-c]').forEach(b => {
-      b.style.borderColor = (d0 && d0.accent === b.dataset.c) ? '#0f0f0f' : '#d5d2cb';
+
+  // Bottom-deal card visibility + add/remove buttons
+  const cardB  = document.getElementById('ic-deal-B');
+  const addBtn = document.getElementById('ic-add-B');
+  if (cardB)  cardB.style.display  = hasB ? '' : 'none';
+  if (addBtn) addBtn.style.display = hasB ? 'none' : '';
+
+  ['A','B'].forEach((slot, idx) => {
+    const d = pair[idx];
+    const aInp = document.getElementById('i-addr-'  + slot);
+    const pInp = document.getElementById('i-price-' + slot);
+    if (aInp) aInp.value = d ? (d.address || '') : '';
+    if (pInp) pInp.value = d ? (d.price   || '') : '';
+    // Accent swatch highlight
+    const row = document.getElementById('ic-accent-row-' + slot);
+    if (row) row.querySelectorAll('button[data-c]').forEach(b => {
+      b.style.borderColor = (d && d.accent === b.dataset.c) ? '#0f0f0f' : '#d5d2cb';
     });
-  }
-  const d = activeDeal();
-  if (!d) return;
-  // Show/hide save-to-library button based on whether this deal has an agent photo
-  document.getElementById('btn-save-agent').style.display = d.agentSrc ? 'block' : 'none';
-  document.getElementById('i-addr').value  = d.address;
-  document.getElementById('i-nbr').value   = d.neighborhood;
-  document.getElementById('i-price').value = d.price;
-  document.getElementById('i-desc').value  = d.description;
-  updateCharCount();
-  syncDZ('dz-agent','th-agent', d.agentSrc);
-  // Property: always clear first (fixes stale manip view when switching slides)
-  const dzProp = document.getElementById('dz-prop');
-  clearManipView(dzProp);
-  if (d.propImg) {
-    buildManipView(
-      dzProp, d.propImg, d.propSrc,
-      ()=>({ ox:d.propOX, oy:d.propOY, scale:d.propScale }),
-      ({ox,oy,scale})=>{ d.propOX=ox; d.propOY=oy; d.propScale=scale; },
-      ()=>{ renderCanvas(activeIdx); if(S.deals.indexOf(d)===0) renderCanvas(0); },
-      'f-prop',
-      ()=>{
-        d.propImg=null; d.propSrc='';
-        clearManipView(dzProp);
-        syncDZ('dz-prop','th-prop','');
-        renderCanvas(activeIdx);
-        if(S.deals.indexOf(d)===0){ renderCanvas(0); syncCoverPanel(); }
-      },
-      (newImg, newSrc) => {
-        d.propImg = newImg; d.propSrc = newSrc;
-        renderCanvas(activeIdx);
-        if(S.deals.indexOf(d)===0){ renderCanvas(0); syncCoverPanel(); }
-      }
-    );
-  } else {
-    syncDZ('dz-prop','th-prop', d.propSrc);
-  }
-  // Show/hide accent-detected badge
-  document.getElementById('accent-detected').classList.add('hidden');
+    // Photo dropzones
+    syncDZ('dz-agent-' + slot, 'th-agent-' + slot, d ? (d.agentSrc || '') : '');
+    syncDZ('dz-prop-'  + slot, 'th-prop-'  + slot, d ? (d.propSrc  || '') : '');
+  });
 }
 
 function syncDZ(dzId, thId, src) {
@@ -1142,8 +1138,8 @@ const T = {
   WM_X_RIGHT:1042, WM_Y:1281, WM_H:32,
 };
 
-// Brand accents — pulled from the reference. Yellow is a slight warm gold.
-const ACCENTS = ['#aaa3cf','#dcb45a','#c0c2b5','#9aa890','#b8a392','#0f0f0f'];
+// Brand accent palette — mirrors the swatch column on the cover panel exactly.
+const ACCENTS = ['#aaa3cf','#e3b462','#4e5b41','#72878c','#e88f81','#d55554'];
 
 // Pair model: deals[] is flat; pair-slide K (1..ceil(N/2)) renders deals[2(K-1)] + deals[2(K-1)+1].
 function slideCount(){ return Math.max(1, Math.ceil(S.deals.length / 2)); }
@@ -1180,20 +1176,33 @@ function drawFramedPhoto(ctx, img, x, y, w, h, accent, t){
   ctx.restore();
 }
 
-// Address (bold caps) + "Last Ask:" (regular) + price (heavy) — 2 lines, top-aligned at (x,y).
-// All text uses the brand -50/1000 em kerning.
-function drawDealText(ctx, deal, x, y){
+// Address (bold caps, shrink-to-fit) + "Last Ask:" (regular) + price (heavy, $ baked in).
+// 2 lines, top-aligned at (x,y). All text uses the brand -50/1000 em kerning. The text
+// must fit inside maxW — the address shrinks down (to a floor) if it would overflow.
+function drawDealText(ctx, deal, x, y, maxW){
   ctx.save();
   ctx.fillStyle = '#000';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.letterSpacing = trackPx(T.TXT_FONT);
   const addr = (deal.address || '').toUpperCase().trim() || 'ADDRESS';
-  const price = (deal.price || '').trim();
-  // Line 1: address — bold caps
-  ctx.font = f(800, T.TXT_FONT);
+  // Bake "$" into the price — strip any leading $ the user typed so they never have to.
+  const raw = (deal.price || '').trim().replace(/^\$+/, '');
+  const price = raw ? '$' + raw : '';
+
+  // Line 1: address. Shrink the font size from T.TXT_FONT down to a 22px floor until it
+  // fits within maxW. This keeps long addresses from running off the agent square's edge.
+  let aSz = T.TXT_FONT;
+  ctx.letterSpacing = trackPx(aSz);
+  ctx.font = f(800, aSz);
+  while (aSz > 22 && ctx.measureText(addr).width > maxW) {
+    aSz -= 1;
+    ctx.letterSpacing = trackPx(aSz);
+    ctx.font = f(800, aSz);
+  }
   ctx.fillText(addr, x, y);
-  // Line 2: "Last Ask:" regular weight, then the price heavy.
+
+  // Line 2: "Last Ask:" regular + price heavy. Stays at the original (T.TXT_FONT) size.
   const lasklbl = 'Last Ask: ';
+  ctx.letterSpacing = trackPx(T.TXT_FONT);
   ctx.font = f(400, T.TXT_FONT);
   const lw = ctx.measureText(lasklbl).width;
   ctx.fillText(lasklbl, x, y + T.TXT_LH);
@@ -1236,21 +1245,22 @@ function drawPairSlide(cv, dealA, dealB, slideHeader){
   ctx.letterSpacing = '0px';
   ctx.restore();
 
-  // Solo case (one deal centered as the upper position).
-  // Agent squares are rendered with NO accent stroke (the photos already carry their
-  // own colored bg + B&W treatment); only the property photos get the accent border.
+  // Agent squares render with NO accent stroke and NO name overlay — the supplied
+  // photos already include the colored bg and the agent's name baked in. Only the
+  // property photos get the accent border. Address text shrinks to fit the gap
+  // between its starting x and the right edge of the agent square next to it.
   const solo = !dealB;
   const A = dealA, accA = A?.accent || ACCENTS[0];
+  const maxAW = (T.U_AGENT_X + T.AGENT_W) - T.U_TEXT_X;
   drawFramedPhoto(ctx, A?.propImg,  T.U_PHOTO_X, T.U_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
-  drawDealText  (ctx, A,            T.U_TEXT_X,  T.U_TEXT_Y);
+  drawDealText  (ctx, A,            T.U_TEXT_X,  T.U_TEXT_Y, maxAW);
   drawFramedPhoto(ctx, A?.agentImg, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H, accA, 0);
-  drawAgentName (ctx, A?.agentName, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H);
 
   if (!solo) {
     const B = dealB, accB = B?.accent || ACCENTS[1];
-    drawDealText  (ctx, B,            T.L_TEXT_X,  T.L_TEXT_Y);
+    const maxBW = (T.L_AGENT_X + T.AGENT_W) - T.L_TEXT_X;
+    drawDealText  (ctx, B,            T.L_TEXT_X,  T.L_TEXT_Y, maxBW);
     drawFramedPhoto(ctx, B?.agentImg, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H, accB, 0);
-    drawAgentName (ctx, B?.agentName, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H);
     drawFramedPhoto(ctx, B?.propImg,  T.L_PHOTO_X, T.L_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
   }
 
@@ -1590,19 +1600,30 @@ function hideAgentResults() {
   document.getElementById('agent-search').value = '';
 }
 
-async function applyAgentFromLibrary(key, name) {
+async function applyAgentFromLibrary(key, name, slot) {
   hideAgentResults();
   const entry = agentLibrary.find(a => a.key === key);
   if (!entry) { showToast('✗ Agent not found'); return; }
-  const d = activeDeal(); if (!d) return;
+  // Slot-aware: write into the per-slot deal of the active pair-slide. Falls back to the
+  // top deal when slot is omitted (preserves the closed-carousel call sites).
+  const targetSlot = (slot === 'A' || slot === 'B') ? slot : 'A';
+  const pair = (typeof dealsForSlide === 'function') ? dealsForSlide(activeIdx) : [activeDeal()];
+  let d = pair[targetSlot === 'B' ? 1 : 0];
+  if (targetSlot === 'B' && !d && typeof ensureSlotB === 'function') d = ensureSlotB();
+  if (!d) return;
   const img = new Image();
   img.onload = () => {
     d.agentImg = img; d.agentSrc = entry.src;
     d.agentName = name;
-    updateStripLabel(activeIdx);
-    syncDZ('dz-agent', 'th-agent', entry.src);
+    if (typeof updateStripLabel === 'function') updateStripLabel(activeIdx);
+    // Update the correct per-slot dropzone thumbnail.
+    if (typeof dealsForSlide === 'function') {
+      syncDZ('dz-agent-' + targetSlot, 'th-agent-' + targetSlot, entry.src);
+    } else {
+      syncDZ('dz-agent', 'th-agent', entry.src);
+    }
     var sa = document.getElementById('btn-save-agent'); if (sa) sa.style.display = 'none';
-    if (activeIdx === 1) tryDetectAccent(img);
+    if (activeIdx === 1 && typeof tryDetectAccent === 'function') tryDetectAccent(img);
     renderCanvas(activeIdx);
     showToast('✓ ' + name + ' applied');
   };
@@ -1930,6 +1951,133 @@ setupDZ('dz-prop','f-prop','th-prop',(img,src)=>{
   );
   renderCanvas(activeIdx);
   if (S.deals.indexOf(d)===0) renderCanvas(0);
+});
+
+// ════════════════════════════════════════════════════════════════════════════════
+// IN-CONTRACT dual-slot panel wiring. Both Top (A) and Bottom (B) deals are
+// editable simultaneously; no slot-toggle button. Each input/dropzone is bound to
+// a specific slot ('A' → pair[0], 'B' → pair[1]), so typing in one never affects
+// the other. setupDZ() is reused for the slot-specific dropzones.
+// ════════════════════════════════════════════════════════════════════════════════
+function dealForSlot(slot){
+  const pair = dealsForSlide(activeIdx);
+  return slot === 'B' ? pair[1] : pair[0];
+}
+function ensureSlotB(){
+  // Make sure pair[1] exists (create a fresh deal in the right position). Returns it.
+  const i = 2*(activeIdx-1) + 1;
+  if (!S.deals[i]) S.deals[i] = makeDeal();
+  // Default to a different accent than slot A so the two halves are visually distinct.
+  if (S.deals[i] && S.deals[i].accent === (S.deals[i-1]?.accent)) {
+    const a = ACCENTS.indexOf(S.deals[i-1].accent);
+    S.deals[i].accent = ACCENTS[(a + 1) % ACCENTS.length];
+  }
+  return S.deals[i];
+}
+function dropSlotB(){
+  const i = 2*(activeIdx-1) + 1;
+  if (S.deals[i]) S.deals.splice(i, 1);
+}
+
+// Slide-header field → top deal's slideHeader
+document.getElementById('i-slidehdr').addEventListener('input', function(){
+  const top = dealsForSlide(activeIdx)[0]; if(!top) return;
+  top.slideHeader = this.value; renderCanvas(activeIdx);
+});
+
+// Address + Price for each slot
+['A','B'].forEach(slot => {
+  const aId = 'i-addr-'  + slot;
+  const pId = 'i-price-' + slot;
+  const ae = document.getElementById(aId);
+  const pe = document.getElementById(pId);
+  if (ae) ae.addEventListener('input', function(){
+    const d = dealForSlot(slot); if(!d) return;
+    d.address = this.value; renderCanvas(activeIdx);
+  });
+  if (pe) pe.addEventListener('input', function(){
+    const d = dealForSlot(slot); if(!d) return;
+    // Strip any leading $ the user typed; the renderer bakes one in.
+    d.price = this.value.replace(/^\$+/, '');
+    renderCanvas(activeIdx);
+  });
+});
+
+// Per-slot accent palette
+['A','B'].forEach(slot => {
+  const row = document.getElementById('ic-accent-row-' + slot);
+  if (!row) return;
+  row.innerHTML = ACCENTS.map(c =>
+    `<button type="button" data-c="${c}" title="${c}" style="width:28px;height:28px;border-radius:6px;border:2px solid #d5d2cb;background:${c};cursor:pointer;padding:0;"></button>`
+  ).join('');
+  row.addEventListener('click', e => {
+    const b = e.target.closest('button[data-c]'); if (!b) return;
+    const d = dealForSlot(slot); if (!d) return;
+    d.accent = b.dataset.c; syncForm(); renderCanvas(activeIdx);
+  });
+});
+
+// Per-slot photo dropzones
+['A','B'].forEach(slot => {
+  setupDZ('dz-agent-' + slot, 'f-agent-' + slot, 'th-agent-' + slot, (img, src, fname) => {
+    const d = dealForSlot(slot); if (!d) return;
+    d.agentImg = img; d.agentSrc = src; d.agentName = parseAgentName(fname);
+    renderCanvas(activeIdx);
+  });
+  setupDZ('dz-prop-' + slot, 'f-prop-' + slot, 'th-prop-' + slot, (img, src) => {
+    const d = dealForSlot(slot); if (!d) return;
+    d.propImg = img; d.propSrc = src; d.propOX = 0; d.propOY = 0; d.propScale = 1;
+    renderCanvas(activeIdx);
+  });
+});
+
+// Per-slot agent library search. Each slot has its own input + results dropdown so
+// they never collide. Reuses searchAgents() from the inherited closed-carousel code.
+function renderAgentResultsInto(elId, slot, results){
+  const el = document.getElementById(elId); if (!el) return;
+  if (!results.length) {
+    el.innerHTML = '<div class="agent-results-empty">No agents found</div>';
+  } else {
+    el.innerHTML = results.map(a => `
+      <div class="agent-result" data-key="${a.key}" data-name="${a.name}" data-slot="${slot}">
+        <img class="agent-result-thumb" src="${a.src}" alt="${a.name}" loading="lazy" onerror="this.style.opacity='.3'">
+        <span class="agent-result-name">${a.name}</span>
+      </div>
+    `).join('');
+  }
+  el.classList.remove('hidden');
+}
+['A','B'].forEach(slot => {
+  const inp = document.getElementById('agent-search-' + slot);
+  const res = document.getElementById('agent-results-' + slot);
+  if (inp) inp.addEventListener('input', function(){
+    const q = this.value;
+    if (!q.trim()) { res.classList.add('hidden'); return; }
+    renderAgentResultsInto('agent-results-' + slot, slot, searchAgents(q));
+  });
+  if (res) res.addEventListener('click', e => {
+    const row = e.target.closest('.agent-result'); if (!row) return;
+    applyAgentFromLibrary(row.dataset.key, row.dataset.name, slot);
+    if (inp) inp.value = '';
+    res.classList.add('hidden');
+  });
+});
+// Hide either dropdown on an outside click.
+document.addEventListener('click', e => {
+  document.querySelectorAll('.agent-lib-wrap[data-slot]').forEach(w => {
+    if (!w.contains(e.target)) {
+      const r = w.querySelector('.agent-results'); if (r) r.classList.add('hidden');
+    }
+  });
+});
+
+// Add / remove the bottom deal on this slide
+document.getElementById('ic-add-B').addEventListener('click', () => {
+  ensureSlotB(); buildStrip(); syncForm(); renderCanvas(activeIdx); updateDlBtn && updateDlBtn();
+});
+document.getElementById('ic-remove-B').addEventListener('click', () => {
+  if (!confirm('Remove the bottom deal from this slide?')) return;
+  dropSlotB(); buildStrip(); syncForm(); renderCanvas(activeIdx); updateDlBtn && updateDlBtn();
 });
 
 setupDZ('dz-cover','f-cover','th-cover',(img,src)=>{
