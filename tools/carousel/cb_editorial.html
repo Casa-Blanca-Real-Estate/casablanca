@@ -155,6 +155,19 @@ const WM_B64='/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAA
 // ============================================================
 document.getElementById('hlogo').src='data:image/png;base64,'+WMWHITE_B64;
 const wmImg=new Image();wmImg.src='data:image/jpeg;base64,'+WM_B64;
+// Official Casa Blanca building mark (black on transparent). Loaded async; renderAll
+// triggers a redraw once it lands, so the canvas-drawn fallback in drawBuildingIcon
+// is replaced by the real artwork the moment it's available.
+const bldgMarkImg=new Image();bldgMarkImg.crossOrigin='anonymous';
+bldgMarkImg.onload=()=>{try{renderAll();}catch(e){}};
+bldgMarkImg.src='../../assets/brand/casa-blanca-mark-black.png';
+const _bldgCache={};
+function bldgTinted(hex){if(_bldgCache[hex])return _bldgCache[hex];
+  if(!bldgMarkImg.naturalWidth)return null;
+  const oc=document.createElement('canvas');oc.width=bldgMarkImg.naturalWidth;oc.height=bldgMarkImg.naturalHeight;
+  const c=oc.getContext('2d');c.drawImage(bldgMarkImg,0,0);
+  c.globalCompositeOperation='source-in';c.fillStyle=hex;c.fillRect(0,0,oc.width,oc.height);
+  _bldgCache[hex]=oc;return oc;}
 const W=1080,H=1350;
 
 // ── design tokens / type system ──
@@ -445,12 +458,18 @@ function drawContext(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.f
   drawLogo(ctx,666,1277,373,40,'#0f0f0f');}
 
 // ── END · CONTACT ──
-// Casa Blanca building mark — silhouette with cut-outs (matches the brand icon).
-// 5 cols × 8 rows: rows 1-6 are outlined windows, row 7-8 form the entrance band with two
-// flanking rectangular doorways (cols 2/4) and a tall rounded central arch (col 3). The
-// corner cells in the entrance band are still windows. Drawn offscreen, then composited so
-// the cut-outs let whatever slide bg is behind it show through.
+// Casa Blanca building mark. Prefers the official assets/brand/casa-blanca-mark-black.png
+// (recolored via composite to `color`); falls back to a hand-drawn approximation while the
+// image is still loading. The fallback uses a 5×8 silhouette-with-cutouts: rows 1-6 are
+// windows, row 7-8 form the entrance band with two flanking doorways + the central arch.
 function drawBuildingIcon(ctx,cx,topY,w,h,color){
+  const tinted=bldgTinted(color);
+  if(tinted){
+    const ar=tinted.width/tinted.height;
+    let dw,dh; if(w/h>ar){dh=h;dw=dh*ar;}else{dw=w;dh=dw/ar;}
+    ctx.drawImage(tinted, Math.round(cx-dw/2), Math.round(topY+(h-dh)/2), Math.round(dw), Math.round(dh));
+    return;
+  }
   const COLS=5,ROWS=8,cw=w/COLS,ch=h/ROWS,fr=Math.max(2,Math.round(cw*0.16));
   const off=document.createElement('canvas');off.width=Math.round(w);off.height=Math.round(h);
   const o=off.getContext('2d');
