@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* Members gate (casual, client-side): the In Contract Roundup is a dev-only tool, so
+   bounce to the studio home unless an approved email was saved there. Same-origin
+   localStorage is shared across the platform. */
+(function(){
+  var A=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+  if(A.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase())===-1) location.replace('../../');
+})();
+</script>
 <script src="../../assets/studio-header.js" defer></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 
@@ -484,9 +493,12 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
     </div>
 
     <div class="card" id="ic-deal-B">
-      <div class="lbl" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="lbl" style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
         <span>Bottom deal</span>
-        <button type="button" class="btn-s" id="ic-remove-B" title="Remove bottom deal from this slide" style="font-size:10px;padding:4px 10px;">Remove</button>
+        <span style="display:flex;gap:6px;">
+          <button type="button" class="btn-s" id="ic-swap" title="Swap the top and bottom deals" style="font-size:10px;padding:4px 10px;">⇅ Swap</button>
+          <button type="button" class="btn-s" id="ic-remove-B" title="Remove bottom deal from this slide" style="font-size:10px;padding:4px 10px;">Remove</button>
+        </span>
       </div>
       <div class="lbl" style="margin-top:8px;">Accent</div>
       <div id="ic-accent-row-B" class="ic-accent-row"></div>
@@ -794,16 +806,19 @@ endImg.src  = 'data:image/png;base64,' + END_B64;
 // CANVAS ARRAY
 // ═══════════════════════════════════════════════════
 let cvs = [];
-let dragFromDealIdx = -1;
+let dragFromSlideIdx = -1;
 
 // ═══════════════════════════════════════════════════
 // STRIP
 // ═══════════════════════════════════════════════════
+// Strip labels are per-SLIDE (not per-deal): each middle thumb is one slide, labelled by
+// its neighborhood/header when set, otherwise "SLIDE n".
 function stripLabel(i) {
   if (i === 0)        return 'COVER';
   if (i === endIdx()) return 'END';
-  const d = S.deals[i-1];
-  return d.agentName ? `D${i} — ${d.agentName}` : `D${i}`;
+  const top = dealsForSlide(i)[0];
+  const hdr = top && top.slideHeader && top.slideHeader.trim();
+  return hdr ? hdr.toUpperCase() : `SLIDE ${i}`;
 }
 
 function buildStrip() {
@@ -838,22 +853,22 @@ function buildStrip() {
 
     wrap.append(cv, dlBtn);
 
-    // Trash button — only for deal slides
+    // Trash button — removes the whole SLIDE (both of its deals)
     if (i > 0 && i < endIdx()) {
       const rmBtn = document.createElement('button');
       rmBtn.className = 'si-rm';
-      rmBtn.title = 'Remove deal';
+      rmBtn.title = 'Remove slide';
       rmBtn.innerHTML = '&#x1F5D1;';
       rmBtn.addEventListener('click', e => {
         e.stopPropagation();
-        removeDealAt(parseInt(si.dataset.i));
+        removeSlideAt(parseInt(si.dataset.i));
       });
       wrap.append(rmBtn);
 
-      // Drag to reorder
+      // Drag to reorder — moves the whole SLIDE (its deal pair stays together)
       si.draggable = true;
       si.addEventListener('dragstart', e => {
-        dragFromDealIdx = parseInt(si.dataset.i) - 1;
+        dragFromSlideIdx = parseInt(si.dataset.i);
         e.dataTransfer.effectAllowed = 'move';
         setTimeout(() => si.classList.add('dragging'), 0);
       });
@@ -865,22 +880,22 @@ function buildStrip() {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         document.querySelectorAll('.si').forEach(el => el.classList.remove('drag-over'));
-        if (dragFromDealIdx !== parseInt(si.dataset.i) - 1) si.classList.add('drag-over');
+        if (dragFromSlideIdx !== parseInt(si.dataset.i)) si.classList.add('drag-over');
       });
       si.addEventListener('drop', e => {
         e.preventDefault();
         si.classList.remove('drag-over');
-        const from = dragFromDealIdx;
-        const to   = parseInt(si.dataset.i) - 1;
-        if (from < 0 || from === to) return;
-        const activeDealRef = activeType() === 'deal' ? activeDeal() : null;
-        const [moved] = S.deals.splice(from, 1);
-        S.deals.splice(to, 0, moved);
-        if (activeDealRef) activeIdx = S.deals.indexOf(activeDealRef) + 1;
+        const from = dragFromSlideIdx;      // 1-based slide index
+        const to   = parseInt(si.dataset.i);
+        if (from < 1 || from === to) return;
+        const groups = getSlideGroups();
+        const [moved] = groups.splice(from - 1, 1);
+        groups.splice(to - 1, 0, moved);
+        setSlideGroups(groups);
+        activeIdx = to;                      // follow the slide we just moved
         buildStrip(); showPanel(); syncForm(); updateDlBtn();
-        // Re-detect accent if deal 1's agent photo changed due to reorder
         const d1 = S.deals[0];
-        if (d1 && d1.agentImg) tryDetectAccent(d1.agentImg);
+        if (d1 && d1.agentImg && typeof tryDetectAccent === 'function') tryDetectAccent(d1.agentImg);
       });
     }
 
@@ -916,20 +931,23 @@ function updateStripLabel(i) {
   if (el) el.textContent = stripLabel(i);
 }
 
+// "+ Deal" (strip button) appends a deal: it completes a trailing solo slide, or starts a
+// new slide when everything is already paired. Either way we navigate to its slide.
 function addDeal() {
   S.deals.push(makeDeal());
-  const newIdx = S.deals.length; // slot before end
-  activeIdx = newIdx;
-  buildStrip(); showPanel(); syncForm();
-  setTimeout(() => document.querySelectorAll('.si')[newIdx]?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' }), 60);
+  activeIdx = slideCount();
+  buildStrip(); showPanel(); syncForm(); updateDlBtn();
+  const idx = activeIdx;
+  setTimeout(() => document.querySelectorAll('.si')[idx]?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' }), 60);
 }
 
-function removeDealAt(stripIdx) {
-  if (S.deals.length <= 1) { showToast('Need at least 1 deal'); return; }
-  const dealIdx = stripIdx - 1;
-  S.deals.splice(dealIdx, 1);
-  if (activeIdx > endIdx() - 1) activeIdx = endIdx() - 1;
-  else if (activeIdx === stripIdx) activeIdx = Math.max(1, activeIdx - 1);
+// Trash on a slide thumb removes the whole slide (both of its deals).
+function removeSlideAt(stripIdx) {
+  if (slideCount() <= 1) { showToast('Need at least 1 slide'); return; }
+  const groups = getSlideGroups();
+  groups.splice(stripIdx - 1, 1);
+  setSlideGroups(groups);
+  activeIdx = Math.max(1, Math.min(activeIdx, slideCount()));
   buildStrip(); showPanel(); syncForm(); updateDlBtn();
 }
 
@@ -969,6 +987,10 @@ function syncForm() {
   if (cardB)  cardB.style.display  = hasB ? '' : 'none';
   if (addBtn) addBtn.style.display = hasB ? 'none' : '';
 
+  // Swap button only makes sense when there's a bottom deal to swap with.
+  const swapBtn = document.getElementById('ic-swap');
+  if (swapBtn) swapBtn.style.display = hasB ? '' : 'none';
+
   ['A','B'].forEach((slot, idx) => {
     const d = pair[idx];
     const aInp = document.getElementById('i-addr-'  + slot);
@@ -980,9 +1002,9 @@ function syncForm() {
     if (row) row.querySelectorAll('button[data-c]').forEach(b => {
       b.style.borderColor = (d && d.accent === b.dataset.c) ? '#0f0f0f' : '#d5d2cb';
     });
-    // Photo dropzones
+    // Agent thumbnail + property adjustable frame
     syncDZ('dz-agent-' + slot, 'th-agent-' + slot, d ? (d.agentSrc || '') : '');
-    syncDZ('dz-prop-'  + slot, 'th-prop-'  + slot, d ? (d.propSrc  || '') : '');
+    if (typeof buildPropManip === 'function') buildPropManip(slot);
   });
 }
 
@@ -1144,6 +1166,14 @@ const ACCENTS = ['#aaa3cf','#e3b462','#4e5b41','#72878c','#e88f81','#d55554'];
 // Pair model: deals[] is flat; pair-slide K (1..ceil(N/2)) renders deals[2(K-1)] + deals[2(K-1)+1].
 function slideCount(){ return Math.max(1, Math.ceil(S.deals.length / 2)); }
 function dealsForSlide(k){ const i=2*(k-1); return [S.deals[i]||null, S.deals[i+1]||null]; }
+// Slide-group view of the flat deals array: [[d0,d1],[d2,d3],[d4]] — used so reordering,
+// removing and swapping operate on whole SLIDES (pairs) rather than individual deals.
+function getSlideGroups(){
+  const g=[];
+  for(let k=1;k<=slideCount();k++){ const [a,b]=dealsForSlide(k); const arr=[a]; if(b)arr.push(b); g.push(arr); }
+  return g;
+}
+function setSlideGroups(groups){ S.deals = groups.flat(); }
 
 // Brand kerning: Object Sans is set at -50/1000 em across the whole template.
 // Convert to a px letterSpacing string for canvas at a given font size.
@@ -2017,6 +2047,28 @@ document.getElementById('i-slidehdr').addEventListener('input', function(){
   });
 });
 
+// (Re)build the adjustable pan/zoom manip view for a slot's property photo. When the
+// slot has a photo, the dropzone becomes a draggable/zoomable frame (same UX as the
+// closed-carousel property photo); otherwise it shows the plain drop target.
+function buildPropManip(slot){
+  const dz = document.getElementById('dz-prop-' + slot); if (!dz) return;
+  const d = dealForSlot(slot);
+  clearManipView(dz);
+  if (d && d.propImg) {
+    buildManipView(
+      dz, d.propImg, d.propSrc,
+      () => ({ ox:d.propOX, oy:d.propOY, scale:d.propScale }),
+      ({ox,oy,scale}) => { d.propOX=ox; d.propOY=oy; d.propScale=scale; },
+      () => { renderCanvas(activeIdx); },
+      'f-prop-' + slot,
+      () => { d.propImg=null; d.propSrc=''; clearManipView(dz); syncDZ('dz-prop-'+slot,'th-prop-'+slot,''); renderCanvas(activeIdx); },
+      (newImg, newSrc) => { d.propImg=newImg; d.propSrc=newSrc; d.propOX=0; d.propOY=0; d.propScale=1; renderCanvas(activeIdx); }
+    );
+  } else {
+    syncDZ('dz-prop-' + slot, 'th-prop-' + slot, d ? (d.propSrc || '') : '');
+  }
+}
+
 // Per-slot photo dropzones
 ['A','B'].forEach(slot => {
   setupDZ('dz-agent-' + slot, 'f-agent-' + slot, 'th-agent-' + slot, (img, src, fname) => {
@@ -2027,8 +2079,22 @@ document.getElementById('i-slidehdr').addEventListener('input', function(){
   setupDZ('dz-prop-' + slot, 'f-prop-' + slot, 'th-prop-' + slot, (img, src) => {
     const d = dealForSlot(slot); if (!d) return;
     d.propImg = img; d.propSrc = src; d.propOX = 0; d.propOY = 0; d.propScale = 1;
+    buildPropManip(slot);
     renderCanvas(activeIdx);
   });
+});
+
+// Swap the top and bottom deals on this slide. The slide header belongs to the slide
+// (stored on the top deal), so it stays put while the two deals trade places.
+document.getElementById('ic-swap').addEventListener('click', () => {
+  const i = 2*(activeIdx-1), a = S.deals[i], b = S.deals[i+1];
+  if (!b) { showToast('Add a bottom deal first'); return; }
+  const hdr = a.slideHeader || '';
+  a.slideHeader = '';
+  S.deals[i] = b; S.deals[i+1] = a;
+  S.deals[i].slideHeader = hdr;   // new top keeps the slide's header
+  buildStrip(); syncForm(); renderCanvas(activeIdx);
+  showToast('⇅ Swapped top & bottom');
 });
 
 // Per-slot agent library search. Each slot has its own input + results dropdown so
@@ -2096,30 +2162,8 @@ setupDZ('dz-cover','f-cover','th-cover',(img,src)=>{
     if (key==='description') updateCharCount();
   });
 });
-// In-contract additions: slide-header field (always written to the top deal of the pair,
-// regardless of which slot is active), accent picker (per-deal), and slot toggle (A/B).
-(function(){
-  const slidehdr = document.getElementById('i-slidehdr');
-  if (slidehdr) slidehdr.addEventListener('input', function(){
-    const top = dealsForSlide(activeIdx)[0]; if(!top) return;
-    top.slideHeader = this.value; renderCanvas(activeIdx);
-  });
-  const arow = document.getElementById('ic-accent-row');
-  if (arow) {
-    arow.innerHTML = ACCENTS.map(c =>
-      `<button type="button" data-c="${c}" title="${c}" style="width:28px;height:28px;border-radius:6px;border:2px solid #d5d2cb;background:${c};cursor:pointer;"></button>`
-    ).join('');
-    arow.addEventListener('click', e=>{
-      const b = e.target.closest('button[data-c]'); if(!b) return;
-      const d = activeDeal(); if(!d) return;
-      d.accent = b.dataset.c; syncForm(); renderCanvas(activeIdx);
-    });
-  }
-  const a = document.getElementById('ic-slot-A'), bn = document.getElementById('ic-slot-B');
-  function pickSlot(slot){ activeSlot = slot; syncForm(); }
-  if (a)  a.addEventListener('click', ()=>pickSlot('A'));
-  if (bn) bn.addEventListener('click', ()=>pickSlot('B'));
-})();
+// (Slide-header, per-slot accent pickers and slot inputs are wired in the dual-slot
+// block further below — the old single-accent-row + A/B toggle wiring was removed.)
 function updateCharCount(){
   const n=document.getElementById('i-desc').value.length;
   const el=document.getElementById('char-cnt');
