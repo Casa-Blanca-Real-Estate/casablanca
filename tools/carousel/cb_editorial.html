@@ -120,7 +120,8 @@ header .hname{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:
         <button class="imhead open" id="imToggle" type="button">1 · Import from StreetEasy<span id="imChevron">▾</span></button>
         <div class="imbody" id="imbody">
           <input id="imUrl" type="text" placeholder="Paste a StreetEasy listing URL, then Import">
-          <div class="imrow"><button class="btn dark" id="imImport" type="button">Import listing</button><button class="btn ghost" id="imAI" type="button">Write captions ✨</button></div>
+          <div class="imrow"><button class="btn dark" id="imImport" type="button">Import listing</button><button class="btn ghost" id="imFill" type="button">Auto-fill slides ✨</button><button class="btn ghost" id="imAI" type="button">Captions only</button></div>
+          <label style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--cb-sand);margin-top:2px;cursor:pointer;"><input type="checkbox" id="imAuto" checked style="accent-color:var(--cb-lav,#aaa3cf);">Auto-fill photos + captions right after import</label>
           <div class="imhint">Import fills the address, price, beds/baths/sqft &amp; description and loads the photos below. “Write captions” drafts the slide copy with AI.</div>
           <div class="imstatus" id="imStatus"></div>
           <div class="imtray" id="imTray"></div>
@@ -755,6 +756,37 @@ function placePhoto(o,src){return new Promise((res,rej)=>{const im=new Image();i
 
 function targetImg(o){return o&&(o.image||o.top)||null;}
 
+// ── Auto-fill: distribute imported photos across the deck's image slots, in order ──
+let IMPORTED_PHOTOS=[];
+// Every property-photo slot on a slide, in order. Double A has two (top, bottom); the End
+// slide's agent headshots are intentionally excluded (they're not listing photos).
+function imageSlotsOf(o){
+  if(!o) return [];
+  if(o.type==='doubleA') return [o.top,o.bottom].filter(Boolean);
+  if(o.type==='end') return [];
+  return o.image?[o.image]:[];
+}
+// Cover hero first, then every mid slide's slots in order.
+function allImageSlots(){
+  const slots=imageSlotsOf(S.cover);
+  S.mid.forEach(m=>{imageSlotsOf(m).forEach(s=>slots.push(s));});
+  return slots;
+}
+async function autoPlacePhotos(photos){
+  const slots=allImageSlots(), n=Math.min(slots.length,photos.length);
+  for(let i=0;i<n;i++){ try{ await placePhoto(slots[i],photos[i]); }catch(e){} }
+  return n;
+}
+// Place photos into slots (gallery order → cover, then each slide) and then write captions.
+// Order-based matching: photo N lands on slide N and that slide's caption is written for it.
+async function autoFill(photos){
+  photos=(photos&&photos.length)?photos:IMPORTED_PHOTOS;
+  const placed=(photos&&photos.length)?await autoPlacePhotos(photos):0;
+  buildEditor();renderAll();
+  if(placed) imStatus('✓ Placed '+placed+' photo'+(placed===1?'':'s')+' into slides. Writing captions…');
+  doAI(); // writes cover subhead + teaser + per-slide captions (async; sets its own status)
+}
+
 function fmtPrice(p){p=(p||'').trim();return p?(p[0]==='$'?p:'$'+p):'';}
 function applyFacts(f){
   const st={'for sale':'justlisted','in contract':'incontract','sold':'justsold','closed':'closed'};
@@ -794,9 +826,12 @@ function doImport(){
     .then(j=>{
       IMPORTED={address:j.address||'',neighborhood:j.neighborhood||'',price:j.price||'',beds:j.beds||'',baths:j.baths||'',sqft:j.sqft||'',agent:j.agent||'',description:j.description||''};
       const photos=Array.isArray(j.photos)?j.photos:[];
+      IMPORTED_PHOTOS=photos;
       applyFacts(IMPORTED);renderTray(photos);
       if(j.warning){imStatus('⚠ '+j.warning,true);return;}
-      imStatus('✓ Imported. '+photos.length+(photos.length===1?' photo':' photos')+' found; empty fields filled.');})
+      const auto=document.getElementById('imAuto');
+      if(auto&&auto.checked&&photos.length){ autoFill(photos); }
+      else imStatus('✓ Imported. '+photos.length+(photos.length===1?' photo':' photos')+' found; empty fields filled.');})
     .catch(e=>imStatus(e&&(e.name==='AbortError'||e.message==='aborted')?'Import cancelled':('Import failed: '+(e.message||e)),true))
     .finally(()=>{clearInterval(ti);clearTimeout(to);});
 }
@@ -895,6 +930,7 @@ function initImportPanel(){
   const tog=document.getElementById('imToggle'),bod=document.getElementById('imbody');
   tog.onclick=()=>{const hidden=bod.hasAttribute('hidden');if(hidden){bod.removeAttribute('hidden');tog.classList.add('open');}else{bod.setAttribute('hidden','');tog.classList.remove('open');}};
   document.getElementById('imImport').onclick=doImport;
+  document.getElementById('imFill').onclick=()=>autoFill();
   document.getElementById('imAI').onclick=doAI;
 }
 
