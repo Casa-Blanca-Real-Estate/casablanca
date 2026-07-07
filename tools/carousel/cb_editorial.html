@@ -724,7 +724,9 @@ function buildFilm(){const fs=document.getElementById('filmstrip');fs.innerHTML=
 document.getElementById('phToggle').onclick=function(){S.showPlaceholders=!S.showPlaceholders;this.classList.toggle('on');renderAll();};
 
 // ── download (untainted: all sources base64) ──
-function downloadCanvas(i){const c=document.createElement('canvas');c.width=W;c.height=H;const a0=ACTIVE;ACTIVE=null;const r=RECORD;RECORD=false;renderTo(c.getContext('2d'),i);RECORD=r;ACTIVE=a0;
+// Exports never contain the gray placeholder hints: force showPlaceholders off for the
+// export render only, then restore it so the on-screen editor still shows them.
+function downloadCanvas(i){const c=document.createElement('canvas');c.width=W;c.height=H;const a0=ACTIVE;ACTIVE=null;const r=RECORD;RECORD=false;const ph0=S.showPlaceholders;S.showPlaceholders=false;renderTo(c.getContext('2d'),i);S.showPlaceholders=ph0;RECORD=r;ACTIVE=a0;
   const a=document.createElement('a');a.download=`cb_editorial_${String(i+1).padStart(2,'0')}_${slideLabel(i).replace(/[^a-z0-9]+/gi,'').toLowerCase()}.png`;a.href=c.toDataURL('image/png');a.click();}
 document.getElementById('dlOne').onclick=()=>{downloadCanvas(active);showToast('✓ Downloaded slide');};
 document.getElementById('dlAll').onclick=async()=>{for(let i=0;i<slideCount();i++){downloadCanvas(i);await new Promise(r=>setTimeout(r,350));}showToast('✓ Downloaded all');};
