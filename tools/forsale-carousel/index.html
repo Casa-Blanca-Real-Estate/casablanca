@@ -3,6 +3,8 @@
 <head>
 <script src="../../assets/studio-header.js" defer></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+<!-- Async StreetEasy import (background fn + polling; sync fallback). Defines window.CBImportStreetEasy -->
+<script src="../../assets/se-import.js"></script>
 
 <script>
 /* Backend base shim. Same-origin by default (works as-is on Netlify, the canonical
@@ -2296,24 +2298,9 @@ document.getElementById('btn-se-fetch').addEventListener('click', async () => {
   btn.textContent = '⌛ Fetching…'; btn.disabled = true;
 
   try {
-    const res = await fetch('/.netlify/functions/streeteasy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    });
-
-    if (!res.ok) {
-      let errMsg = 'StreetEasy fetch ' + res.status;
-      try {
-        const err = await res.json();
-        if (err.message) errMsg += ': ' + err.message;
-        else if (err.error) errMsg += ': ' + err.error;
-      } catch(e) {}
-      showToast('✗ ' + errMsg);
-      return;
-    }
-
-    const data = await res.json();
+    // Async import (background fn + polling) so a slow StreetEasy render never hits
+    // Netlify's 26s cap; se-import.js falls back to the sync endpoint if async isn't deployed.
+    const data = await CBImportStreetEasy(url, { timeoutMs: 170000, onStatus: m => { btn.textContent = '⌛ ' + m; } });
     const d = activeDeal();
     if (!d) return;
 
@@ -2360,7 +2347,9 @@ document.getElementById('btn-se-fetch').addEventListener('click', async () => {
     else showToast('✓ Filled: ' + (filled.length ? filled.join(', ') : 'nothing extracted'));
   } catch(e) {
     console.warn('SE fetch failed', e);
-    showToast('✗ Could not reach StreetEasy fetch endpoint');
+    showToast('✗ ' + ((e && (e.name === 'AbortError' || e.message === 'aborted'))
+      ? 'Fetch cancelled/timed out — StreetEasy was too slow. Try again.'
+      : (e && e.message) || 'Could not reach StreetEasy'));
   } finally {
     btn.textContent = oldTxt; btn.disabled = false;
   }
@@ -2545,11 +2534,9 @@ async function bulkFetchOne(row){
   if(!url) return {skipped:true};
   var btn=row.querySelector('.bulk-fetch'); var oldTxt=btn?btn.textContent:''; if(btn) btn.disabled=true;
   var t0=Date.now(); var ti=btn?setInterval(function(){btn.textContent='⌛ '+Math.round((Date.now()-t0)/1000)+'s';},250):null;
-  var ctl=new AbortController(); var to=setTimeout(function(){ctl.abort();},90000);
+  var ctl=new AbortController(); var to=setTimeout(function(){ctl.abort();},180000);
   try{
-    var res=await fetch('/.netlify/functions/streeteasy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:ctl.signal});
-    if(!res.ok){ var msg='fetch '+res.status; try{var er=await res.json(); if(er.message)msg+=': '+er.message;}catch(e){} return {ok:false,msg:msg}; }
-    var data=await res.json();
+    var data=await CBImportStreetEasy(url,{signal:ctl.signal,timeoutMs:170000});
     var _a=row.querySelector('.bulk-address'),_n=row.querySelector('.bulk-nbr'),_p=row.querySelector('.bulk-price'),_d=row.querySelector('.bulk-desc');
     if(data.address&&!_a.value.trim())_a.value=data.address;
     if(data.neighborhood&&!_n.value.trim())_n.value=data.neighborhood;
@@ -2557,7 +2544,7 @@ async function bulkFetchOne(row){
     if(data.description&&!_d.value.trim())_d.value=data.description;
     if(data.heroImage&&!row.dataset.heroImage)row.dataset.heroImage=data.heroImage;
     return {ok:true};
-  }catch(err){ return {ok:false,msg:(err&&err.name==='AbortError')?'timed out':'unreachable'}; }
+  }catch(err){ return {ok:false,msg:(err&&(err.name==='AbortError'||err.message==='aborted'))?'timed out':((err&&err.message)||'unreachable')}; }
   finally{ if(ti)clearInterval(ti); clearTimeout(to); if(btn){btn.textContent=oldTxt;btn.disabled=false;} }
 }
 (function(){
@@ -2593,16 +2580,7 @@ document.getElementById('bulk-rows').addEventListener('click', async (e) => {
     const btn = e.target;
     const oldTxt = btn.textContent; btn.textContent = '⌛'; btn.disabled = true;
     try {
-      const res = await fetch('/.netlify/functions/streeteasy', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      });
-      if (!res.ok) {
-        let msg = 'fetch ' + res.status;
-        try { const er = await res.json(); if (er.message) msg += ': ' + er.message; } catch(e){}
-        showToast('✗ ' + msg); return;
-      }
-      const data = await res.json();
+      const data = await CBImportStreetEasy(url, { timeoutMs: 170000 });
       if (data.address)      row.querySelector('.bulk-address').value = data.address;
       if (data.neighborhood) row.querySelector('.bulk-nbr').value = data.neighborhood;
       if (data.price)        row.querySelector('.bulk-price').value = data.price;
@@ -2611,7 +2589,7 @@ document.getElementById('bulk-rows').addEventListener('click', async (e) => {
       row.dataset.heroImage = data.heroImage || '';
       showToast('✓ Row filled from StreetEasy');
     } catch(err) {
-      showToast('✗ Could not reach StreetEasy endpoint');
+      showToast('✗ ' + ((err && err.message) || 'Could not reach StreetEasy endpoint'));
     } finally {
       btn.textContent = oldTxt; btn.disabled = false;
     }
@@ -2657,18 +2635,12 @@ document.getElementById('bulk-create-btn').addEventListener('click', async () =>
     // 1. If URL present and key fields missing, fetch SE now
     if (job.seUrl && (!job.address || !job.description)) {
       try {
-        const res = await fetch('/.netlify/functions/streeteasy', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: job.seUrl })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (!job.address && data.address) job.address = data.address;
-          if (!job.neighborhood && data.neighborhood) job.neighborhood = data.neighborhood;
-          if (!job.price && data.price) job.price = data.price;
-          if (!job.description && data.description) job.description = data.description;
-          if (!job.heroImage && data.heroImage) job.heroImage = data.heroImage;
-        }
+        const data = await CBImportStreetEasy(job.seUrl, { timeoutMs: 170000 });
+        if (!job.address && data.address) job.address = data.address;
+        if (!job.neighborhood && data.neighborhood) job.neighborhood = data.neighborhood;
+        if (!job.price && data.price) job.price = data.price;
+        if (!job.description && data.description) job.description = data.description;
+        if (!job.heroImage && data.heroImage) job.heroImage = data.heroImage;
       } catch(e) {}
     }
 
