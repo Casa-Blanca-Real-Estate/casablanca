@@ -26,7 +26,7 @@ const SCHEMA = {
     agent: { type: 'string', description: 'Primary listing agent full name, if shown. Empty if unknown.' },
     description: {
       type: 'string',
-      description: 'The COMPLETE "About this home" / listing description — every paragraph, in full. If a "read more"/"see more"/"show more" expander truncates it on the page, still return the entire description, never the shortened preview. Do not summarize or cut it off.',
+      description: 'A concise 2-3 sentence summary of the "About this home" listing description — the key selling points only. Keep it short (the tools rewrite/condense it anyway). Do NOT reproduce the full multi-paragraph text.',
     },
     photos: {
       type: 'array',
@@ -46,7 +46,7 @@ const EXTRACT_PROMPT =
   'price: the listing price. ' +
   'beds / baths / sqft: read these from the listing\'s key-details / specs row (bedroom count, bathroom count, interior square footage). ' +
   'agent: the listing agent\'s name. ' +
-  'description: the COMPLETE "About this home" text — every paragraph in full, including anything hidden behind a "read more"/"see more"/"show more" expander; never return a truncated preview. ' +
+  'description: a CONCISE 2-3 sentence summary of the "About this home" text — key selling points only, not the full multi-paragraph copy (the tools rewrite it anyway). Keeping this short makes the extraction much faster. ' +
   'photos: the real property photographs from the gallery (NOT the logo, icons, agent headshots, maps, or ads). ' +
   'If a field genuinely is not on the page, leave it empty — do not guess.';
 
@@ -70,7 +70,8 @@ export default async (req) => {
       url,
       formats: ['extract', 'markdown'], // markdown lets us detect a bot-wall page vs. a real listing
       onlyMainContent: true,
-      waitFor: 2500, // StreetEasy is JS-heavy — a little time to render, but kept short
+      waitFor: 1200, // StreetEasy is JS-heavy — give it a moment to render, but keep it lean
+                     // so more of the Firecrawl budget is left for the page + extract
       // Firecrawl's own cap. The primary stealth call gets the lion's share (StreetEasy
       // render + LLM extract needs ~15-20s); the bare fallback only runs after a fast
       // stealth reject, so it gets a smaller slice to keep the total under Netlify's 26s.
