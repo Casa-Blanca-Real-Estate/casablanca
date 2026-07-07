@@ -331,72 +331,60 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
   // CB logo 373×40 centered @ X=354 Y=1277 (black on white strip)
   drawLogo(ctx,354,1277,373,40,'#0f0f0f');}
 
-// ── TEASER (Closed variant) ──
+// ── TEASER ──
+// LEFT block is always shown: address (wraps) / "[lead-in] $price" / with agent.
+// RIGHT block shows the listing specs (beds / baths / sqft) — but ONLY the ones actually
+// filled in (no gray placeholder specs, ever, in the editor or the export). The two blocks
+// coexist: specs sit on the right, vertically centered against the left block.
 function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTOP=315; // narrow measure → address wraps
   setLS(ctx,true);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   const addr=ph(t.address,PH.address),pr=ph(t.price,PH.price),ag=ph(t.agent,PH.agent);
 
-  // STATS MODE — when any of beds/baths/sqft is set, render the MLS-style header
-  // matching the "Just Listed" reference (status prefix + address LEFT, BD/BA + SF + price RIGHT).
-  if((t.beds||'').trim()||(t.baths||'').trim()||(t.sqft||'').trim()){
-    const stat=STATUSES[S.status]||STATUSES.closed;
-    const statusLabel=(stat.badge||'').trim();
-    const statusRuns=statusLabel?[{text:statusLabel+':',bold:false}]:null;
-    const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
-    const statusLines=statusRuns?drawRunsCount(statusRuns,MEAS,sz):0;
-    const addrLines=drawRunsCount(addrRuns,MEAS,sz);
-    const leftLines=statusLines+addrLines;
-    const rightLines=3;
-    const nLines=Math.max(leftLines,rightLines);
-    const yTop=Math.max(0,(IMGTOP-nLines*lh)/2);
-    // LEFT block (status prefix on its own line, then address below)
-    let yL=yTop;
-    if(statusRuns){const sr2=drawRuns(ctx,statusRuns,X,yL,MEAS,sz,lh,{justify:false,color:BODY});yL=sr2.bottom;}
-    const lr=drawRuns(ctx,addrRuns,X,yL,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
-    if(addr.t)hit('address',X,yL,MEAS,lr.lines*lh);
-    // RIGHT block (BD/BA, SF, price), right-aligned at W-57
-    const RX=W-57, beds=(t.beds||'').trim(), baths=(t.baths||'').trim(), sqft=(t.sqft||'').trim();
-    const bdraw=ph(beds,PH.beds), brraw=ph(baths,PH.baths), sfraw=ph(sqft,PH.sqft);
-    // "Studio" (or any non-numeric value) renders as-is; numeric counts get the BD/BA suffix.
-    const bdTxt=bdraw.t?(/^\d+(\.\d+)?$/.test(bdraw.t.trim())?bdraw.t+' BD':bdraw.t):'';
-    const brTxt=brraw.t?(/^\d+(\.\d+)?$/.test(brraw.t.trim())?brraw.t+' BA':brraw.t):'';
-    const bdLine=bdTxt+(bdTxt&&brTxt?', ':'')+brTxt;
-    const sfLine=sfraw.t?sfraw.t+' SF':'';
-    const prLine=pr.t||'';
-    const lines=[
-      {txt:bdLine, fid:'beds',  isph:bdraw.isph||brraw.isph},
-      {txt:sfLine, fid:'sqft',  isph:sfraw.isph},
-      {txt:prLine, fid:'price', isph:pr.isph}
-    ];
+  // RIGHT-side specs — built straight from the raw values so empty ones simply don't appear.
+  const beds=(t.beds||'').trim(), baths=(t.baths||'').trim(), sqft=(t.sqft||'').trim();
+  const bdTxt=beds?(/^\d+(\.\d+)?$/.test(beds)?beds+' BD':beds):'';
+  const brTxt=baths?(/^\d+(\.\d+)?$/.test(baths)?baths+' BA':baths):'';
+  const bdLine=bdTxt+(bdTxt&&brTxt?', ':'')+brTxt;
+  const sfLine=sqft?sqft+' SF':'';
+  const specItems=[];
+  if(bdLine)specItems.push({txt:bdLine,fid:'beds'});
+  if(sfLine)specItems.push({txt:sfLine,fid:'sqft'});
+  const hasSpecs=specItems.length>0;
+
+  // Vertical layout: left block is 3 lines (address may wrap to >1). Center the taller of
+  // the two blocks within the space above the image.
+  const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
+  const addrLines=drawRunsCount(addrRuns,MEAS,sz);
+  const leftLines=addrLines+2;                 // address(+wrap) + price + agent
+  const nLines=Math.max(leftLines,specItems.length);
+  const blockTop=Math.max(0,(IMGTOP-nLines*lh)/2);
+
+  // LEFT block. When specs share the row, keep the agent line within MEAS so it can't
+  // run under the specs; otherwise the agent name may use the near-full width.
+  let y=blockTop;
+  const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
+  if(addr.t||S.showPlaceholders)hit('address',X,y,MEAS,ar.lines*lh);y=ar.bottom;
+  const lead=(t.leadin||(STATUSES[S.status]||STATUSES.closed).leadin);
+  const r2=drawRuns(ctx,[{text:lead+' ',bold:false},{text:pr.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:pr.isph});
+  hit('price',X,y,MEAS,lh);y=r2.bottom;
+  const agentW=hasSpecs?MEAS:(W-X-57);
+  const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,agentW,sz,lh,{justify:false,color:BODY,isph:ag.isph});
+  hit('agent',X,y,agentW,lh);y=r3.bottom;
+
+  // RIGHT block — filled specs only, right-aligned, vertically centered against the left block.
+  if(hasSpecs){
+    const RX=W-57;
     ctx.textAlign='right';ctx.font=f(800,sz);ctx.fillStyle=BODY;
-    let ry=yTop;
-    lines.forEach(L=>{
-      if(!L.txt)return;
-      ctx.globalAlpha=L.isph?0.4:1;
+    let ry=blockTop+Math.max(0,(leftLines-specItems.length)/2)*lh;
+    specItems.forEach(L=>{
       ctx.fillText(L.txt,RX,ry+sz*ASC);
-      ctx.globalAlpha=1;
       const tw=ctx.measureText(L.txt).width;
       hit(L.fid,RX-tw-5,ry,tw+10,sz*ASC);
       ry+=lh;
     });
     ctx.textAlign='left';
-    setLS(ctx,false);
-    return yTop+nLines*lh;
   }
-
-  // CLOSED-style (existing): address / "[lead-in] $price" / with agent
-  const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
-  const nLines=drawRunsCount(addrRuns,MEAS,sz)+2;
-  let y=Math.max(0,(IMGTOP-nLines*lh)/2);
-  const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
-  if(addr.t)hit('address',X,y,MEAS,ar.lines*lh);y=ar.bottom;
-  const lead=(t.leadin||(STATUSES[S.status]||STATUSES.closed).leadin);
-  const r2=drawRuns(ctx,[{text:lead+' ',bold:false},{text:pr.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:pr.isph});
-  hit('price',X,y,MEAS,lh);y=r2.bottom;
-  const AGENTW=W-X-57; // agent name uses near-full width — the narrow MEAS is only to wrap the address
-  const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,AGENTW,sz,lh,{justify:false,color:BODY,isph:ag.isph});
-  hit('agent',X,y,AGENTW,lh);y=r3.bottom;
-  setLS(ctx,false);return y;}
+  setLS(ctx,false);return blockTop+nLines*lh;}
 function drawTeaser(ctx,t){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
   drawTeaserHeader(ctx,t);
   drawPic(ctx,t.image,0,315,1080,720);                       // image 1080×720 @ Y=315
