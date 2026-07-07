@@ -120,7 +120,8 @@ header .hname{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:
         <button class="imhead open" id="imToggle" type="button">1 · Import from StreetEasy<span id="imChevron">▾</span></button>
         <div class="imbody" id="imbody">
           <input id="imUrl" type="text" placeholder="Paste a StreetEasy listing URL, then Import">
-          <div class="imrow"><button class="btn dark" id="imImport" type="button">Import listing</button><button class="btn ghost" id="imAI" type="button">Write captions ✨</button></div>
+          <div class="imrow"><button class="btn dark" id="imImport" type="button">Import listing</button><button class="btn ghost" id="imFill" type="button">Auto-fill slides ✨</button><button class="btn ghost" id="imAI" type="button">Captions only</button></div>
+          <label style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--cb-sand);margin-top:2px;cursor:pointer;"><input type="checkbox" id="imAuto" checked style="accent-color:var(--cb-lav,#aaa3cf);">Auto-fill photos + captions right after import</label>
           <div class="imhint">Import fills the address, price, beds/baths/sqft &amp; description and loads the photos below. “Write captions” drafts the slide copy with AI.</div>
           <div class="imstatus" id="imStatus"></div>
           <div class="imtray" id="imTray"></div>
@@ -323,11 +324,18 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
   // subhead — over image, X=57, weight 800 caps, LS = 85% of font size, Y by slider
   const sr=ph(c.subhead,PH.subhead);
   if(sr.t){const sz=c.subSize,lh=sz*0.85;setLS(ctx,true);ctx.fillStyle=c.subColor;ctx.textBaseline='alphabetic';ctx.font=f(800,sz);ctx.globalAlpha=sr.isph?0.4:1;
-    const segs=sr.t.toUpperCase().split('\n');let yTop=161+c.subY*1076;const align=c.subAlign;
+    // Each hard-break segment is additionally word-wrapped to the cover width, so a long
+    // generated (or typed) line wraps to the next line instead of running off the frame.
+    const maxW=W-2*57;
+    const wrapSeg=(seg)=>{const words=seg.split(/\s+/).filter(Boolean);const out=[];let cur='';
+      words.forEach(w=>{const tt=cur?cur+' '+w:w;if(cur&&ctx.measureText(tt).width>maxW){out.push(cur);cur=w;}else cur=tt;});
+      if(cur)out.push(cur);return out.length?out:[''];};
+    const lines=[];sr.t.toUpperCase().split('\n').forEach(s=>wrapSeg(s).forEach(l=>lines.push(l)));
+    let yTop=161+c.subY*1076;const align=c.subAlign;
     let maxLineW=0;ctx.textAlign=align;let cy=yTop+sz*ASC;
-    segs.forEach(s=>{const lw=ctx.measureText(s).width;maxLineW=Math.max(maxLineW,lw);const ax=align==='center'?W/2:align==='right'?W-57:57;ctx.fillText(s,ax,cy);cy+=lh;});
+    lines.forEach(s=>{const lw=ctx.measureText(s).width;maxLineW=Math.max(maxLineW,lw);const ax=align==='center'?W/2:align==='right'?W-57:57;ctx.fillText(s,ax,cy);cy+=lh;});
     ctx.globalAlpha=1;ctx.textAlign='left';setLS(ctx,false);
-    const hx=align==='center'?W/2-maxLineW/2:align==='right'?W-57-maxLineW:57;hit('subhead',hx,yTop,maxLineW,segs.length*lh);}
+    const hx=align==='center'?W/2-maxLineW/2:align==='right'?W-57-maxLineW:57;hit('subhead',hx,yTop,maxLineW,lines.length*lh);}
   // CB logo 373×40 centered @ X=354 Y=1277 (black on white strip)
   drawLogo(ctx,354,1277,373,40,'#0f0f0f');}
 
@@ -421,12 +429,15 @@ function drawDoubleA(ctx,s){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';ctx.f
   drawPic(ctx,s.bottom,54,760,972,520);                      // bottom 972×520 @ Y=760
   // desc vertically centered in the gap (574..760), H≈140
   const plain=runsPlain(s.descRuns),show=plain||S.showPlaceholders;
-  if(show){const gapTop=574,gapBot=760,sz=BODY_SZ,lh=BODY_LH;
-    // pre-measure line count to center
-    const tmp=document.createElement('canvas').getContext('2d');tmp.font=f(400,sz);
-    const probe=drawRunsCount(plain?s.descRuns:[{text:PH.desc,bold:false}],BODYW,sz);
+  if(show){const gapTop=574,gapBot=760;let sz=BODY_SZ,lh=BODY_LH;
+    const runs=plain?s.descRuns:[{text:PH.desc,bold:false}];
+    // The caption lives in a fixed gap between the two photos. Auto-shrink if the copy runs
+    // longer than the gap fits, so it can never overflow into the images.
+    const maxLines=Math.floor((gapBot-gapTop)/BODY_LH);
+    let probe=drawRunsCount(runs,BODYW,sz);
+    while(probe>maxLines&&sz>26){sz-=1;lh=sz*(BODY_LH/BODY_SZ);probe=drawRunsCount(runs,BODYW,sz);}
     const blockH=probe*lh;const topY=Math.max(gapTop,(gapTop+gapBot)/2-blockH/2);
-    const r=drawRuns(ctx,plain?s.descRuns:[{text:PH.desc,bold:false}],MX,topY,BODYW,sz,lh,{justify:true,color:BODY,isph:!plain});
+    const r=drawRuns(ctx,runs,MX,topY,BODYW,sz,lh,{justify:true,color:BODY,isph:!plain});
     hit('desc',MX,topY,BODYW,r.lines*lh);}}
 // off-canvas measure of line count (for vertical centering)
 const _mc=document.createElement('canvas').getContext('2d');
@@ -724,7 +735,9 @@ function buildFilm(){const fs=document.getElementById('filmstrip');fs.innerHTML=
 document.getElementById('phToggle').onclick=function(){S.showPlaceholders=!S.showPlaceholders;this.classList.toggle('on');renderAll();};
 
 // ── download (untainted: all sources base64) ──
-function downloadCanvas(i){const c=document.createElement('canvas');c.width=W;c.height=H;const a0=ACTIVE;ACTIVE=null;const r=RECORD;RECORD=false;renderTo(c.getContext('2d'),i);RECORD=r;ACTIVE=a0;
+// Exports never contain the gray placeholder hints: force showPlaceholders off for the
+// export render only, then restore it so the on-screen editor still shows them.
+function downloadCanvas(i){const c=document.createElement('canvas');c.width=W;c.height=H;const a0=ACTIVE;ACTIVE=null;const r=RECORD;RECORD=false;const ph0=S.showPlaceholders;S.showPlaceholders=false;renderTo(c.getContext('2d'),i);S.showPlaceholders=ph0;RECORD=r;ACTIVE=a0;
   const a=document.createElement('a');a.download=`cb_editorial_${String(i+1).padStart(2,'0')}_${slideLabel(i).replace(/[^a-z0-9]+/gi,'').toLowerCase()}.png`;a.href=c.toDataURL('image/png');a.click();}
 document.getElementById('dlOne').onclick=()=>{downloadCanvas(active);showToast('✓ Downloaded slide');};
 document.getElementById('dlAll').onclick=async()=>{for(let i=0;i<slideCount();i++){downloadCanvas(i);await new Promise(r=>setTimeout(r,350));}showToast('✓ Downloaded all');};
@@ -742,6 +755,37 @@ let IMPORTED=null;
 function placePhoto(o,src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{o.img=im;o.src=src;o.ox=0;o.oy=0;o.scale=1;ACTIVEIMG=o;renderAll();res();};im.onerror=()=>rej(new Error('decode failed'));im.src=src;});}
 
 function targetImg(o){return o&&(o.image||o.top)||null;}
+
+// ── Auto-fill: distribute imported photos across the deck's image slots, in order ──
+let IMPORTED_PHOTOS=[];
+// Every property-photo slot on a slide, in order. Double A has two (top, bottom); the End
+// slide's agent headshots are intentionally excluded (they're not listing photos).
+function imageSlotsOf(o){
+  if(!o) return [];
+  if(o.type==='doubleA') return [o.top,o.bottom].filter(Boolean);
+  if(o.type==='end') return [];
+  return o.image?[o.image]:[];
+}
+// Cover hero first, then every mid slide's slots in order.
+function allImageSlots(){
+  const slots=imageSlotsOf(S.cover);
+  S.mid.forEach(m=>{imageSlotsOf(m).forEach(s=>slots.push(s));});
+  return slots;
+}
+async function autoPlacePhotos(photos){
+  const slots=allImageSlots(), n=Math.min(slots.length,photos.length);
+  for(let i=0;i<n;i++){ try{ await placePhoto(slots[i],photos[i]); }catch(e){} }
+  return n;
+}
+// Place photos into slots (gallery order → cover, then each slide) and then write captions.
+// Order-based matching: photo N lands on slide N and that slide's caption is written for it.
+async function autoFill(photos){
+  photos=(photos&&photos.length)?photos:IMPORTED_PHOTOS;
+  const placed=(photos&&photos.length)?await autoPlacePhotos(photos):0;
+  buildEditor();renderAll();
+  if(placed) imStatus('✓ Placed '+placed+' photo'+(placed===1?'':'s')+' into slides. Writing captions…');
+  doAI(); // writes cover subhead + teaser + per-slide captions (async; sets its own status)
+}
 
 function fmtPrice(p){p=(p||'').trim();return p?(p[0]==='$'?p:'$'+p):'';}
 function applyFacts(f){
@@ -782,9 +826,12 @@ function doImport(){
     .then(j=>{
       IMPORTED={address:j.address||'',neighborhood:j.neighborhood||'',price:j.price||'',beds:j.beds||'',baths:j.baths||'',sqft:j.sqft||'',agent:j.agent||'',description:j.description||''};
       const photos=Array.isArray(j.photos)?j.photos:[];
+      IMPORTED_PHOTOS=photos;
       applyFacts(IMPORTED);renderTray(photos);
       if(j.warning){imStatus('⚠ '+j.warning,true);return;}
-      imStatus('✓ Imported. '+photos.length+(photos.length===1?' photo':' photos')+' found; empty fields filled.');})
+      const auto=document.getElementById('imAuto');
+      if(auto&&auto.checked&&photos.length){ autoFill(photos); }
+      else imStatus('✓ Imported. '+photos.length+(photos.length===1?' photo':' photos')+' found; empty fields filled.');})
     .catch(e=>imStatus(e&&(e.name==='AbortError'||e.message==='aborted')?'Import cancelled':('Import failed: '+(e.message||e)),true))
     .finally(()=>{clearInterval(ti);clearTimeout(to);});
 }
@@ -802,7 +849,13 @@ function doAI(){
     if((!facts.description||!facts.description.trim())&&t.descRuns&&t.descRuns.length)facts.description=runsPlain(t.descRuns);
   }
   const mids=S.mid.filter(m=>m.type!=='teaser'&&m.type!=='end'); // end slide has no caption to write
-  const slides=mids.map(m=>({kind:m.type}));
+  // Per-slide-type copy capacity, measured from each layout at the body font (≈9 words per
+  // full-width line; Single B is a narrow overlay column ≈5 words/line). The heading is drawn
+  // inline before the body, so the budget covers heading + body together. Double A is the
+  // tightest — its caption sits in a fixed gap between two photos.
+  const LINE_BUDGET={singleA:5,singleB:5,doubleA:3,context:5};
+  const WORDS_PER_LINE={singleB:5}; // default 9
+  const slides=mids.map(m=>({kind:m.type,maxLines:(LINE_BUDGET[m.type]||4),wpl:(WORDS_PER_LINE[m.type]||9)}));
   const statusLabel={justlisted:'Just Listed',incontract:'In Contract',justsold:'Just Sold',closed:'Closed (off-market sale)'}[S.status]||S.status;
   const prompt=`You are the copywriter for Casa Blanca, a New York City luxury real-estate brand.
 Voice: understated, confident, editorial — like a design magazine, not a hype ad. Present tense. No exclamation marks, no emoji, no hashtags. Concrete and specific over superlatives. Never invent facts that aren't supported by the listing details below.
@@ -811,16 +864,19 @@ Listing facts (JSON):
 ${JSON.stringify(facts,null,2)}
 
 Post status: ${statusLabel}.
-The carousel has ${slides.length} mid slide(s) after the cover and teaser. Their kinds, in order:
-${slides.map((s,i)=>`  ${i+1}. ${s.kind}`).join('\n')||'  (none)'}
+
+Each slide has a HARD copy budget — the text is drawn on a fixed canvas and WILL run off the frame if you exceed it. The "heading" is drawn inline right before the "body", so heading + body together must fit the budget. Always prefer concise copy; it is better to be a line short than one line over.
+
+The carousel has ${slides.length} mid slide(s) after the cover and teaser. Their kinds + copy budgets, in order:
+${slides.map((s,i)=>`  ${i+1}. ${s.kind} — heading + body must fit ${s.maxLines} line(s) of ~${s.wpl} words/line (≈${s.maxLines*s.wpl} words MAX for this slide)`).join('\n')||'  (none)'}
 
 Return ONLY a JSON object (no markdown fences, no commentary) with this exact shape:
 {
-  "coverSubhead": "2-3 short lines for the cover; use \\n between lines. For a Closed/Just Sold post the last line is usually the price.",
-  "teaser": "one or two sentence teaser line for the second slide",
-  "slides": [ { "heading": "short Title-Case heading", "body": "1-3 sentences of body copy" } ]
+  "coverSubhead": "the cover headline: 2-3 SHORT lines separated by \\n, each line ≤4 words, ≤9 words TOTAL so it never runs off the frame. For a Closed/Just Sold post the last line is usually the price.",
+  "teaser": "one short sentence (≤18 words) for the second slide",
+  "slides": [ { "heading": "≤4-word Title-Case heading", "body": "body copy that, together with the heading, fits this slide's line budget above" } ]
 }
-"slides" must contain exactly ${slides.length} item(s), one per mid slide above, each on a different angle (the architecture, the neighborhood, a standout room/detail, the building).`;
+"slides" must contain exactly ${slides.length} item(s), one per mid slide above, each on a different angle (the architecture, the neighborhood, a standout room/detail, the building). Respect every line budget — they are hard limits.`;
   imStatus('Writing captions…');
   fetch(cbBackend()+'/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:1500,messages:[{role:'user',content:prompt}]})})
     .then(r=>r.text().then(tx=>{let j;try{j=JSON.parse(tx);}catch(_){throw new Error('server error (HTTP '+r.status+') — the import backend returned a non-JSON response');}return{ok:r.ok,j};})).then(({ok,j})=>{
@@ -874,6 +930,7 @@ function initImportPanel(){
   const tog=document.getElementById('imToggle'),bod=document.getElementById('imbody');
   tog.onclick=()=>{const hidden=bod.hasAttribute('hidden');if(hidden){bod.removeAttribute('hidden');tog.classList.add('open');}else{bod.setAttribute('hidden','');tog.classList.remove('open');}};
   document.getElementById('imImport').onclick=doImport;
+  document.getElementById('imFill').onclick=()=>autoFill();
   document.getElementById('imAI').onclick=doAI;
 }
 
