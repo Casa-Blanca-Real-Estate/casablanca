@@ -371,11 +371,12 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
   const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,agentW,sz,lh,{justify:false,color:BODY,isph:ag.isph});
   hit('agent',X,y,agentW,lh);y=r3.bottom;
 
-  // RIGHT block — filled specs only, right-aligned, vertically centered against the left block.
+  // RIGHT block — filled specs only, right-aligned, BOTTOM-aligned with the left block
+  // (the last spec line shares the baseline of the 'with agent' line).
   if(hasSpecs){
     const RX=W-57;
     ctx.textAlign='right';ctx.font=f(800,sz);ctx.fillStyle=BODY;
-    let ry=blockTop+Math.max(0,(leftLines-specItems.length)/2)*lh;
+    let ry=blockTop+Math.max(0,(leftLines-specItems.length))*lh;
     specItems.forEach(L=>{
       ctx.fillText(L.txt,RX,ry+sz*ASC);
       const tw=ctx.measureText(L.txt).width;
