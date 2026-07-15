@@ -42,14 +42,18 @@ export default async (req) => {
       const body = await req.json();
       const cfg = await read(store);
 
-      // Workshop: replace the whole object when provided.
+      // Workshop: replace the whole object when provided. Supports either a fixed
+      // `date` or an auto-repeating `anchor` + `recurEveryDays` (rolls forward client-side).
       if (body.workshop && typeof body.workshop === 'object') {
+        const w = body.workshop;
         cfg.workshop = {
-          title: String(body.workshop.title || 'Social Media & Content Workshop').slice(0, 120),
-          date: String(body.workshop.date || '').slice(0, 10),
-          time: String(body.workshop.time || '').slice(0, 40),
-          location: String(body.workshop.location || '').slice(0, 80),
-          cadence: String(body.workshop.cadence || '').slice(0, 80),
+          title: String(w.title || 'Social Media & Content Workshop').slice(0, 120),
+          date: String(w.date || '').slice(0, 10),
+          anchor: String(w.anchor || '').slice(0, 10),
+          recurEveryDays: Number(w.recurEveryDays) > 0 ? Math.min(365, Math.floor(Number(w.recurEveryDays))) : 0,
+          time: String(w.time || '').slice(0, 40),
+          location: String(w.location || '').slice(0, 80),
+          cadence: String(w.cadence || '').slice(0, 80),
         };
       }
       if (body.workshop === null) delete cfg.workshop;

@@ -430,13 +430,16 @@
     <label>Title</label>
     <input id="wsTitle" type="text" placeholder="Social Media &amp; Content Workshop">
     <div class="two">
-      <div><label>Date</label><input id="wsDate" type="date"></div>
+      <div><label id="wsDateLbl">Date</label><input id="wsDate" type="date"></div>
       <div><label>Time</label><input id="wsTime" type="text" placeholder="11:00 AM"></div>
     </div>
     <div class="two">
       <div><label>Location</label><input id="wsLoc" type="text" placeholder="the office"></div>
       <div><label>Cadence</label><input id="wsCad" type="text" placeholder="every other Thursday"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;text-transform:none;letter-spacing:normal;color:#55514a;margin:2px 0 12px">
+      <input id="wsRepeat" type="checkbox" style="width:auto;margin:0"> Repeat automatically every other week (the date rolls forward on its own)
+    </label>
     <div class="err" id="wsErr"></div>
     <div class="row">
       <button class="cancel" id="wsCancel" type="button">Cancel</button>
@@ -447,7 +450,7 @@
 
 <!-- Offline/default fallback content (used if the live backend is unreachable) -->
 <script type="application/json" id="workshop-data">
-{ "title": "Social Media & Content Workshop", "date": "2026-07-02", "time": "11:00 AM", "location": "the office", "cadence": "every other Thursday" }
+{ "title": "Social Media & Content Workshop", "anchor": "2026-07-16", "recurEveryDays": 14, "time": "11:00 AM", "location": "the office", "cadence": "every other Thursday" }
 </script>
 <script type="application/json" id="cl-data">
 [
@@ -537,11 +540,23 @@
   var workshop=null;
   try{ workshop=JSON.parse($('workshop-data').textContent); }catch(e){ workshop={}; }
 
+  function parseYMD(s){ var p=String(s||'').split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return isNaN(d)?null:d; }
+  // The next occurrence: for a repeating workshop, roll the anchor forward by its
+  // cadence until it lands on/after today — so the date advances on its own.
+  function workshopDate(cfg){
+    var today=new Date(); today.setHours(0,0,0,0);
+    if(cfg.anchor && +cfg.recurEveryDays>0){
+      var d=parseYMD(cfg.anchor); if(!d) return null;
+      var step=Math.max(1,+cfg.recurEveryDays);
+      while(d<today){ d.setDate(d.getDate()+step); }
+      return d;
+    }
+    return parseYMD(cfg.date);
+  }
   function renderWorkshop(){
     var el=$('workshop'); var cfg=workshop||{};
-    if(!cfg.date){ el.hidden=true; return; }
-    var parts=String(cfg.date).split('-'); var d=new Date(+parts[0],+parts[1]-1,+parts[2]);
-    if(isNaN(d)){ el.hidden=true; return; }
+    var d=workshopDate(cfg);
+    if(!d){ el.hidden=true; return; }
     var today=new Date(); today.setHours(0,0,0,0);
     $('wTitle').textContent=cfg.title||'Social Media & Content Workshop';
     $('wMonth').textContent=MO[d.getMonth()];
@@ -549,26 +564,36 @@
     var dateStr=DAY[d.getDay()]+', '+MO[d.getMonth()]+' '+d.getDate();
     var bits=[dateStr]; if(cfg.time) bits.push(cfg.time); if(cfg.location) bits.push('at '+cfg.location);
     var meta=bits.join(' · ');
-    if(d<today){ meta='Next date TBA — check with the team.'+(cfg.cadence?' (Usually '+cfg.cadence+'.)':''); }
-    else if(cfg.cadence){ meta+='  ·  '+cfg.cadence; }
+    if(!(cfg.anchor && +cfg.recurEveryDays>0) && d<today){
+      meta='Next date TBA — check with the team.'+(cfg.cadence?' (Usually '+cfg.cadence+'.)':'');
+    } else if(cfg.cadence){ meta+='  ·  '+cfg.cadence; }
     $('wMeta').textContent=meta;
     el.hidden=false;
   }
 
   var wsModal=$('wsModal');
+  function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+  function syncDateLbl(){ $('wsDateLbl').textContent=$('wsRepeat').checked?'Start / next date':'Date'; }
+  $('wsRepeat').onchange=syncDateLbl;
   $('wEdit').onclick=function(){
     var c=workshop||{};
+    var repeats=!!(c.anchor && +c.recurEveryDays>0);
     $('wsTitle').value=c.title||'Social Media & Content Workshop';
-    $('wsDate').value=c.date||''; $('wsTime').value=c.time||'';
-    $('wsLoc').value=c.location||''; $('wsCad').value=c.cadence||'';
+    // show the upcoming computed date as the value to edit
+    var d=workshopDate(c); $('wsDate').value=d?ymd(d):(c.date||c.anchor||'');
+    $('wsTime').value=c.time||''; $('wsLoc').value=c.location||''; $('wsCad').value=c.cadence||'';
+    $('wsRepeat').checked=repeats; syncDateLbl();
     $('wsErr').textContent=''; wsModal.classList.add('open');
   };
   $('wsCancel').onclick=function(){wsModal.classList.remove('open');};
   wsModal.addEventListener('click',function(e){if(e.target===wsModal)wsModal.classList.remove('open');});
   $('wsSave').onclick=function(){
-    var next={ title:$('wsTitle').value.trim(), date:$('wsDate').value.trim(),
+    var date=$('wsDate').value.trim();
+    var next={ title:$('wsTitle').value.trim(),
       time:$('wsTime').value.trim(), location:$('wsLoc').value.trim(), cadence:$('wsCad').value.trim() };
-    if(!next.date){ $('wsErr').textContent='Pick a date.'; return; }
+    if($('wsRepeat').checked){ next.anchor=date; next.recurEveryDays=14; }
+    else { next.date=date; }
+    if(!date){ $('wsErr').textContent='Pick a date.'; return; }
     $('wsSave').disabled=true; $('wsErr').textContent='Saving…';
     fetch(SITE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workshop:next})})
       .then(function(r){return r.json();}).then(function(d){
@@ -625,7 +650,7 @@
   /* ---------- hydrate from live backend (fall back to inline defaults) ---------- */
   function hydrate(){
     fetch(SITE,{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
-      if(cfg&&cfg.workshop&&cfg.workshop.date){ workshop=cfg.workshop; renderWorkshop(); }
+      if(cfg&&cfg.workshop&&(cfg.workshop.date||cfg.workshop.anchor)){ workshop=cfg.workshop; renderWorkshop(); }
       if(cfg&&Array.isArray(cfg.changelog)&&cfg.changelog.length){ changelog=cfg.changelog; renderChangelog(); }
     }).catch(function(){ /* offline — inline defaults already rendered */ });
   }
