@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="../../assets/studio-header.js" defer></script>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casa Blanca — QR Code Generator</title>
+  <style>
+    @font-face { font-family:'ObjectSans'; src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype'); font-weight:400; font-style:normal; font-display:swap; }
+    @font-face { font-family:'ObjectSans'; src:url('../../assets/fonts/ObjectSans-Slanted.otf') format('opentype'); font-weight:400; font-style:italic; font-display:swap; }
+    @font-face { font-family:'ObjectSans'; src:url('../../assets/fonts/ObjectSans-Heavy.otf') format('opentype'); font-weight:800; font-style:normal; font-display:swap; }
+    @font-face { font-family:'ObjectSans'; src:url('../../assets/fonts/ObjectSans-HeavySlanted.otf') format('opentype'); font-weight:800; font-style:italic; font-display:swap; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:    #0f0f0f;
+      --sand:     #c0c2b5;
+      --lavender: #aaa3cf;
+      --bg:       #f4f3f0;
+      --surface:  #ffffff;
+      --border:   #dddbd5;
+      --mid:      #888680;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'ObjectSans', system-ui, sans-serif;
+      font-weight: 400;
+      color: var(--black);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    header {
+      width: 100%; padding: 20px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--black);
+    }
+    .header-logo { height: 24px; }
+    .header-tag {
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--sand);
+    }
+
+    main {
+      width: 100%; max-width: 1060px;
+      padding: 44px 24px 90px;
+      display: flex; flex-direction: column; gap: 26px;
+    }
+
+    .cta-hero {
+      font-weight: 800; font-size: 64px; line-height: 0.92;
+      letter-spacing: -0.05em; text-transform: uppercase;
+    }
+    @media (max-width: 640px) { .cta-hero { font-size: 42px; } }
+
+    .layout { display: grid; grid-template-columns: 1fr 380px; gap: 22px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    .stack { display: flex; flex-direction: column; gap: 14px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 18px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .section-label {
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid);
+    }
+
+    /* ── Type tabs ── */
+    .types { display: flex; gap: 6px; flex-wrap: wrap; }
+    .type-btn {
+      font-family: inherit; font-size: 11px; font-weight: 800;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 9px 14px; border-radius: 6px;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--mid); cursor: pointer;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    .type-btn:hover { border-color: var(--lavender); color: var(--black); }
+    .type-btn.active { border-color: var(--black); background: var(--black); color: #fff; }
+
+    /* ── Fields ── */
+    .fields { display: flex; flex-direction: column; gap: 12px; }
+    .fields[hidden] { display: none; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+    .lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+
+    input[type="text"], input[type="url"], input[type="email"], input[type="tel"], textarea, select {
+      width: 100%; font-family: inherit; font-size: 14px; color: var(--black);
+      background: var(--bg); border: 1.5px solid var(--border); border-radius: 5px;
+      padding: 10px 12px; transition: border-color .15s;
+    }
+    textarea { resize: vertical; min-height: 92px; line-height: 1.45; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--lavender); }
+    ::placeholder { color: #b3b0a9; }
+
+    select {
+      appearance: none; cursor: pointer; font-weight: 800; font-size: 12px;
+      background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888680' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+      padding-right: 28px;
+    }
+
+    /* ── Segmented control ── */
+    .seg { display: flex; gap: 6px; }
+    .seg button {
+      flex: 1; padding: 8px 4px; font-family: inherit; font-size: 11px; font-weight: 800;
+      letter-spacing: .06em;
+      border: 1.5px solid var(--border); border-radius: 5px;
+      background: transparent; color: var(--mid); cursor: pointer;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    .seg button:hover { border-color: var(--lavender); color: var(--black); }
+    .seg button.active { border-color: var(--black); background: var(--black); color: #fff; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+    .ctrl { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Palette swatches ── */
+    .palette { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pal {
+      width: 40px; height: 40px; border-radius: 6px; cursor: pointer; position: relative;
+      border: 2px solid var(--border); overflow: hidden; padding: 0; background: none;
+      transition: border-color .15s, transform .15s;
+    }
+    .pal:hover { border-color: var(--lavender); }
+    .pal.active { border-color: var(--black); transform: scale(1.06); }
+    .pal i { position: absolute; inset: 0; display: block; }
+    .pal i::after {
+      content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px;
+      transform: translate(-50%, -50%); border-radius: 3px; background: var(--fg);
+    }
+
+    .colorpick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; }
+    .colorpick label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--mid); }
+    input[type="color"] {
+      width: 30px; height: 30px; padding: 0; border: 1.5px solid var(--border);
+      border-radius: 5px; background: none; cursor: pointer;
+    }
+
+    .check { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .check input { width: 15px; height: 15px; accent-color: var(--black); cursor: pointer; }
+
+    .hint { font-size: 11px; color: var(--mid); line-height: 1.5; }
+
+    /* ── Preview ── */
+    .preview-col { position: sticky; top: 18px; display: flex; flex-direction: column; gap: 14px; }
+    @media (max-width: 900px) { .preview-col { position: static; } }
+
+    .stage {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+    }
+    .canvas-wrap {
+      width: 100%; border-radius: 6px; overflow: hidden;
+      background-image:
+        linear-gradient(45deg, #eceae5 25%, transparent 25%),
+        linear-gradient(-45deg, #eceae5 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eceae5 75%),
+        linear-gradient(-45deg, transparent 75%, #eceae5 75%);
+      background-size: 14px 14px;
+      background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+    }
+    #preview { width: 100%; height: auto; display: block; }
+
+    .meta { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--mid); text-align: center; }
+    .meta b { color: var(--black); }
+    .meta.sub { letter-spacing: .06em; color: #b1aea7; margin-top: -8px; }
+
+    .warn {
+      display: none; width: 100%; gap: 8px; align-items: flex-start;
+      background: #fdf6e3; border: 1px solid #efe0b0; border-radius: 6px;
+      padding: 10px 12px; font-size: 11px; line-height: 1.5; color: #6b5a1e;
+    }
+    .warn.on { display: flex; }
+    .warn.bad { background: #fdeceb; border-color: #f2c4c0; color: #7d2a24; }
+    .warn svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 13px 16px; border: none; border-radius: 6px;
+      font-family: inherit; font-size: 11px; font-weight: 800;
+      letter-spacing: .16em; text-transform: uppercase;
+      background: var(--black); color: #fff; cursor: pointer; transition: background .15s;
+    }
+    .btn:hover { background: #2a2a2a; }
+    .btn.ghost { background: transparent; color: var(--black); border: 1.5px solid var(--border); }
+    .btn.ghost:hover { background: var(--bg); border-color: var(--black); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+
+    .dl { display: flex; flex-direction: column; gap: 8px; }
+    .dl-size { display: flex; align-items: center; gap: 8px; }
+    .dl-size .section-label { white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="../../assets/cb-logo-white.png" alt="Casa Blanca">
+  <span class="header-tag">QR Code Generator</span>
+</header>
+
+<main>
+
+  <h1 class="cta-hero">PASTE A LINK,<br>GET A QR CODE.</h1>
+
+  <div class="layout">
+
+    <!-- ─────────── Controls ─────────── -->
+    <div class="stack">
+
+      <!-- What it points to -->
+      <div class="card">
+        <span class="section-label">What it points to</span>
+        <div class="types" id="types">
+          <button class="type-btn active" data-type="link">Link</button>
+          <button class="type-btn" data-type="contact">Contact card</button>
+          <button class="type-btn" data-type="text">Text</button>
+          <button class="type-btn" data-type="email">Email</button>
+          <button class="type-btn" data-type="phone">Phone</button>
+        </div>
+
+        <div class="fields" data-fields="link">
+          <div class="field">
+            <label class="lbl" for="f-url">Web address</label>
+            <input type="text" id="f-url" placeholder="casa-blanca.com/listings/123-west-84th" value="https://casa-blanca.com" spellcheck="false">
+          </div>
+          <p class="hint">Anything a phone can open — a listing page, a StreetEasy link, an RSVP form, a Google review page.</p>
+        </div>
+
+        <div class="fields" data-fields="contact" hidden>
+          <div class="field-row">
+            <div class="field"><label class="lbl" for="f-name">Full name</label><input type="text" id="f-name" placeholder="Jane Doe"></div>
+            <div class="field"><label class="lbl" for="f-title">Title</label><input type="text" id="f-title" placeholder="Licensed Real Estate Salesperson"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label class="lbl" for="f-cphone">Phone</label><input type="tel" id="f-cphone" placeholder="(212) 555-1234"></div>
+            <div class="field"><label class="lbl" for="f-cemail">Email</label><input type="email" id="f-cemail" placeholder="jane@casa-blanca.com"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label class="lbl" for="f-company">Company</label><input type="text" id="f-company" value="Casa Blanca"></div>
+            <div class="field"><label class="lbl" for="f-site">Website</label><input type="text" id="f-site" placeholder="casa-blanca.com"></div>
+          </div>
+          <p class="hint">Scanning saves the contact straight to the phone — the one to put on a business card or a yard sign.</p>
+        </div>
+
+        <div class="fields" data-fields="text" hidden>
+          <div class="field">
+            <label class="lbl" for="f-text">Text</label>
+            <textarea id="f-text" placeholder="Open house — Sunday 12–2pm&#10;123 West 84th Street, Apt 5B"></textarea>
+          </div>
+        </div>
+
+        <div class="fields" data-fields="email" hidden>
+          <div class="field"><label class="lbl" for="f-email">Send to</label><input type="email" id="f-email" placeholder="hello@casa-blanca.com"></div>
+          <div class="field"><label class="lbl" for="f-subject">Subject <span style="text-transform:none;letter-spacing:0">(optional)</span></label><input type="text" id="f-subject" placeholder="123 West 84th — I'd like to see it"></div>
+          <div class="field"><label class="lbl" for="f-body">Message <span style="text-transform:none;letter-spacing:0">(optional)</span></label><textarea id="f-body" placeholder="Pre-written message the scanner can send."></textarea></div>
+        </div>
+
+        <div class="fields" data-fields="phone" hidden>
+          <div class="field">
+            <label class="lbl" for="f-phone">Phone number</label>
+            <input type="tel" id="f-phone" placeholder="(212) 555-1234">
+          </div>
+          <p class="hint">Scanning starts a call to this number.</p>
+        </div>
+      </div>
+
+      <!-- Look -->
+      <div class="card">
+        <span class="section-label">Look</span>
+
+        <div class="grid2">
+          <div class="ctrl">
+            <span class="lbl">Modules</span>
+            <div class="seg" id="seg-module" role="group" aria-label="Module shape">
+              <button data-v="square" class="active">Square</button>
+              <button data-v="rounded">Rounded</button>
+              <button data-v="dots">Dots</button>
+            </div>
+          </div>
+          <div class="ctrl">
+            <span class="lbl">Corner eyes</span>
+            <div class="seg" id="seg-eye" role="group" aria-label="Corner eye shape">
+              <button data-v="square" class="active">Square</button>
+              <button data-v="rounded">Rounded</button>
+              <button data-v="circle">Circle</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl">
+          <span class="lbl">Colors</span>
+          <div class="palette" id="palette" role="group" aria-label="Color presets"></div>
+          <div class="colorpick">
+            <label>Code <input type="color" id="c-fg" value="#0f0f0f"></label>
+            <label>Background <input type="color" id="c-bg" value="#ffffff"></label>
+            <label class="check"><input type="checkbox" id="c-transparent"> Transparent background</label>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="ctrl">
+            <span class="lbl">Center mark</span>
+            <div class="seg" id="seg-logo" role="group" aria-label="Center mark size">
+              <button data-v="off">Off</button>
+              <button data-v="small">Small</button>
+              <button data-v="medium" class="active">Medium</button>
+              <button data-v="large">Large</button>
+            </div>
+          </div>
+          <div class="ctrl">
+            <span class="lbl">Error correction</span>
+            <div class="seg" id="seg-ecl" role="group" aria-label="Error correction level">
+              <button data-v="L">L</button>
+              <button data-v="M" class="active">M</button>
+              <button data-v="Q">Q</button>
+              <button data-v="H">H</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="f-label">Caption under the code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+          <input type="text" id="f-label" placeholder="SCAN FOR THE FULL LISTING" maxlength="42">
+        </div>
+
+        <p class="hint" id="ecl-hint"></p>
+      </div>
+
+    </div>
+
+    <!-- ─────────── Preview ─────────── -->
+    <aside class="preview-col">
+      <div class="stage">
+        <div class="canvas-wrap"><canvas id="preview" width="1024" height="1024"></canvas></div>
+        <div class="meta" id="meta">—</div>
+        <div class="meta sub" id="meta-print"></div>
+        <div class="warn" id="warn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v5M12 17.5v.01"/><path d="M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          <span id="warn-text"></span>
+        </div>
+      </div>
+
+      <div class="card dl">
+        <div class="dl-size">
+          <span class="section-label">PNG size</span>
+          <select id="png-size">
+            <option value="512">512 px</option>
+            <option value="1024" selected>1024 px</option>
+            <option value="2048">2048 px</option>
+            <option value="4096">4096 px — print</option>
+          </select>
+        </div>
+        <button class="btn" id="dl-png">Download PNG</button>
+        <div class="btn-row">
+          <button class="btn ghost" id="dl-svg">SVG</button>
+          <button class="btn ghost" id="copy-png">Copy</button>
+        </div>
+        <p class="hint">SVG is vector — hand that one to the printer for signs and business cards. A caption in the SVG uses Object Sans if the machine opening it has the font; the PNG bakes it in.</p>
+      </div>
+    </aside>
+
+  </div>
+</main>
+
+<script src="qr-core.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var LOGO_SRC = '../../assets/brand/casa-blanca-mark-black.png';
+  var QUIET = 4;                 // quiet-zone modules — the spec minimum, not negotiable
+  var LOGO_FRACTION = { off: 0, small: 0.18, medium: 0.24, large: 0.30 };
+  var PREFS_KEY = 'cb_qr_prefs';
+
+  var PALETTES = [
+    { name: 'Ink on white',    fg: '#0f0f0f', bg: '#ffffff' },
+    { name: 'Ink on sand',     fg: '#0f0f0f', bg: '#e8e6e0' },
+    { name: 'Ink on lavender', fg: '#0f0f0f', bg: '#aaa3cf' },
+    { name: 'White on ink',    fg: '#ffffff', bg: '#0f0f0f' },
+    { name: 'Lavender on ink', fg: '#aaa3cf', bg: '#0f0f0f' }
+  ];
+
+  var state = {
+    type: 'link',
+    module: 'square',
+    eye: 'square',
+    logo: 'medium',
+    ecl: 'M',
+    fg: '#0f0f0f',
+    bg: '#ffffff',
+    transparent: false
+  };
+
+  var logoImg = null, logoReady = false;
+  var tintCache = {};
+  var current = null;   // last successfully encoded QR
+
+  /* ── Content assembly ─────────────────────────────────────────────── */
+
+  function normalizeUrl(v) {
+    v = (v || '').trim();
+    if (!v) return '';
+    if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return v;      // already has a scheme
+    if (/^\/\//.test(v)) return 'https:' + v;
+    return 'https://' + v.replace(/^\/+/, '');
+  }
+
+  function escVcard(v) {
+    return String(v || '').trim().replace(/([\\,;])/g, '\\$1').replace(/\r?\n/g, '\\n');
+  }
+
+  function payload() {
+    var t = state.type;
+    if (t === 'link') return normalizeUrl($('f-url').value);
+
+    if (t === 'text') return $('f-text').value.trim();
+
+    if (t === 'phone') {
+      var num = $('f-phone').value.trim();
+      return num ? 'tel:' + num.replace(/[^\d+]/g, '') : '';
+    }
+
+    if (t === 'email') {
+      var addr = $('f-email').value.trim();
+      if (!addr) return '';
+      var q = [];
+      if ($('f-subject').value.trim()) q.push('subject=' + encodeURIComponent($('f-subject').value.trim()));
+      if ($('f-body').value.trim()) q.push('body=' + encodeURIComponent($('f-body').value.trim()));
+      return 'mailto:' + addr + (q.length ? '?' + q.join('&') : '');
+    }
+
+    // vCard 3.0 — the format iOS and Android both import cleanly.
+    var name = $('f-name').value.trim();
+    var phone = $('f-cphone').value.trim();
+    var mail = $('f-cemail').value.trim();
+    var title = $('f-title').value.trim();
+    var org = $('f-company').value.trim();
+    var site = $('f-site').value.trim();
+    if (!name && !phone && !mail) return '';
+
+    var parts = name.split(/\s+/);
+    var last = parts.length > 1 ? parts.pop() : '';
+    var first = parts.join(' ');
+
+    var lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+    lines.push('N:' + escVcard(last) + ';' + escVcard(first) + ';;;');
+    if (name) lines.push('FN:' + escVcard(name));
+    if (org) lines.push('ORG:' + escVcard(org));
+    if (title) lines.push('TITLE:' + escVcard(title));
+    if (phone) lines.push('TEL;TYPE=CELL,VOICE:' + phone.replace(/[^\d+()\-. ]/g, ''));
+    if (mail) lines.push('EMAIL;TYPE=INTERNET:' + escVcard(mail));
+    if (site) lines.push('URL:' + normalizeUrl(site));
+    lines.push('END:VCARD');
+    return lines.join('\r\n');
+  }
+
+  function fileStem() {
+    var t = state.type;
+    var base = 'casa-blanca-qr';
+    if (t === 'link') {
+      try { base = new URL(normalizeUrl($('f-url').value)).hostname.replace(/^www\./, '') || base; } catch (e) {}
+    } else if (t === 'contact' && $('f-name').value.trim()) {
+      base = $('f-name').value.trim();
+    } else if (t === 'phone' || t === 'email') {
+      base = t;
+    }
+    return 'qr-' + base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48);
+  }
+
+  /* ── Geometry — one path description drives both the canvas and the SVG ── */
+
+  function inFinder(size, r, c) {
+    return (r < 7 && c < 7) || (r < 7 && c >= size - 7) || (r >= size - 7 && c < 7);
+  }
+
+  /* Alignment patterns have to stay solid rings whatever the module style is —
+     a scanner locks onto them to correct for perspective, and it cannot do that
+     if they have crumbled into loose dots. Square modules already draw as solid,
+     so only the shaped styles need them lifted out. */
+  function alignBoxes(qr) {
+    if (state.module === 'square') return [];
+    var pos = qr.alignmentPositions();
+    var boxes = [];
+    for (var i = 0; i < pos.length; i++) {
+      for (var j = 0; j < pos.length; j++) {
+        var corner = (i === 0 && j === 0) ||
+                     (i === 0 && j === pos.length - 1) ||
+                     (i === pos.length - 1 && j === 0);
+        if (!corner) boxes.push({ r: pos[i], c: pos[j] });
+      }
+    }
+    return boxes;
+  }
+
+  function alignPath(qr) {
+    var boxes = alignBoxes(qr), d = '';
+    for (var i = 0; i < boxes.length; i++) {
+      var r = boxes[i].r, c = boxes[i].c;
+      if (state.module === 'dots') {
+        d += circle(c + 0.5, r + 0.5, 2.5);
+        d += circleHole(c + 0.5, r + 0.5, 1.5);
+        d += circle(c + 0.5, r + 0.5, 0.5);
+      } else {
+        d += roundRect(c - 2, r - 2, 5, 5, 1.25);
+        d += roundRectHole(c - 1, r - 1, 3, 3, 0.75);
+        d += roundRect(c, r, 1, 1, 0.3);
+      }
+    }
+    return d;
+  }
+
+  function knockout(qr) {
+    if (state.logo === 'off' || !logoReady) return null;
+    var h = qr.size * LOGO_FRACTION[state.logo];
+    var w = h * (logoImg.naturalWidth / logoImg.naturalHeight);
+    var pad = 0.9;
+    return {
+      x: qr.size / 2 - w / 2, y: qr.size / 2 - h / 2, w: w, h: h,
+      kx: qr.size / 2 - w / 2 - pad, ky: qr.size / 2 - h / 2 - pad,
+      kw: w + pad * 2, kh: h + pad * 2
+    };
+  }
+
+  /* Both windings of every shape: the fill rule punches a hole wherever an inner
+     subpath runs against the direction of the one enclosing it. */
+  function roundRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    return 'M' + (x + r) + ',' + y +
+           'H' + (x + w - r) + 'A' + r + ',' + r + ' 0 0 1 ' + (x + w) + ',' + (y + r) +
+           'V' + (y + h - r) + 'A' + r + ',' + r + ' 0 0 1 ' + (x + w - r) + ',' + (y + h) +
+           'H' + (x + r) + 'A' + r + ',' + r + ' 0 0 1 ' + x + ',' + (y + h - r) +
+           'V' + (y + r) + 'A' + r + ',' + r + ' 0 0 1 ' + (x + r) + ',' + y + 'Z';
+  }
+
+  function roundRectHole(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    return 'M' + (x + r) + ',' + y +
+           'A' + r + ',' + r + ' 0 0 0 ' + x + ',' + (y + r) +
+           'V' + (y + h - r) + 'A' + r + ',' + r + ' 0 0 0 ' + (x + r) + ',' + (y + h) +
+           'H' + (x + w - r) + 'A' + r + ',' + r + ' 0 0 0 ' + (x + w) + ',' + (y + h - r) +
+           'V' + (y + r) + 'A' + r + ',' + r + ' 0 0 0 ' + (x + w - r) + ',' + y + 'Z';
+  }
+
+  function circle(cx, cy, r) {
+    return 'M' + (cx - r) + ',' + cy +
+           'a' + r + ',' + r + ' 0 1 0 ' + (r * 2) + ',0' +
+           'a' + r + ',' + r + ' 0 1 0 ' + (-r * 2) + ',0Z';
+  }
+
+  function circleHole(cx, cy, r) {
+    return 'M' + (cx - r) + ',' + cy +
+           'a' + r + ',' + r + ' 0 1 1 ' + (r * 2) + ',0' +
+           'a' + r + ',' + r + ' 0 1 1 ' + (-r * 2) + ',0Z';
+  }
+
+  /* Rounded module with per-corner radii, so neighbouring modules stay welded
+     together and only the outer corners of a blob get softened. */
+  function weldedRect(x, y, tl, tr, br, bl) {
+    var d = 'M' + (x + tl) + ',' + y;
+    d += 'H' + (x + 1 - tr);
+    d += tr ? 'A' + tr + ',' + tr + ' 0 0 1 ' + (x + 1) + ',' + (y + tr) : 'V' + y;
+    d += 'V' + (y + 1 - br);
+    d += br ? 'A' + br + ',' + br + ' 0 0 1 ' + (x + 1 - br) + ',' + (y + 1) : 'H' + (x + 1);
+    d += 'H' + (x + bl);
+    d += bl ? 'A' + bl + ',' + bl + ' 0 0 1 ' + x + ',' + (y + 1 - bl) : 'V' + (y + 1);
+    d += 'V' + (y + tl);
+    d += tl ? 'A' + tl + ',' + tl + ' 0 0 1 ' + (x + tl) + ',' + y : 'H' + x;
+    return d + 'Z';
+  }
+
+  /* Path for every data module (everything outside the corner eyes and the
+     alignment patterns, both of which are drawn as whole shapes). */
+  function modulePath(qr, knock) {
+    var size = qr.size, d = '', r, c;
+    var R = 0.4;    // welded-corner radius
+    var DOT = 0.42; // dot radius
+    var boxes = alignBoxes(qr);
+
+    function inAlign(rr, cc) {
+      for (var i = 0; i < boxes.length; i++) {
+        if (Math.abs(rr - boxes[i].r) <= 2 && Math.abs(cc - boxes[i].c) <= 2) return true;
+      }
+      return false;
+    }
+
+    function dark(rr, cc) {
+      if (rr < 0 || cc < 0 || rr >= size || cc >= size) return false;
+      if (inFinder(size, rr, cc) || inAlign(rr, cc)) return false;
+      if (knock && cc + 0.5 > knock.kx && cc + 0.5 < knock.kx + knock.kw &&
+                   rr + 0.5 > knock.ky && rr + 0.5 < knock.ky + knock.kh) return false;
+      return qr.isDark(rr, cc);
+    }
+
+    for (r = 0; r < size; r++) {
+      for (c = 0; c < size; c++) {
+        if (!dark(r, c)) continue;
+        if (state.module === 'dots') {
+          d += circle(c + 0.5, r + 0.5, DOT);
+        } else if (state.module === 'rounded') {
+          var up = dark(r - 1, c), down = dark(r + 1, c), left = dark(r, c - 1), right = dark(r, c + 1);
+          d += weldedRect(c, r, (!up && !left) ? R : 0, (!up && !right) ? R : 0,
+                                (!down && !right) ? R : 0, (!down && !left) ? R : 0);
+        } else {
+          d += 'M' + c + ',' + r + 'h1v1h-1Z';
+        }
+      }
+    }
+    return d;
+  }
+
+  /* Path for the three corner eyes, drawn as shapes rather than module-by-module
+     so the outline stays crisp at every style. */
+  function eyePath(qr) {
+    var size = qr.size, d = '';
+    var corners = [[0, 0], [0, size - 7], [size - 7, 0]];
+    for (var i = 0; i < corners.length; i++) {
+      var r = corners[i][0], c = corners[i][1];
+      if (state.eye === 'circle') {
+        d += circle(c + 3.5, r + 3.5, 3.5);
+        d += circleHole(c + 3.5, r + 3.5, 2.5);
+        d += circle(c + 3.5, r + 3.5, 1.5);
+      } else if (state.eye === 'rounded') {
+        d += roundRect(c, r, 7, 7, 1.75);
+        d += roundRectHole(c + 1, r + 1, 5, 5, 1.15);
+        d += roundRect(c + 2, r + 2, 3, 3, 0.75);
+      } else {
+        d += 'M' + c + ',' + r + 'h7v7h-7Z';
+        d += 'M' + (c + 1) + ',' + (r + 1) + 'v5h5v-5Z';   // reversed winding punches the hole
+        d += 'M' + (c + 2) + ',' + (r + 2) + 'h3v3h-3Z';
+      }
+    }
+    return d;
+  }
+
+  /* ── Logo tinting — the mark is solid black art, recolored to match the code ── */
+
+  function tintedLogo(color) {
+    if (tintCache[color]) return tintCache[color];
+    var c = document.createElement('canvas');
+    c.width = logoImg.naturalWidth; c.height = logoImg.naturalHeight;
+    var x = c.getContext('2d');
+    x.drawImage(logoImg, 0, 0);
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = color;
+    x.fillRect(0, 0, c.width, c.height);
+    tintCache[color] = c;
+    return c;
+  }
+
+  /* ── Rendering ─────────────────────────────────────────────────────── */
+
+  function labelText() { return $('f-label').value.trim().toUpperCase(); }
+
+  function layout(qr) {
+    var span = qr.size + QUIET * 2;                 // code + quiet zone, in modules
+    var label = labelText();
+    var labelBand = label ? 3.4 : 0;                // in modules
+    return { span: span, labelBand: labelBand, totalH: span + labelBand, label: label };
+  }
+
+  function drawCanvas(canvas, qr, px) {
+    var L = layout(qr);
+    var unit = px / L.span;
+    canvas.width = Math.round(L.span * unit);
+    canvas.height = Math.round(L.totalH * unit);
+
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!state.transparent) {
+      ctx.fillStyle = state.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    var knock = knockout(qr);
+
+    ctx.save();
+    ctx.translate(QUIET * unit, QUIET * unit);
+    ctx.scale(unit, unit);
+    ctx.fillStyle = state.fg;
+    ctx.fill(new Path2D(modulePath(qr, knock)));
+    ctx.fill(new Path2D(alignPath(qr)));
+    ctx.fill(new Path2D(eyePath(qr)));
+    ctx.restore();
+
+    if (knock) {
+      var art = tintedLogo(state.fg);
+      ctx.drawImage(art,
+        (QUIET + knock.x) * unit, (QUIET + knock.y) * unit,
+        knock.w * unit, knock.h * unit);
+    }
+
+    if (L.label) {
+      ctx.fillStyle = state.fg;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var fontPx = unit * 1.25;
+      ctx.font = '800 ' + fontPx + "px ObjectSans, 'Object Sans', Helvetica, Arial, sans-serif";
+      if (ctx.letterSpacing !== undefined) ctx.letterSpacing = (fontPx * 0.14) + 'px';
+      ctx.fillText(L.label, canvas.width / 2, (L.span + L.labelBand / 2 - 0.4) * unit);
+      if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';
+    }
+  }
+
+  function buildSvg(qr, px) {
+    var L = layout(qr);
+    var knock = knockout(qr);
+    var w = px, h = px * (L.totalH / L.span);
+    var s = [];
+    s.push('<?xml version="1.0" encoding="UTF-8"?>');
+    s.push('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ' +
+           'width="' + Math.round(w) + '" height="' + Math.round(h) + '" ' +
+           'viewBox="0 0 ' + L.span + ' ' + L.totalH + '" shape-rendering="geometricPrecision">');
+    s.push('<title>Casa Blanca QR code</title>');
+    if (!state.transparent) {
+      s.push('<rect width="' + L.span + '" height="' + L.totalH + '" fill="' + state.bg + '"/>');
+    }
+    s.push('<g transform="translate(' + QUIET + ',' + QUIET + ')" fill="' + state.fg + '">');
+    s.push('<path d="' + modulePath(qr, knock) + '"/>');
+    var align = alignPath(qr);
+    if (align) s.push('<path d="' + align + '"/>');
+    s.push('<path d="' + eyePath(qr) + '"/>');
+    s.push('</g>');
+    if (knock) {
+      var href = tintedLogo(state.fg).toDataURL('image/png');
+      s.push('<image x="' + (QUIET + knock.x) + '" y="' + (QUIET + knock.y) + '" ' +
+             'width="' + knock.w + '" height="' + knock.h + '" ' +
+             'href="' + href + '" xlink:href="' + href + '"/>');
+    }
+    if (L.label) {
+      // Baseline placed explicitly — dominant-baseline is unreliable in print tools.
+      var fontSize = 1.25;
+      s.push('<text x="' + (L.span / 2) + '" y="' + (L.span + L.labelBand / 2 + fontSize * 0.35) + '" ' +
+             'text-anchor="middle" fill="' + state.fg + '" ' +
+             'font-family="ObjectSans, \'Object Sans\', Helvetica, Arial, sans-serif" font-weight="800" ' +
+             'font-size="' + fontSize + '" letter-spacing="0.17">' + escapeXml(L.label) + '</text>');
+    }
+    s.push('</svg>');
+    return s.join('\n');
+  }
+
+  function escapeXml(v) {
+    return String(v).replace(/[<>&"']/g, function (ch) {
+      return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[ch];
+    });
+  }
+
+  /* ── Contrast guard ────────────────────────────────────────────────── */
+
+  function luminance(hex) {
+    var n = parseInt(hex.slice(1), 16);
+    var rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  }
+
+  function contrast(a, b) {
+    var la = luminance(a), lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+
+  function checkWarnings() {
+    var warn = $('warn'), text = $('warn-text');
+    var messages = [];
+    var bad = false;
+
+    var bg = state.transparent ? '#ffffff' : state.bg;
+    var ratio = contrast(state.fg, bg);
+    if (ratio < 2.5) {
+      messages.push('The code and its background are too close in tone — most phones will not read this. Darken the code or lighten the background.');
+      bad = true;
+    } else if (ratio < 4) {
+      messages.push('Low contrast — it scans on a good camera but not a tired one. Worth going darker.');
+    }
+
+    if (luminance(state.fg) > luminance(bg)) {
+      messages.push('Light code on a dark background: some older scanners refuse inverted codes. Test before it goes to print.');
+    }
+
+    if (state.transparent) {
+      messages.push('Transparent PNG — only place it on a light, plain background.');
+    }
+
+    warn.className = 'warn' + (messages.length ? ' on' : '') + (bad ? ' bad' : '');
+    text.textContent = messages.join(' ');
+  }
+
+  /* ── Main update ───────────────────────────────────────────────────── */
+
+  var pending = null;
+  function scheduleRender() {
+    if (pending) cancelAnimationFrame(pending);
+    pending = requestAnimationFrame(render);
+  }
+
+  function render() {
+    pending = null;
+    var text = payload();
+    var meta = $('meta');
+
+    if (!text) {
+      current = null;
+      var cv = $('preview');
+      cv.width = 1024; cv.height = 1024;
+      var c = cv.getContext('2d');
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.fillStyle = '#f4f3f0'; c.fillRect(0, 0, cv.width, cv.height);
+      c.fillStyle = '#c9c6c0';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = "800 44px ObjectSans, Helvetica, Arial, sans-serif";
+      c.fillText('NOTHING TO ENCODE', cv.width / 2, cv.height / 2);
+      meta.textContent = 'Fill in the fields above';
+      $('meta-print').textContent = '';
+      setButtons(false);
+      $('warn').className = 'warn';
+      return;
+    }
+
+    var ecl = state.ecl;
+    if (state.logo !== 'off') {
+      // A mark in the middle eats modules — never encode that below Q, and use H
+      // for anything but the smallest mark.
+      ecl = LOGO_FRACTION[state.logo] >= 0.24 ? 'H' : (ecl === 'L' || ecl === 'M' ? 'Q' : ecl);
+    }
+
+    try {
+      current = QRCore.encode(text, { ecl: ecl });
+    } catch (e) {
+      current = null;
+      meta.textContent = e.message;
+      $('meta-print').textContent = '';
+      setButtons(false);
+      $('warn').className = 'warn on bad';
+      $('warn-text').textContent = e.message;
+      return;
+    }
+
+    drawCanvas($('preview'), current, 1024);
+    setButtons(true);
+
+    meta.innerHTML = 'Version <b>' + current.version + '</b> · <b>' + current.size + '×' + current.size + '</b> · ' +
+                     'level <b>' + current.ecl + '</b> · <b>' + text.length + '</b> character' + (text.length === 1 ? '' : 's');
+
+    // Phone cameras need roughly half a millimetre per module in print — the
+    // denser the code, the wider it has to be laid out.
+    var mm = Math.ceil((current.size + QUIET * 2) * 0.5);
+    $('meta-print').textContent = 'Print no smaller than ' + mm + ' mm / ' + (mm / 25.4).toFixed(1) + " in wide";
+    $('ecl-hint').textContent = eclHint(ecl);
+    checkWarnings();
+  }
+
+  function eclHint(effective) {
+    var pct = { L: '7%', M: '15%', Q: '25%', H: '30%' }[current ? current.ecl : effective];
+    var line = 'Level ' + (current ? current.ecl : effective) + ' survives about ' + pct +
+               ' of the code being scuffed, covered or reprinted badly.';
+    if (state.logo !== 'off') line += ' Raised automatically because a center mark is on.';
+    else if (current && current.ecl !== state.ecl) line += ' Raised from ' + state.ecl + ' — the spare room was free.';
+    return line;
+  }
+
+  function setButtons(on) {
+    $('dl-png').disabled = !on;
+    $('dl-svg').disabled = !on;
+    $('copy-png').disabled = !on;
+  }
+
+  /* ── Downloads ─────────────────────────────────────────────────────── */
+
+  function saveBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+
+  function exportCanvas() {
+    var px = parseInt($('png-size').value, 10);
+    var c = document.createElement('canvas');
+    drawCanvas(c, current, px);
+    return c;
+  }
+
+  function flash(btn, msg) {
+    var old = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(function () { btn.textContent = old; }, 1400);
+  }
+
+  $('dl-png').onclick = function () {
+    if (!current) return;
+    exportCanvas().toBlob(function (b) { saveBlob(b, fileStem() + '.png'); });
+  };
+
+  $('dl-svg').onclick = function () {
+    if (!current) return;
+    var svg = buildSvg(current, parseInt($('png-size').value, 10));
+    saveBlob(new Blob([svg], { type: 'image/svg+xml' }), fileStem() + '.svg');
+  };
+
+  $('copy-png').onclick = function (e) {
+    if (!current) return;
+    var btn = e.currentTarget;
+    if (!navigator.clipboard || !window.ClipboardItem) { flash(btn, 'No clipboard'); return; }
+    exportCanvas().toBlob(function (b) {
+      navigator.clipboard.write([new window.ClipboardItem({ 'image/png': b })])
+        .then(function () { flash(btn, 'Copied ✓'); })
+        .catch(function () { flash(btn, 'Blocked'); });
+    });
+  };
+
+  /* ── Wiring ────────────────────────────────────────────────────────── */
+
+  function segment(id, key, after) {
+    var wrap = $(id);
+    wrap.addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      Array.prototype.forEach.call(wrap.children, function (b) { b.classList.toggle('active', b === btn); });
+      state[key] = btn.dataset.v;
+      if (after) after();
+      savePrefs();
+      scheduleRender();
+    });
+  }
+
+  segment('seg-module', 'module');
+  segment('seg-eye', 'eye');
+  segment('seg-logo', 'logo');
+  segment('seg-ecl', 'ecl');
+
+  $('types').addEventListener('click', function (e) {
+    var btn = e.target.closest('.type-btn');
+    if (!btn) return;
+    state.type = btn.dataset.type;
+    Array.prototype.forEach.call($('types').children, function (b) { b.classList.toggle('active', b === btn); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-fields]'), function (f) {
+      f.hidden = f.dataset.fields !== state.type;
+    });
+    var first = document.querySelector('[data-fields="' + state.type + '"] input, [data-fields="' + state.type + '"] textarea');
+    if (first) first.focus();
+    scheduleRender();
+  });
+
+  function buildPalette() {
+    var wrap = $('palette');
+    PALETTES.forEach(function (p) {
+      var b = document.createElement('button');
+      b.className = 'pal';
+      b.type = 'button';
+      b.title = p.name;
+      b.setAttribute('aria-label', p.name);
+      b.dataset.fg = p.fg; b.dataset.bg = p.bg;
+      b.innerHTML = '<i style="background:' + p.bg + ';--fg:' + p.fg + '"></i>';
+      b.onclick = function () {
+        state.fg = p.fg; state.bg = p.bg; state.transparent = false;
+        $('c-fg').value = p.fg; $('c-bg').value = p.bg; $('c-transparent').checked = false;
+        syncPalette();
+        savePrefs();
+        scheduleRender();
+      };
+      wrap.appendChild(b);
+    });
+  }
+
+  function syncPalette() {
+    Array.prototype.forEach.call($('palette').children, function (b) {
+      b.classList.toggle('active', !state.transparent &&
+        b.dataset.fg.toLowerCase() === state.fg.toLowerCase() &&
+        b.dataset.bg.toLowerCase() === state.bg.toLowerCase());
+    });
+  }
+
+  $('c-fg').oninput = function () { state.fg = this.value; syncPalette(); savePrefs(); scheduleRender(); };
+  $('c-bg').oninput = function () { state.bg = this.value; state.transparent = false; $('c-transparent').checked = false; syncPalette(); savePrefs(); scheduleRender(); };
+  $('c-transparent').onchange = function () { state.transparent = this.checked; syncPalette(); savePrefs(); scheduleRender(); };
+
+  Array.prototype.forEach.call(document.querySelectorAll('input, textarea'), function (el) {
+    if (el.type === 'color' || el.type === 'checkbox') return;
+    el.addEventListener('input', scheduleRender);
+  });
+  $('png-size').addEventListener('change', savePrefs);
+
+  /* ── Preferences (style only — never the content) ───────────────────── */
+
+  function savePrefs() {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        module: state.module, eye: state.eye, logo: state.logo, ecl: state.ecl,
+        fg: state.fg, bg: state.bg, transparent: state.transparent, size: $('png-size').value
+      }));
+    } catch (e) {}
+  }
+
+  function loadPrefs() {
+    var raw;
+    try { raw = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); } catch (e) { raw = null; }
+    if (!raw) return;
+    ['module', 'eye', 'logo', 'ecl'].forEach(function (k) {
+      if (!raw[k]) return;
+      var wrap = $('seg-' + k);
+      var btn = wrap.querySelector('[data-v="' + raw[k] + '"]');
+      if (!btn) return;
+      state[k] = raw[k];
+      Array.prototype.forEach.call(wrap.children, function (b) { b.classList.toggle('active', b === btn); });
+    });
+    if (raw.fg) { state.fg = raw.fg; $('c-fg').value = raw.fg; }
+    if (raw.bg) { state.bg = raw.bg; $('c-bg').value = raw.bg; }
+    state.transparent = !!raw.transparent;
+    $('c-transparent').checked = state.transparent;
+    if (raw.size) $('png-size').value = raw.size;
+  }
+
+  /* ── Boot ──────────────────────────────────────────────────────────── */
+
+  buildPalette();
+  loadPrefs();
+  syncPalette();
+
+  logoImg = new Image();
+  logoImg.onload = function () { logoReady = true; scheduleRender(); };
+  logoImg.onerror = function () {
+    logoReady = false;
+    $('seg-logo').querySelector('[data-v="off"]').click();
+  };
+  logoImg.src = LOGO_SRC;
+
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('800 40px ObjectSans').then(scheduleRender).catch(function () {});
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
