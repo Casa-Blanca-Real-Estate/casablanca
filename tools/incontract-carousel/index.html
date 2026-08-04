@@ -818,7 +818,9 @@ wmBlackImg.onload = ()=>{ try{ if(typeof renderAll==='function') renderAll(); }c
 wmBlackImg.src = '../../assets/brand/casa-blanca-wordmark-black.png';
 const _bldgCache = {};
 function bldgTinted(hex){ if(_bldgCache[hex]) return _bldgCache[hex];
-  if(!bldgMarkImg.naturalWidth) return null;
+  // complete AND naturalWidth: naturalWidth lands as soon as the header is parsed, so
+  // tinting on that alone can cache a blank canvas and lose the mark for the session.
+  if(!bldgMarkImg.complete || !bldgMarkImg.naturalWidth) return null;
   const oc=document.createElement('canvas');oc.width=bldgMarkImg.naturalWidth;oc.height=bldgMarkImg.naturalHeight;
   const c=oc.getContext('2d');c.drawImage(bldgMarkImg,0,0);
   c.globalCompositeOperation='source-in';c.fillStyle=hex;c.fillRect(0,0,oc.width,oc.height);
@@ -1237,8 +1239,11 @@ const TA = {
   TEXT_X_LEFT:47,   TEXT_X_RIGHT:682,
   // Right edge of each 369-wide column — the text shrinks to fit inside it.
   COL_R_LEFT:403,   COL_R_RIGHT:1047,
-  P1_PHOTO_Y:200,   P1_TEXT_Y:202,   // property 1 text is flush with its photo's top
-  P2_PHOTO_Y:747,                    // property 2 text is centred against its photo
+  P1_PHOTO_Y:200,   P2_PHOTO_Y:747,
+  // Space between the agent square and each address block. The blocks hang off the
+  // agent square rather than the slide edges, which lands them about halfway down
+  // their own property photo.
+  TEXT_GAP:40,
 };
 
 // Which side the agent square sits on in one-agent mode. 'left' puts the agent bottom
@@ -1445,24 +1450,24 @@ function drawAgentSlide(cv, dealA, dealB){
   const textX    = agentLeft ? TA.TEXT_X_LEFT   : TA.TEXT_X_RIGHT;
   const textMaxW = (agentLeft ? TA.COL_R_LEFT   : TA.COL_R_RIGHT) - textX;
 
-  // Text column, mirrored around the slide's middle: property 1's block hugs the top
-  // edge of its photo, property 2's hugs the bottom edge of its photo, and the agent
-  // square is centred on the gap between the two photos — even spacing off both. Text
-  // heights vary with the neighborhood line, so positions are measured, not fixed.
-  const t1Y = TA.P1_TEXT_Y;
-  const t2Y = (TA.P2_PHOTO_Y + T.PHOTO_H) - dealTextH(dealB, true);
+  // Text column, mirrored around the slide's middle: the agent square centres on the gap
+  // between the two property photos, and each address block hangs a fixed gap off it —
+  // property 1's above, property 2's below, each landing around the middle of its own
+  // photo. Text heights vary with the neighborhood line, so positions are measured.
   const agentY = (TA.P1_PHOTO_Y + T.PHOTO_H + TA.P2_PHOTO_Y) / 2 - T.AGENT_H / 2;
+  const t1Y = agentY - TA.TEXT_GAP - dealTextH(dealA, true);
+  const t2Y = agentY + T.AGENT_H + TA.TEXT_GAP;
 
   // Agent photo — no accent stroke (the supplied photo already carries its colored
   // background and baked-in name, same as on the pair slide).
   drawFramedPhoto(ctx, dealA?.agentImg, agentX, agentY, T.AGENT_W, T.AGENT_H, dealA?.accent || ACCENTS[0], 0);
 
-  // Property 1 — photo opposite the agent, address + last ask at the top of the column.
+  // Property 1 — photo opposite the agent, address + last ask just above the agent square.
   const accA = dealA?.accent || ACCENTS[0];
   drawFramedPhoto(ctx, dealA?.propImg, photoX, TA.P1_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
   drawDealText  (ctx, dealA,           textX,  t1Y, textMaxW, true);
 
-  // Property 2 — photo stacked under the first, text flush with that photo's bottom edge.
+  // Property 2 — photo stacked under the first, text just below the agent square.
   if (dealB) {
     const accB = dealB.accent || ACCENTS[1];
     drawDealText  (ctx, dealB,          textX,  t2Y, textMaxW, true);
