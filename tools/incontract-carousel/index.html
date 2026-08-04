@@ -1227,20 +1227,17 @@ const T = {
   WM_X_RIGHT:1042, WM_Y:1281, WM_H:32,
 };
 
-// ONE-AGENT layout — same grid, same margins, same photo box as the pair slide. The
-// agent square keeps its 369px size but moves up to the header row (top-aligned with
-// the building mark, right edge flush with the pair-slide agent squares) so it sits
-// beside the agent's name. The agent square keeps its 369px size and drops to the top
-// property photo's top edge, with property 1's text under it; property 2's text is
-// centred in the column opposite its photo, where the second agent square used to live.
+// ONE-AGENT layout — same grid, same margins, same photo boxes as the pair slide. Both
+// property photos stack in one column; the other column carries property 1's address
+// block (flush with its photo), then the 369px agent square centred in the gap, then
+// property 2's address block centred against its photo. Agent between the two deals.
 const TA = {
-  AGENT_Y:200,                       // 369x369 — flush with the top property photo
-  AGENT_X_LEFT:34,  AGENT_X_RIGHT:678,
+  AGENT_X_LEFT:34,  AGENT_X_RIGHT:678,   // 369x369 — reuses T.AGENT_W / T.AGENT_H
   PHOTO_X_LEFT:33,  PHOTO_X_RIGHT:432,
   TEXT_X_LEFT:47,   TEXT_X_RIGHT:682,
   // Right edge of each 369-wide column — the text shrinks to fit inside it.
   COL_R_LEFT:403,   COL_R_RIGHT:1047,
-  P1_PHOTO_Y:200,   P1_TEXT_Y:601,   // property 1 text sits under the agent square
+  P1_PHOTO_Y:200,   P1_TEXT_Y:202,   // property 1 text is flush with its photo's top
   P2_PHOTO_Y:747,                    // property 2 text is centred against its photo
 };
 
@@ -1420,7 +1417,7 @@ function drawPairSlide(cv, dealA, dealB, slideHeader){
 
 // One-agent slide renderer — one agent, two of their properties. Same header band,
 // same photo boxes and margins as drawPairSlide; the agent's name replaces the
-// neighborhood line and their (single) photo sits beside it in the header row.
+// neighborhood line and their (single) photo sits between the two deals' address blocks.
 function drawAgentSlide(cv, dealA, dealB){
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
@@ -1448,20 +1445,27 @@ function drawAgentSlide(cv, dealA, dealB){
   const textX    = agentLeft ? TA.TEXT_X_LEFT   : TA.TEXT_X_RIGHT;
   const textMaxW = (agentLeft ? TA.COL_R_LEFT   : TA.COL_R_RIGHT) - textX;
 
-  // Agent photo — top edge flush with property 1's photo, no accent stroke (the supplied
-  // photo already carries its colored background and baked-in name, as on the pair slide).
-  drawFramedPhoto(ctx, dealA?.agentImg, agentX, TA.AGENT_Y, T.AGENT_W, T.AGENT_H, dealA?.accent || ACCENTS[0], 0);
+  // Text column: property 1's block sits flush with its photo, property 2's is centred
+  // against its own photo, and the agent square is centred in the gap between the two —
+  // so the agent reads as belonging to both deals. Heights vary with the neighborhood
+  // line, so every position is measured rather than fixed.
+  const t1Y = TA.P1_TEXT_Y, t1End = t1Y + dealTextH(dealA, true);
+  const t2Y = TA.P2_PHOTO_Y + (T.PHOTO_H - dealTextH(dealB, true)) / 2;
+  const agentY = t1End + ((t2Y - t1End) - T.AGENT_H) / 2;
 
-  // Property 1 — photo opposite the agent, address + last ask under the agent square.
+  // Agent photo — no accent stroke (the supplied photo already carries its colored
+  // background and baked-in name, same as on the pair slide).
+  drawFramedPhoto(ctx, dealA?.agentImg, agentX, agentY, T.AGENT_W, T.AGENT_H, dealA?.accent || ACCENTS[0], 0);
+
+  // Property 1 — photo opposite the agent, address + last ask at the top of the column.
   const accA = dealA?.accent || ACCENTS[0];
   drawFramedPhoto(ctx, dealA?.propImg, photoX, TA.P1_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
-  drawDealText  (ctx, dealA,           textX,  TA.P1_TEXT_Y,  textMaxW, true);
+  drawDealText  (ctx, dealA,           textX,  t1Y, textMaxW, true);
 
-  // Property 2 — photo stacked under the first, text centred against it in the agent's column.
+  // Property 2 — photo stacked under the first, text below the agent square.
   if (dealB) {
     const accB = dealB.accent || ACCENTS[1];
-    const p2TextY = TA.P2_PHOTO_Y + (T.PHOTO_H - dealTextH(dealB, true)) / 2;
-    drawDealText  (ctx, dealB,          textX,  p2TextY, textMaxW, true);
+    drawDealText  (ctx, dealB,          textX,  t2Y, textMaxW, true);
     drawFramedPhoto(ctx, dealB.propImg, photoX, TA.P2_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
   }
 
