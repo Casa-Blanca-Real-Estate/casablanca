@@ -512,7 +512,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
         </div>
       </div>
       <div class="ig" style="margin-top:10px;">
-        <div class="igrp ig-full"><label for="i-addr-A">Address</label><input type="text" id="i-addr-A" placeholder="10 HUBERT ST"></div>
+        <div class="igrp ig-full"><label for="i-addr-A" id="ic-addr-lbl-A">Address</label><input type="text" id="i-addr-A" placeholder="10 HUBERT ST"></div>
         <div class="igrp ig-full"><label for="i-price-A">Price <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— $ baked in, just type "800K"</span></label><input type="text" id="i-price-A" placeholder="800K"></div>
       </div>
     </div>
@@ -552,7 +552,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
         </div>
       </div>
       <div class="ig" style="margin-top:10px;">
-        <div class="igrp ig-full"><label for="i-addr-B">Address</label><input type="text" id="i-addr-B" placeholder="60 COLLISTER ST"></div>
+        <div class="igrp ig-full"><label for="i-addr-B" id="ic-addr-lbl-B">Address</label><input type="text" id="i-addr-B" placeholder="60 COLLISTER ST"></div>
         <div class="igrp ig-full"><label for="i-price-B">Price <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— $ baked in, just type "800K"</span></label><input type="text" id="i-price-B" placeholder="800K"></div>
       </div>
     </div>
@@ -1030,6 +1030,14 @@ function syncForm() {
   setTxt('ic-prop-lbl-A', solo ? 'Property 1 photo'   : 'Property photo');
   setTxt('ic-prop-lbl-B', solo ? 'Property 2 photo'   : 'Property photo');
   setTxt('ic-agent-lbl-A', solo ? 'Agent photo (both)' : 'Agent photo');
+  // One-agent slides carry the neighborhood in the address field, after a comma.
+  ['A','B'].forEach(s => {
+    const lbl = document.getElementById('ic-addr-lbl-' + s);
+    if (lbl) lbl.innerHTML = 'Address' + (solo
+      ? ' <span style="font-weight:400;color:var(--mid);font-size:9px;text-transform:none;letter-spacing:0;">— neighborhood after a comma</span>' : '');
+    const inp = document.getElementById('i-addr-' + s);
+    if (inp) inp.placeholder = (s === 'A' ? '10 HUBERT ST' : '60 COLLISTER ST') + (solo ? ', TRIBECA' : '');
+  });
   // One agent means one agent photo: the bottom card's agent slot is hidden in solo mode.
   const agBlockB = document.getElementById('ic-agent-block-B');
   if (agBlockB) agBlockB.style.display = solo ? 'none' : '';
@@ -1222,17 +1230,24 @@ const T = {
 // ONE-AGENT layout — same grid, same margins, same photo box as the pair slide. The
 // agent square keeps its 369px size but moves up to the header row (top-aligned with
 // the building mark, right edge flush with the pair-slide agent squares) so it sits
-// beside the agent's name. Each property's address/last-ask block is then centred in
-// the column opposite its photo, exactly where the second agent square used to live.
+// beside the agent's name. The agent square keeps its 369px size and drops to the top
+// property photo's top edge, with property 1's text under it; property 2's text is
+// centred in the column opposite its photo, where the second agent square used to live.
 const TA = {
-  AGENT_X:678, AGENT_Y:28,           // 369x369 — reuses T.AGENT_W / T.AGENT_H
-  // Property 1 — photo left (same box as the pair-slide upper deal), text right.
-  P1_PHOTO_X:33,  P1_PHOTO_Y:200,
-  P1_TEXT_X:682,  P1_TEXT_Y:496,
-  // Property 2 — mirrored: text left, photo right (same boxes as the lower deal).
-  P2_PHOTO_X:432, P2_PHOTO_Y:747,
-  P2_TEXT_X:47,   P2_TEXT_Y:945,
+  AGENT_Y:200,                       // 369x369 — flush with the top property photo
+  AGENT_X_LEFT:34,  AGENT_X_RIGHT:678,
+  PHOTO_X_LEFT:33,  PHOTO_X_RIGHT:432,
+  TEXT_X_LEFT:47,   TEXT_X_RIGHT:682,
+  // Right edge of each 369-wide column — the text shrinks to fit inside it.
+  COL_R_LEFT:403,   COL_R_RIGHT:1047,
+  P1_PHOTO_Y:200,   P1_TEXT_Y:601,   // property 1 text sits under the agent square
+  P2_PHOTO_Y:747,                    // property 2 text is centred against its photo
 };
+
+// Which side the agent square sits on in one-agent mode. 'left' puts the agent bottom
+// left of the header with property 1's photo on the right (property sides swapped from
+// the pair slide); 'right' mirrors the whole slide. One switch flips everything.
+const IC_AGENT_SIDE = 'left';   // 'left' | 'right'
 
 // Brand accent palette — mirrors the swatch column on the cover panel exactly.
 const ACCENTS = ['#aaa3cf','#e3b462','#4e5b41','#72878c','#e88f81','#d55554'];
@@ -1280,38 +1295,66 @@ function drawFramedPhoto(ctx, img, x, y, w, h, accent, t){
   ctx.restore();
 }
 
-// Address (bold caps, shrink-to-fit) + "Last Ask:" (regular) + price (heavy, $ baked in).
-// 2 lines, top-aligned at (x,y). All text uses the brand -50/1000 em kerning. The text
-// must fit inside maxW — the address shrinks down (to a floor) if it would overflow.
-function drawDealText(ctx, deal, x, y, maxW){
+// One-agent slides let the address field carry the neighborhood after a comma (or a
+// "·" / "|"): "304 E 73RD ST, UPPER EAST SIDE" sets the neighborhood on its own line
+// under the address — no extra field to fill in. Everything before the first separator
+// is the address. Returns ['', ''] parts, either of which may be empty.
+function splitAddress(raw){
+  const s = (raw || '').trim();
+  const m = s.match(/\s*[,·|]\s*/);
+  if (!m) return [s, ''];
+  return [s.slice(0, m.index).trim(), s.slice(m.index + m[0].length).trim()];
+}
+// Height of a deal's text block, so callers can centre it against a photo.
+function dealTextH(deal, withNbhd){
+  const lines = (withNbhd && splitAddress(deal && deal.address)[1]) ? 3 : 2;
+  return T.TXT_FONT + (lines - 1) * T.TXT_LH;
+}
+
+// Address (bold caps, shrink-to-fit) + optional neighborhood (regular) + "Last Ask:"
+// (regular) + price (heavy, $ baked in). Top-aligned at (x,y). All text uses the brand
+// -50/1000 em kerning. Each line must fit inside maxW — it shrinks down to a floor if
+// it would overflow. Pass withNbhd to split a "ADDRESS, NEIGHBORHOOD" address onto two
+// lines (one-agent slides only — the pair slide has no room under its text block).
+function drawDealText(ctx, deal, x, y, maxW, withNbhd){
   ctx.save();
   ctx.fillStyle = '#000';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  const addr = (deal.address || '').toUpperCase().trim() || 'ADDRESS';
+  const [addrPart, nbhdPart] = withNbhd ? splitAddress(deal.address) : [(deal.address||'').trim(), ''];
+  const addr = addrPart.toUpperCase() || 'ADDRESS';
+  const nbhd = nbhdPart.toUpperCase();
   // Bake "$" into the price — strip any leading $ the user typed so they never have to.
   const raw = (deal.price || '').trim().replace(/^\$+/, '');
   const price = raw ? '$' + raw : '';
 
-  // Line 1: address. Shrink the font size from T.TXT_FONT down to a 22px floor until it
-  // fits within maxW. This keeps long addresses from running off the agent square's edge.
-  let aSz = T.TXT_FONT;
-  ctx.letterSpacing = trackPx(aSz);
-  ctx.font = f(800, aSz);
-  while (aSz > 22 && ctx.measureText(addr).width > maxW) {
-    aSz -= 1;
-    ctx.letterSpacing = trackPx(aSz);
-    ctx.font = f(800, aSz);
-  }
-  ctx.fillText(addr, x, y);
+  // Shrink a line's font size from T.TXT_FONT down to a 22px floor until it fits maxW.
+  // This keeps long addresses from running off the agent square's edge.
+  const fit = (txt, weight) => {
+    let sz = T.TXT_FONT;
+    ctx.letterSpacing = trackPx(sz);
+    ctx.font = f(weight, sz);
+    while (sz > 22 && ctx.measureText(txt).width > maxW) {
+      sz -= 1;
+      ctx.letterSpacing = trackPx(sz);
+      ctx.font = f(weight, sz);
+    }
+  };
 
-  // Line 2: "Last Ask:" regular + price heavy. Stays at the original (T.TXT_FONT) size.
+  // Line 1: address (heavy). Line 2 (optional): neighborhood, regular weight — same
+  // treatment the header gives the neighborhood under "IN CONTRACT:".
+  fit(addr, 800);
+  ctx.fillText(addr, x, y);
+  let row = 1;
+  if (nbhd) { fit(nbhd, 400); ctx.fillText(nbhd, x, y + row * T.TXT_LH); row++; }
+
+  // Last line: "Last Ask:" regular + price heavy. Stays at the original (T.TXT_FONT) size.
   const lasklbl = 'Last Ask: ';
   ctx.letterSpacing = trackPx(T.TXT_FONT);
   ctx.font = f(400, T.TXT_FONT);
   const lw = ctx.measureText(lasklbl).width;
-  ctx.fillText(lasklbl, x, y + T.TXT_LH);
+  ctx.fillText(lasklbl, x, y + row * T.TXT_LH);
   ctx.font = f(900, T.TXT_FONT);
-  ctx.fillText(price || '—', x + lw, y + T.TXT_LH);
+  ctx.fillText(price || '—', x + lw, y + row * T.TXT_LH);
   ctx.letterSpacing = '0px';
   ctx.restore();
 }
@@ -1396,20 +1439,32 @@ function drawAgentSlide(cv, dealA, dealB){
   ctx.letterSpacing = '0px';
   ctx.restore();
 
-  // Agent photo — beside the name, no accent stroke (the supplied photo already carries
-  // its colored background and baked-in name, same as the pair slide).
-  drawFramedPhoto(ctx, dealA?.agentImg, TA.AGENT_X, TA.AGENT_Y, T.AGENT_W, T.AGENT_H, dealA?.accent || ACCENTS[0], 0);
+  // Sides. With the agent on the left, property 1's photo sits on the right and
+  // property 2's on the left — the mirror of the pair slide. IC_AGENT_SIDE flips it all.
+  const agentLeft = IC_AGENT_SIDE !== 'right';
+  const agentX  = agentLeft ? TA.AGENT_X_LEFT  : TA.AGENT_X_RIGHT;
+  const p1Photo = agentLeft ? TA.PHOTO_X_RIGHT : TA.PHOTO_X_LEFT;
+  const p2Photo = agentLeft ? TA.PHOTO_X_LEFT  : TA.PHOTO_X_RIGHT;
+  const p1Text  = agentLeft ? TA.TEXT_X_LEFT   : TA.TEXT_X_RIGHT;   // under the agent
+  const p2Text  = agentLeft ? TA.TEXT_X_RIGHT  : TA.TEXT_X_LEFT;    // opposite its photo
+  const p1MaxW  = (agentLeft ? TA.COL_R_LEFT  : TA.COL_R_RIGHT) - p1Text;
+  const p2MaxW  = (agentLeft ? TA.COL_R_RIGHT : TA.COL_R_LEFT)  - p2Text;
 
-  // Property 1 — photo left, address + last ask centred in the right column.
+  // Agent photo — top edge flush with property 1's photo, no accent stroke (the supplied
+  // photo already carries its colored background and baked-in name, as on the pair slide).
+  drawFramedPhoto(ctx, dealA?.agentImg, agentX, TA.AGENT_Y, T.AGENT_W, T.AGENT_H, dealA?.accent || ACCENTS[0], 0);
+
+  // Property 1 — photo opposite the agent, address + last ask under the agent square.
   const accA = dealA?.accent || ACCENTS[0];
-  drawFramedPhoto(ctx, dealA?.propImg, TA.P1_PHOTO_X, TA.P1_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
-  drawDealText  (ctx, dealA,           TA.P1_TEXT_X,  TA.P1_TEXT_Y, (TA.AGENT_X + T.AGENT_W) - TA.P1_TEXT_X);
+  drawFramedPhoto(ctx, dealA?.propImg, p1Photo, TA.P1_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
+  drawDealText  (ctx, dealA,           p1Text,  TA.P1_TEXT_Y,  p1MaxW, true);
 
-  // Property 2 — mirrored.
+  // Property 2 — mirrored: photo under the agent's column, text centred against it.
   if (dealB) {
     const accB = dealB.accent || ACCENTS[1];
-    drawDealText  (ctx, dealB,          TA.P2_TEXT_X,  TA.P2_TEXT_Y, (T.L_AGENT_X + T.AGENT_W) - TA.P2_TEXT_X);
-    drawFramedPhoto(ctx, dealB.propImg, TA.P2_PHOTO_X, TA.P2_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
+    const p2TextY = TA.P2_PHOTO_Y + (T.PHOTO_H - dealTextH(dealB, true)) / 2;
+    drawDealText  (ctx, dealB,          p2Text,  p2TextY, p2MaxW, true);
+    drawFramedPhoto(ctx, dealB.propImg, p2Photo, TA.P2_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
   }
 
   // Wordmark — official casa-blanca-wordmark-black.png, right-aligned at the bottom.
@@ -1748,6 +1803,26 @@ function hideAgentResults() {
   document.getElementById('agent-search').value = '';
 }
 
+// Every headshot in assets/agents/ has the agent's name baked into the square. A
+// one-agent slide already prints the name in the header, so it prefers a nameless
+// version when one exists: assets/agents/clean/<same filename>. That's the profile-pic
+// tool's "SQ · Clean" export — drop files in there to switch an agent over, no manifest
+// to regenerate. Falls back to the named square whenever a clean one is missing.
+function probeImg(url){
+  return new Promise(res => { const i = new Image(); i.onload = () => res(url); i.onerror = () => res(''); i.src = url; });
+}
+async function cleanAgentSrc(src){
+  const base = src.replace(/^.*\//, '').replace(/\.[^.]+$/, '');
+  const ext  = (src.match(/\.[^.]+$/) || ['.jpg'])[0];
+  // Same extension first, then the other formats the library uses.
+  const exts = [ext, ...['.jpg','.png','.jpeg','.webp'].filter(e => e !== ext)];
+  for (const e of exts) {
+    const hit = await probeImg('../../assets/agents/clean/' + base + e);
+    if (hit) return hit;
+  }
+  return src;
+}
+
 async function applyAgentFromLibrary(key, name, slot) {
   hideAgentResults();
   const entry = agentLibrary.find(a => a.key === key);
@@ -1759,9 +1834,11 @@ async function applyAgentFromLibrary(key, name, slot) {
   let d = pair[targetSlot === 'B' ? 1 : 0];
   if (targetSlot === 'B' && !d && typeof ensureSlotB === 'function') d = ensureSlotB();
   if (!d) return;
+  // One-agent slides take the nameless headshot when the library has one for them.
+  const src = (pair[0] && pair[0].soloAgent) ? await cleanAgentSrc(entry.src) : entry.src;
   const img = new Image();
   img.onload = () => {
-    d.agentImg = img; d.agentSrc = entry.src;
+    d.agentImg = img; d.agentSrc = src;
     d.agentName = name;
     // One-agent mode: the agent we just picked also names the slide header.
     if (targetSlot === 'A' && d.soloAgent && !((d.agentLabel||'').trim())) {
@@ -1771,9 +1848,9 @@ async function applyAgentFromLibrary(key, name, slot) {
     if (typeof updateStripLabel === 'function') updateStripLabel(activeIdx);
     // Update the correct per-slot dropzone thumbnail.
     if (typeof dealsForSlide === 'function') {
-      syncDZ('dz-agent-' + targetSlot, 'th-agent-' + targetSlot, entry.src);
+      syncDZ('dz-agent-' + targetSlot, 'th-agent-' + targetSlot, src);
     } else {
-      syncDZ('dz-agent', 'th-agent', entry.src);
+      syncDZ('dz-agent', 'th-agent', src);
     }
     var sa = document.getElementById('btn-save-agent'); if (sa) sa.style.display = 'none';
     if (activeIdx === 1 && typeof tryDetectAccent === 'function') tryDetectAccent(img);
@@ -1781,7 +1858,7 @@ async function applyAgentFromLibrary(key, name, slot) {
     showToast('✓ ' + name + ' applied');
   };
   img.onerror = () => showToast('✗ Failed to load agent photo');
-  img.src = entry.src;
+  img.src = src;
 }
 
 async function removeAgentFromLibrary(key, name) {
