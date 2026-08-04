@@ -1439,16 +1439,14 @@ function drawAgentSlide(cv, dealA, dealB){
   ctx.letterSpacing = '0px';
   ctx.restore();
 
-  // Sides. With the agent on the left, property 1's photo sits on the right and
-  // property 2's on the left — the mirror of the pair slide. IC_AGENT_SIDE flips it all.
+  // Sides. Both property photos stack in the column opposite the agent — not staggered
+  // like the pair slide — so the agent square and both address blocks share one column.
+  // IC_AGENT_SIDE flips the whole slide to its mirror image.
   const agentLeft = IC_AGENT_SIDE !== 'right';
-  const agentX  = agentLeft ? TA.AGENT_X_LEFT  : TA.AGENT_X_RIGHT;
-  const p1Photo = agentLeft ? TA.PHOTO_X_RIGHT : TA.PHOTO_X_LEFT;
-  const p2Photo = agentLeft ? TA.PHOTO_X_LEFT  : TA.PHOTO_X_RIGHT;
-  const p1Text  = agentLeft ? TA.TEXT_X_LEFT   : TA.TEXT_X_RIGHT;   // under the agent
-  const p2Text  = agentLeft ? TA.TEXT_X_RIGHT  : TA.TEXT_X_LEFT;    // opposite its photo
-  const p1MaxW  = (agentLeft ? TA.COL_R_LEFT  : TA.COL_R_RIGHT) - p1Text;
-  const p2MaxW  = (agentLeft ? TA.COL_R_RIGHT : TA.COL_R_LEFT)  - p2Text;
+  const agentX   = agentLeft ? TA.AGENT_X_LEFT  : TA.AGENT_X_RIGHT;
+  const photoX   = agentLeft ? TA.PHOTO_X_RIGHT : TA.PHOTO_X_LEFT;
+  const textX    = agentLeft ? TA.TEXT_X_LEFT   : TA.TEXT_X_RIGHT;
+  const textMaxW = (agentLeft ? TA.COL_R_LEFT   : TA.COL_R_RIGHT) - textX;
 
   // Agent photo — top edge flush with property 1's photo, no accent stroke (the supplied
   // photo already carries its colored background and baked-in name, as on the pair slide).
@@ -1456,15 +1454,15 @@ function drawAgentSlide(cv, dealA, dealB){
 
   // Property 1 — photo opposite the agent, address + last ask under the agent square.
   const accA = dealA?.accent || ACCENTS[0];
-  drawFramedPhoto(ctx, dealA?.propImg, p1Photo, TA.P1_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
-  drawDealText  (ctx, dealA,           p1Text,  TA.P1_TEXT_Y,  p1MaxW, true);
+  drawFramedPhoto(ctx, dealA?.propImg, photoX, TA.P1_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
+  drawDealText  (ctx, dealA,           textX,  TA.P1_TEXT_Y,  textMaxW, true);
 
-  // Property 2 — mirrored: photo under the agent's column, text centred against it.
+  // Property 2 — photo stacked under the first, text centred against it in the agent's column.
   if (dealB) {
     const accB = dealB.accent || ACCENTS[1];
     const p2TextY = TA.P2_PHOTO_Y + (T.PHOTO_H - dealTextH(dealB, true)) / 2;
-    drawDealText  (ctx, dealB,          p2Text,  p2TextY, p2MaxW, true);
-    drawFramedPhoto(ctx, dealB.propImg, p2Photo, TA.P2_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
+    drawDealText  (ctx, dealB,          textX,  p2TextY, textMaxW, true);
+    drawFramedPhoto(ctx, dealB.propImg, photoX, TA.P2_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
   }
 
   // Wordmark — official casa-blanca-wordmark-black.png, right-aligned at the bottom.
