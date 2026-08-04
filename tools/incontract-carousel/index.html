@@ -1242,8 +1242,10 @@ const TA = {
   P1_PHOTO_Y:200,   P2_PHOTO_Y:747,
   // Space between the agent square and each address block. The blocks hang off the
   // agent square rather than the slide edges, which lands them about halfway down
-  // their own property photo.
-  TEXT_GAP:40,
+  // their own property photo. The lower block leads with the heavy address line while
+  // the upper one closes on the lighter "Last Ask" line, so an equal measured gap reads
+  // tighter underneath — TEXT_GAP_BOTTOM_ADJ is the optical correction for that.
+  TEXT_GAP:40, TEXT_GAP_BOTTOM_ADJ:3,
 };
 
 // Which side the agent square sits on in one-agent mode. 'left' puts the agent bottom
@@ -1456,7 +1458,7 @@ function drawAgentSlide(cv, dealA, dealB){
   // photo. Text heights vary with the neighborhood line, so positions are measured.
   const agentY = (TA.P1_PHOTO_Y + T.PHOTO_H + TA.P2_PHOTO_Y) / 2 - T.AGENT_H / 2;
   const t1Y = agentY - TA.TEXT_GAP - dealTextH(dealA, true);
-  const t2Y = agentY + T.AGENT_H + TA.TEXT_GAP;
+  const t2Y = agentY + T.AGENT_H + TA.TEXT_GAP + TA.TEXT_GAP_BOTTOM_ADJ;
 
   // Agent photo — no accent stroke (the supplied photo already carries its colored
   // background and baked-in name, same as on the pair slide).
