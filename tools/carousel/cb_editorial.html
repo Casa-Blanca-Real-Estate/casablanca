@@ -195,21 +195,40 @@ const PH={
   handle:'@handle', contact:'Contact the agent to schedule a tour.\nStreetEasy link in bio.'
 };
 
-// post status → badge text + teaser price lead-in (lead-in stays editable per teaser)
+// Post side + status → badge text, teaser price lead-in, teaser agent lead-in.
+// The badge reads the same on both sides (CLOSED stays CLOSED); it's the price lead-in that
+// carries sold vs acquired, and the agent line that reads "with agent" vs "by agent".
+// Every derived string stays editable per post — these are defaults, not locks.
+const SIDE_OPTS=[{v:'sell',t:'Sell side'},{v:'buy',t:'Buy side'}];
+const STATUS_OPTS=[{v:'listed',t:'Listed'},{v:'exclusive',t:'Exclusive'},{v:'incontract',t:'In Contract'},{v:'closed',t:'Closed'}];
 const STATUSES={
-  justlisted:{badge:'JUST LISTED', leadin:'Listed at'},
-  listed:{badge:'LISTED',       leadin:'Listed at'},
-  exclusive:{badge:'EXCLUSIVE',  leadin:'Offered at'},
-  incontract:{badge:'IN CONTRACT', leadin:'In contract at'},
-  justsold:{badge:'JUST SOLD',  leadin:'Sold for'},
-  closed:{badge:'CLOSED',       leadin:'Acquired for'}
+  sell:{
+    listed:{badge:'LISTED',       leadin:'Listed at'},
+    exclusive:{badge:'EXCLUSIVE', leadin:'Offered at'},
+    incontract:{badge:'IN CONTRACT', leadin:'In contract at'},
+    closed:{badge:'CLOSED',       leadin:'Sold for'}
+  },
+  buy:{
+    listed:{badge:'LISTED',       leadin:'Listed at'},
+    exclusive:{badge:'EXCLUSIVE', leadin:'Offered at'},
+    incontract:{badge:'IN CONTRACT', leadin:'In contract at'},
+    closed:{badge:'CLOSED',       leadin:'Acquired for'}
+  }
 };
-const STATUS_OPTS=[{v:'justlisted',t:'Just Listed'},{v:'listed',t:'Listed'},{v:'exclusive',t:'Exclusive'},{v:'incontract',t:'In Contract'},{v:'justsold',t:'Just Sold'},{v:'closed',t:'Closed'}];
+// Long names get the abbreviated lead-in ("with agent" → "w/ agent") so the name itself
+// keeps the width; "by agent" is already short enough to leave alone.
+const AGENT_LEADIN={sell:'with agent', buy:'by agent'};
+const AGENT_LEADIN_ABBR={sell:'w/ agent', buy:'by agent'};
+const AGENT_ABBR_AT=20;   // characters in the agent name
+function statusDef(){const side=STATUSES[S.side]||STATUSES.sell;return side[S.status]||side.closed;}
+function agentLead(name){const m=(String(name||'').trim().length>=AGENT_ABBR_AT)?AGENT_LEADIN_ABBR:AGENT_LEADIN;return m[S.side]||m.sell;}
+// Older saves used justlisted/justsold; fold them into the four-status model.
+function migrateStatus(st){st=String(st||'');if(st==='justlisted')return'listed';if(st==='justsold')return'closed';return STATUSES.sell[st]?st:'closed';}
 
 // ── slide factories ──
 function blankImg(){return{img:null,src:null,ox:0,oy:0,scale:1,border:false,bc:'#ffffff'};}
 function mkCover(){return{type:'cover',badge:'',badgeColor:'#0f0f0f',image:blankImg(),subhead:'',subColor:'#ffffff',subSize:82,subY:0.645,subAlign:'left'};}
-function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',leadin:'',beds:'',baths:'',sqft:'',image:blankImg(),descRuns:[]};}
+function mkTeaser(){return{type:'teaser',address:'',price:'',agent:'',leadin:'',agentLeadin:'',beds:'',baths:'',sqft:'',image:blankImg(),descRuns:[]};}
 function mkSingleA(){return{type:'singleA',image:blankImg(),descRuns:[]};}
 function mkSingleB(){return{type:'singleB',image:blankImg(),descRuns:[],tx:0.055,ty:0.70,color:'#ffffff',align:'left'};}
 function mkDoubleA(){return{type:'doubleA',top:blankImg(),bottom:blankImg(),descRuns:[]};}
@@ -217,7 +236,7 @@ function mkContext(kind){return{type:'context',kind:kind||'building',name:'',ima
 function mkEnd(){return{type:'end',address:'',price:'',agents:[{image:blankImg(),handle:''},{image:blankImg(),handle:''}],contact:''};}
 function makeKind(t){if(t==='teaser')return mkTeaser();if(t==='singleA')return mkSingleA();if(t==='singleB')return mkSingleB();if(t==='doubleA')return mkDoubleA();if(t==='building')return mkContext('building');if(t==='neighborhood')return mkContext('neighborhood');if(t==='end')return mkEnd();return mkSingleA();}
 
-const S={ accent:'#aaa3cf', showPlaceholders:true, status:'closed', cover:mkCover(),
+const S={ accent:'#aaa3cf', showPlaceholders:true, side:'sell', status:'closed', cover:mkCover(),
   mid:[ mkTeaser(), mkSingleA(), mkDoubleA(), mkContext('building'), mkSingleB(), mkEnd() ] };
 let active=0, ACTIVE=null, ACTIVEIMG=null;
 
@@ -312,7 +331,7 @@ function drawCover(ctx){const c=S.cover;ctx.clearRect(0,0,W,H);ctx.fillStyle='#f
   // cover image 1080×1076 @ Y=161
   drawPic(ctx,c.image,0,161,1080,1076);
   // badge — 35pt(105px) max → 30pt(90px) min, fit to BODYW, anchored above image (bottom border @161)
-  const bt=ph(c.badge,(STATUSES[S.status]||STATUSES.closed).badge),btxt=(bt.t||'').toUpperCase();
+  const bt=ph(c.badge,statusDef().badge),btxt=(bt.t||'').toUpperCase();
   if(btxt){setLS(ctx,true);
     // CLOSED badge: fixed cap-height 106px, top Y=54, centered (matches official template); shrinks only if wider than body
     const capTop=54,capH=106;let sz=capH/CAPR;ctx.font=f(800,sz);
@@ -363,28 +382,40 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
   // the two blocks within the space above the image.
   const addrRuns=[{text:addr.t.toUpperCase(),bold:false}];
   const addrLines=drawRunsCount(addrRuns,MEAS,sz);
-  const leftLines=addrLines+2;                 // address(+wrap) + price + agent
+  // Agent line: shrink the type to fit a long name on one line, but only down to 85% of the
+  // header size — a name that still doesn't fit at that floor is allowed to wrap instead of
+  // shrinking away to nothing.
+  // The specs sit in the top-right corner (see below), so the agent line is never sharing a
+  // row with them and can always use the near-full width.
+  const agentW=W-X-57;
+  const agRuns=[{text:(t.agentLeadin||agentLead(ag.t))+' ',bold:false},{text:ag.t,bold:true}];
+  const AG_FLOOR=Math.round(sz*0.85*10)/10;
+  let agSz=sz;
+  if(drawRunsCount(agRuns,agentW,agSz)>1){
+    for(let s2=sz-0.5;s2>=AG_FLOOR;s2-=0.5){agSz=s2;if(drawRunsCount(agRuns,agentW,s2)<=1)break;}
+  }
+  const agLh=lh*(agSz/sz), agLines=drawRunsCount(agRuns,agentW,agSz);
+
+  const leftLines=addrLines+1+agLines;         // address(+wrap) + price + agent(+wrap)
   const nLines=Math.max(leftLines,specItems.length);
   const blockTop=Math.max(0,(IMGTOP-nLines*lh)/2);
 
-  // LEFT block. When specs share the row, keep the agent line within MEAS so it can't
-  // run under the specs; otherwise the agent name may use the near-full width.
+  // LEFT block — address / price / agent, stacked from the top of the centered block.
   let y=blockTop;
   const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
   if(addr.t||S.showPlaceholders)hit('address',X,y,MEAS,ar.lines*lh);y=ar.bottom;
-  const lead=(t.leadin||(STATUSES[S.status]||STATUSES.closed).leadin);
+  const lead=(t.leadin||statusDef().leadin);
   const r2=drawRuns(ctx,[{text:lead+' ',bold:false},{text:pr.t,bold:true}],X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:pr.isph});
   hit('price',X,y,MEAS,lh);y=r2.bottom;
-  const agentW=hasSpecs?MEAS:(W-X-57);
-  const r3=drawRuns(ctx,[{text:'with agent ',bold:false},{text:ag.t,bold:true}],X,y,agentW,sz,lh,{justify:false,color:BODY,isph:ag.isph});
-  hit('agent',X,y,agentW,lh);y=r3.bottom;
+  const r3=drawRuns(ctx,agRuns,X,y,agentW,agSz,agLh,{justify:false,color:BODY,isph:ag.isph});
+  hit('agent',X,y,agentW,r3.lines*agLh);y=r3.bottom;
 
-  // RIGHT block — filled specs only, right-aligned, BOTTOM-aligned with the left block
-  // (the last spec line shares the baseline of the 'with agent' line).
+  // RIGHT block — filled specs only, right-aligned, TOP-aligned with the address so the
+  // corner reads clean and the bottom-right stays clear for a long agent name.
   if(hasSpecs){
     const RX=W-57;
     ctx.textAlign='right';ctx.font=f(800,sz);ctx.fillStyle=BODY;
-    let ry=blockTop+Math.max(0,(leftLines-specItems.length))*lh;
+    let ry=blockTop;
     specItems.forEach(L=>{
       ctx.fillText(L.txt,RX,ry+sz*ASC);
       const tw=ctx.measureText(L.txt).width;
@@ -620,8 +651,9 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
   head.innerHTML=`<div class="slidetype">${KINDNAME[k]||k}</div><div class="slidename">${slideLabel(active)}</div>`;body.appendChild(head);
 
   if(k==='cover'){
-    body.appendChild(seg('Status (whole post)',STATUS_OPTS,S.status,v=>{S.status=v;o.badge=STATUSES[v].badge;buildEditor();renderAll();}));
-    body.appendChild(fld('Badge',o.badge,v=>{o.badge=v;renderAll();},(STATUSES[S.status]||STATUSES.closed).badge,'badge','All caps, sits above the cover photo. Status sets this; edit freely.'));
+    body.appendChild(seg('Deal side (whole post)',SIDE_OPTS,S.side,v=>{S.side=v;o.badge=statusDef().badge;buildEditor();renderAll();},null,'Which side Casa Blanca represented. Sets the badge (Closed reads SOLD on sell side, ACQUIRED on buy side), the price lead-in, and the agent lead-in.'));
+    body.appendChild(seg('Status (whole post)',STATUS_OPTS,S.status,v=>{S.status=v;o.badge=statusDef().badge;buildEditor();renderAll();}));
+    body.appendChild(fld('Badge',o.badge,v=>{o.badge=v;renderAll();},statusDef().badge,'badge','All caps, sits above the cover photo. Side + status set this; edit freely.'));
     body.appendChild(seg('Badge color',[{v:'#0f0f0f',t:'Black'},{v:'#ffffff',t:'White'},{v:'__accent',t:'Accent'}],o.badgeColor===S.accent?'__accent':o.badgeColor,v=>{o.badgeColor=(v==='__accent')?S.accent:v;renderAll();}));
     imageBlock(body,'Cover photo',o.image,'1080×1076. Drag on the canvas to reposition.');
     body.appendChild(taField('Subhead  ·  press Enter for a hard line break',o.subhead,v=>{o.subhead=v;renderAll();},PH.subhead,'subhead','Each line becomes its own ALL-CAPS line on the cover.'));
@@ -632,13 +664,14 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
   }
   else if(k==='teaser'){
     body.appendChild(fld('Address line',o.address,v=>{o.address=v;renderAll();},'71 BLEECKER ST #2E, NOHO, NYC','address'));
-    body.appendChild(fld('Price lead-in',o.leadin,v=>{o.leadin=v;renderAll();},(STATUSES[S.status]||STATUSES.closed).leadin,null,'Defaults from the post status set on the cover (e.g. Listed at / Sold for). Edit to override.'));
+    body.appendChild(fld('Price lead-in',o.leadin,v=>{o.leadin=v;renderAll();},statusDef().leadin,null,'Defaults from the side + status set on the cover (e.g. Listed at / Sold for). Edit to override.'));
     body.appendChild(fld('Price',o.price,v=>{o.price=v;renderAll();},'$5.4M','price'));
-    divlabel(body,'Listing specs (Listed / Just Listed posts) — fill any to switch the teaser to the MLS-style header.');
+    divlabel(body,'Listing specs (Listed / Exclusive posts) — fill any to switch the teaser to the MLS-style header.');
     body.appendChild(fld('Beds',o.beds,v=>{o.beds=v;renderAll();},'2','beds'));
     body.appendChild(fld('Baths',o.baths,v=>{o.baths=v;renderAll();},'2.5','beds'));
     body.appendChild(fld('Sqft',o.sqft,v=>{o.sqft=v;renderAll();},'1,530','sqft'));
-    body.appendChild(fld('With agent',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent'));
+    body.appendChild(fld('Agent lead-in',o.agentLeadin,v=>{o.agentLeadin=v;renderAll();},agentLead(o.agent||PH.agent),'agent','Defaults from the deal side (sell → “with agent”, buy → “by agent”), shortening to “w/ agent” once the name runs long. Edit to override.'));
+    body.appendChild(fld('Agent name',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent','Long names shorten the lead-in to “w/ agent”, then shrink the type, before ever wrapping.'));
     imageBlock(body,'Photo',o.image,'1080×720. Drag on the canvas to reposition.');
     body.appendChild(richField('Description  ·  select text + Bold',o.descRuns,runs=>{o.descRuns=runs;renderAll();},'desc'));
     const cond=document.createElement('button');cond.className='delbtn';cond.style.cssText='background:#f3f0ff;border-color:#cfc7f0;color:#5a4fa3;margin-bottom:6px';cond.textContent='✨ Condense description with AI';cond.onclick=condenseDescription;body.appendChild(cond);
@@ -789,9 +822,9 @@ async function autoFill(photos){
 
 function fmtPrice(p){p=(p||'').trim();return p?(p[0]==='$'?p:'$'+p):'';}
 function applyFacts(f){
-  const st={'for sale':'justlisted','in contract':'incontract','sold':'justsold','closed':'closed'};
+  const st={'for sale':'listed','in contract':'incontract','sold':'closed','closed':'closed'};
   const s=(f.status||'').toLowerCase();
-  for(const k in st){if(s.includes(k)){S.status=st[k];S.cover.badge=STATUSES[S.status].badge;break;}}
+  for(const k in st){if(s.includes(k)){S.status=st[k];S.cover.badge=statusDef().badge;break;}}
   const price=fmtPrice(f.price);
   if(!(S.cover.subhead||'').trim()){const lines=[];if(f.neighborhood)lines.push(String(f.neighborhood).toUpperCase());if(price)lines.push(price);if(lines.length)S.cover.subhead=lines.join('\n');}
   const t=S.mid.find(m=>m.type==='teaser');
@@ -856,14 +889,15 @@ function doAI(){
   const LINE_BUDGET={singleA:5,singleB:5,doubleA:3,context:5};
   const WORDS_PER_LINE={singleB:5}; // default 9
   const slides=mids.map(m=>({kind:m.type,maxLines:(LINE_BUDGET[m.type]||4),wpl:(WORDS_PER_LINE[m.type]||9)}));
-  const statusLabel={justlisted:'Just Listed',incontract:'In Contract',justsold:'Just Sold',closed:'Closed (off-market sale)'}[S.status]||S.status;
+  const statusLabel={listed:'Listed',exclusive:'Exclusive (off-market)',incontract:'In Contract',closed:(S.side==='buy'?'Closed — acquired':'Closed — sold')}[S.status]||S.status;
+  const sideLabel=S.side==='buy'?'buy side — Casa Blanca represented the buyer':'sell side — Casa Blanca represented the seller';
   const prompt=`You are the copywriter for Casa Blanca, a New York City luxury real-estate brand.
 Voice: understated, confident, editorial — like a design magazine, not a hype ad. Present tense. No exclamation marks, no emoji, no hashtags. Concrete and specific over superlatives. Never invent facts that aren't supported by the listing details below.
 
 Listing facts (JSON):
 ${JSON.stringify(facts,null,2)}
 
-Post status: ${statusLabel}.
+Post status: ${statusLabel} (${sideLabel}).
 
 Each slide has a HARD copy budget — the text is drawn on a fixed canvas and WILL run off the frame if you exceed it. The "heading" is drawn inline right before the "body", so heading + body together must fit the budget. Always prefer concise copy; it is better to be a line short than one line over.
 
@@ -872,7 +906,7 @@ ${slides.map((s,i)=>`  ${i+1}. ${s.kind} — heading + body must fit ${s.maxLine
 
 Return ONLY a JSON object (no markdown fences, no commentary) with this exact shape:
 {
-  "coverSubhead": "the cover headline: 2-3 SHORT lines separated by \\n, each line ≤4 words, ≤9 words TOTAL so it never runs off the frame. For a Closed/Just Sold post the last line is usually the price.",
+  "coverSubhead": "the cover headline: 2-3 SHORT lines separated by \\n, each line ≤4 words, ≤9 words TOTAL so it never runs off the frame. For a Closed post the last line is usually the price.",
   "teaser": "one short sentence (≤18 words) for the second slide",
   "slides": [ { "heading": "≤4-word Title-Case heading", "body": "body copy that, together with the heading, fits this slide's line budget above" } ]
 }
@@ -957,7 +991,7 @@ function edAutosave(){ if(!devAuthed())return; if(!editorialHasContent()){ try{l
   edMarkSaved();
 }
 function applyEditorial(d){
-  if(d.accent) S.accent=d.accent; if(d.status) S.status=d.status; if('showPlaceholders' in d) S.showPlaceholders=d.showPlaceholders;
+  if(d.accent) S.accent=d.accent; if(d.side) S.side=(d.side==='buy'?'buy':'sell'); if(d.status) S.status=migrateStatus(d.status); if('showPlaceholders' in d) S.showPlaceholders=d.showPlaceholders;
   if(d.cover){ S.cover=Object.assign(mkCover(),d.cover); reviveImg(S.cover.image); }
   if(Array.isArray(d.mid)&&d.mid.length) S.mid=d.mid.map(reviveSlide);
   active=Math.min(Math.max(0,active), slideCount()-1);
@@ -968,7 +1002,7 @@ function edSig(){ try{ return serializeEditorial().length+'|'+(S.cover.subhead||
 let _edSavedSig='';
 function edMarkSaved(){ _edSavedSig=edSig(); edRefreshStatus(); }
 function edRefreshStatus(){ const el=document.getElementById('ed-save-status'); if(!el)return; if(!devAuthed()){el.textContent='';return;} const dirty=edSig()!==_edSavedSig; el.textContent=dirty?'• Unsaved':'✓ Saved'; el.style.color=dirty?'#b4452f':'#8a8270'; }
-function edStartFresh(){ if(!confirm('Start fresh? This clears the current editorial post on this device.'))return; try{localStorage.removeItem(ED_AUTOSAVE_KEY);}catch(e){} S.accent='#aaa3cf'; S.status='closed'; S.cover=mkCover(); S.mid=[mkTeaser(),mkSingleA(),mkDoubleA(),mkContext('building'),mkSingleB(),mkEnd()]; active=0; ACTIVE=null; ACTIVEIMG=null;
+function edStartFresh(){ if(!confirm('Start fresh? This clears the current editorial post on this device.'))return; try{localStorage.removeItem(ED_AUTOSAVE_KEY);}catch(e){} S.accent='#aaa3cf'; S.side='sell'; S.status='closed'; S.cover=mkCover(); S.mid=[mkTeaser(),mkSingleA(),mkDoubleA(),mkContext('building'),mkSingleB(),mkEnd()]; active=0; ACTIVE=null; ACTIVEIMG=null;
   // also clear the Import & AI panel (URL field, imported facts, photo tray)
   IMPORTED=null; const _u=document.getElementById('imUrl'); if(_u)_u.value=''; const _t=document.getElementById('imTray'); if(_t)_t.innerHTML=''; imStatus('');
   buildAccents(); buildFilm(); buildEditor(); renderAll(); edMarkSaved(); showToast('✓ Started fresh'); }
