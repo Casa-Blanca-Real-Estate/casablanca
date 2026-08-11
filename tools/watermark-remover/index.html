@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+/* Members gate (casual, client-side): dev-only tool, so bounce to the studio home
+   unless an approved email was saved there. Same-origin localStorage is shared
+   across the platform. */
+(function(){
+  var A=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
+  if(A.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase())===-1) location.replace('../../');
+})();
+</script>
+<script src="../../assets/studio-header.js" defer></script>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+
+<script>
+/* Backend base shim — same-origin by default (works as-is on Netlify). Set
+   localStorage.cb_backend to the Netlify origin to run this from GitHub Pages. */
+(function(){
+  var BASE=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
+  if(!BASE) return;
+  var P='/.netlify/functions/', of=window.fetch;
+  window.fetch=function(u,o){try{if(typeof u==='string'&&u.indexOf(P)===0)u=BASE+u;}catch(e){}return of.call(this,u,o);};
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Casa Blanca — Watermark Remover</title>
+<style>
+:root{--black:#0f0f0f;--lav:#aaa3cf;--bg:#f4f3f0;--sur:#fff;--bdr:#dddbd5;--mid:#888680;--r:6px;--rsm:4px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'ObjectSans',system-ui,sans-serif;background:var(--bg);color:var(--black);}
+
+header{width:100%;padding:18px 40px;display:flex;align-items:center;justify-content:space-between;background:var(--black);position:sticky;top:0;z-index:50;}
+.h-lbl{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#c0c2b5;}
+
+main{width:100%;max-width:1100px;margin:0 auto;padding:28px 24px 80px;display:flex;flex-direction:column;gap:16px;}
+h1.hero{font-weight:800;font-size:clamp(28px,4.5vw,44px);line-height:.95;letter-spacing:-.04em;text-transform:uppercase;}
+.sub{font-size:12px;color:var(--mid);line-height:1.7;max-width:640px;}
+.lbl{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--mid);}
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;}
+.hidden{display:none!important;}
+
+.dz{border:1.5px dashed var(--bdr);border-radius:var(--r);padding:26px 12px;display:flex;flex-direction:column;
+    align-items:center;gap:6px;cursor:pointer;position:relative;background:var(--sur);text-align:center;transition:border-color .2s,background .2s;}
+.dz:hover,.dz.over{border-color:var(--lav);background:#faf9fd;}
+.dz input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz-lbl{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);}
+.dz-hint{font-size:10px;color:var(--mid);}
+
+.url-row{display:flex;gap:8px;align-items:center;}
+input[type=text]{flex:1;background:var(--bg);border:1.5px solid var(--bdr);border-radius:var(--rsm);padding:9px 12px;
+  font-family:inherit;font-size:12px;font-weight:600;color:var(--black);outline:none;}
+input[type=text]:focus{border-color:var(--lav);}
+
+.stage-wrap{position:relative;background:#e9e7e2;border-radius:var(--r);overflow:hidden;display:flex;justify-content:center;}
+#stage{display:block;max-width:100%;height:auto;cursor:crosshair;touch-action:none;}
+#overlay{position:absolute;inset:0;pointer-events:none;}
+
+.btn-p{padding:12px 18px;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+  background:var(--black);color:#fff;border:none;border-radius:var(--rsm);cursor:pointer;}
+.btn-p:hover{background:#2a2a2a;}
+.btn-p:disabled{opacity:.35;cursor:not-allowed;}
+.btn-s{padding:8px 14px;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  background:transparent;color:var(--mid);border:1.5px solid var(--bdr);border-radius:var(--rsm);cursor:pointer;}
+.btn-s:hover{border-color:var(--lav);color:var(--black);}
+.btn-s:disabled{opacity:.38;cursor:not-allowed;}
+.btn-s.on{background:var(--black);color:#fff;border-color:var(--black);}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.spacer{flex:1;}
+
+.ctl{display:flex;align-items:center;gap:10px;}
+.ctl label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);white-space:nowrap;}
+input[type=range]{width:140px;accent-color:var(--lav);}
+.val{font-size:11px;font-weight:800;color:var(--black);min-width:38px;}
+
+.status{font-size:11px;color:var(--mid);line-height:1.6;}
+.status b{color:var(--black);}
+.marks{display:flex;flex-direction:column;gap:6px;}
+.mark-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--mid);background:var(--bg);
+  border:1px solid var(--bdr);border-radius:var(--rsm);padding:6px 10px;}
+.mark-row b{color:var(--black);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--black);color:#fff;
+  padding:10px 18px;border-radius:var(--rsm);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:99;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.foot{font-size:11px;color:var(--mid);line-height:1.8;}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="color:#fff;font-weight:800;font-size:14px;">casa blanca</span>
+  <span class="h-lbl">Watermark Remover</span>
+</header>
+
+<main>
+  <h1 class="hero">TAKE THE MARK<br>OFF.</h1>
+  <p class="sub">
+    Drop a listing photo, drag a box around a Casa&nbsp;Blanca watermark, and it comes off.
+    The mark is a known shape composited at a known opacity, so the tool solves for exactly what
+    was added and subtracts it — then fills the strokes from their surroundings. Repeat the box for
+    a second mark. Everything runs in your browser; nothing is uploaded.
+  </p>
+
+  <div class="card" id="input-card">
+    <div class="lbl">Photo</div>
+    <div class="dz" id="dz">
+      <input type="file" id="file" accept="image/*">
+      <span class="dz-lbl">Drop, click, or paste</span>
+      <span class="dz-hint">JPG or PNG</span>
+    </div>
+    <div class="url-row">
+      <input type="text" id="url" placeholder="…or paste an image URL (StreetEasy, etc.)" autocomplete="off">
+      <button class="btn-s" id="btn-url">Load URL</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="work-card">
+    <div class="row">
+      <span class="lbl">Mode</span>
+      <button class="btn-s on" id="mode-auto" data-mode="auto">Casa Blanca mark</button>
+      <button class="btn-s"    id="mode-fill" data-mode="fill">Any mark (fill box)</button>
+      <span class="spacer"></span>
+      <button class="btn-s" id="btn-undo" disabled>↶ Undo</button>
+      <button class="btn-s" id="btn-reset" disabled>Reset</button>
+    </div>
+
+    <div class="stage-wrap">
+      <canvas id="stage"></canvas>
+      <canvas id="overlay"></canvas>
+    </div>
+
+    <div class="row">
+      <div class="ctl">
+        <label for="spread">Spread</label>
+        <input type="range" id="spread" min="0" max="5" step="1" value="2">
+        <span class="val" id="spread-val">2px</span>
+      </div>
+      <div class="ctl">
+        <label for="opacity">Opacity</label>
+        <input type="range" id="opacity" min="0" max="100" step="1" value="0">
+        <span class="val" id="opacity-val">auto</span>
+      </div>
+      <div class="ctl">
+        <label for="grain">Grain</label>
+        <input type="checkbox" id="grain" checked>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn-p" id="btn-dl">↓ Download</button>
+    </div>
+
+    <p class="status" id="status">Drag a box around a watermark.</p>
+    <div class="marks" id="marks"></div>
+  </div>
+
+  <p class="foot">
+    Removal is exact when the mark was applied at a light opacity. These StreetEasy photos carry it at
+    roughly 85%, which leaves only ~15% of the original pixels underneath — the tool recovers the correct
+    colour and shading there, then rebuilds the lost detail from the pixels around each stroke.
+  </p>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// MASK SOURCE
+// ═══════════════════════════════════════════════════
+// Same artwork the Watermarker composites (assets/brand/casa-blanca-wordmark-black.png is
+// byte-identical to its embedded logo), so the alpha channel here IS the mark's shape.
+const LOGO = new Image();
+LOGO.crossOrigin = 'anonymous';
+let LOGO_READY = false, LOGO_AR = 130/1222;
+LOGO.onload = () => { LOGO_READY = true; LOGO_AR = LOGO.naturalHeight / LOGO.naturalWidth; };
+LOGO.src = '../../assets/brand/casa-blanca-wordmark-black.png';
+
+const WHITE = [255,255,255];
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const S = { img:null, w:0, h:0, cur:null, history:[], marks:[], mode:'auto', dragging:false, box:null };
+const stage   = document.getElementById('stage');
+const overlay = document.getElementById('overlay');
+const sctx = stage.getContext('2d', { willReadFrequently:true });
+const octx = overlay.getContext('2d');
+
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1900); }
+function status(html){ document.getElementById('status').innerHTML = html; }
+
+// ═══════════════════════════════════════════════════
+// LOADING
+// ═══════════════════════════════════════════════════
+function setImage(img){
+  S.img = img; S.w = img.naturalWidth; S.h = img.naturalHeight;
+  stage.width = S.w; stage.height = S.h;
+  overlay.width = S.w; overlay.height = S.h;
+  overlay.style.width = stage.style.width = '100%';
+  sctx.drawImage(img, 0, 0);
+  S.cur = sctx.getImageData(0, 0, S.w, S.h);
+  S.history = []; S.marks = [];
+  renderMarks(); syncButtons();
+  document.getElementById('work-card').classList.remove('hidden');
+  status(`Loaded <b>${S.w}×${S.h}</b>. Drag a box around a watermark.`);
+}
+function loadFile(f){
+  if (!f || !/^image\//.test(f.type)) return;
+  const r = new FileReader();
+  r.onload = e => { const i = new Image(); i.onload = () => setImage(i); i.src = e.target.result; };
+  r.readAsDataURL(f);
+}
+document.getElementById('file').addEventListener('change', function(){ loadFile(this.files[0]); this.value=''; });
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); loadFile(e.dataTransfer.files[0]); });
+document.addEventListener('paste', e => {
+  for (const it of (e.clipboardData||{}).items||[]) if (it.type.startsWith('image/')) { loadFile(it.getAsFile()); return; }
+});
+// Remote URLs go through the existing image proxy so the canvas stays untainted.
+document.getElementById('btn-url').addEventListener('click', () => {
+  const u = document.getElementById('url').value.trim();
+  if (!u) return;
+  const i = new Image(); i.crossOrigin = 'anonymous';
+  i.onload = () => setImage(i);
+  i.onerror = () => toast('✗ Could not load that URL');
+  i.src = '/.netlify/functions/img?u=' + encodeURIComponent(u);
+});
+
+// ═══════════════════════════════════════════════════
+// BOX SELECTION
+// ═══════════════════════════════════════════════════
+function evtXY(e){
+  const r = stage.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return { x: Math.round((p.clientX - r.left) * S.w / r.width), y: Math.round((p.clientY - r.top) * S.h / r.height) };
+}
+function drawBox(b){
+  octx.clearRect(0,0,S.w,S.h);
+  if (!b) return;
+  octx.strokeStyle = '#aaa3cf'; octx.lineWidth = Math.max(2, S.w/500);
+  octx.setLineDash([octx.lineWidth*3, octx.lineWidth*2]);
+  octx.strokeRect(b.x, b.y, b.w, b.h);
+}
+function startDrag(e){ if (!S.img) return; e.preventDefault(); const p = evtXY(e); S.dragging = true; S.box = { x:p.x, y:p.y, w:0, h:0, ox:p.x, oy:p.y }; }
+function moveDrag(e){
+  if (!S.dragging) return; e.preventDefault();
+  const p = evtXY(e), b = S.box;
+  b.x = Math.min(b.ox, p.x); b.y = Math.min(b.oy, p.y);
+  b.w = Math.abs(p.x - b.ox); b.h = Math.abs(p.y - b.oy);
+  drawBox(b);
+}
+function endDrag(){
+  if (!S.dragging) return;
+  S.dragging = false;
+  if (!S.box || S.box.w < 12 || S.box.h < 6) { S.box = null; drawBox(null); return; }
+  runRemoval(S.box);
+}
+stage.addEventListener('mousedown', startDrag);
+window.addEventListener('mousemove', moveDrag);
+window.addEventListener('mouseup', endDrag);
+stage.addEventListener('touchstart', startDrag, {passive:false});
+stage.addEventListener('touchmove', moveDrag, {passive:false});
+stage.addEventListener('touchend', endDrag);
+
+// ═══════════════════════════════════════════════════
+// MASK RASTERISATION
+// ═══════════════════════════════════════════════════
+const mcv = document.createElement('canvas');
+const mctx = mcv.getContext('2d', { willReadFrequently:true });
+/** Alpha coverage of the wordmark drawn at width lw, origin (x,y) — sub-pixel via the
+ *  canvas resampler — into a w×h buffer. Returns Float32Array of 0..1 coverage. */
+function rasterMask(w, h, lw, x, y){
+  mcv.width = w; mcv.height = h;
+  mctx.clearRect(0,0,w,h);
+  mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';
+  mctx.drawImage(LOGO, x, y, lw, lw*LOGO_AR);
+  const d = mctx.getImageData(0,0,w,h).data;
+  const m = new Float32Array(w*h);
+  for (let i=0, p=3; i<m.length; i++, p+=4) m[i] = d[p]/255;
+  return m;
+}
+
+// ═══════════════════════════════════════════════════
+// FITTING
+// ═══════════════════════════════════════════════════
+function gradMag(buf, w, h, stride, off){
+  const g = new Float32Array(w*h);
+  for (let y=1; y<h-1; y++) for (let x=1; x<w-1; x++){
+    const i = y*w+x;
+    const gx = buf[(i+1)*stride+off] - buf[(i-1)*stride+off];
+    const gy = buf[(i+w)*stride+off] - buf[(i-w)*stride+off];
+    g[i] = Math.hypot(gx, gy);
+  }
+  return g;
+}
+function gradMagF(m, w, h){
+  const g = new Float32Array(w*h);
+  for (let y=1; y<h-1; y++) for (let x=1; x<w-1; x++){
+    const i = y*w+x;
+    g[i] = Math.hypot(m[i+1]-m[i-1], m[i+w]-m[i-w]);
+  }
+  return g;
+}
+function ncc(a, b){
+  let ma=0, mb=0, n=a.length;
+  for (let i=0;i<n;i++){ ma+=a[i]; mb+=b[i]; }
+  ma/=n; mb/=n;
+  let num=0, da=0, db=0;
+  for (let i=0;i<n;i++){ const u=a[i]-ma, v=b[i]-mb; num+=u*v; da+=u*u; db+=v*v; }
+  return num / (Math.sqrt(da)*Math.sqrt(db) + 1e-9);
+}
+/** The wordmark rasterised once at a given width — slid over the image rather than
+ *  re-rendered per candidate position, which is what keeps the search interactive. */
+function logoTemplate(lw){
+  const w = Math.max(6, Math.round(lw)), h = Math.max(3, Math.round(lw*LOGO_AR));
+  mcv.width = w; mcv.height = h;
+  mctx.clearRect(0,0,w,h);
+  mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';
+  mctx.drawImage(LOGO, 0, 0, w, h);
+  const d = mctx.getImageData(0,0,w,h).data;
+  const a = new Float32Array(w*h);
+  for (let i=0, p=3; i<a.length; i++, p+=4) a[i] = d[p]/255;
+  return { g: gradMagF(a, w, h), w, h };
+}
+/** NCC of a template against the window of the image gradient at (x,y). */
+function nccAt(gi, cw, ch, t, x, y){
+  const { g, w, h } = t;
+  if (x < 0 || y < 0 || x+w > cw || y+h > ch) return -2;
+  let ma=0, mb=0, n=w*h;
+  for (let j=0;j<h;j++){ const gi0=(y+j)*cw+x, t0=j*w;
+    for (let i=0;i<w;i++){ ma+=gi[gi0+i]; mb+=g[t0+i]; } }
+  ma/=n; mb/=n;
+  let num=0, da=0, db=0;
+  for (let j=0;j<h;j++){ const gi0=(y+j)*cw+x, t0=j*w;
+    for (let i=0;i<w;i++){ const u=gi[gi0+i]-ma, v=g[t0+i]-mb; num+=u*v; da+=u*u; db+=v*v; } }
+  return num / (Math.sqrt(da)*Math.sqrt(db) + 1e-9);
+}
+/** Search logo width + offset inside the user's box, scoring in the gradient domain
+ *  (which is opacity-independent, so alignment and opacity decouple). Coarse sweep on
+ *  width and position, then a 1px refine, then a half-pixel polish. */
+function fitMark(crop, cw, ch, box){
+  const gi = gradMag(crop.data, cw, ch, 4, 0);
+  let best = { s:-2, lw:box.w, x:box.x, y:box.y };
+  const lo = Math.max(24, box.w*0.5), hi = box.w*1.06;
+  const coarseStep = Math.max(2, (hi-lo)/18);
+  for (let lw = lo; lw <= hi; lw += coarseStep){
+    const t = logoTemplate(lw);
+    if (t.h >= ch || t.w >= cw) continue;
+    for (let y=0; y<=ch-t.h; y+=2) for (let x=0; x<=cw-t.w; x+=2){
+      const s = nccAt(gi, cw, ch, t, x, y);
+      if (s > best.s) best = { s, lw, x, y };
+    }
+  }
+  if (best.s < -1) return best;
+  for (let lw = best.lw-coarseStep; lw <= best.lw+coarseStep; lw += 1){
+    const t = logoTemplate(lw);
+    if (t.h >= ch || t.w >= cw) continue;
+    for (let y=Math.max(0,best.y-3); y<=Math.min(ch-t.h,best.y+3); y++)
+      for (let x=Math.max(0,best.x-3); x<=Math.min(cw-t.w,best.x+3); x++){
+        const s = nccAt(gi, cw, ch, t, x, y);
+        if (s > best.s) best = { s, lw, x, y };
+      }
+  }
+  // Half-pixel polish on the full-crop mask — the strokes get filled either way, so this
+  // only has to be close enough that the un-blend doesn't leave a rim.
+  let sub = { s: best.s, lw: best.lw, x: best.x, y: best.y };
+  for (const dl of [-0.5, 0, 0.5]) for (const dx of [-0.5, 0, 0.5]) for (const dy of [-0.5, 0, 0.5]){
+    if (!dl && !dx && !dy) continue;
+    const m = rasterMask(cw, ch, best.lw+dl, best.x+dx, best.y+dy);
+    const s = ncc(gi, gradMagF(m, cw, ch));
+    if (s > sub.s) sub = { s, lw: best.lw+dl, x: best.x+dx, y: best.y+dy };
+  }
+  return sub;
+}
+
+// ═══════════════════════════════════════════════════
+// OPACITY SOLVE
+// ═══════════════════════════════════════════════════
+// Residual-ghost detection: any leftover (or over-corrected) mark leaves structure in the
+// recovered image that correlates with the MASK's gradients. |corr| minimal = right alpha.
+// Objectives that merely minimise texture are degenerate here — a flat mark left in place
+// looks "smoother" than the photo underneath, so they converge on doing nothing.
+function solveAlpha(crop, cw, ch, mask, ch_i){
+  const gm = gradMagF(mask, cw, ch);
+  let bestA = 0.5, bestG = 1e9;
+  const rec = new Float32Array(cw*ch);
+  for (let a100 = 25; a100 < 100; a100++){
+    const a = a100/100;
+    for (let i=0, p=ch_i; i<rec.length; i++, p+=4){
+      const am = a*mask[i];
+      rec[i] = Math.min(255, Math.max(0, (crop.data[p] - 255*am) / Math.max(1-am, 1e-6)));
+    }
+    const g = Math.abs(ncc(gm, gradMagF(rec, cw, ch)));
+    if (g < bestG){ bestG = g; bestA = a; }
+  }
+  return bestA;
+}
+
+// ═══════════════════════════════════════════════════
+// REMOVAL
+// ═══════════════════════════════════════════════════
+function dilate(mask, cw, ch, thr, px){
+  let cur = new Uint8Array(cw*ch);
+  for (let i=0;i<cur.length;i++) cur[i] = mask[i] > thr ? 1 : 0;
+  for (let k=0;k<px;k++){
+    const nx = new Uint8Array(cur);
+    for (let y=1;y<ch-1;y++) for (let x=1;x<cw-1;x++){
+      const i=y*cw+x;
+      if (cur[i-1]||cur[i+1]||cur[i-cw]||cur[i+cw]) nx[i]=1;
+    }
+    cur = nx;
+  }
+  return cur;
+}
+/** Jacobi diffusion of known pixels into the hole — the strokes are thin, so this
+ *  reconstructs them convincingly without a full patch-synthesis pass. */
+function diffuseFill(buf, cw, ch, hole, iters){
+  for (let c=0;c<3;c++){
+    const f = new Float32Array(cw*ch);
+    let sum=0, n=0;
+    for (let i=0;i<f.length;i++){ f[i] = buf[i*4+c]; if (!hole[i]){ sum+=f[i]; n++; } }
+    const mean = n ? sum/n : 128;
+    for (let i=0;i<f.length;i++) if (hole[i]) f[i] = mean;
+    const g = new Float32Array(f);
+    for (let k=0;k<iters;k++){
+      for (let y=1;y<ch-1;y++) for (let x=1;x<cw-1;x++){
+        const i=y*cw+x;
+        if (!hole[i]) continue;
+        g[i] = (f[i-1]+f[i+1]+f[i-cw]+f[i+cw])*0.25;
+      }
+      f.set(g);
+    }
+    for (let i=0;i<f.length;i++) if (hole[i]) buf[i*4+c] = f[i];
+  }
+}
+function addGrain(buf, cw, ch, hole, amp){
+  if (amp <= 0) return;
+  let seed = 12345;
+  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff - 0.5; };
+  for (let i=0;i<cw*ch;i++){
+    if (!hole[i]) continue;
+    const n = rnd()*amp*2;
+    for (let c=0;c<3;c++) buf[i*4+c] = Math.min(255, Math.max(0, buf[i*4+c] + n));
+  }
+}
+function ringNoise(buf, cw, ch, hole){
+  // Rough high-frequency amplitude just outside the hole, so the fill matches its grain.
+  let sum=0, n=0;
+  for (let y=2;y<ch-2;y++) for (let x=2;x<cw-2;x++){
+    const i=y*cw+x;
+    if (hole[i]) continue;
+    const v = buf[i*4], lo = (buf[(i-1)*4]+buf[(i+1)*4]+buf[(i-cw)*4]+buf[(i+cw)*4])*0.25;
+    sum += Math.abs(v-lo); n++;
+  }
+  return n ? sum/n : 0;
+}
+
+function runRemoval(box){
+  if (!S.img) return;
+  if (S.mode === 'auto' && !LOGO_READY){ toast('Logo still loading…'); return; }
+  const P = 26;
+  const x0 = Math.max(0, box.x - P), y0 = Math.max(0, box.y - P);
+  const x1 = Math.min(S.w, box.x + box.w + P), y1 = Math.min(S.h, box.y + box.h + P);
+  const cw = x1-x0, ch = y1-y0;
+  if (cw < 8 || ch < 8) return;
+
+  S.history.push(sctx.getImageData(0,0,S.w,S.h));
+  const crop = sctx.getImageData(x0, y0, cw, ch);
+  const spread = +document.getElementById('spread').value;
+  const ovr = +document.getElementById('opacity').value;
+  const useGrain = document.getElementById('grain').checked;
+
+  let mask, alpha = [0,0,0], fit = null;
+  if (S.mode === 'auto'){
+    fit = fitMark(crop, cw, ch, { x: box.x-x0, y: box.y-y0, w: box.w, h: box.h });
+    if (!fit || fit.s < 0.2){
+      S.history.pop();
+      status('No Casa Blanca mark found in that box — try a tighter box, or switch to <b>Any mark</b>.');
+      drawBox(null); toast('✗ No match'); return;
+    }
+    mask = rasterMask(cw, ch, fit.lw, fit.x, fit.y);
+    // Per-channel opacity: the mark is not identical across R/G/B after StreetEasy's
+    // re-encode, and a single shared value leaves coloured fringing on the letterforms.
+    alpha = ovr > 0 ? [ovr/100, ovr/100, ovr/100] : [0,1,2].map(c => solveAlpha(crop, cw, ch, mask, c));
+    // Un-blend: out = (1-a·m)·bg + a·m·C  ⇒  bg = (out - a·m·C)/(1 - a·m)
+    for (let i=0;i<cw*ch;i++){
+      const m = mask[i]; if (m <= 0.002) continue;
+      for (let c=0;c<3;c++){
+        const am = alpha[c]*m;
+        crop.data[i*4+c] = Math.min(255, Math.max(0, (crop.data[i*4+c] - 255*am) / Math.max(1-am, 1e-6)));
+      }
+    }
+  } else {
+    mask = new Float32Array(cw*ch);
+    for (let y=box.y-y0; y<box.y-y0+box.h; y++)
+      for (let x=box.x-x0; x<box.x-x0+box.w; x++)
+        if (y>=0 && y<ch && x>=0 && x<cw) mask[y*cw+x] = 1;
+  }
+
+  // The un-blend restores colour and shading but at high opacity the fine detail is gone —
+  // only ~15% of the original signal survived, so quantisation noise comes back amplified.
+  // Treat the mark's whole footprint as unknown and rebuild it from its surroundings.
+  const hole = dilate(mask, cw, ch, S.mode === 'auto' ? 0.03 : 0.5, spread);
+  const amp = useGrain ? ringNoise(crop.data, cw, ch, hole) : 0;
+  diffuseFill(crop.data, cw, ch, hole, 260);
+  addGrain(crop.data, cw, ch, hole, amp);
+
+  sctx.putImageData(crop, x0, y0);
+  S.cur = sctx.getImageData(0,0,S.w,S.h);
+  S.marks.push({
+    mode: S.mode,
+    at: `${x0+(fit?Math.round(fit.x):0)},${y0+(fit?Math.round(fit.y):0)}`,
+    size: fit ? Math.round(fit.lw) : box.w,
+    score: fit ? fit.s.toFixed(2) : '—',
+    alpha: S.mode==='auto' ? alpha.map(a=>a.toFixed(2)).join(' / ') : '—'
+  });
+  drawBox(null); renderMarks(); syncButtons();
+  status(S.mode==='auto'
+    ? `Removed a mark — <b>${Math.round(fit.lw)}px</b> wide (${(100*fit.lw/S.w).toFixed(1)}% of width), match <b>${fit.s.toFixed(2)}</b>, opacity <b>${alpha.map(a=>Math.round(a*100)).join('/')}%</b>. Drag another box for a second mark.`
+    : `Filled a <b>${box.w}×${box.h}</b> box. Drag another box for a second mark.`);
+  toast('✓ Mark removed');
+}
+
+function renderMarks(){
+  const el = document.getElementById('marks');
+  el.innerHTML = S.marks.map((m,i) =>
+    `<div class="mark-row"><b>${i+1}</b> · ${m.mode==='auto'?'Casa Blanca mark':'box fill'} · at <b>${m.at}</b> · ${m.mode==='auto'?`width <b>${m.size}px</b> · match <b>${m.score}</b> · opacity <b>${m.alpha}</b>`:`<b>${m.size}px</b> wide`}</div>`
+  ).join('');
+}
+function syncButtons(){
+  document.getElementById('btn-undo').disabled  = !S.history.length;
+  document.getElementById('btn-reset').disabled = !S.history.length;
+}
+document.getElementById('btn-undo').addEventListener('click', () => {
+  const prev = S.history.pop(); if (!prev) return;
+  sctx.putImageData(prev, 0, 0); S.cur = prev; S.marks.pop();
+  renderMarks(); syncButtons(); status('Undid the last removal.');
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!S.img) return;
+  sctx.drawImage(S.img, 0, 0); S.cur = sctx.getImageData(0,0,S.w,S.h);
+  S.history = []; S.marks = []; renderMarks(); syncButtons(); status('Back to the original.');
+});
+['mode-auto','mode-fill'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(){
+    S.mode = this.dataset.mode;
+    document.getElementById('mode-auto').classList.toggle('on', S.mode==='auto');
+    document.getElementById('mode-fill').classList.toggle('on', S.mode==='fill');
+    status(S.mode==='auto' ? 'Drag a box around a Casa Blanca watermark.' : 'Drag a box over anything to fill it in from its surroundings.');
+  });
+});
+document.getElementById('spread').addEventListener('input', function(){ document.getElementById('spread-val').textContent = this.value + 'px'; });
+document.getElementById('opacity').addEventListener('input', function(){
+  document.getElementById('opacity-val').textContent = this.value === '0' ? 'auto' : this.value + '%';
+});
+document.getElementById('btn-dl').addEventListener('click', () => {
+  if (!S.img) return;
+  const a = document.createElement('a');
+  a.download = 'cleaned.png';
+  a.href = stage.toDataURL('image/png');
+  a.click();
+});
+</script>
+</body>
+</html>
