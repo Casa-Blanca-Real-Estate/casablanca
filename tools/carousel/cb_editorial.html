@@ -196,9 +196,9 @@ const PH={
 };
 
 // Post side + status → badge text, teaser price lead-in, teaser agent lead-in.
-// The side (which side of the deal Casa Blanca represented) is what makes "closed" mean
-// SOLD or ACQUIRED, and the agent line read "with agent" or "by agent". Every derived
-// string stays editable per post — these are defaults, not locks.
+// The badge reads the same on both sides (CLOSED stays CLOSED); it's the price lead-in that
+// carries sold vs acquired, and the agent line that reads "with agent" vs "by agent".
+// Every derived string stays editable per post — these are defaults, not locks.
 const SIDE_OPTS=[{v:'sell',t:'Sell side'},{v:'buy',t:'Buy side'}];
 const STATUS_OPTS=[{v:'listed',t:'Listed'},{v:'exclusive',t:'Exclusive'},{v:'incontract',t:'In Contract'},{v:'closed',t:'Closed'}];
 const STATUSES={
@@ -206,18 +206,22 @@ const STATUSES={
     listed:{badge:'LISTED',       leadin:'Listed at'},
     exclusive:{badge:'EXCLUSIVE', leadin:'Offered at'},
     incontract:{badge:'IN CONTRACT', leadin:'In contract at'},
-    closed:{badge:'SOLD',         leadin:'Sold for'}
+    closed:{badge:'CLOSED',       leadin:'Sold for'}
   },
   buy:{
     listed:{badge:'LISTED',       leadin:'Listed at'},
     exclusive:{badge:'EXCLUSIVE', leadin:'Offered at'},
     incontract:{badge:'IN CONTRACT', leadin:'In contract at'},
-    closed:{badge:'ACQUIRED',     leadin:'Acquired for'}
+    closed:{badge:'CLOSED',       leadin:'Acquired for'}
   }
 };
+// Long names get the abbreviated lead-in ("with agent" → "w/ agent") so the name itself
+// keeps the width; "by agent" is already short enough to leave alone.
 const AGENT_LEADIN={sell:'with agent', buy:'by agent'};
+const AGENT_LEADIN_ABBR={sell:'w/ agent', buy:'by agent'};
+const AGENT_ABBR_AT=20;   // characters in the agent name
 function statusDef(){const side=STATUSES[S.side]||STATUSES.sell;return side[S.status]||side.closed;}
-function agentLead(){return AGENT_LEADIN[S.side]||AGENT_LEADIN.sell;}
+function agentLead(name){const m=(String(name||'').trim().length>=AGENT_ABBR_AT)?AGENT_LEADIN_ABBR:AGENT_LEADIN;return m[S.side]||m.sell;}
 // Older saves used justlisted/justsold; fold them into the four-status model.
 function migrateStatus(st){st=String(st||'');if(st==='justlisted')return'listed';if(st==='justsold')return'closed';return STATUSES.sell[st]?st:'closed';}
 
@@ -381,8 +385,10 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
   // Agent line: shrink the type to fit a long name on one line, but only down to 85% of the
   // header size — a name that still doesn't fit at that floor is allowed to wrap instead of
   // shrinking away to nothing.
-  const agentW=hasSpecs?MEAS:(W-X-57);
-  const agRuns=[{text:(t.agentLeadin||agentLead())+' ',bold:false},{text:ag.t,bold:true}];
+  // The specs sit in the top-right corner (see below), so the agent line is never sharing a
+  // row with them and can always use the near-full width.
+  const agentW=W-X-57;
+  const agRuns=[{text:(t.agentLeadin||agentLead(ag.t))+' ',bold:false},{text:ag.t,bold:true}];
   const AG_FLOOR=Math.round(sz*0.85*10)/10;
   let agSz=sz;
   if(drawRunsCount(agRuns,agentW,agSz)>1){
@@ -394,8 +400,7 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
   const nLines=Math.max(leftLines,specItems.length);
   const blockTop=Math.max(0,(IMGTOP-nLines*lh)/2);
 
-  // LEFT block. When specs share the row, keep the agent line within MEAS so it can't
-  // run under the specs; otherwise the agent name may use the near-full width.
+  // LEFT block — address / price / agent, stacked from the top of the centered block.
   let y=blockTop;
   const ar=drawRuns(ctx,addrRuns,X,y,MEAS,sz,lh,{justify:false,color:BODY,isph:addr.isph});
   if(addr.t||S.showPlaceholders)hit('address',X,y,MEAS,ar.lines*lh);y=ar.bottom;
@@ -405,12 +410,12 @@ function drawTeaserHeader(ctx,t){const sz=HEAD_SZ,lh=HEAD_LH,X=57,MEAS=640,IMGTO
   const r3=drawRuns(ctx,agRuns,X,y,agentW,agSz,agLh,{justify:false,color:BODY,isph:ag.isph});
   hit('agent',X,y,agentW,r3.lines*agLh);y=r3.bottom;
 
-  // RIGHT block — filled specs only, right-aligned, BOTTOM-aligned with the left block
-  // (the last spec line shares the baseline of the 'with agent' line).
+  // RIGHT block — filled specs only, right-aligned, TOP-aligned with the address so the
+  // corner reads clean and the bottom-right stays clear for a long agent name.
   if(hasSpecs){
     const RX=W-57;
     ctx.textAlign='right';ctx.font=f(800,sz);ctx.fillStyle=BODY;
-    let ry=blockTop+Math.max(0,(leftLines-specItems.length))*lh;
+    let ry=blockTop;
     specItems.forEach(L=>{
       ctx.fillText(L.txt,RX,ry+sz*ASC);
       const tw=ctx.measureText(L.txt).width;
@@ -665,8 +670,8 @@ function buildEditor(){const body=document.getElementById('ebody');body.innerHTM
     body.appendChild(fld('Beds',o.beds,v=>{o.beds=v;renderAll();},'2','beds'));
     body.appendChild(fld('Baths',o.baths,v=>{o.baths=v;renderAll();},'2.5','beds'));
     body.appendChild(fld('Sqft',o.sqft,v=>{o.sqft=v;renderAll();},'1,530','sqft'));
-    body.appendChild(fld('Agent lead-in',o.agentLeadin,v=>{o.agentLeadin=v;renderAll();},agentLead(),'agent','Defaults from the deal side (sell → “with agent”, buy → “by agent”). Edit to override.'));
-    body.appendChild(fld('Agent name',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent','Long names shrink to stay on one line, then wrap once they hit 85% of the header size.'));
+    body.appendChild(fld('Agent lead-in',o.agentLeadin,v=>{o.agentLeadin=v;renderAll();},agentLead(o.agent||PH.agent),'agent','Defaults from the deal side (sell → “with agent”, buy → “by agent”), shortening to “w/ agent” once the name runs long. Edit to override.'));
+    body.appendChild(fld('Agent name',o.agent,v=>{o.agent=v;renderAll();},'Frankie Delessio','agent','Long names shorten the lead-in to “w/ agent”, then shrink the type, before ever wrapping.'));
     imageBlock(body,'Photo',o.image,'1080×720. Drag on the canvas to reposition.');
     body.appendChild(richField('Description  ·  select text + Bold',o.descRuns,runs=>{o.descRuns=runs;renderAll();},'desc'));
     const cond=document.createElement('button');cond.className='delbtn';cond.style.cssText='background:#f3f0ff;border-color:#cfc7f0;color:#5a4fa3;margin-bottom:6px';cond.textContent='✨ Condense description with AI';cond.onclick=condenseDescription;body.appendChild(cond);
