@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="../../assets/studio-header.js" defer></script>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+<script src="../../assets/se-import.js"></script>
+
+<script>
+/* Backend base shim — same as the carousel builders. Same-origin by default; set
+   localStorage.cb_backend to the Netlify origin to run this off GitHub Pages. */
+(function(){
+  var BASE=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
+  if(!BASE) return;
+  var P='/.netlify/functions/', of=window.fetch;
+  window.fetch=function(u,o){try{if(typeof u==='string'&&u.indexOf(P)===0)u=BASE+u;}catch(e){}return of.call(this,u,o);};
+  function fix(img){var s=(img.getAttribute&&img.getAttribute('src'))||'';if(s.indexOf(P)===0)img.setAttribute('src',BASE+s);}
+  new MutationObserver(function(muts){muts.forEach(function(m){m.addedNodes.forEach(function(n){
+    if(n.nodeType!==1)return; if(n.tagName==='IMG')fix(n);
+    if(n.querySelectorAll)n.querySelectorAll('img').forEach(fix);
+  });});}).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Casa Blanca — Story Motion Builder</title>
+<style>
+  @font-face{font-family:'ObjectSans';src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-display:block}
+  @font-face{font-family:'ObjectSans';src:url('../../assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-display:block}
+
+  :root{
+    --ink:#0f0f0f; --paper:#f4f3f0; --paper2:#e8e6e0; --soft:#faf9fd;
+    --accent:#aaa3cf; --sand:#c0c2b5; --plum:#1e1a2e; --plum2:#2d2640;
+    --mid:#8a877f; --muted:#888680; --line:#dddbd5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font-family:'ObjectSans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+
+  header{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--ink);color:#fff;position:sticky;top:0;z-index:50}
+  header img{height:19px}
+  .h-lbl{font-weight:800;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#cbc8c2}
+
+  .wrap{display:grid;grid-template-columns:376px 1fr;gap:0;min-height:calc(100vh - 47px)}
+
+  /* ── left: inputs ───────────────────────────── */
+  .panel{background:#fff;border-right:1px solid var(--line);padding:18px 16px 60px;overflow-y:auto;max-height:calc(100vh - 47px)}
+  .sec{border-bottom:1px solid var(--line);padding:0 0 16px;margin:0 0 16px}
+  .sec:last-child{border-bottom:none}
+  .sec-h{font-weight:800;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mid);margin:0 0 11px}
+  label{display:block;font-weight:800;font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 5px;color:#55514a}
+  .fld{margin:0 0 13px}
+  input[type=text],select,textarea{width:100%;font-family:inherit;font-size:12.5px;color:var(--ink);
+    background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 10px;outline:none}
+  input[type=text]:focus,select:focus,textarea:focus{border-color:var(--accent);background:#fff}
+  textarea{resize:vertical;line-height:1.45}
+  .hint{font-size:10px;color:var(--mid);margin:4px 0 0;line-height:1.4}
+
+  .seg{display:flex;gap:5px;flex-wrap:wrap}
+  .seg button{flex:1 1 auto;font-family:inherit;font-weight:800;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+    padding:8px 6px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:#55514a;cursor:pointer;transition:.12s}
+  .seg button:hover{border-color:var(--accent)}
+  .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .dz{border:1.5px dashed #cfccc5;border-radius:10px;background:var(--paper);padding:14px 10px;text-align:center;cursor:pointer;transition:.12s}
+  .dz:hover,.dz.over{border-color:var(--accent);background:#fff}
+  .dz .dz-lbl{font-weight:800;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid)}
+
+  .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin:9px 0 0}
+  .thumb{position:relative;width:60px;height:76px;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--paper2)}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb button{position:absolute;top:2px;right:2px;width:16px;height:16px;border:none;border-radius:4px;
+    background:rgba(15,15,15,.78);color:#fff;font-size:10px;line-height:1;cursor:pointer;padding:0}
+  .thumb .ord{position:absolute;bottom:2px;left:3px;font-size:9px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+
+  .btn{font-family:inherit;font-weight:800;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    padding:11px 14px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;width:100%;transition:.12s}
+  .btn:hover{background:var(--plum)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-s{background:var(--paper);color:var(--ink);border-color:var(--line);padding:8px 11px;font-size:10px;width:auto}
+  .btn-s:hover{background:#fff;border-color:var(--accent)}
+
+  /* ── right: stage ───────────────────────────── */
+  .stage{background:linear-gradient(160deg,#1e1a2e 0%,#2d2640 45%,#1a1625 100%);
+         display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:26px 20px 34px;gap:16px}
+  .frame{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);background:#000;line-height:0}
+  #cv{display:block;width:var(--pw);height:auto}
+
+  .transport{display:flex;align-items:center;gap:12px;width:var(--pw);max-width:100%;color:#fff}
+  .tbtn{width:38px;height:38px;flex:0 0 38px;border-radius:50%;border:1px solid rgba(255,255,255,.24);
+    background:rgba(255,255,255,.09);color:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .tbtn:hover{background:rgba(255,255,255,.2)}
+  #scrub{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;background:rgba(255,255,255,.24);outline:none}
+  #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+  #scrub::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+  .tc{font-weight:800;font-size:10px;letter-spacing:.08em;color:#cbc8c2;min-width:88px;text-align:right;font-variant-numeric:tabular-nums}
+
+  .exportbar{width:var(--pw);max-width:100%;display:flex;gap:9px;align-items:center}
+  .exportbar .btn{width:auto;flex:1}
+  .estat{font-size:10.5px;color:#cbc8c2;letter-spacing:.05em;min-height:14px;text-align:center;width:var(--pw);max-width:100%}
+  .estat b{color:#fff}
+
+  .warn{background:#fff3f0;border:1px solid #e8c4bb;color:#8c3a26;border-radius:8px;padding:9px 11px;font-size:11px;line-height:1.45;margin:0 0 13px}
+
+  /* motion json editor */
+  details.jsonbox{border:1px solid var(--line);border-radius:9px;background:var(--paper);padding:0;overflow:hidden}
+  details.jsonbox>summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:800;font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;color:#55514a}
+  details.jsonbox>summary::-webkit-details-marker{display:none}
+  details.jsonbox[open]>summary{border-bottom:1px solid var(--line);background:#fff}
+  .jsonbody{padding:11px 11px 12px}
+  #motion-json{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;line-height:1.5;height:290px;background:#fff}
+  .jsonrow{display:flex;gap:7px;margin:9px 0 0}
+
+  /* keyframe timeline read-out */
+  .tl{margin:10px 0 0}
+  .tl-row{display:flex;align-items:center;gap:8px;margin:0 0 3px}
+  .tl-name{width:86px;flex:0 0 86px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tl-bar{position:relative;flex:1;height:12px;border-radius:3px;background:var(--paper2)}
+  .tl-span{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--accent);opacity:.42}
+  .tl-key{position:absolute;top:3px;width:6px;height:6px;margin-left:-3px;transform:rotate(45deg);background:var(--ink);border-radius:1px}
+  .tl-play{position:absolute;top:-2px;bottom:-2px;width:1.5px;background:#b4452f;margin-left:-.75px}
+
+  @media(max-width:1000px){.wrap{grid-template-columns:1fr}.panel{max-height:none;border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="../../assets/cb-logo-white.png" alt="Casa Blanca">
+  <span class="h-lbl">Story Motion Builder</span>
+</header>
+
+<div class="wrap">
+
+  <!-- ══════════ INPUTS ══════════ -->
+  <div class="panel">
+
+    <div class="sec">
+      <div class="sec-h">Template</div>
+      <div class="seg" id="tpl-seg"></div>
+      <p class="hint" id="tpl-note"></p>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Content</div>
+      <div id="fields"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Photos <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--mid)">— 1 to 4, they crossfade</span></div>
+      <div class="dz" id="dz-photos">
+        <input type="file" accept="image/*" multiple hidden>
+        <div class="dz-lbl">Drop or click — up to 4</div>
+      </div>
+      <div class="thumbs" id="photo-thumbs"></div>
+      <div class="fld" style="margin-top:11px">
+        <label>Or paste a StreetEasy link</label>
+        <input type="text" id="se-url" placeholder="https://streeteasy.com/building/…">
+        <div class="jsonrow"><button class="btn btn-s" id="btn-se" style="flex:1">Import listing</button></div>
+        <p class="hint" id="se-stat"></p>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Motion</div>
+      <details class="jsonbox">
+        <summary>▸ Keyframes (editable)</summary>
+        <div class="jsonbody">
+          <p class="hint" style="margin:0 0 8px">
+            Every layer's position, size and keyframes live here in story pixels (1080×1920) and seconds.
+            Edit and hit Apply to see it instantly — this is where DaVinci numbers get transcribed.
+          </p>
+          <textarea id="motion-json" spellcheck="false"></textarea>
+          <div class="jsonrow">
+            <button class="btn btn-s" id="btn-json-apply" style="flex:1">Apply</button>
+            <button class="btn btn-s" id="btn-json-reset">Reset</button>
+          </div>
+          <p class="hint" id="json-stat"></p>
+        </div>
+      </details>
+      <div class="tl" id="timeline"></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════ STAGE ══════════ -->
+  <div class="stage">
+    <div class="frame"><canvas id="cv" width="1080" height="1920"></canvas></div>
+
+    <div class="transport">
+      <button class="tbtn" id="btn-play" title="Play / pause">▶</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0" step="1">
+      <span class="tc" id="tc">0.00s / 0.00s</span>
+    </div>
+
+    <div class="exportbar">
+      <button class="btn" id="btn-export">↓ Export MP4</button>
+      <button class="btn btn-s" id="btn-poster" style="color:#fff;background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.24)">Still frame</button>
+    </div>
+    <div class="estat" id="estat"></div>
+  </div>
+
+</div>
+
+<script type="module">
+/* ═══════════════════════════════════════════════════════════════════════
+   CASA BLANCA — STORY MOTION BUILDER
+
+   The whole point: a template is DATA, not code. A template declares its
+   layers with absolute boxes in story space (1080×1920) and keyframe tracks
+   in seconds. The engine below is generic — it knows how to interpolate and
+   draw, and nothing about "in contract" or "sold". Adding a new motion
+   template is adding an object to TEMPLATES, not writing new render code.
+
+   Keyframe track format:   prop: [ [time, value], [time, value, 'ease'] ]
+   The ease named on a key describes how the curve arrives AT that key.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const W = 1080, H = 1920;                       // Instagram story, 9:16
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+/* ── easing ─────────────────────────────────────────────────────────────
+   Named to line up with what an editor actually reaches for. DaVinci's
+   "Ease Out" (slow at the end) is our outCubic; its "Ease In and Out" is
+   inOutCubic. Add curves here as we need to match a specific comp.       */
+const EASE = {
+  linear:     t => t,
+  inQuad:     t => t*t,
+  outQuad:    t => 1-(1-t)*(1-t),
+  inOutQuad:  t => t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2,
+  inCubic:    t => t*t*t,
+  outCubic:   t => 1-Math.pow(1-t,3),
+  inOutCubic: t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2,
+  outQuart:   t => 1-Math.pow(1-t,4),
+  outQuint:   t => 1-Math.pow(1-t,5),
+  outExpo:    t => t>=1 ? 1 : 1-Math.pow(2,-10*t),
+  outBack:    t => 1+2.2*Math.pow(t-1,3)+1.2*Math.pow(t-1,2),
+};
+
+/* Sample a keyframe track at time t. Holds the first/last value outside
+   the track's range, which is what makes "fade in then just sit there"
+   the default behaviour rather than something you have to key. */
+function track(keys, t, dflt) {
+  if (!keys || !keys.length) return dflt;
+  if (keys.length === 1) return keys[0][1];
+  if (t <= keys[0][0]) return keys[0][1];
+  if (t >= keys[keys.length-1][0]) return keys[keys.length-1][1];
+  for (let i = 0; i < keys.length-1; i++) {
+    const a = keys[i], b = keys[i+1];
+    if (t >= a[0] && t <= b[0]) {
+      const span = b[0]-a[0];
+      const u = span <= 0 ? 1 : (t-a[0])/span;
+      const e = (EASE[b[2]] || EASE.outCubic)(u);
+      return a[1] + (b[1]-a[1])*e;
+    }
+  }
+  return keys[keys.length-1][1];
+}
+
+/* Every animatable property, with its resting value. A layer only keys the
+   ones it cares about; the rest resolve to these. */
+const PROP_DEFAULTS = { opacity:1, tx:0, ty:0, scale:1, rotate:0, clip:1, blur:0 };
+
+function resolve(layer, t) {
+  const a = layer.anim || {}, out = {};
+  for (const k in PROP_DEFAULTS) out[k] = track(a[k], t, PROP_DEFAULTS[k]);
+  return out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TEMPLATES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const CB_BLACK='#0f0f0f', CB_PAPER='#f4f3f0', CB_LAVENDER='#aaa3cf', CB_SAND='#c0c2b5';
+
+const STATUS_STORY = {
+  id:'status', name:'Transaction Status',
+  note:'Status eyebrow, address, photo stack, agent + logo. The one agents post when a deal moves.',
+  fps:30, duration:7.0, bg:CB_BLACK,
+  fields:[
+    {id:'status',  label:'Status',        type:'seg',  value:'IN CONTRACT',
+     options:['JUST LISTED','IN CONTRACT','SOLD','OPEN HOUSE']},
+    {id:'address', label:'Address',       type:'text', value:'254 PARK AVENUE SOUTH'},
+    {id:'sub',     label:'Neighborhood / unit', type:'text', value:'FLATIRON · 4B'},
+    {id:'price',   label:'Price',         type:'text', value:'$2,495,000'},
+    {id:'desc',    label:'Description',   type:'area', value:'Corner three-bedroom with south light, a chef’s kitchen and original 1910 detail throughout.'},
+    {id:'agent',   label:'Agent',         type:'agent',value:''},
+    {id:'agentName', label:'Agent name shown', type:'text', value:''},
+  ],
+  layers:[
+    /* ── photo stack ─────────────────────────────────────────────────── */
+    { id:'frame', type:'solid', box:[74,506,932,1044], color:CB_PAPER, radius:0,
+      anim:{ opacity:[[0.12,0],[0.62,1,'outQuad']],
+             scale:  [[0.12,1.045],[1.25,1,'outCubic']] } },
+
+    { id:'photos', type:'photos', bind:'photos', box:[92,524,896,1008],
+      hold:2.1, xfade:0.75, zoom:0.09,
+      anim:{ opacity:[[0.12,0],[0.62,1,'outQuad']],
+             scale:  [[0.12,1.045],[1.25,1,'outCubic']] } },
+
+    /* ── status eyebrow ──────────────────────────────────────────────── */
+    { id:'rule', type:'solid', box:[74,300,932,3], color:CB_LAVENDER,
+      origin:[0,0.5],
+      anim:{ clip:[[0.10,0],[1.00,1,'outQuint']] } },
+
+    { id:'status', type:'text', bind:'status', box:[74,338,932,120],
+      size:104, weight:800, tracking:-0.005, color:CB_PAPER, transform:'upper', fit:true,
+      anim:{ opacity:[[0.22,0],[0.70,1,'outQuad']],
+             ty:     [[0.22,54],[0.92,0,'outCubic']],
+             clip:   [[0.22,0],[1.02,1,'outQuint']] } },
+
+    /* ── address block ───────────────────────────────────────────────── */
+    { id:'address', type:'text', bind:'address', box:[74,1596,932,86],
+      size:60, weight:800, tracking:0.005, color:CB_PAPER, transform:'upper', fit:true,
+      anim:{ opacity:[[0.55,0],[1.05,1,'outQuad']],
+             ty:     [[0.55,44],[1.25,0,'outCubic']] } },
+
+    { id:'sub', type:'text', bind:'sub', box:[74,1676,600,44],
+      size:30, weight:400, tracking:0.14, color:CB_SAND, transform:'upper',
+      anim:{ opacity:[[0.70,0],[1.20,1,'outQuad']],
+             ty:     [[0.70,32],[1.40,0,'outCubic']] } },
+
+    { id:'price', type:'text', bind:'price', box:[74,1676,932,44],
+      size:32, weight:800, tracking:0.06, color:CB_LAVENDER, align:'right',
+      anim:{ opacity:[[0.80,0],[1.30,1,'outQuad']],
+             ty:     [[0.80,32],[1.50,0,'outCubic']] } },
+
+    { id:'desc', type:'text', bind:'desc', box:[74,1742,760,120],
+      size:25, weight:400, tracking:0.01, color:'#a8a49c', lineHeight:1.42, lines:3,
+      anim:{ opacity:[[1.00,0],[1.60,1,'outQuad']],
+             ty:     [[1.00,22],[1.70,0,'outCubic']] } },
+
+    /* ── agent ───────────────────────────────────────────────────────── */
+    { id:'agentPhoto', type:'image', bind:'agent', box:[74,160,108,108], shape:'circle',
+      ring:{ width:2, color:CB_LAVENDER, gap:7 },
+      anim:{ opacity:[[0.05,0],[0.45,1,'outQuad']],
+             scale:  [[0.05,0.72],[0.72,1,'outBack']] } },
+
+    { id:'agentName', type:'text', bind:'agentName', box:[204,196,500,40],
+      size:26, weight:800, tracking:0.12, color:CB_PAPER, transform:'upper',
+      anim:{ opacity:[[0.28,0],[0.78,1,'outQuad']],
+             tx:     [[0.28,-22],[0.88,0,'outCubic']] } },
+
+    /* ── logo ────────────────────────────────────────────────────────── */
+    { id:'logo', type:'logo', box:[856,180,150,34], align:'right',
+      anim:{ opacity:[[0.05,0],[0.60,1,'outQuad']] } },
+  ]
+};
+
+const TEMPLATES = [STATUS_STORY];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════════════ */
+
+let TPL   = JSON.parse(JSON.stringify(STATUS_STORY));   // live (JSON-editable) copy
+const DATA = {};                                        // field id → value
+const IMG  = { photos:[], agent:null, logo:null };      // decoded HTMLImageElements
+
+let playing = false, playT = 0, lastTick = 0;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DRAW
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function font(weight, size){
+  return `${weight} ${size}px 'ObjectSans','Arial Black',Arial,sans-serif`;
+}
+
+/* Canvas letterSpacing is Chrome 99+ / Safari 26+. Everything that can encode
+   an MP4 in-browser has it, but fall back to per-glyph placement anyway so the
+   preview never silently loses tracking. */
+const HAS_LS = (() => { try { const c=document.createElement('canvas').getContext('2d'); c.letterSpacing='1px'; return c.letterSpacing==='1px'; } catch(e){ return false; } })();
+
+function setTracking(c, size, tracking){
+  if (HAS_LS) c.letterSpacing = ((tracking||0)*size).toFixed(3)+'px';
+}
+function measure(c, text){ return c.measureText(text).width; }
+
+function drawText(c, text, x, y, align){
+  c.textAlign = align || 'left';
+  c.textBaseline = 'alphabetic';
+  if (HAS_LS) { c.fillText(text, x, y); return; }
+  // Manual tracking fallback: place glyph by glyph.
+  const sp = parseFloat(c.letterSpacing) || 0;
+  let w = 0; for (const ch of text) w += c.measureText(ch).width + sp;
+  w -= sp;
+  let cx = align==='right' ? x-w : align==='center' ? x-w/2 : x;
+  c.textAlign = 'left';
+  for (const ch of text){ c.fillText(ch, cx, y); cx += c.measureText(ch).width + sp; }
+}
+
+function wrapLines(c, text, maxW, maxLines){
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = []; let cur = '';
+  for (const w of words){
+    const test = cur ? cur+' '+w : w;
+    if (measure(c, test) <= maxW || !cur) cur = test;
+    else { lines.push(cur); cur = w; if (maxLines && lines.length >= maxLines) break; }
+  }
+  if (cur && (!maxLines || lines.length < maxLines)) lines.push(cur);
+  if (maxLines && lines.length >= maxLines){
+    // ellipsize the last line if there's more text than room
+    const used = lines.join(' ').split(/\s+/).length;
+    if (used < words.length){
+      let last = lines[maxLines-1];
+      while (measure(c, last+'…') > maxW && last.includes(' ')) last = last.slice(0, last.lastIndexOf(' '));
+      lines[maxLines-1] = last+'…';
+    }
+  }
+  return lines;
+}
+
+/* Cover-fit an image into a box with an extra zoom factor, centred. */
+function cover(c, img, x, y, w, h, zoom){
+  if (!img || !img.naturalWidth) return;
+  const s = Math.max(w/img.naturalWidth, h/img.naturalHeight) * (zoom||1);
+  const dw = img.naturalWidth*s, dh = img.naturalHeight*s;
+  c.drawImage(img, x+(w-dw)/2, y+(h-dh)/2, dw, dh);
+}
+
+function drawFrame(c, t){
+  c.save();
+  c.fillStyle = TPL.bg || '#000';
+  c.fillRect(0,0,W,H);
+
+  for (const L of (TPL.layers||[])){
+    const p = resolve(L, t);
+    if (p.opacity <= 0.001) continue;
+    const [bx,by,bw,bh] = L.box;
+
+    c.save();
+    c.globalAlpha = Math.max(0, Math.min(1, p.opacity));
+
+    // scale / rotate about the layer's origin (default: box centre)
+    const ox = bx + bw*((L.origin && L.origin[0] != null) ? L.origin[0] : 0.5);
+    const oy = by + bh*((L.origin && L.origin[1] != null) ? L.origin[1] : 0.5);
+    c.translate(ox + p.tx, oy + p.ty);
+    if (p.rotate) c.rotate(p.rotate*Math.PI/180);
+    if (p.scale !== 1) c.scale(p.scale, p.scale);
+    c.translate(-ox, -oy);
+
+    // left→right wipe
+    if (p.clip < 0.999){
+      c.beginPath();
+      c.rect(bx - 4, by - bh, bw*Math.max(0,p.clip) + 4, bh*3);
+      c.clip();
+    }
+
+    drawLayer(c, L, p, t, bx, by, bw, bh);
+    c.restore();
+  }
+  c.restore();
+}
+
+function drawLayer(c, L, p, t, bx, by, bw, bh){
+  switch (L.type){
+
+    case 'solid': {
+      c.fillStyle = L.color || '#fff';
+      if (L.radius){ roundRect(c, bx, by, bw, bh, L.radius); c.fill(); }
+      else c.fillRect(bx, by, bw, bh);
+      break;
+    }
+
+    case 'photos': {
+      const list = IMG.photos.filter(Boolean);
+      c.save(); c.beginPath(); c.rect(bx, by, bw, bh); c.clip();
+      if (!list.length){
+        c.fillStyle = '#26232c'; c.fillRect(bx, by, bw, bh);
+        c.fillStyle = '#4d4956'; c.font = font(800, 26);
+        setTracking(c, 26, .16);
+        drawText(c, 'ADD 1–4 PHOTOS', bx+bw/2, by+bh/2+9, 'center');
+      } else {
+        const hold = L.hold ?? 2.2, xf = L.xfade ?? 0.7, zoom = L.zoom ?? 0.08;
+        const n = list.length;
+        const base = c.globalAlpha;              // the layer's own animated opacity
+        // Photo i owns [i*hold, (i+1)*hold]. The crossfade into photo i runs over
+        // the xf window that ENDS at i*hold, so photo i-1's fade-out and photo i's
+        // fade-in are the same window and the stack never dips to background.
+        for (let i = 0; i < n; i++){
+          let a = 1;
+          if (i > 0)     a = Math.min(a, clamp01((t - (i*hold - xf)) / xf));
+          if (i < n - 1) a = Math.min(a, clamp01(((i+1)*hold - t) / xf));
+          if (a <= 0.001) continue;
+          // slow push-in across this photo's own span
+          const u = clamp01((t - (i*hold - xf)) / (hold + xf));
+          c.globalAlpha = base * a;
+          cover(c, list[i], bx, by, bw, bh, 1 + zoom*u);
+        }
+        c.globalAlpha = base;
+      }
+      c.restore();
+      break;
+    }
+
+    case 'image': {
+      const img = IMG[L.bind];
+      if (!img) break;
+      c.save();
+      if (L.shape === 'circle'){
+        if (L.ring){
+          c.strokeStyle = L.ring.color; c.lineWidth = L.ring.width;
+          c.beginPath();
+          c.arc(bx+bw/2, by+bh/2, bw/2 + (L.ring.gap||6), 0, Math.PI*2);
+          c.stroke();
+        }
+        c.beginPath(); c.arc(bx+bw/2, by+bh/2, bw/2, 0, Math.PI*2); c.clip();
+      } else {
+        c.beginPath(); c.rect(bx, by, bw, bh); c.clip();
+      }
+      cover(c, img, bx, by, bw, bh, 1);
+      c.restore();
+      break;
+    }
+
+    case 'logo': {
+      if (!IMG.logo) break;
+      const ar = IMG.logo.naturalWidth / IMG.logo.naturalHeight;
+      let dw = bw, dh = dw/ar;
+      if (dh > bh){ dh = bh; dw = dh*ar; }
+      const x = L.align === 'right' ? bx+bw-dw : L.align === 'center' ? bx+(bw-dw)/2 : bx;
+      c.drawImage(IMG.logo, x, by+(bh-dh)/2, dw, dh);
+      break;
+    }
+
+    case 'text': {
+      const raw = String(DATA[L.bind] ?? L.text ?? '');
+      if (!raw.trim()) break;
+      const text = L.transform === 'upper' ? raw.toUpperCase()
+                 : L.transform === 'lower' ? raw.toLowerCase() : raw;
+      c.fillStyle = L.color || '#fff';
+
+      let size = L.size || 40;
+      const weight = L.weight || 400;
+
+      if (L.lines && L.lines > 1){
+        c.font = font(weight, size); setTracking(c, size, L.tracking);
+        const lh = size * (L.lineHeight || 1.4);
+        const lines = wrapLines(c, text, bw, L.lines);
+        let y = by + size;                       // first baseline
+        for (const ln of lines){ drawText(c, ln, xFor(L, bx, bw), y, L.align); y += lh; }
+      } else {
+        // single line — shrink to fit the box when `fit` is on
+        c.font = font(weight, size); setTracking(c, size, L.tracking);
+        if (L.fit){
+          let guard = 0;
+          while (measure(c, text) > bw && size > 10 && guard++ < 200){
+            size -= 1; c.font = font(weight, size); setTracking(c, size, L.tracking);
+          }
+        }
+        drawText(c, text, xFor(L, bx, bw), by + size, L.align);
+      }
+      break;
+    }
+  }
+}
+
+function xFor(L, bx, bw){
+  return L.align === 'right' ? bx+bw : L.align === 'center' ? bx+bw/2 : bx;
+}
+function clamp01(v){ return v < 0 ? 0 : v > 1 ? 1 : v; }
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FORM — generated from TPL.fields, not hand-written per template
+   ═══════════════════════════════════════════════════════════════════════ */
+
+let AGENTS = [];
+
+function buildForm(){
+  const host = document.getElementById('fields');
+  host.innerHTML = '';
+  for (const f of TPL.fields){
+    if (DATA[f.id] === undefined) DATA[f.id] = f.value ?? '';
+    const box = document.createElement('div');
+    box.className = 'fld';
+    const lab = document.createElement('label');
+    lab.textContent = f.label;
+    box.appendChild(lab);
+
+    if (f.type === 'seg'){
+      const seg = document.createElement('div'); seg.className = 'seg';
+      f.options.forEach(o => {
+        const b = document.createElement('button');
+        b.textContent = o;
+        b.className = (DATA[f.id] === o) ? 'on' : '';
+        b.onclick = () => {
+          DATA[f.id] = o;
+          seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+          render();
+        };
+        seg.appendChild(b);
+      });
+      box.appendChild(seg);
+
+    } else if (f.type === 'area'){
+      const ta = document.createElement('textarea');
+      ta.rows = 3; ta.value = DATA[f.id]; ta.dataset.fid = f.id;
+      ta.oninput = () => { DATA[f.id] = ta.value; render(); };
+      box.appendChild(ta);
+
+    } else if (f.type === 'agent'){
+      const sel = document.createElement('select');
+      sel.innerHTML = '<option value="">— none —</option>';
+      sel.onchange = async () => {
+        DATA[f.id] = sel.value;
+        IMG.agent = sel.value ? await loadImage(sel.value) : null;
+        // auto-fill the displayed name from the picked agent
+        const nm = AGENTS.find(a => a.src === sel.value);
+        if (nm){
+          DATA.agentName = nm.name.replace(/\.$/,'');
+          const el = document.querySelector('[data-fid="agentName"]');
+          if (el) el.value = DATA.agentName;
+        }
+        render();
+      };
+      box.appendChild(sel);
+      loadAgents().then(list => {
+        AGENTS = list;
+        list.forEach(a => {
+          const o = document.createElement('option');
+          o.value = a.src; o.textContent = a.name;
+          sel.appendChild(o);
+        });
+      });
+      const h = document.createElement('p');
+      h.className = 'hint'; h.textContent = 'Pulls the headshot straight from the studio agent library.';
+      box.appendChild(h);
+
+    } else {
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.value = DATA[f.id]; inp.dataset.fid = f.id;
+      inp.oninput = () => { DATA[f.id] = inp.value; render(); };
+      box.appendChild(inp);
+    }
+    host.appendChild(box);
+  }
+}
+
+async function loadAgents(){
+  try {
+    const r = await fetch('../../assets/agents/agents.json', { cache:'no-cache' });
+    const j = await r.json();
+    return j.map(a => ({ name:a.name, src:'../../assets/agents/' + a.file }));
+  } catch(e){ return []; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   IMAGES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function loadImage(src){
+  return new Promise(res => {
+    const i = new Image();
+    i.crossOrigin = 'anonymous';
+    i.onload = () => res(i);
+    i.onerror = () => res(null);
+    i.src = src;
+  });
+}
+/* Remote photos go through the studio's image proxy so the canvas stays
+   untainted and the MP4 encoder can actually read the pixels back. */
+function proxied(url){
+  return /^(data:|blob:|\.\.?\/)/.test(url) ? url
+       : '/.netlify/functions/img?u=' + encodeURIComponent(url);
+}
+
+function setupPhotoDrop(){
+  const dz = document.getElementById('dz-photos');
+  const fi = dz.querySelector('input');
+  dz.onclick = () => fi.click();
+  fi.onchange = () => addFiles([...fi.files]);
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
+  dz.ondragleave = () => dz.classList.remove('over');
+  dz.ondrop = e => {
+    e.preventDefault(); dz.classList.remove('over');
+    addFiles([...e.dataTransfer.files].filter(f => f.type.startsWith('image/')));
+  };
+}
+
+async function addFiles(files){
+  for (const f of files.slice(0, 4 - IMG.photos.length)){
+    const img = await loadImage(URL.createObjectURL(f));
+    if (img) IMG.photos.push(img);
+  }
+  syncThumbs(); render();
+}
+
+function syncThumbs(){
+  const host = document.getElementById('photo-thumbs');
+  host.innerHTML = '';
+  IMG.photos.forEach((img, i) => {
+    const d = document.createElement('div'); d.className = 'thumb';
+    const im = document.createElement('img'); im.src = img.src;
+    const x  = document.createElement('button'); x.textContent = '×';
+    x.onclick = () => { IMG.photos.splice(i,1); syncThumbs(); render(); };
+    const n  = document.createElement('span'); n.className = 'ord'; n.textContent = i+1;
+    d.append(im, x, n); host.appendChild(d);
+  });
+  // photo count changes the stack's runtime — keep the clip long enough to show them all
+  autoDuration();
+}
+
+/* The stack drives the length of the story: N photos × hold, floor of 7s. */
+function autoDuration(){
+  const stack = (TPL.layers||[]).find(l => l.type === 'photos');
+  if (!stack) return;
+  const n = Math.max(1, IMG.photos.length);
+  TPL.duration = Math.max(7, n*(stack.hold ?? 2.2) + 0.9);
+  drawTimeline();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   STREETEASY IMPORT — reuses the studio's shared client
+   ═══════════════════════════════════════════════════════════════════════ */
+
+document.getElementById('btn-se').onclick = async () => {
+  const url  = document.getElementById('se-url').value.trim();
+  const stat = document.getElementById('se-stat');
+  if (!url) { stat.textContent = 'Paste a StreetEasy listing URL first.'; return; }
+  stat.textContent = 'Importing…';
+  try {
+    const r = await window.CBImportStreetEasy(url, { onStatus: m => stat.textContent = m });
+    if (r.address) { DATA.address = r.address; setField('address', r.address); }
+    if (r.price)   { DATA.price   = r.price;   setField('price', r.price); }
+    if (r.neighborhood){ DATA.sub = r.neighborhood; setField('sub', r.neighborhood); }
+    if (r.description){ DATA.desc = r.description; setField('desc', r.description); }
+    const photos = (r.photos || []).slice(0, 4);
+    IMG.photos = [];
+    for (const p of photos){ const im = await loadImage(proxied(p)); if (im) IMG.photos.push(im); }
+    syncThumbs();
+    stat.textContent = `Imported — ${IMG.photos.length} photo(s).`;
+    render();
+  } catch(e){
+    stat.textContent = 'Import failed: ' + (e.message || e);
+  }
+};
+function setField(id, v){
+  const el = document.querySelector(`[data-fid="${id}"]`);
+  if (el) el.value = v;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TRANSPORT
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const scrub = document.getElementById('scrub');
+const tcEl  = document.getElementById('tc');
+const playBtn = document.getElementById('btn-play');
+
+function render(){
+  drawFrame(ctx, playT);
+  scrub.value = Math.round((playT / TPL.duration) * 1000);
+  tcEl.textContent = playT.toFixed(2) + 's / ' + TPL.duration.toFixed(2) + 's';
+  drawPlayhead();
+}
+
+scrub.oninput = () => { playing = false; playBtn.textContent = '▶'; playT = (scrub.value/1000)*TPL.duration; render(); };
+playBtn.onclick = () => {
+  playing = !playing;
+  playBtn.textContent = playing ? '❚❚' : '▶';
+  if (playing){ if (playT >= TPL.duration - 0.01) playT = 0; lastTick = performance.now(); requestAnimationFrame(tick); }
+};
+function tick(now){
+  if (!playing) return;
+  playT += (now - lastTick)/1000; lastTick = now;
+  if (playT >= TPL.duration){ playT = TPL.duration; playing = false; playBtn.textContent = '▶'; }
+  render();
+  if (playing) requestAnimationFrame(tick);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TIMELINE READ-OUT — every keyframe on every layer, at a glance
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function drawTimeline(){
+  const host = document.getElementById('timeline');
+  host.innerHTML = '';
+  for (const L of (TPL.layers||[])){
+    const keys = [];
+    for (const k in (L.anim||{})) (L.anim[k]||[]).forEach(kf => keys.push(kf[0]));
+    const row = document.createElement('div'); row.className = 'tl-row';
+    const nm  = document.createElement('div'); nm.className = 'tl-name'; nm.textContent = L.id;
+    const bar = document.createElement('div'); bar.className = 'tl-bar';
+    if (keys.length){
+      const lo = Math.min(...keys), hi = Math.max(...keys);
+      const sp = document.createElement('div'); sp.className = 'tl-span';
+      sp.style.left  = (lo/TPL.duration*100)+'%';
+      sp.style.width = (Math.max(0.6,(hi-lo))/TPL.duration*100)+'%';
+      bar.appendChild(sp);
+      [...new Set(keys)].forEach(t => {
+        const d = document.createElement('div'); d.className = 'tl-key';
+        d.style.left = (t/TPL.duration*100)+'%'; d.title = t.toFixed(2)+'s';
+        bar.appendChild(d);
+      });
+    }
+    const ph = document.createElement('div'); ph.className = 'tl-play';
+    bar.appendChild(ph);
+    row.append(nm, bar); host.appendChild(row);
+  }
+  drawPlayhead();
+}
+function drawPlayhead(){
+  const pct = (playT/TPL.duration*100)+'%';
+  document.querySelectorAll('.tl-play').forEach(e => e.style.left = pct);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOTION JSON — the transcription surface
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const jsonEl = document.getElementById('motion-json');
+function fillJson(){
+  jsonEl.value = JSON.stringify({ duration:TPL.duration, fps:TPL.fps, bg:TPL.bg, layers:TPL.layers }, null, 1);
+}
+document.getElementById('btn-json-apply').onclick = () => {
+  const stat = document.getElementById('json-stat');
+  try {
+    const j = JSON.parse(jsonEl.value);
+    if (!Array.isArray(j.layers)) throw new Error('layers must be an array');
+    TPL.layers = j.layers;
+    if (j.duration) TPL.duration = +j.duration;
+    if (j.fps) TPL.fps = +j.fps;
+    if (j.bg) TPL.bg = j.bg;
+    stat.textContent = 'Applied.'; drawTimeline(); render();
+  } catch(e){ stat.textContent = 'Invalid: ' + e.message; }
+};
+document.getElementById('btn-json-reset').onclick = () => {
+  TPL = JSON.parse(JSON.stringify(STATUS_STORY));
+  fillJson(); autoDuration(); drawTimeline(); render();
+  document.getElementById('json-stat').textContent = 'Reset to the built-in template.';
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EXPORT — deterministic, frame by frame, straight to H.264 MP4
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const estat = document.getElementById('estat');
+
+document.getElementById('btn-poster').onclick = () => {
+  drawFrame(ctx, playT);
+  const a = document.createElement('a');
+  a.download = `cb_story_${slug()}_${playT.toFixed(2)}s.jpg`;
+  a.href = cv.toDataURL('image/jpeg', 0.95);
+  a.click();
+};
+
+document.getElementById('btn-export').onclick = async () => {
+  const btn = document.getElementById('btn-export');
+  playing = false; playBtn.textContent = '▶';
+  btn.disabled = true;
+  estat.innerHTML = 'Loading encoder…';
+
+  try {
+    const MB = await import('../../assets/vendor/mediabunny.min.mjs');
+    const { Output, Mp4OutputFormat, BufferTarget, CanvasSource, QUALITY_HIGH, getFirstEncodableVideoCodec } = MB;
+
+    // Instagram wants H.264. Every other codec muxes into a valid .mp4 but IG will
+    // reject or re-encode it, so we only fall back after saying so out loud.
+    const codec = await getFirstEncodableVideoCodec(['avc','hevc','vp9','av1'], { width:W, height:H });
+    if (!codec) throw new Error('This browser can’t encode video. Use Chrome, Edge, or Safari 26+.');
+    if (codec !== 'avc'){
+      const ok = confirm(
+        `Heads up: this browser has no H.264 encoder, so the file will be ${codec.toUpperCase()}.\n\n` +
+        `Instagram may reject it. Chrome or Edge on a normal desktop will give you H.264.\n\n` +
+        `Export anyway?`);
+      if (!ok){ estat.textContent = 'Cancelled.'; btn.disabled = false; return; }
+    }
+
+    const fps = TPL.fps || 30;
+    const total = Math.round(TPL.duration * fps);
+
+    const output = new Output({ format: new Mp4OutputFormat({ fastStart:'in-memory' }), target: new BufferTarget() });
+    const source = new CanvasSource(cv, { codec, quality: QUALITY_HIGH, keyFrameInterval: 1 });
+    output.addVideoTrack(source, { frameRate: fps });
+    await output.start();
+
+    const t0 = performance.now();
+    for (let i = 0; i < total; i++){
+      drawFrame(ctx, i/fps);
+      await source.add(i/fps, 1/fps);
+      if (i % 5 === 0 || i === total-1){
+        const pct = Math.round((i+1)/total*100);
+        estat.innerHTML = `Encoding <b>${pct}%</b> — frame ${i+1} of ${total}`;
+        await new Promise(r => setTimeout(r, 0));   // let the UI breathe
+      }
+    }
+    await output.finalize();
+
+    const blob = new Blob([output.target.buffer], { type:'video/mp4' });
+    const a = document.createElement('a');
+    a.download = `cb_story_${slug()}.mp4`;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 20000);
+
+    const secs = ((performance.now()-t0)/1000).toFixed(1);
+    estat.innerHTML = `Done — <b>${(blob.size/1048576).toFixed(1)} MB</b>, ${total} frames in ${secs}s (${codec.toUpperCase()}).`;
+    playT = 0; render();
+
+  } catch(e){
+    estat.innerHTML = 'Export failed: ' + (e.message || e);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+function slug(){
+  return String(DATA.address || 'story').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function sizePreview(){
+  // Fit the 9:16 story into the stage without ever overflowing the viewport.
+  const avail = Math.min(window.innerHeight - 300, (window.innerWidth - 420) * 0.9);
+  const w = Math.max(220, Math.min(390, avail * (W/H)));
+  document.documentElement.style.setProperty('--pw', w.toFixed(0)+'px');
+}
+window.addEventListener('resize', sizePreview);
+
+(async function boot(){
+  sizePreview();
+
+  // Templates strip (one for now — the shape is here for the next three).
+  const seg = document.getElementById('tpl-seg');
+  TEMPLATES.forEach(t => {
+    const b = document.createElement('button');
+    b.textContent = t.name; b.className = 'on';
+    seg.appendChild(b);
+  });
+  document.getElementById('tpl-note').textContent = STATUS_STORY.note;
+
+  // Fonts must be resident before the first canvas draw or the metrics lie.
+  try { await document.fonts.load("800 100px 'ObjectSans'"); await document.fonts.load("400 30px 'ObjectSans'"); } catch(e){}
+  await document.fonts.ready;
+
+  IMG.logo = await loadImage('../../assets/cb-logo-white.png');
+
+  buildForm();
+  setupPhotoDrop();
+  fillJson();
+  autoDuration();
+  drawTimeline();
+  render();
+})();
+</script>
+</body>
+</html>
