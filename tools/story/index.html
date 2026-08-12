@@ -275,89 +275,177 @@ function resolve(layer, t) {
 
 const CB_BLACK='#0f0f0f', CB_PAPER='#f4f3f0', CB_LAVENDER='#aaa3cf', CB_SAND='#c0c2b5';
 
-const STATUS_STORY = {
-  id:'status', name:'Transaction Status',
-  note:'Status eyebrow, address, photo stack, agent + logo. The one agents post when a deal moves.',
-  fps:30, duration:7.0, bg:CB_BLACK,
-  fields:[
-    {id:'status',  label:'Status',        type:'seg',  value:'IN CONTRACT',
-     options:['JUST LISTED','IN CONTRACT','SOLD','OPEN HOUSE']},
-    {id:'address', label:'Address',       type:'text', value:'254 PARK AVENUE SOUTH'},
-    {id:'sub',     label:'Neighborhood / unit', type:'text', value:'FLATIRON · 4B'},
-    {id:'price',   label:'Price',         type:'text', value:'$2,495,000'},
-    {id:'desc',    label:'Description',   type:'area', value:'Corner three-bedroom with south light, a chef’s kitchen and original 1910 detail throughout.'},
-    {id:'agent',   label:'Agent',         type:'agent',value:''},
-    {id:'agentName', label:'Agent name shown', type:'text', value:''},
-  ],
-  layers:[
-    /* ── photo stack ─────────────────────────────────────────────────── */
-    { id:'frame', type:'solid', box:[74,506,932,1044], color:CB_PAPER, radius:0,
-      anim:{ opacity:[[0.12,0],[0.62,1,'outQuad']],
-             scale:  [[0.12,1.045],[1.25,1,'outCubic']] } },
+/* Every template asks for the same facts, so the field list is shared. Templates
+   differ in composition, not in what a listing is. */
+const FIELDS = () => ([
+  {id:'intro',   label:'Opening card',  type:'seg',  value:'ON', options:['ON','OFF'],
+   hint:'Opens on the agent, centred, for 1.5s. Needs an agent picked below — without one the story starts straight on the listing.'},
+  {id:'status',  label:'Status',        type:'seg',  value:'IN CONTRACT',
+   options:['JUST LISTED','IN CONTRACT','SOLD','OPEN HOUSE']},
+  {id:'address', label:'Address',       type:'text', value:'254 PARK AVENUE SOUTH'},
+  {id:'sub',     label:'Neighborhood',  type:'text', value:'FLATIRON'},
+  {id:'price',   label:'Price',         type:'text', value:'$2,495,000'},
+  {id:'desc',    label:'Description',   type:'area', value:'Corner three-bedroom with south light, a chef’s kitchen and original 1910 detail throughout.'},
+  {id:'agent',   label:'Agent',         type:'agent',value:''},
+  {id:'agentName', label:'Agent name shown', type:'text', value:''},
+]);
 
-    { id:'photos', type:'photos', bind:'photos', box:[92,524,896,1008],
-      hold:2.1, xfade:0.75, zoom:0.09,
-      anim:{ opacity:[[0.12,0],[0.62,1,'outQuad']],
-             scale:  [[0.12,1.045],[1.25,1,'outCubic']] } },
+/* The pieces that recur across templates. Each takes its box so a template can
+   place it, and carries its own entrance — a status line reads the same way
+   whichever layout it lands in. Everything that belongs to the listing (as
+   opposed to the opening card) is tagged group:'listing' and gets pushed later
+   in time when the opening card is switched on. */
+const PART = {
+  logo: (box) => ({ id:'logo', type:'logo', box, align:'right',
+    anim:{ opacity:[[0.10,0],[0.65,1,'outQuad']] } }),
 
-    /* ── status eyebrow ──────────────────────────────────────────────── */
-    { id:'rule', type:'solid', box:[74,300,932,3], color:CB_LAVENDER,
-      origin:[0,0.5],
-      anim:{ clip:[[0.10,0],[1.00,1,'outQuint']] } },
+  rule: (box) => ({ id:'rule', type:'solid', box, color:CB_LAVENDER, origin:[0,0.5],
+    anim:{ clip:[[0.10,0],[1.00,1,'outQuint']] } }),
 
-    { id:'status', type:'text', bind:'status', box:[74,338,932,120],
-      size:104, weight:800, tracking:-0.005, color:CB_PAPER, transform:'upper', fit:true,
-      anim:{ opacity:[[0.22,0],[0.70,1,'outQuad']],
-             ty:     [[0.22,54],[0.92,0,'outCubic']],
-             clip:   [[0.22,0],[1.02,1,'outQuint']] } },
+  status: (box, size) => ({ id:'status', type:'text', bind:'status', box,
+    size, weight:800, tracking:-0.005, color:CB_PAPER, transform:'upper', fit:true,
+    anim:{ opacity:[[0.22,0],[0.70,1,'outQuad']],
+           ty:     [[0.22,54],[0.92,0,'outCubic']],
+           clip:   [[0.22,0],[1.02,1,'outQuint']] } }),
 
-    /* ── address block ───────────────────────────────────────────────── */
-    { id:'address', type:'text', bind:'address', box:[74,1596,932,86],
-      size:60, weight:800, tracking:0.005, color:CB_PAPER, transform:'upper', fit:true,
-      anim:{ opacity:[[0.55,0],[1.05,1,'outQuad']],
-             ty:     [[0.55,44],[1.25,0,'outCubic']] } },
+  /* ── the opening card: agent centred, on for 1.5s with a quarter-second
+        fade either side, then out of the way for the listing. ─────────── */
+  agentHero: (box) => ({ id:'agentHero', type:'image', bind:'agent', box, shape:'circle',
+    when:'intro', ring:{ width:3, color:CB_LAVENDER, gap:16 },
+    trimName:{ zoom:1.20, focus:[0.5, 0.02] },
+    anim:{ opacity:[[0.35,0],[0.60,1,'outQuad'],[2.10,1],[2.35,0,'inQuad']],
+           scale:  [[0.35,0.90],[0.60,1,'outCubic'],[2.10,1],[2.35,1.04,'inQuad']] } }),
 
-    { id:'sub', type:'text', bind:'sub', box:[74,1676,600,44],
-      size:30, weight:400, tracking:0.14, color:CB_SAND, transform:'upper',
-      anim:{ opacity:[[0.70,0],[1.20,1,'outQuad']],
-             ty:     [[0.70,32],[1.40,0,'outCubic']] } },
+  agentHeroName: (box, size) => ({ id:'agentHeroName', type:'text', bind:'agentName', box,
+    size, weight:800, tracking:0.16, color:CB_PAPER, transform:'upper', align:'center',
+    when:'intro',
+    anim:{ opacity:[[0.50,0],[0.80,1,'outQuad'],[2.05,1],[2.30,0,'inQuad']],
+           ty:     [[0.50,26],[1.05,0,'outCubic']] } }),
 
-    { id:'price', type:'text', bind:'price', box:[74,1676,932,44],
-      size:32, weight:800, tracking:0.06, color:CB_LAVENDER, align:'right',
-      anim:{ opacity:[[0.80,0],[1.30,1,'outQuad']],
-             ty:     [[0.80,32],[1.50,0,'outCubic']] } },
+  /* ── the listing ─────────────────────────────────────────────────────── */
+  frame: (box) => ({ id:'frame', type:'solid', box, color:CB_PAPER, group:'listing',
+    anim:{ opacity:[[0.12,0],[0.62,1,'outQuad']],
+           scale:  [[0.12,1.045],[1.25,1,'outCubic']] } }),
 
-    { id:'desc', type:'text', bind:'desc', box:[74,1742,760,120],
-      size:25, weight:400, tracking:0.01, color:'#a8a49c', lineHeight:1.42, lines:3,
-      anim:{ opacity:[[1.00,0],[1.60,1,'outQuad']],
-             ty:     [[1.00,22],[1.70,0,'outCubic']] } },
+  photos: (box, opts) => Object.assign({ id:'photos', type:'photos', bind:'photos', box,
+    group:'listing', hold:2.5, xfade:0.75, zoom:0.09, holdAuto:true,
+    anim:{ opacity:[[0.12,0],[0.62,1,'outQuad']],
+           scale:  [[0.12,1.045],[1.25,1,'outCubic']] } }, opts||{}),
 
-    /* ── agent ───────────────────────────────────────────────────────── */
-    { id:'agentPhoto', type:'image', bind:'agent', box:[74,160,108,108], shape:'circle',
-      ring:{ width:2, color:CB_LAVENDER, gap:7 },
-      anim:{ opacity:[[0.05,0],[0.45,1,'outQuad']],
-             scale:  [[0.05,0.72],[0.72,1,'outBack']] } },
+  address: (box, size) => ({ id:'address', type:'text', bind:'address', box,
+    size, weight:800, tracking:0.005, color:CB_PAPER, transform:'upper', fit:true, group:'listing',
+    anim:{ opacity:[[0.55,0],[1.05,1,'outQuad']],
+           ty:     [[0.55,44],[1.25,0,'outCubic']] } }),
 
-    { id:'agentName', type:'text', bind:'agentName', box:[204,196,500,40],
-      size:26, weight:800, tracking:0.12, color:CB_PAPER, transform:'upper',
-      anim:{ opacity:[[0.28,0],[0.78,1,'outQuad']],
-             tx:     [[0.28,-22],[0.88,0,'outCubic']] } },
+  sub: (box, size) => ({ id:'sub', type:'text', bind:'sub', box,
+    size, weight:400, tracking:0.14, color:CB_SAND, transform:'upper', group:'listing',
+    anim:{ opacity:[[0.70,0],[1.20,1,'outQuad']],
+           ty:     [[0.70,32],[1.40,0,'outCubic']] } }),
 
-    /* ── logo ────────────────────────────────────────────────────────── */
-    { id:'logo', type:'logo', box:[856,180,150,34], align:'right',
-      anim:{ opacity:[[0.05,0],[0.60,1,'outQuad']] } },
-  ]
+  price: (box, size) => ({ id:'price', type:'text', bind:'price', box,
+    size, weight:800, tracking:0.06, color:CB_LAVENDER, align:'right', group:'listing',
+    anim:{ opacity:[[0.80,0],[1.30,1,'outQuad']],
+           ty:     [[0.80,32],[1.50,0,'outCubic']] } }),
+
+  desc: (box, size, opts) => Object.assign({ id:'desc', type:'text', bind:'desc', box,
+    size, weight:400, tracking:0.01, color:'#a8a49c', lineHeight:1.4, lines:2, group:'listing',
+    anim:{ opacity:[[1.00,0],[1.60,1,'outQuad']],
+           ty:     [[1.00,22],[1.70,0,'outCubic']] } }, opts||{}),
+
+  /* The corner credit belongs to the listing: with an opening card it fades in
+     as the big centred headshot leaves, so the agent stays credited throughout. */
+  agentBadge: (box) => ({ id:'agentPhoto', type:'image', bind:'agent', box, shape:'circle',
+    ring:{ width:2, color:CB_LAVENDER, gap:7 }, group:'listing',
+    trimName:{ zoom:1.20, focus:[0.5, 0.02] },
+    anim:{ opacity:[[0.05,0],[0.45,1,'outQuad']],
+           scale:  [[0.05,0.72],[0.72,1,'outBack']] } }),
+
+  agentName: (box, size) => ({ id:'agentName', type:'text', bind:'agentName', box,
+    size, weight:800, tracking:0.12, color:CB_PAPER, transform:'upper', group:'listing',
+    anim:{ opacity:[[0.28,0],[0.78,1,'outQuad']],
+           tx:     [[0.28,-22],[0.88,0,'outCubic']] } }),
 };
 
-const TEMPLATES = [STATUS_STORY];
+/* Timing shared by both templates. `intro.end` is when the opening card is fully
+   gone, and therefore how far the whole listing is pushed back. */
+const TIMING = { fps:30, duration:10, intro:{ end:2.35 }, outro:{ start:9.30, end:9.92 } };
+
+/* ── 1. FRAMED ─────────────────────────────────────────────────────────────
+   Photo sits in a paper frame with the type stacked under it. Vertical rhythm
+   keeps everything between y=210 and y=1665 so Instagram's own chrome — the
+   profile bar up top, the reply bar along the bottom — never covers anything. */
+const T_FRAMED = Object.assign({
+  id:'framed', name:'Framed',
+  note:'Photo in a paper frame, type stacked underneath. The default.',
+  bg:CB_BLACK,
+  fields:FIELDS(),
+  layers:[
+    PART.logo       ([626, 218, 380, 60]),
+    PART.agentBadge ([74,  210, 104, 104]),
+    PART.agentName  ([196, 244, 420, 40], 26),
+    PART.rule       ([74,  358, 932, 3]),
+    PART.status     ([74,  386, 932, 130], 104),
+
+    PART.frame      ([74,  542, 932, 876]),
+    PART.photos     ([92,  560, 896, 840]),
+
+    PART.address    ([74,  1456, 932, 80], 58),
+    PART.sub        ([74,  1536, 600, 44], 29),
+    PART.price      ([74,  1536, 932, 44], 30),
+    PART.desc       ([74,  1596, 780, 90], 24),
+
+    PART.agentHero    ([330, 770, 420, 420]),
+    PART.agentHeroName([74, 1256, 932, 50], 34),
+  ]
+}, TIMING);
+
+/* ── 2. FULL BLEED ─────────────────────────────────────────────────────────
+   Same content, the photo carries the whole frame. Scrims top and bottom keep
+   the type legible over whatever the photo happens to be. */
+const T_BLEED = Object.assign({
+  id:'bleed', name:'Full Bleed',
+  note:'Photo fills the frame, type sits over scrims. Reads bolder in a feed.',
+  bg:CB_BLACK,
+  fields:FIELDS(),
+  layers:[
+    PART.photos([0, 0, 1080, 1920], { zoom:0.12,
+      anim:{ opacity:[[0.10,0],[0.75,1,'outQuad']],
+             scale:  [[0.10,1.03],[1.40,1,'outCubic']] } }),
+
+    { id:'scrimTop', type:'scrim', box:[0,0,1080,620], group:'listing',
+      from:'rgba(15,15,15,0.86)', to:'rgba(15,15,15,0)',
+      anim:{ opacity:[[0.10,0],[0.75,1,'outQuad']] } },
+    { id:'scrimBot', type:'scrim', box:[0,1000,1080,920], group:'listing',
+      from:'rgba(15,15,15,0)', to:'rgba(15,15,15,0.94)',
+      anim:{ opacity:[[0.10,0],[0.75,1,'outQuad']] } },
+
+    PART.logo       ([626, 218, 380, 60]),
+    PART.agentBadge ([74,  210, 104, 104]),
+    PART.agentName  ([196, 244, 420, 40], 26),
+    PART.rule       ([74,  358, 932, 3]),
+    PART.status     ([74,  386, 932, 130], 104),
+
+    PART.address    ([74,  1432, 932, 80], 58),
+    PART.sub        ([74,  1512, 600, 44], 29),
+    PART.price      ([74,  1512, 932, 44], 30),
+    // Lighter than the framed version — this one sits over a photo, not paper-on-black.
+    PART.desc       ([74,  1572, 780, 90], 24, { color:'#d5d2cb' }),
+
+    PART.agentHero    ([330, 770, 420, 420]),
+    PART.agentHeroName([74, 1256, 932, 50], 34),
+  ]
+}, TIMING);
+
+const TEMPLATES = [T_FRAMED, T_BLEED];
 
 /* ═══════════════════════════════════════════════════════════════════════
    STATE
    ═══════════════════════════════════════════════════════════════════════ */
 
-let TPL   = JSON.parse(JSON.stringify(STATUS_STORY));   // live (JSON-editable) copy
+let tplIdx = 0;
+let TPL   = JSON.parse(JSON.stringify(TEMPLATES[0]));   // live (JSON-editable) copy
 const DATA = {};                                        // field id → value
-const IMG  = { photos:[], agent:null, logo:null };      // decoded HTMLImageElements
+const IMG  = { photos:[], agent:null, agentIsClean:false, logo:null };  // decoded HTMLImageElements
 
 let playing = false, playT = 0, lastTick = 0;
 
@@ -413,12 +501,36 @@ function wrapLines(c, text, maxW, maxLines){
   return lines;
 }
 
-/* Cover-fit an image into a box with an extra zoom factor, centred. */
-function cover(c, img, x, y, w, h, zoom){
+/* Cover-fit an image into a box with an extra zoom factor. `focus` is the point
+   of the overflow to keep, 0–1 on each axis; [0.5,0.5] is centred. */
+function cover(c, img, x, y, w, h, zoom, focus){
   if (!img || !img.naturalWidth) return;
+  const fx = focus ? focus[0] : 0.5, fy = focus ? focus[1] : 0.5;
   const s = Math.max(w/img.naturalWidth, h/img.naturalHeight) * (zoom||1);
   const dw = img.naturalWidth*s, dh = img.naturalHeight*s;
-  c.drawImage(img, x+(w-dw)/2, y+(h-dh)/2, dw, dh);
+  c.drawImage(img, x+(w-dw)*fx, y+(h-dh)*fy, dw, dh);
+}
+
+/* Is the opening card switched on? Drives both which layers exist and how far
+   the listing is pushed back in time. The card IS the agent, so with no
+   headshot picked there's nothing to open with — rather than hold two and a
+   half seconds of near-empty frame, the story just starts on the listing. */
+function introOn(){ return DATA.intro !== 'OFF' && !!IMG.agent; }
+function listingDelay(){ return introOn() ? ((TPL.intro && TPL.intro.end) || 0) : 0; }
+
+/* Layers tagged group:'listing' run on their own clock, offset by the opening
+   card. Keeps every listing keyframe written relative to "when the listing
+   starts" rather than to absolute story time, so toggling the card doesn't
+   mean rewriting a single number. */
+function layerTime(L, t){ return L.group === 'listing' ? t - listingDelay() : t; }
+
+/* One master fade at the tail so "everything fades out" is a scene property
+   rather than an out-key bolted onto all eighteen layers. */
+function masterAlpha(t){
+  const o = TPL.outro;
+  if (!o || t <= o.start) return 1;
+  if (t >= o.end) return 0;
+  return 1 - EASE.inOutQuad((t - o.start) / (o.end - o.start));
 }
 
 function drawFrame(c, t){
@@ -426,8 +538,15 @@ function drawFrame(c, t){
   c.fillStyle = TPL.bg || '#000';
   c.fillRect(0,0,W,H);
 
+  const master = masterAlpha(t), on = introOn();
+
   for (const L of (TPL.layers||[])){
-    const p = resolve(L, t);
+    if (L.when === 'intro'   && !on) continue;
+    if (L.when === 'noIntro' &&  on) continue;
+
+    const lt = layerTime(L, t);
+    const p  = resolve(L, lt);
+    p.opacity *= master;
     if (p.opacity <= 0.001) continue;
     const [bx,by,bw,bh] = L.box;
 
@@ -449,7 +568,7 @@ function drawFrame(c, t){
       c.clip();
     }
 
-    drawLayer(c, L, p, t, bx, by, bw, bh);
+    drawLayer(c, L, p, lt, bx, by, bw, bh);
     c.restore();
   }
   c.restore();
@@ -462,6 +581,14 @@ function drawLayer(c, L, p, t, bx, by, bw, bh){
       c.fillStyle = L.color || '#fff';
       if (L.radius){ roundRect(c, bx, by, bw, bh, L.radius); c.fill(); }
       else c.fillRect(bx, by, bw, bh);
+      break;
+    }
+
+    case 'scrim': {
+      const g = c.createLinearGradient(bx, by, bx, by+bh);
+      g.addColorStop(0, L.from || 'rgba(0,0,0,0)');
+      g.addColorStop(1, L.to   || 'rgba(0,0,0,0.9)');
+      c.fillStyle = g; c.fillRect(bx, by, bw, bh);
       break;
     }
 
@@ -499,6 +626,10 @@ function drawLayer(c, L, p, t, bx, by, bw, bh){
     case 'image': {
       const img = IMG[L.bind];
       if (!img) break;
+      // The library's default squares have the agent's name printed across the
+      // bottom. When that's the file we ended up with, crop it off; when a clean
+      // headshot was found, use the frame as shot.
+      const trim = (L.bind === 'agent' && !IMG.agentIsClean) ? L.trimName : null;
       c.save();
       if (L.shape === 'circle'){
         if (L.ring){
@@ -511,7 +642,7 @@ function drawLayer(c, L, p, t, bx, by, bw, bh){
       } else {
         c.beginPath(); c.rect(bx, by, bw, bh); c.clip();
       }
-      cover(c, img, bx, by, bw, bh, 1);
+      cover(c, img, bx, by, bw, bh, trim ? trim.zoom : 1, trim ? trim.focus : null);
       c.restore();
       break;
     }
@@ -594,11 +725,15 @@ function buildForm(){
         b.onclick = () => {
           DATA[f.id] = o;
           seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+          // Toggling the opening card moves where the listing starts, so the
+          // photo stack has to be re-divided across what's left.
+          if (f.id === 'intro') retime();
           render();
         };
         seg.appendChild(b);
       });
       box.appendChild(seg);
+      if (f.hint){ const h = document.createElement('p'); h.className='hint'; h.textContent=f.hint; box.appendChild(h); }
 
     } else if (f.type === 'area'){
       const ta = document.createElement('textarea');
@@ -609,9 +744,25 @@ function buildForm(){
     } else if (f.type === 'agent'){
       const sel = document.createElement('select');
       sel.innerHTML = '<option value="">— none —</option>';
+      const note = document.createElement('p');
+      note.className = 'hint';
+      note.textContent = 'Pulls the headshot straight from the studio agent library.';
+
       sel.onchange = async () => {
         DATA[f.id] = sel.value;
-        IMG.agent = sel.value ? await loadImage(sel.value) : null;
+        if (!sel.value){
+          IMG.agent = null; IMG.agentIsClean = false;
+          note.textContent = 'Pulls the headshot straight from the studio agent library.';
+        } else {
+          const clean = await cleanAgentSrc(sel.value);
+          IMG.agent = await loadImage(clean || sel.value);
+          IMG.agentIsClean = !!clean;
+          note.textContent = clean
+            ? 'Using the clean headshot.'
+            : 'No clean crop for this agent — using the named square with the name cropped off. Export one from the Profile Pic tool (SQ · Clean) into assets/agents/clean/ to use the full frame.';
+        }
+        retime();                       // the opening card depends on having one
+
         // auto-fill the displayed name from the picked agent
         const nm = AGENTS.find(a => a.src === sel.value);
         if (nm){
@@ -630,9 +781,7 @@ function buildForm(){
           sel.appendChild(o);
         });
       });
-      const h = document.createElement('p');
-      h.className = 'hint'; h.textContent = 'Pulls the headshot straight from the studio agent library.';
-      box.appendChild(h);
+      box.appendChild(note);
 
     } else {
       const inp = document.createElement('input');
@@ -665,6 +814,25 @@ function loadImage(src){
     i.src = src;
   });
 }
+/* Every headshot in assets/agents/ has the agent's name baked into the square.
+   This story prints the name as type, so it prefers the nameless version when
+   one exists at assets/agents/clean/<same filename> — the same convention the
+   carousel builders use, fed by the Profile Pic tool's "SQ · Clean" export.
+   Falls back to the named square, which then gets cropped (see trimName). */
+function probeImg(url){
+  return new Promise(res => { const i = new Image(); i.onload = () => res(url); i.onerror = () => res(''); i.src = url; });
+}
+async function cleanAgentSrc(src){
+  const base = src.replace(/^.*\//, '').replace(/\.[^.]+$/, '');
+  const ext  = (src.match(/\.[^.]+$/) || ['.jpg'])[0];
+  const exts = [ext, ...['.jpg','.png','.jpeg','.webp'].filter(e => e !== ext)];
+  for (const e of exts){
+    const hit = await probeImg('../../assets/agents/clean/' + base + e);
+    if (hit) return hit;
+  }
+  return '';
+}
+
 /* Remote photos go through the studio's image proxy so the canvas stays
    untainted and the MP4 encoder can actually read the pixels back. */
 function proxied(url){
@@ -704,16 +872,20 @@ function syncThumbs(){
     const n  = document.createElement('span'); n.className = 'ord'; n.textContent = i+1;
     d.append(im, x, n); host.appendChild(d);
   });
-  // photo count changes the stack's runtime — keep the clip long enough to show them all
-  autoDuration();
+  retime();
 }
 
-/* The stack drives the length of the story: N photos × hold, floor of 7s. */
-function autoDuration(){
+/* The story is a fixed 10 seconds. So the photo stack doesn't drive the length —
+   the length divides among the photos. Whatever time is left after the opening
+   card is split evenly, so 1 photo lingers and 4 move along. */
+function retime(){
   const stack = (TPL.layers||[]).find(l => l.type === 'photos');
-  if (!stack) return;
+  if (!stack || stack.holdAuto === false) return;
   const n = Math.max(1, IMG.photos.length);
-  TPL.duration = Math.max(7, n*(stack.hold ?? 2.2) + 0.9);
+  stack.hold = +((TPL.duration - listingDelay()) / n).toFixed(3);
+  // Keep the motion panel honest about what just changed — unless it's being
+  // typed in, in which case stomping the textarea would eat the edit.
+  if (document.activeElement !== jsonEl) fillJson();
   drawTimeline();
 }
 
@@ -783,9 +955,14 @@ function tick(now){
 function drawTimeline(){
   const host = document.getElementById('timeline');
   host.innerHTML = '';
+  const on = introOn();
   for (const L of (TPL.layers||[])){
+    if (L.when === 'intro'   && !on) continue;
+    if (L.when === 'noIntro' &&  on) continue;
+    // Show keys where they actually land on the story clock, delay included.
+    const off = L.group === 'listing' ? listingDelay() : 0;
     const keys = [];
-    for (const k in (L.anim||{})) (L.anim[k]||[]).forEach(kf => keys.push(kf[0]));
+    for (const k in (L.anim||{})) (L.anim[k]||[]).forEach(kf => keys.push(kf[0] + off));
     const row = document.createElement('div'); row.className = 'tl-row';
     const nm  = document.createElement('div'); nm.className = 'tl-name'; nm.textContent = L.id;
     const bar = document.createElement('div'); bar.className = 'tl-bar';
@@ -818,7 +995,10 @@ function drawPlayhead(){
 
 const jsonEl = document.getElementById('motion-json');
 function fillJson(){
-  jsonEl.value = JSON.stringify({ duration:TPL.duration, fps:TPL.fps, bg:TPL.bg, layers:TPL.layers }, null, 1);
+  jsonEl.value = JSON.stringify({
+    duration:TPL.duration, fps:TPL.fps, bg:TPL.bg,
+    intro:TPL.intro, outro:TPL.outro, layers:TPL.layers
+  }, null, 1);
 }
 document.getElementById('btn-json-apply').onclick = () => {
   const stat = document.getElementById('json-stat');
@@ -829,14 +1009,26 @@ document.getElementById('btn-json-apply').onclick = () => {
     if (j.duration) TPL.duration = +j.duration;
     if (j.fps) TPL.fps = +j.fps;
     if (j.bg) TPL.bg = j.bg;
+    if (j.intro) TPL.intro = j.intro;
+    if (j.outro) TPL.outro = j.outro;
     stat.textContent = 'Applied.'; drawTimeline(); render();
   } catch(e){ stat.textContent = 'Invalid: ' + e.message; }
 };
 document.getElementById('btn-json-reset').onclick = () => {
-  TPL = JSON.parse(JSON.stringify(STATUS_STORY));
-  fillJson(); autoDuration(); drawTimeline(); render();
+  loadTemplate(tplIdx);
   document.getElementById('json-stat').textContent = 'Reset to the built-in template.';
 };
+
+/* Switching template swaps the layout wholesale but keeps DATA and the loaded
+   photos, so you can flip between designs without retyping anything. */
+function loadTemplate(i){
+  tplIdx = i;
+  TPL = JSON.parse(JSON.stringify(TEMPLATES[i]));
+  document.getElementById('tpl-note').textContent = TEMPLATES[i].note;
+  document.querySelectorAll('#tpl-seg button').forEach((b,n) => b.classList.toggle('on', n === i));
+  playT = Math.min(playT, TPL.duration);
+  retime(); fillJson(); drawTimeline(); render();
+}
 
 /* ═══════════════════════════════════════════════════════════════════════
    EXPORT — deterministic, frame by frame, straight to H.264 MP4
@@ -932,14 +1124,13 @@ window.addEventListener('resize', sizePreview);
 (async function boot(){
   sizePreview();
 
-  // Templates strip (one for now — the shape is here for the next three).
   const seg = document.getElementById('tpl-seg');
-  TEMPLATES.forEach(t => {
+  TEMPLATES.forEach((t, i) => {
     const b = document.createElement('button');
-    b.textContent = t.name; b.className = 'on';
+    b.textContent = t.name;
+    b.onclick = () => loadTemplate(i);
     seg.appendChild(b);
   });
-  document.getElementById('tpl-note').textContent = STATUS_STORY.note;
 
   // Fonts must be resident before the first canvas draw or the metrics lie.
   try { await document.fonts.load("800 100px 'ObjectSans'"); await document.fonts.load("400 30px 'ObjectSans'"); } catch(e){}
@@ -949,10 +1140,7 @@ window.addEventListener('resize', sizePreview);
 
   buildForm();
   setupPhotoDrop();
-  fillJson();
-  autoDuration();
-  drawTimeline();
-  render();
+  loadTemplate(0);
 })();
 </script>
 </body>

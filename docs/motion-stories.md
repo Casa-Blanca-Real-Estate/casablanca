@@ -50,8 +50,8 @@ Why this matters for what you asked for:
 - **Adding "Just Sold" or "Open House" as a different layout is adding an object to an
   array, not writing new render code.** The five templates after the first one are
   nearly free.
-- **You can transcribe DaVinci numbers directly.** A keyframe at 00:00:07 with Ease Out
-  is `[0.23, value, 'outCubic']`. There's a JSON editor in the tool's Motion panel that
+- **You can transcribe DaVinci numbers directly.** A keyframe at frame 7 with Ease Out is
+  `[0.23, value, 'outCubic']`. There's a JSON editor in the tool's Motion panel that
   live-applies edits, so tuning is a paste-and-look loop, not a rebuild.
 - **The form generates itself** from whichever layers declare a `bind`. Add a layer with
   `bind:'openHouseTime'` and the input appears. That's the aggregator idea, literally.
@@ -118,73 +118,98 @@ acceptable requirement — the same one the carousel builders already lean on fo
 
 ---
 
-## 4. What's in the prototype now
+## 4. The story, as it stands
 
-`tools/story/index.html` — one self-contained file, same shape as the carousel builders.
+**Fixed 10 seconds, 30 fps, 300 frames.** The length is a constant, not something the
+photo count drives — the stack divides whatever time is left instead. One photo lingers,
+four move along.
 
-- **1080×1920 live preview** with play/pause, a scrubber, and a timecode readout.
-- **Auto-generated form** — status (4-way toggle), address, neighborhood/unit, price,
-  description, agent.
-- **Agent dropdown** wired to the real `assets/agents/agents.json`, so picking a name
+### Shape of the clip
+
+| | |
+|---|---|
+| **0.0 – 0.35 s** | Logo, rule and status headline come in. |
+| **0.35 – 2.35 s** | **Opening card** (optional): the agent, centred, quarter-second fade in, 1.5 s on screen, quarter-second fade out. |
+| **2.35 s →** | Photo frame arrives with the address, neighborhood, price and description. The corner agent credit fades in as the big headshot leaves. |
+| **→ 9.30 s** | Photos crossfade through the stack with a slow push-in. |
+| **9.30 – 9.92 s** | Everything fades out together. |
+
+Switching the opening card off collapses that window and the listing simply starts at
+zero. Nothing needs rewriting: layers tagged `group:'listing'` run on their own clock,
+offset by `intro.end`, so every listing keyframe is written relative to *when the listing
+starts* rather than to absolute story time. The end fade is one scene-level `outro`
+property rather than an out-key bolted onto all eighteen layers.
+
+The opening card needs an agent to open on. With none picked it's skipped automatically
+rather than holding 2.35 s of near-empty frame.
+
+### Two designs
+
+| | |
+|---|---|
+| **Framed** | Photo in a paper frame, type stacked underneath. The default. |
+| **Full Bleed** | Photo carries the whole frame, type over scrims top and bottom. |
+
+They share one field list and one set of layer parts — they differ in composition, not in
+what a listing is. Switching between them keeps everything you've typed and every photo
+you've loaded. **Adding a third is roughly twenty lines of layout numbers.**
+
+### Layout and Instagram's chrome
+
+Everything sits between **y=210 and y=1665**, so Instagram's own furniture — the profile
+bar along the top, the reply bar along the bottom — never covers anything. The photo is
+932 × 876, a touch wider than square.
+
+### The rest of the tool
+
+- **1080×1920 live preview** with play/pause, scrubber and timecode.
+- **Auto-generated form** — opening card toggle, status (4-way), address, neighborhood,
+  price, description, agent.
+- **Agent dropdown** wired to the real `assets/agents/agents.json` (112 agents), which
   pulls the headshot and auto-fills the displayed name.
-- **1–4 photos**, drag-drop or file-picker, that crossfade with a slow push-in. Photo
-  count drives the clip length automatically.
-- **StreetEasy import** via the existing `CBImportStreetEasy` client — address, price,
-  neighborhood, description and the first four photos in one paste.
-- **Keyframe timeline readout** — every layer as a row, every keyframe as a diamond,
-  with a playhead. Makes it obvious at a glance what's moving when.
-- **Live-editable motion JSON** — the transcription surface for your DaVinci settings.
-- **Export MP4** and **Still frame** (JPEG at the current playhead, for a static post).
+- **1–4 photos**, drag-drop or picker, crossfading with a slow push-in.
+- **StreetEasy import** via the existing `CBImportStreetEasy` client.
+- **Keyframe timeline readout** — every layer a row, every keyframe a diamond, with a
+  playhead. Keys are drawn where they actually land, delay included.
+- **Live-editable motion JSON** — the transcription surface for DaVinci numbers.
+- **Export MP4** and **Still frame** (JPEG at the playhead, for a static post).
 
-The motion in it right now is a **placeholder built to be replaced.** It's a reasonable
-staggered entrance — rule wipes out, status slides up behind a wipe, photo frame settles
-in from 4.5% over, address/sub/price/description cascade, agent photo pops with a slight
-overshoot. It is *not* your comp. It exists so there's something concrete to react to.
+### Headshots
 
----
-
-## 5. What I need from you
-
-1. **Screenshots of one of your existing story videos** at several points — start, each
-   element's entrance, mid-crossfade, end. Enough to read positions and order.
-2. **The DaVinci/Canva settings**, however rough. What I actually need per element:
-   - when it starts and when it lands (seconds, or frames at whatever fps)
-   - what property moves — position, opacity, scale, or a wipe
-   - the from/to values (px offsets are ideal)
-   - the easing (Ease Out / Ease In and Out / Linear)
-3. **The end card**, if there is one — does it hold on the last photo, cut to a logo
-   card, anything else?
-4. **Music.** Out of scope for now: audio would mean shipping and licensing a track, and
-   most agents add sound in the Instagram app anyway. Say the word if it's wanted.
-
-I don't need the source project file — screenshots plus the numbers are enough, and the
-numbers are the part I can't recover from a screenshot.
+The library's squares have the agent's name printed across the bottom, which collides
+with the story printing the name as type. So, exactly as the carousels do, the tool
+prefers a nameless crop at `assets/agents/clean/<same filename>` — the Profile Pic tool's
+"SQ · Clean" export. **That folder is currently empty**, so today every agent falls back
+to the named square, and the tool crops the bottom 17% off to remove the baked-in name
+(`trimName` on the layer). Dropping clean crops into that folder makes the full frame
+usable with no code change.
 
 ---
 
-## 6. Effort estimate
+## 5. Effort estimate
 
 | Phase | What | Size |
 |---|---|---|
 | ~~0~~ | ~~Prove the browser can export an Instagram-ready MP4~~ | ~~**done**~~ |
-| 1 | Rebuild the motion to match your real comp | small — it's data, not code |
-| 2 | Design pass on the layout to match the studio's editorial look | medium |
-| 3 | Templates 2–4 (just listed / sold / open house variants) | small each |
-| 4 | Session save/restore + history, matching the carousel builders | small |
+| ~~1~~ | ~~10 s timing, opening card, layout, second design~~ | ~~**done**~~ |
+| 2 | More designs for agents to pick from | small each |
+| 3 | Session save/restore + history, matching the carousel builders | small |
+| 4 | Populate `assets/agents/clean/` from the Profile Pic tool | not code |
 | 5 | Add to the studio dashboard with a thumbnail | trivial |
 
-Phase 1 is the one gated on you. Everything else is independent.
+**Music is out of scope by decision** — agents add sound in the Instagram app.
 
 ---
 
-## 7. Known gaps in the prototype
+## 6. Known gaps
 
-- **Not linked from the studio dashboard** — deliberately. It's a prototype until the
-  motion is signed off, and it shouldn't appear to agents before then.
+- **Not linked from the studio dashboard** — deliberately. It shouldn't appear to agents
+  before the designs are signed off.
 - **No session persistence** yet (the carousels save to `/.netlify/functions/sessions`).
-- **One template.** The registry supports more; there's only one in it.
-- **No audio track.** See above.
-- **Blur is declared as an animatable property but not implemented** in the draw layer —
-  `ctx.filter` works but is slow enough per-frame to be worth measuring before adopting.
-- **Agent headshots** use the name-baked `accent/` variants. The carousels prefer the
-  `clean/` crops when they exist; this should do the same.
+- **Two templates.** More are cheap; there are two.
+- **`clean/` is empty**, so every headshot is currently the cropped named square.
+- **Blur is declared as an animatable property but not implemented** — `ctx.filter` works
+  but is slow enough per frame to be worth measuring before adopting.
+- **The photo stack's `hold` is recomputed** whenever the photo count or the opening card
+  changes. Setting `holdAuto:false` on the layer in the JSON panel pins it if you want to
+  hand-time the stack.
