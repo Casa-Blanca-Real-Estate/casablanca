@@ -426,108 +426,263 @@ function dilate(mask, cw, ch, thr, px){
 // rebuilds the hole from those. The nearest-neighbour field is refined by two moves:
 //   propagation   — a good offset usually suits the neighbouring patch too
 //   random search — sample offsets at exponentially shrinking radii around the best
-// Note: we deliberately do NOT steer this with the un-blended estimate. At the ~85%
+//
+// Two details separate a passable fill from a seamless one, and both are in here:
+//
+//   MULTI-SCALE. Solving only at full resolution lets each patch make a locally
+//   plausible choice that is globally incoherent — a floorboard line that stops, a rug
+//   that changes direction. Solving on a pyramid coarse-to-fine settles the large
+//   structure first, then refines detail inside it. This is the piece real Content-Aware
+//   Fill has that a single-scale port doesn't.
+//
+//   WEIGHTED VOTING. Each hole pixel is covered by many patches. Averaging them equally
+//   blurs — one bad match drags the result. Weighting each contribution by exp(-d/2σ²)
+//   (Wexler et al.) lets confident matches dominate and keeps the texture crisp.
+//
+// We deliberately do NOT steer any of this with the un-blended estimate: at the ~85%
 // opacity these listing photos use, even a heavily blurred estimate is contaminated
 // enough to pull the letterforms back into the result.
-function patchMatchFill(buf, cw, ch, hole, P, iters, outer){
-  const h = P >> 1, N = cw*ch;
-  // A patch can be a SOURCE only if it contains no hole pixels.
+
+/** RGBA bytes → planar float RGB, which is what the solver works on. */
+function rgbaToF32(buf, n){
+  const p = new Float32Array(n*3);
+  for (let i=0;i<n;i++){ p[i*3]=buf[i*4]; p[i*3+1]=buf[i*4+1]; p[i*3+2]=buf[i*4+2]; }
+  return p;
+}
+/** Half-size box-filtered copy of a float RGB buffer. */
+function halfPix(pix, w, h){
+  const w2 = w>>1, h2 = h>>1, out = new Float32Array(w2*h2*3);
+  for (let y=0;y<h2;y++) for (let x=0;x<w2;x++){
+    const o = (y*w2+x)*3;
+    for (let c=0;c<3;c++){
+      const a = pix[((2*y)*w + 2*x)*3+c],   b = pix[((2*y)*w + 2*x+1)*3+c];
+      const d = pix[((2*y+1)*w + 2*x)*3+c], e = pix[((2*y+1)*w + 2*x+1)*3+c];
+      out[o+c] = (a+b+d+e)*0.25;
+    }
+  }
+  return { pix: out, w: w2, h: h2 };
+}
+/** Half-size hole: a coarse pixel is unknown if ANY of its four children is. */
+function halfHole(hole, w, h){
+  const w2 = w>>1, h2 = h>>1, out = new Uint8Array(w2*h2);
+  for (let y=0;y<h2;y++) for (let x=0;x<w2;x++)
+    out[y*w2+x] = (hole[(2*y)*w + 2*x] || hole[(2*y)*w + 2*x+1] ||
+                   hole[(2*y+1)*w + 2*x] || hole[(2*y+1)*w + 2*x+1]) ? 1 : 0;
+  return out;
+}
+
+/** Smooth local-brightness field, built from KNOWN pixels only and extrapolated across
+ *  the hole (a box blur of the known pixels divided by a box blur of the known mask).
+ *  Matching against mean-shifted patches lets texture come from anywhere in the photo
+ *  while the fill still takes the brightness of the neighbourhood it lands in — without
+ *  it, a stroke over dark floor happily borrows from a bright wall and reads as a patch. */
+function localMean(pix, w, h, hole, radius){
+  const N = w*h;
+  const sum = new Float64Array((w+1)*(h+1)*3), cnt = new Float64Array((w+1)*(h+1));
+  const SW = w+1;
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const i = y*w+x, k = (y+1)*SW + (x+1);
+    const known = hole[i] ? 0 : 1;
+    for (let c=0;c<3;c++)
+      sum[k*3+c] = (known ? pix[i*3+c] : 0) + sum[(k-1)*3+c] + sum[(k-SW)*3+c] - sum[(k-SW-1)*3+c];
+    cnt[k] = known + cnt[k-1] + cnt[k-SW] - cnt[k-SW-1];
+  }
+  const M = new Float32Array(N*3);
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const x0 = Math.max(0, x-radius), y0 = Math.max(0, y-radius);
+    const x1 = Math.min(w-1, x+radius), y1 = Math.min(h-1, y+radius);
+    const a = (y1+1)*SW + (x1+1), b = (y0)*SW + (x1+1), c0 = (y1+1)*SW + x0, d = (y0)*SW + x0;
+    const n = cnt[a] - cnt[b] - cnt[c0] + cnt[d];
+    const i = y*w+x;
+    for (let c=0;c<3;c++)
+      M[i*3+c] = n > 0 ? (sum[a*3+c] - sum[b*3+c] - sum[c0*3+c] + sum[d*3+c]) / n : pix[i*3+c];
+  }
+  return M;
+}
+
+/** One pyramid level: refine the NNF, then vote. Returns the NNF for the next level. */
+function pmLevel(pix, w, h, hole, P, iters, outer, nnfIn, rnd){
+  const half = P >> 1, N = w*h;
+  // A patch is a valid SOURCE only if it contains no unknown pixels.
   const ok = new Uint8Array(N);
-  for (let y=h; y<ch-h; y++) for (let x=h; x<cw-h; x++){
+  for (let y=half; y<h-half; y++) for (let x=half; x<w-half; x++){
     let clean = 1;
-    for (let j=-h; j<=h && clean; j++) for (let i=-h; i<=h; i++) if (hole[(y+j)*cw + x+i]) { clean = 0; break; }
-    ok[y*cw+x] = clean;
+    for (let j=-half; j<=half && clean; j++){
+      const row = (y+j)*w + x;
+      for (let i=-half; i<=half; i++) if (hole[row+i]) { clean = 0; break; }
+    }
+    ok[y*w+x] = clean;
   }
   const srcs = [];
   for (let i=0;i<N;i++) if (ok[i]) srcs.push(i);
-  const tgt = [];
-  for (let y=h; y<ch-h; y++) for (let x=h; x<cw-h; x++) if (hole[y*cw+x]) tgt.push(y*cw+x);
-  if (srcs.length < 32 || !tgt.length) return false;
-
-  let seed = 987654321;
-  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const tgt = [], tIdx = new Int32Array(N).fill(-1);
+  for (let y=half; y<h-half; y++) for (let x=half; x<w-half; x++)
+    if (hole[y*w+x]) { tIdx[y*w+x] = tgt.length; tgt.push(y*w+x); }
   const n = tgt.length;
-  const nn = new Int32Array(n);
-  for (let k=0;k<n;k++) nn[k] = srcs[(rnd()*srcs.length)|0];
+  if (srcs.length < 32 || !n) return null;
 
-  // Seed the hole with the mean of what's known, so early distances mean something.
-  let mr=0, mg=0, mb=0, cnt=0;
-  for (let i=0;i<N;i++) if (!hole[i]){ mr+=buf[i*4]; mg+=buf[i*4+1]; mb+=buf[i*4+2]; cnt++; }
-  mr/=cnt; mg/=cnt; mb/=cnt;
-  for (let i=0;i<N;i++) if (hole[i]){ buf[i*4]=mr; buf[i*4+1]=mg; buf[i*4+2]=mb; }
+  // Local brightness, so patches are compared with it removed.
+  const M = localMean(pix, w, h, hole, Math.max(6, Math.round(Math.min(w,h)/8)));
 
-  // Patch distance over the target patch's KNOWN pixels only. No early exit: the running
-  // sum is compared per known pixel at the end, and bailing on a partial sum against that
-  // average rejects candidates that would have won once the rest of the patch was counted.
-  function dist(t, s){
-    const ty = (t/cw)|0, tx = t%cw, sy = (s/cw)|0, sx = s%cw;
-    let sum = 0, w = 0;
-    for (let j=-h; j<=h; j++){
-      let ti = (ty+j)*cw + tx - h, si = (sy+j)*cw + sx - h;
-      for (let i=-h; i<=h; i++, ti++, si++){
-        if (hole[ti]) continue;
-        const a4 = ti*4, b4 = si*4;
-        const dr = buf[a4]-buf[b4], dg = buf[a4+1]-buf[b4+1], db = buf[a4+2]-buf[b4+2];
-        sum += dr*dr + dg*dg + db*db; w++;
-      }
-    }
-    return w ? sum/w : Infinity;
+  const nnf = new Int32Array(n);
+  for (let k=0;k<n;k++){
+    let s = nnfIn ? nnfIn[k] : -1;
+    if (s < 0 || !ok[s]) s = srcs[(rnd()*srcs.length)|0];
+    nnf[k] = s;
   }
 
-  const maxR = Math.max(cw, ch);
+  // Compare the WHOLE patch, not just its known pixels. A patch sitting deep inside a
+  // thick hole has no known pixels at all, and scoring only those leaves every candidate
+  // tied at infinity — which is exactly how a hole ends up filled with flat grey. Unknown
+  // pixels carry the current estimate (from the coarser level) at a reduced weight, so
+  // known context still dominates while interiors have something to follow.
+  const W_UNKNOWN = 0.4;
+  function dist(t, s){
+    const ty = (t/w)|0, tx = t%w, sy = (s/w)|0, sx = s%w;
+    let sum = 0, cnt = 0;
+    for (let j=-half; j<=half; j++){
+      let ti = (ty+j)*w + tx - half, si = (sy+j)*w + sx - half;
+      for (let i=-half; i<=half; i++, ti++, si++){
+        const q = hole[ti] ? W_UNKNOWN : 1;
+        const a = ti*3, b = si*3;
+        const dr = (pix[a]  -M[a])   - (pix[b]  -M[b]);
+        const dg = (pix[a+1]-M[a+1]) - (pix[b+1]-M[b+1]);
+        const db = (pix[a+2]-M[a+2]) - (pix[b+2]-M[b+2]);
+        sum += q*(dr*dr + dg*dg + db*db); cnt += q;
+      }
+    }
+    return cnt ? sum/cnt : Infinity;
+  }
+
+  const maxR = Math.max(w, h);
+  const best = new Float32Array(n);
   for (let o=0; o<outer; o++){
     for (let it=0; it<iters; it++){
       const fwd = (it & 1) === 0;
       for (let idx=0; idx<n; idx++){
         const k = fwd ? idx : n-1-idx;
         const t = tgt[k];
-        let best = dist(t, nn[k]);
+        let bd = dist(t, nnf[k]);
         const step = fwd ? -1 : 1;
         for (const kk of [k+step, k+step*2]){
           if (kk < 0 || kk >= n) continue;
-          const cand = nn[kk] + (t - tgt[kk]);
-          const cy = (cand/cw)|0, cx = cand%cw;
-          if (cy<h || cy>=ch-h || cx<h || cx>=cw-h || !ok[cand]) continue;
+          const cand = nnf[kk] + (t - tgt[kk]);
+          const cy = (cand/w)|0, cx = cand%w;
+          if (cy<half || cy>=h-half || cx<half || cx>=w-half || !ok[cand]) continue;
           const d = dist(t, cand);
-          if (d < best){ best = d; nn[k] = cand; }
+          if (d < bd){ bd = d; nnf[k] = cand; }
         }
         let r = maxR;
-        const by = (nn[k]/cw)|0, bx = nn[k]%cw;
+        const by = (nnf[k]/w)|0, bx = nnf[k]%w;
         while (r > 1){
           const yy = by + Math.round((rnd()*2-1)*r), xx = bx + Math.round((rnd()*2-1)*r);
-          const cand = yy*cw + xx;
-          if (yy>=h && yy<ch-h && xx>=h && xx<cw-h && ok[cand]){
+          const cand = yy*w + xx;
+          if (yy>=half && yy<h-half && xx>=half && xx<w-half && ok[cand]){
             const d = dist(t, cand);
-            if (d < best){ best = d; nn[k] = cand; }
+            if (d < bd){ bd = d; nnf[k] = cand; }
           }
           r >>= 1;
         }
+        best[k] = bd;
       }
     }
-    // Vote: every patch covering a hole pixel contributes its matched source pixel.
+    // Similarity-weighted vote: confident matches dominate, so texture stays crisp.
+    let mean = 0, mc = 0;
+    for (let k=0;k<n;k++) if (isFinite(best[k])){ mean += best[k]; mc++; }
+    mean = (mc ? mean/mc : 1) + 1e-6;
     const num = new Float32Array(N*3), den = new Float32Array(N);
     for (let k=0;k<n;k++){
-      const t = nn[k];
-      const ty = (tgt[k]/cw)|0, tx = tgt[k]%cw, sy = (t/cw)|0, sx = t%cw;
-      for (let j=-h; j<=h; j++){
-        let ti = (ty+j)*cw + tx - h, si = (sy+j)*cw + sx - h;
-        for (let i=-h; i<=h; i++, ti++, si++){
+      const wgt = isFinite(best[k]) ? Math.exp(-best[k] / (2*mean)) : 0;
+      if (!wgt) continue;
+      const t = nnf[k];
+      const ty = (tgt[k]/w)|0, tx = tgt[k]%w, sy = (t/w)|0, sx = t%w;
+      for (let j=-half; j<=half; j++){
+        let ti = (ty+j)*w + tx - half, si = (sy+j)*w + sx - half;
+        for (let i=-half; i<=half; i++, ti++, si++){
           if (!hole[ti]) continue;
-          num[ti*3] += buf[si*4]; num[ti*3+1] += buf[si*4+1]; num[ti*3+2] += buf[si*4+2];
-          den[ti] += 1;
+          num[ti*3]   += (pix[si*3]  -M[si*3]  +M[ti*3])  *wgt;
+          num[ti*3+1] += (pix[si*3+1]-M[si*3+1]+M[ti*3+1])*wgt;
+          num[ti*3+2] += (pix[si*3+2]-M[si*3+2]+M[ti*3+2])*wgt;
+          den[ti] += wgt;
         }
       }
     }
     for (let i=0;i<N;i++){
       if (!hole[i] || !den[i]) continue;
-      buf[i*4]   = num[i*3]  /den[i];
-      buf[i*4+1] = num[i*3+1]/den[i];
-      buf[i*4+2] = num[i*3+2]/den[i];
+      pix[i*3]   = num[i*3]  /den[i];
+      pix[i*3+1] = num[i*3+1]/den[i];
+      pix[i*3+2] = num[i*3+2]/den[i];
     }
+  }
+  return { nnf, tIdx, tgt, w, h };
+}
+
+/** Coarse-to-fine PatchMatch fill. Returns false if there's too little source texture. */
+function patchMatchFill(buf, cw, ch, hole, P, iters, outer){
+  const N = cw*ch;
+  // Pyramid, coarsest last. Stop before a level gets too small to hold a few patches.
+  const pyr = [{ pix: rgbaToF32(buf, N), w: cw, h: ch, hole }];
+  while (pyr.length < 4){
+    const t = pyr[pyr.length-1];
+    if (Math.min(t.w, t.h) < 6*P) break;
+    const d = halfPix(t.pix, t.w, t.h);
+    pyr.push({ pix: d.pix, w: d.w, h: d.h, hole: halfHole(t.hole, t.w, t.h) });
+  }
+  let seed = 987654321;
+  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+  // Seed the coarsest level's hole with the mean of what's known there.
+  const top = pyr[pyr.length-1];
+  let mr=0, mg=0, mb=0, cnt=0;
+  for (let i=0;i<top.w*top.h;i++) if (!top.hole[i]){ mr+=top.pix[i*3]; mg+=top.pix[i*3+1]; mb+=top.pix[i*3+2]; cnt++; }
+  if (!cnt) return false;
+  mr/=cnt; mg/=cnt; mb/=cnt;
+  for (let i=0;i<top.w*top.h;i++) if (top.hole[i]){ top.pix[i*3]=mr; top.pix[i*3+1]=mg; top.pix[i*3+2]=mb; }
+
+  let prev = null;
+  for (let l = pyr.length-1; l >= 0; l--){
+    const lv = pyr[l];
+    let nnfInit = null;
+    if (prev){
+      // Carry the coarse solution down: the filled colours as a starting image, and the
+      // offsets themselves (doubled) so the fine search begins from the coarse answer.
+      const half = P>>1;
+      const tgt = [], tIdx = new Int32Array(lv.w*lv.h).fill(-1);
+      for (let y=half; y<lv.h-half; y++) for (let x=half; x<lv.w-half; x++)
+        if (lv.hole[y*lv.w+x]) { tIdx[y*lv.w+x] = tgt.length; tgt.push(y*lv.w+x); }
+      nnfInit = new Int32Array(tgt.length).fill(-1);
+      for (let k=0;k<tgt.length;k++){
+        const y = (tgt[k]/lv.w)|0, x = tgt[k]%lv.w;
+        const cy = y>>1, cx = x>>1;
+        if (cy < prev.h && cx < prev.w){
+          const ck = prev.tIdx[cy*prev.w+cx];
+          if (ck >= 0){
+            const cs = prev.nnf[ck];
+            const sy = ((cs/prev.w)|0)*2 + (y&1), sx = (cs%prev.w)*2 + (x&1);
+            if (sy>=half && sy<lv.h-half && sx>=half && sx<lv.w-half) nnfInit[k] = sy*lv.w+sx;
+          }
+        }
+        // Upsample the coarse colours as this level's starting guess.
+        if (cy < prev.h && cx < prev.w){
+          const src = (cy*prev.w+cx)*3, dst = tgt[k]*3;
+          lv.pix[dst] = prev.pix[src]; lv.pix[dst+1] = prev.pix[src+1]; lv.pix[dst+2] = prev.pix[src+2];
+        }
+      }
+    }
+    const res = pmLevel(lv.pix, lv.w, lv.h, lv.hole, P, iters, outer, nnfInit, rnd);
+    if (!res) return false;
+    prev = { nnf: res.nnf, tIdx: res.tIdx, w: lv.w, h: lv.h, pix: lv.pix };
+  }
+
+  const fine = pyr[0];
+  for (let i=0;i<N;i++){
+    if (!hole[i]) continue;
+    buf[i*4]   = Math.min(255, Math.max(0, fine.pix[i*3]));
+    buf[i*4+1] = Math.min(255, Math.max(0, fine.pix[i*3+1]));
+    buf[i*4+2] = Math.min(255, Math.max(0, fine.pix[i*3+2]));
   }
   return true;
 }
-
 /** Jacobi diffusion — fallback when a hole is so large there isn't enough clean source
  *  texture around it for PatchMatch to draw on. */
 function diffuseFill(buf, cw, ch, hole, iters){
