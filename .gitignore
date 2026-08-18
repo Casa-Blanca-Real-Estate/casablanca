@@ -1,2 +1,8 @@
 node_modules/
 .netlify/
+
+# Vite build output for the React tools under tools-src/.
+# Netlify rebuilds these on deploy; the hand-written tools in tools/ are NOT
+# generated and stay committed as normal source.
+tools/_shared/
+tools/react-demo/

@@ -1,5 +1,9 @@
 [build]
   publish = "."
+  # Compiles only the React tools listed in vite.config.js (sources in tools-src/).
+  # Every hand-written tool under tools/ is served exactly as committed and is not
+  # touched by this command.
+  command = "npm run build"
 
 [functions]
   directory = "netlify/functions"

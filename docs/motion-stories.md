@@ -100,11 +100,11 @@ back with a demuxer, the file reports MP4 / 1080×1920 / 7.2 s / 216 packets / e
 
 | Option | Why not |
 |---|---|
-| **Remotion** | The best-known tool here, and genuinely good — but it's React, needs a build step, and renders via headless Chrome on a server (or paid Lambda). The studio is static HTML on Netlify with no build step. It would mean a second, incompatible stack. |
+| **Remotion** | The best-known tool here, and genuinely good. **Its licence is the blocker, not its architecture** — free only up to 3 employees, and a tool agents generate videos with lands on the $100/month-minimum tier. It also now renders client-side *via Mediabunny*, the library below, so we'd be paying to wrap an engine we already call directly. Full reasoning: [`react-in-the-studio.md`](react-in-the-studio.md). |
 | **`MediaRecorder` + `canvas.captureStream()`** | Free and 10 lines, but it records in *real time* — a slow machine drops frames — and outputs WebM/VP8, which Instagram doesn't reliably take. |
 | **`ffmpeg.wasm`** | ~30 MB payload, much slower, and WebCodecs makes it unnecessary for encode-only work. |
 | **Server-side headless Chrome + ffmpeg** | Real per-render cost and a 26 s Netlify function ceiling to fight. Worth revisiting only if we ever want batch rendering. |
-| **HeyGen HyperFrames** | Newer HTML/CSS→MP4 renderer, interesting, but also a CLI + server render model. Same mismatch as Remotion. |
+| **HeyGen HyperFrames** | Apache-2.0 HTML/CSS→MP4 renderer, no licence problem — but it renders through a CLI driving headless Chrome, and it's aimed at AI agents *composing* video rather than people filling in a template. Different job. |
 
 ### Browser support — the one real constraint
 

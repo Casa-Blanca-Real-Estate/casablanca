@@ -2,9 +2,20 @@
   "name": "casablanca-tools-backend",
   "private": true,
   "type": "module",
-  "description": "Netlify Functions backing the Casa Blanca carousel tools (StreetEasy import + AI copy).",
+  "description": "Netlify Functions backing the Casa Blanca carousel tools (StreetEasy import + AI copy), plus the Vite build for the React tools under tools-src/.",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "npm run build && npx --yes http-server . -p 8080 -c-1"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.0",
-    "@netlify/blobs": "^8.1.0"
+    "@netlify/blobs": "^8.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.5",
+    "vite": "^8.2.1"
   }
 }

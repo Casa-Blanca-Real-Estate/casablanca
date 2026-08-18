@@ -1,0 +1,66 @@
+/* Same brand tokens and chrome as the hand-written tools — but here the CSS is a
+   real module Vite bundles and hashes, instead of a <style> block copy-pasted
+   between eleven HTML files. That deduplication is most of the day-to-day win. */
+
+@font-face{font-family:'ObjectSans';src:url('/assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-display:block}
+@font-face{font-family:'ObjectSans';src:url('/assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-display:block}
+
+:root{
+  --ink:#0f0f0f; --paper:#f4f3f0; --paper2:#e8e6e0;
+  --accent:#aaa3cf; --plum:#1e1a2e; --mid:#8a877f; --line:#dddbd5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+     font-family:'ObjectSans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+
+header{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--ink);color:#fff;position:sticky;top:0;z-index:50}
+header img{height:19px}
+.h-lbl{font-weight:800;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#cbc8c2}
+
+.wrap{display:grid;grid-template-columns:376px 1fr;min-height:calc(100vh - 47px)}
+.panel{background:#fff;border-right:1px solid var(--line);padding:18px 16px 60px;overflow-y:auto;max-height:calc(100vh - 47px)}
+
+.banner{background:#f2f0fa;border:1px solid #d9d5ee;color:#3a3550;border-radius:8px;
+  padding:10px 12px;font-size:11px;line-height:1.5;margin:0 0 16px}
+.banner code{font-size:10.5px;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px}
+
+.sec{border-bottom:1px solid var(--line);padding:0 0 16px;margin:0 0 16px}
+.sec:last-child{border-bottom:none}
+.sec-h{font-weight:800;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mid);margin:0 0 11px}
+.sec-h .ok{color:#3d7a4e;letter-spacing:.04em}
+label{display:block;font-weight:800;font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 5px;color:#55514a}
+
+input[type=text]{width:100%;font-family:inherit;font-size:12.5px;color:var(--ink);
+  background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 10px;outline:none}
+input[type=text]:focus{border-color:var(--accent);background:#fff}
+input[type=range]{width:100%}
+
+.agents{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 0;max-height:250px;overflow-y:auto}
+.agent{padding:0;border:1px solid var(--line);border-radius:8px;background:var(--paper);cursor:pointer;overflow:hidden;text-align:center}
+.agent:hover{border-color:var(--accent)}
+.agent.on{border-color:var(--ink);box-shadow:0 0 0 1.5px var(--ink)}
+.agent img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.agent span{display:block;font-size:8px;font-weight:800;letter-spacing:.03em;padding:3px 2px;
+  color:#55514a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.swatches{display:flex;gap:7px}
+.sw{width:34px;height:34px;border-radius:7px;border:2px solid var(--line);cursor:pointer}
+.sw.on{border-color:var(--ink)}
+
+.btn{font-family:inherit;font-weight:800;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  padding:11px 14px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:var(--plum)}
+.btn-s{background:var(--paper);color:var(--ink);border-color:var(--line);padding:8px 11px;font-size:10px}
+.btn-s:hover{background:#fff;border-color:var(--accent)}
+
+.hint{font-size:10px;color:var(--mid);margin:7px 0 0;line-height:1.45;word-break:break-word}
+.err{font-size:11px;color:#b4452f;margin:0 0 8px}
+
+.stage{background:linear-gradient(160deg,#1e1a2e 0%,#2d2640 45%,#1a1625 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 20px;gap:16px}
+.frame{border-radius:12px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);line-height:0;background:#000}
+#cv{display:block;width:min(460px,60vw);height:auto}
+.stagehint{color:#cbc8c2;font-size:10.5px;max-width:460px;text-align:center;line-height:1.6;margin:0}
+.stagehint code{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px}
+
+@media(max-width:1000px){.wrap{grid-template-columns:1fr}.panel{max-height:none;border-right:none;border-bottom:1px solid var(--line)}}
