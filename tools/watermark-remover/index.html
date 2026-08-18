@@ -85,6 +85,25 @@ input[type=range]{width:140px;accent-color:var(--lav);}
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:99;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .foot{font-size:11px;color:var(--mid);line-height:1.8;}
+.foot a{color:var(--black);}
+.divider-v{width:1px;align-self:stretch;background:var(--bdr);margin:0 4px;}
+
+/* Filmstrip — one thumb per loaded photo */
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+.strip:empty{display:none;}
+.st{position:relative;flex-shrink:0;cursor:pointer;border:2px solid var(--bdr);border-radius:var(--rsm);
+    overflow:hidden;width:104px;height:74px;background:#e9e7e2;}
+.st img{width:100%;height:100%;object-fit:cover;display:block;}
+.st.on{border-color:var(--lav);box-shadow:0 0 0 1px var(--lav);}
+.st-badge{position:absolute;top:3px;left:3px;font-size:9px;font-weight:800;letter-spacing:.06em;
+  background:rgba(15,15,15,.78);color:#fff;border-radius:3px;padding:1px 5px;}
+.st-x{position:absolute;top:3px;right:3px;width:16px;height:16px;border:none;border-radius:3px;
+  background:rgba(15,15,15,.6);color:#fff;font-size:10px;line-height:1;cursor:pointer;opacity:0;}
+.st:hover .st-x{opacity:1;}
+.st-x:hover{background:rgba(180,60,60,.9);}
+.mark-x{margin-left:auto;border:none;background:transparent;color:var(--mid);cursor:pointer;
+  font-size:13px;line-height:1;padding:2px 6px;border-radius:3px;}
+.mark-x:hover{background:rgba(180,60,60,.12);color:#b85a4a;}
 </style>
 </head>
 <body>
@@ -106,9 +125,9 @@ input[type=range]{width:140px;accent-color:var(--lav);}
   <div class="card" id="input-card">
     <div class="lbl">Photo</div>
     <div class="dz" id="dz">
-      <input type="file" id="file" accept="image/*">
+      <input type="file" id="file" accept="image/*" multiple>
       <span class="dz-lbl">Drop, click, or paste</span>
-      <span class="dz-hint">JPG or PNG</span>
+      <span class="dz-hint">JPG or PNG · several at once is fine</span>
     </div>
     <div class="url-row">
       <input type="text" id="url" placeholder="…or paste an image URL (StreetEasy, etc.)" autocomplete="off">
@@ -117,10 +136,16 @@ input[type=range]{width:140px;accent-color:var(--lav);}
   </div>
 
   <div class="card hidden" id="work-card">
+    <div class="strip" id="strip"></div>
+
     <div class="row">
-      <span class="lbl">Mode</span>
-      <button class="btn-s on" id="mode-auto" data-mode="auto">Casa Blanca mark</button>
-      <button class="btn-s"    id="mode-fill" data-mode="fill">Any mark (fill box)</button>
+      <span class="lbl">Mark</span>
+      <button class="btn-s on" id="mode-auto" data-mode="auto">Casa Blanca</button>
+      <button class="btn-s"    id="mode-fill" data-mode="fill">Anything</button>
+      <span class="divider-v"></span>
+      <span class="lbl">Fill</span>
+      <button class="btn-s on" id="fill-cr" data-fill="cr">Structure-first</button>
+      <button class="btn-s"    id="fill-pm" data-fill="pm">Texture</button>
       <span class="spacer"></span>
       <button class="btn-s" id="btn-undo" disabled>↶ Undo</button>
       <button class="btn-s" id="btn-reset" disabled>Reset</button>
@@ -131,31 +156,19 @@ input[type=range]{width:140px;accent-color:var(--lav);}
       <canvas id="overlay"></canvas>
     </div>
 
-    <div class="row">
-      <div class="ctl">
-        <label for="spread">Spread</label>
-        <input type="range" id="spread" min="0" max="10" step="1" value="5">
-        <span class="val" id="spread-val">5px</span>
-      </div>
-      <div class="ctl">
-        <label for="opacity">Opacity</label>
-        <input type="range" id="opacity" min="0" max="100" step="1" value="0">
-        <span class="val" id="opacity-val">auto</span>
-      </div>
-      <div class="ctl">
-        <label>Fill</label>
-        <button class="btn-s on" id="fill-cr" data-fill="cr" style="padding:6px 10px;">Structure-first</button>
-        <button class="btn-s"    id="fill-pm" data-fill="pm" style="padding:6px 10px;">Texture</button>
-      </div>
-      <span class="spacer"></span>
-      <button class="btn-p" id="btn-dl">↓ Download</button>
-    </div>
-
     <p class="status" id="status">Drag a box around a watermark.</p>
     <div class="marks" id="marks"></div>
+
+    <div class="row">
+      <button class="btn-s" id="btn-apply-all" disabled title="Run this photo's removals on every other photo">⇉ Apply marks to all photos</button>
+      <span class="spacer"></span>
+      <button class="btn-s" id="btn-dl">↓ This photo</button>
+      <button class="btn-p" id="btn-dl-all">↓ Download all</button>
+    </div>
   </div>
 
   <p class="foot">
+    Need to <em>add</em> a watermark instead? That's the <a href="../watermarker/">Watermarker</a>.<br>
     Removal is exact when the mark was applied at a light opacity. These StreetEasy photos carry it at
     roughly 85%, which leaves only ~15% of the original pixels underneath — the tool recovers the correct
     colour and shading there, then rebuilds the lost detail from the pixels around each stroke.
@@ -184,50 +197,75 @@ const UNBLEND_MAX = 0.60;
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-const S = { img:null, w:0, h:0, cur:null, history:[], marks:[], mode:'auto', fill:'cr', dragging:false, box:null };
+// Photos hold their ORIGINAL pixels plus an ordered list of removals. The canvas is
+// always the original replayed through those ops, which is what lets one mark be pulled
+// out of the middle without disturbing the others.
+const S = {
+  photos: [],        // [{ name, img, w, h, ops:[{box,mode,fill,info}] }]
+  idx: -1,
+  mode: 'auto', fill: 'cr',
+  dragging: false, box: null, busy: false,
+};
+const SPREAD = 5;    // px the hole grows past the mark's own footprint
 const stage   = document.getElementById('stage');
 const overlay = document.getElementById('overlay');
 const sctx = stage.getContext('2d', { willReadFrequently:true });
 const octx = overlay.getContext('2d');
+const photo = () => S.photos[S.idx] || null;
 
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1900); }
 function status(html){ document.getElementById('status').innerHTML = html; }
+const yieldUI = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 
 // ═══════════════════════════════════════════════════
 // LOADING
 // ═══════════════════════════════════════════════════
-function setImage(img){
-  S.img = img; S.w = img.naturalWidth; S.h = img.naturalHeight;
-  stage.width = S.w; stage.height = S.h;
-  overlay.width = S.w; overlay.height = S.h;
-  overlay.style.width = stage.style.width = '100%';
-  sctx.drawImage(img, 0, 0);
-  S.cur = sctx.getImageData(0, 0, S.w, S.h);
-  S.history = []; S.marks = [];
-  renderMarks(); syncButtons();
+function addPhoto(img, name){
+  S.photos.push({ name: name || `photo-${S.photos.length+1}`, img, w: img.naturalWidth, h: img.naturalHeight, ops: [] });
   document.getElementById('work-card').classList.remove('hidden');
-  status(`Loaded <b>${S.w}×${S.h}</b>. Drag a box around a watermark.`);
+  if (S.idx < 0) selectPhoto(0); else { renderStrip(); syncButtons(); }
 }
-function loadFile(f){
-  if (!f || !/^image\//.test(f.type)) return;
-  const r = new FileReader();
-  r.onload = e => { const i = new Image(); i.onload = () => setImage(i); i.src = e.target.result; };
-  r.readAsDataURL(f);
+function selectPhoto(i){
+  if (i < 0 || i >= S.photos.length) return;
+  S.idx = i;
+  const p = S.photos[i];
+  stage.width = p.w; stage.height = p.h;
+  overlay.width = p.w; overlay.height = p.h;
+  overlay.style.width = stage.style.width = '100%';
+  redraw();
+  renderStrip();
+  status(`<b>${p.name}</b> — ${p.w}×${p.h}. Drag a box around a watermark.`);
 }
-document.getElementById('file').addEventListener('change', function(){ loadFile(this.files[0]); this.value=''; });
+/** Redraw from the original and replay this photo's ops. */
+async function redraw(){
+  const p = photo(); if (!p) return;
+  sctx.drawImage(p.img, 0, 0);
+  for (const op of p.ops) applyOp(op);
+  renderMarks(); renderStrip(); syncButtons();
+}
+function loadFiles(list){
+  const files = Array.from(list || []).filter(f => /^image\//.test(f.type));
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = e => { const i = new Image(); i.onload = () => addPhoto(i, f.name.replace(/\.[^.]+$/, '')); i.src = e.target.result; };
+    r.readAsDataURL(f);
+  });
+}
+document.getElementById('file').addEventListener('change', function(){ loadFiles(this.files); this.value=''; });
 const dz = document.getElementById('dz');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); loadFile(e.dataTransfer.files[0]); });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); loadFiles(e.dataTransfer.files); });
 document.addEventListener('paste', e => {
-  for (const it of (e.clipboardData||{}).items||[]) if (it.type.startsWith('image/')) { loadFile(it.getAsFile()); return; }
+  const items = (e.clipboardData||{}).items||[];
+  for (const it of items) if (it.type.startsWith('image/')) { loadFiles([it.getAsFile()]); return; }
 });
 // Remote URLs go through the existing image proxy so the canvas stays untainted.
 document.getElementById('btn-url').addEventListener('click', () => {
   const u = document.getElementById('url').value.trim();
   if (!u) return;
   const i = new Image(); i.crossOrigin = 'anonymous';
-  i.onload = () => setImage(i);
+  i.onload = () => { addPhoto(i, (u.split('/').pop()||'photo').replace(/\?.*$/,'').replace(/\.[^.]+$/,'')); document.getElementById('url').value=''; };
   i.onerror = () => toast('✗ Could not load that URL');
   i.src = '/.netlify/functions/img?u=' + encodeURIComponent(u);
 });
@@ -918,41 +956,33 @@ function ringNoise(buf, cw, ch, hole){
   return n ? sum/n : 0;
 }
 
-async function runRemoval(box){
-  if (!S.img) return;
-  if (S.mode === 'auto' && !LOGO_READY){ toast('Logo still loading…'); return; }
-  // Generous context: PatchMatch can only copy texture it can see, so give it a wide
+/** Apply one removal to the current canvas. Pure with respect to the op: replaying the
+ *  same op list on the same original always reproduces the same result, which is what
+ *  makes deleting a single mark cheap to express. Returns a description, or null. */
+function applyOp(op){
+  const p = photo(); if (!p) return null;
+  const box = op.box;
+  // Generous context: the fill can only copy texture it can see, so give it a wide
   // margin of clean pixels around the mark to source from.
-  const P = Math.max(60, Math.round(box.w * 0.42));
-  const x0 = Math.max(0, box.x - P), y0 = Math.max(0, box.y - P);
-  const x1 = Math.min(S.w, box.x + box.w + P), y1 = Math.min(S.h, box.y + box.h + P);
+  const PAD = Math.max(60, Math.round(box.w * 0.42));
+  const x0 = Math.max(0, box.x - PAD), y0 = Math.max(0, box.y - PAD);
+  const x1 = Math.min(p.w, box.x + box.w + PAD), y1 = Math.min(p.h, box.y + box.h + PAD);
   const cw = x1-x0, ch = y1-y0;
-  if (cw < 8 || ch < 8) return;
+  if (cw < 8 || ch < 8) return null;
 
-  status('Working…');
-  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-  S.history.push(sctx.getImageData(0,0,S.w,S.h));
   const crop = sctx.getImageData(x0, y0, cw, ch);
-  const spread = +document.getElementById('spread').value;
-  const ovr = +document.getElementById('opacity').value;
-  const useGrain = true;   // only the diffusion fallback uses synthetic grain
-
   let mask, alpha = [0,0,0], fit = null, unblended = false, method = 'fill';
-  if (S.mode === 'auto'){
+
+  if (op.mode === 'auto'){
     fit = fitMark(crop, cw, ch, { x: box.x-x0, y: box.y-y0, w: box.w, h: box.h });
-    if (!fit || fit.s < 0.2){
-      S.history.pop();
-      status('No Casa Blanca mark found in that box — try a tighter box, or switch to <b>Any mark</b>.');
-      drawBox(null); toast('✗ No match'); return;
-    }
+    if (!fit || fit.s < 0.2) return null;
     mask = rasterMask(cw, ch, fit.lw, fit.x, fit.y);
     // Per-channel opacity: the mark is not identical across R/G/B after StreetEasy's
     // re-encode, and a single shared value leaves coloured fringing on the letterforms.
-    alpha = ovr > 0 ? [ovr/100, ovr/100, ovr/100] : [0,1,2].map(c => solveAlpha(crop, cw, ch, mask, c));
+    alpha = [0,1,2].map(c => solveAlpha(crop, cw, ch, mask, c));
     // The un-blend is exact only while enough of the original signal survives beneath the
     // mark. Past ~60% opacity it returns mostly amplified quantisation noise, and letting
-    // that inform the fill drags the letterforms back in — so above the threshold we skip
-    // it entirely and hand the strokes to PatchMatch, which is what Photoshop would do.
+    // that inform the fill drags the letterforms back in.
     unblended = Math.max(alpha[0], alpha[1], alpha[2]) < UNBLEND_MAX;
     if (unblended){
       // out = (1-a·m)·bg + a·m·C  ⇒  bg = (out - a·m·C)/(1 - a·m)
@@ -972,63 +1002,124 @@ async function runRemoval(box){
   }
 
   if (unblended){
-    // Light opacity: the inversion recovered the real pixels, so leave them alone.
-    method = 'un-blend';
+    method = 'un-blend';   // light opacity: the inversion recovered the real pixels
   } else {
     // Rebuild the mark's whole footprint — including its anti-aliased edges, which is why
     // the threshold is low — from real texture around it.
-    const hole = dilate(mask, cw, ch, S.mode === 'auto' ? 0.03 : 0.5, spread);
+    const hole = dilate(mask, cw, ch, op.mode === 'auto' ? 0.03 : 0.5, SPREAD);
     let seed = 20240917;
     const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-    const done = S.fill === 'cr'
+    const done = op.fill === 'cr'
       ? criminisiFill(crop.data, cw, ch, hole, 11, rnd)
       : patchMatchFill(crop.data, cw, ch, hole, 13, 4, 2);
-    method = done ? (S.fill === 'cr' ? 'structure-first fill' : 'content-aware fill')
+    method = done ? (op.fill === 'cr' ? 'structure-first' : 'texture')
                   : 'diffusion (not enough source texture)';
     if (!done){
-      // Fallback only: PatchMatch copies real grain, so it needs no synthetic noise.
-      const amp = useGrain ? ringNoise(crop.data, cw, ch, hole) : 0;
+      // Fallback only: the exemplar fills copy real grain and need no synthetic noise.
+      const amp = ringNoise(crop.data, cw, ch, hole);
       diffuseFill(crop.data, cw, ch, hole, 260);
       addGrain(crop.data, cw, ch, hole, amp);
     }
   }
-
   sctx.putImageData(crop, x0, y0);
-  S.cur = sctx.getImageData(0,0,S.w,S.h);
-  S.marks.push({
-    mode: S.mode,
-    at: `${x0+(fit?Math.round(fit.x):0)},${y0+(fit?Math.round(fit.y):0)}`,
+  op.info = {
+    mode: op.mode, method,
+    at: `${x0 + (fit ? Math.round(fit.x) : 0)},${y0 + (fit ? Math.round(fit.y) : 0)}`,
     size: fit ? Math.round(fit.lw) : box.w,
-    score: fit ? fit.s.toFixed(2) : '—',
-    alpha: S.mode==='auto' ? alpha.map(a=>a.toFixed(2)).join(' / ') : '—',
-    method
-  });
-  drawBox(null); renderMarks(); syncButtons();
-  status(S.mode==='auto'
-    ? `Removed a mark — <b>${Math.round(fit.lw)}px</b> wide (${(100*fit.lw/S.w).toFixed(1)}% of width), match <b>${fit.s.toFixed(2)}</b>, opacity <b>${alpha.map(a=>Math.round(a*100)).join('/')}%</b> → <b>${method}</b>. Drag another box for a second mark.`
-    : `Filled a <b>${box.w}×${box.h}</b> box with <b>${method}</b>. Drag another box for a second mark.`);
+    score: fit ? fit.s.toFixed(2) : null,
+    alpha: fit ? alpha.map(a => Math.round(a*100)).join('/') : null,
+  };
+  return op.info;
+}
+
+async function runRemoval(box){
+  const p = photo(); if (!p || S.busy) return;
+  if (S.mode === 'auto' && !LOGO_READY){ toast('Logo still loading…'); return; }
+  S.busy = true;
+  status('Working…');
+  await yieldUI();
+  const op = { box: { x:box.x, y:box.y, w:box.w, h:box.h }, mode: S.mode, fill: S.fill };
+  const info = applyOp(op);
+  S.busy = false;
+  drawBox(null);
+  if (!info){
+    status('No Casa Blanca mark found in that box — try a tighter box, or switch to <b>Anything</b>.');
+    toast('✗ No match'); return;
+  }
+  p.ops.push(op);
+  renderMarks(); renderStrip(); syncButtons();
+  status(info.score
+    ? `Removed a mark — <b>${info.size}px</b> wide (${(100*info.size/p.w).toFixed(1)}% of width), match <b>${info.score}</b>, opacity <b>${info.alpha}%</b> → <b>${info.method}</b>.`
+    : `Filled a <b>${box.w}×${box.h}</b> box with <b>${info.method}</b>.`);
   toast('✓ Mark removed');
 }
 
-function renderMarks(){
-  const el = document.getElementById('marks');
-  el.innerHTML = S.marks.map((m,i) =>
-    `<div class="mark-row"><b>${i+1}</b> · ${m.mode==='auto'?'Casa Blanca mark':'box fill'} · at <b>${m.at}</b> · ${m.mode==='auto'?`width <b>${m.size}px</b> · match <b>${m.score}</b> · opacity <b>${m.alpha}</b>`:`<b>${m.size}px</b> wide`}</div>`
-  ).join('');
+// ═══════════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════════
+function renderStrip(){
+  const el = document.getElementById('strip');
+  if (!S.photos.length){ el.innerHTML = ''; return; }
+  el.innerHTML = S.photos.map((p,i) =>
+    `<div class="st${i===S.idx?' on':''}" data-i="${i}" title="${p.name}">
+       <img src="${p.img.src}" alt="">
+       ${p.ops.length ? `<span class="st-badge">${p.ops.length} ✓</span>` : ''}
+       <button class="st-x" data-x="${i}" title="Remove this photo">✕</button>
+     </div>`).join('');
 }
-function syncButtons(){
-  document.getElementById('btn-undo').disabled  = !S.history.length;
-  document.getElementById('btn-reset').disabled = !S.history.length;
-}
-document.getElementById('btn-undo').addEventListener('click', () => {
-  const prev = S.history.pop(); if (!prev) return;
-  sctx.putImageData(prev, 0, 0); S.cur = prev; S.marks.pop();
-  renderMarks(); syncButtons(); status('Undid the last removal.');
+document.getElementById('strip').addEventListener('click', e => {
+  if (S.busy) return;
+  const x = e.target.closest('.st-x');
+  if (x){
+    const i = +x.dataset.x;
+    S.photos.splice(i,1);
+    if (!S.photos.length){ S.idx = -1; document.getElementById('work-card').classList.add('hidden'); return; }
+    S.idx = Math.max(0, Math.min(S.idx > i ? S.idx-1 : S.idx, S.photos.length-1));
+    selectPhoto(S.idx); return;
+  }
+  const t = e.target.closest('.st');
+  if (t) selectPhoto(+t.dataset.i);
 });
-document.getElementById('btn-reset').addEventListener('click', () => {
-  if (!S.img) return;
-  sctx.drawImage(S.img, 0, 0); S.cur = sctx.getImageData(0,0,S.w,S.h);
-  S.history = []; S.marks = []; renderMarks(); syncButtons(); status('Back to the original.');
+
+function renderMarks(){
+  const p = photo();
+  const el = document.getElementById('marks');
+  el.innerHTML = !p ? '' : p.ops.map((op,i) => {
+    const n = op.info || {};
+    const detail = n.score
+      ? `Casa Blanca mark · <b>${n.size}px</b> · match <b>${n.score}</b> · opacity <b>${n.alpha}%</b> · ${n.method}`
+      : `box fill · <b>${op.box.w}×${op.box.h}</b> · ${n.method || '—'}`;
+    return `<div class="mark-row"><b>${i+1}</b> · ${detail}
+      <button class="mark-x" data-op="${i}" title="Undo just this one">✕</button></div>`;
+  }).join('');
+}
+document.getElementById('marks').addEventListener('click', async e => {
+  const b = e.target.closest('.mark-x'); if (!b || S.busy) return;
+  const p = photo(); if (!p) return;
+  S.busy = true; status('Redoing the remaining marks…'); await yieldUI();
+  p.ops.splice(+b.dataset.op, 1);
+  await redraw();
+  S.busy = false;
+  status(p.ops.length ? `Removed that one — <b>${p.ops.length}</b> mark${p.ops.length>1?'s':''} still applied.` : 'Back to the original.');
+});
+
+function syncButtons(){
+  const p = photo(), n = p ? p.ops.length : 0;
+  document.getElementById('btn-undo').disabled  = !n;
+  document.getElementById('btn-reset').disabled = !n;
+  document.getElementById('btn-apply-all').disabled = !n || S.photos.length < 2;
+  document.getElementById('btn-dl-all').textContent = S.photos.length > 1 ? `↓ Download all ${S.photos.length}` : '↓ Download';
+  document.getElementById('btn-dl').style.display = S.photos.length > 1 ? '' : 'none';
+}
+document.getElementById('btn-undo').addEventListener('click', async () => {
+  const p = photo(); if (!p || !p.ops.length || S.busy) return;
+  S.busy = true; await yieldUI();
+  p.ops.pop(); await redraw();
+  S.busy = false; status('Undid the last removal.');
+});
+document.getElementById('btn-reset').addEventListener('click', async () => {
+  const p = photo(); if (!p || S.busy) return;
+  p.ops = []; await redraw(); status('Back to the original.');
 });
 ['mode-auto','mode-fill'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(){
@@ -1044,20 +1135,60 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     document.getElementById('fill-pm').classList.toggle('on', S.fill==='pm');
     document.getElementById('fill-cr').classList.toggle('on', S.fill==='cr');
     status(S.fill==='cr'
-      ? 'Structure-first: fills along strong edges before flat areas. Better across a boundary, slower.'
+      ? 'Structure-first: fills along strong edges before flat areas. Best across a boundary.'
       : 'Texture: multi-scale PatchMatch. Best over even texture.');
   });
 });
-document.getElementById('spread').addEventListener('input', function(){ document.getElementById('spread-val').textContent = this.value + 'px'; });
-document.getElementById('opacity').addEventListener('input', function(){
-  document.getElementById('opacity-val').textContent = this.value === '0' ? 'auto' : this.value + '%';
+
+// Same marks, every photo. The boxes carry over as SEARCH REGIONS, not fixed masks —
+// each photo re-fits inside them, so a mark that sits a few pixels off still lands.
+document.getElementById('btn-apply-all').addEventListener('click', async () => {
+  const src = photo(); if (!src || S.busy) return;
+  S.busy = true;
+  let ok = 0, miss = 0;
+  for (let i=0;i<S.photos.length;i++){
+    if (i === S.idx) continue;
+    const p = S.photos[i];
+    status(`Applying to <b>${p.name}</b> (${i+1}/${S.photos.length})…`);
+    await yieldUI();
+    const saveIdx = S.idx;
+    S.idx = i;
+    stage.width = p.w; stage.height = p.h;
+    sctx.drawImage(p.img, 0, 0);
+    p.ops = src.ops.map(o => ({ box:{...o.box}, mode:o.mode, fill:o.fill }));
+    for (let k=p.ops.length-1; k>=0; k--) if (!applyOp(p.ops[k])) p.ops.splice(k,1);
+    if (p.ops.length === src.ops.length) ok++; else miss++;
+    S.idx = saveIdx;
+  }
+  selectPhoto(S.idx);
+  S.busy = false;
+  status(miss
+    ? `Applied to <b>${ok}</b> photo${ok===1?'':'s'}. <b>${miss}</b> didn't match every mark — check those and drag a box where it's missing.`
+    : `Applied to <b>${ok}</b> other photo${ok===1?'':'s'}.`);
+  toast('✓ Applied to all');
 });
-document.getElementById('btn-dl').addEventListener('click', () => {
-  if (!S.img) return;
+
+function downloadCanvas(name){
   const a = document.createElement('a');
-  a.download = 'cleaned.png';
+  a.download = name + '-clean.png';
   a.href = stage.toDataURL('image/png');
   a.click();
+}
+document.getElementById('btn-dl').addEventListener('click', () => { const p = photo(); if (p) downloadCanvas(p.name); });
+document.getElementById('btn-dl-all').addEventListener('click', async () => {
+  if (!S.photos.length || S.busy) return;
+  if (S.photos.length === 1){ downloadCanvas(S.photos[0].name); return; }
+  S.busy = true;
+  const back = S.idx;
+  for (let i=0;i<S.photos.length;i++){
+    status(`Preparing ${i+1}/${S.photos.length}…`);
+    selectPhoto(i); await redraw(); await yieldUI();
+    downloadCanvas(S.photos[i].name);
+    await new Promise(r => setTimeout(r, 350));   // browsers throttle back-to-back saves
+  }
+  selectPhoto(back);
+  S.busy = false;
+  status(`Downloaded <b>${S.photos.length}</b> photos.`);
 });
 </script>
 </body>
