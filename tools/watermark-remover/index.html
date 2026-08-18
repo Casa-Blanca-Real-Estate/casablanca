@@ -1047,19 +1047,29 @@ async function runRemoval(box){
   status('Working…');
   await yieldUI();
   const op = { box: { x:box.x, y:box.y, w:box.w, h:box.h }, mode: S.mode, fill: S.fill };
-  const info = applyOp(op);
+  let info = applyOp(op);
+  // No Casa Blanca logo in there? Fall back to filling the box, rather than making the
+  // user find a mode button. Safe here because the user drew this box on this photo —
+  // they can see what's in it. It is NOT safe to repeat blind on other photos, which is
+  // why the op is recorded as a plain fill and applyToAll leaves fills where they are.
+  if (!info && op.mode === 'auto'){
+    op.mode = 'fill'; op.viaFallback = true;
+    info = applyOp(op);
+  }
   S.busy = false;
   drawBox(null);
   if (!info){
-    status('No Casa Blanca mark found in that box — try a tighter box, or switch to <b>Anything</b>.');
-    toast('✗ No match'); return;
+    status('Nothing could be filled there — try a slightly larger box.');
+    toast('✗ Nothing to do'); return;
   }
   p.ops.push(op);
   renderMarks(); renderStrip(); syncButtons();
   status(info.score
-    ? `Removed a mark — <b>${info.size}px</b> wide (${(100*info.size/p.w).toFixed(1)}% of width), match <b>${info.score}</b>, opacity <b>${info.alpha}%</b> → <b>${info.method}</b>.`
-    : `Filled a <b>${box.w}×${box.h}</b> box with <b>${info.method}</b>.`);
-  toast('✓ Mark removed');
+    ? `Removed a Casa Blanca mark — <b>${info.size}px</b> wide (${(100*info.size/p.w).toFixed(1)}% of width), match <b>${info.score}</b>, opacity <b>${info.alpha}%</b> → <b>${info.method}</b>.`
+    : op.viaFallback
+      ? `No Casa Blanca mark in that box, so it was filled in instead (<b>${box.w}×${box.h}</b>, ${info.method}). Box fills stay on this photo — they can't be verified elsewhere.`
+      : `Filled a <b>${box.w}×${box.h}</b> box with <b>${info.method}</b>.`);
+  toast(info.score ? '✓ Mark removed' : '✓ Filled in');
 }
 
 // ═══════════════════════════════════════════════════
@@ -1096,7 +1106,7 @@ function renderMarks(){
     const n = op.info || {};
     const detail = n.score
       ? `Casa Blanca mark · <b>${n.size}px</b> · match <b>${n.score}</b> · opacity <b>${n.alpha}%</b> · ${n.method}`
-      : `box fill · <b>${op.box.w}×${op.box.h}</b> · ${n.method || '—'}`;
+      : `${op.viaFallback ? 'no logo found → box fill' : 'box fill'} · <b>${op.box.w}×${op.box.h}</b> · ${n.method || '—'} · <span title="Box fills are not copied to other photos">this photo only</span>`;
     return `<div class="mark-row"><b>${i+1}</b> · ${detail}
       <button class="mark-x" data-op="${i}" title="Undo just this one">✕</button></div>`;
   }).join('');
@@ -1115,7 +1125,7 @@ function syncButtons(){
   const p = photo(), n = p ? p.ops.length : 0;
   document.getElementById('btn-undo').disabled  = !n;
   document.getElementById('btn-reset').disabled = !n;
-  document.getElementById('btn-apply-all').disabled = !n || S.photos.length < 2;
+  document.getElementById('btn-apply-all').disabled = !(p && p.ops.some(o => o.mode === 'auto')) || S.photos.length < 2;
   document.getElementById('btn-dl-all').textContent = S.photos.length > 1 ? `↓ Download all ${S.photos.length}` : '↓ Download';
   document.getElementById('btn-dl').style.display = S.photos.length > 1 ? '' : 'none';
 }
@@ -1153,7 +1163,17 @@ document.getElementById('btn-reset').addEventListener('click', async () => {
 document.getElementById('btn-apply-all').addEventListener('click', async () => {
   const src = photo(); if (!src || S.busy) return;
   S.busy = true;
-  let ok = 0, miss = 0;
+  // Only marks that were VERIFIED as the Casa Blanca logo travel. A box fill can't be
+  // checked against anything, so repeating it blind on another photo would erase whatever
+  // happens to sit there — clean pixels included. Those stay on the photo they were drawn on.
+  const travelling = src.ops.filter(o => o.mode === 'auto');
+  const stayput = src.ops.length - travelling.length;
+  if (!travelling.length){
+    S.busy = false;
+    status('Nothing to apply — box fills stay on the photo they were drawn on, because there\'s no way to confirm the same thing sits there in another photo.');
+    toast('✗ Nothing to copy'); return;
+  }
+  let ok = 0, partial = 0;
   for (let i=0;i<S.photos.length;i++){
     if (i === S.idx) continue;
     const p = S.photos[i];
@@ -1163,16 +1183,19 @@ document.getElementById('btn-apply-all').addEventListener('click', async () => {
     S.idx = i;
     stage.width = p.w; stage.height = p.h;
     sctx.drawImage(p.img, 0, 0);
-    p.ops = src.ops.map(o => ({ box:{...o.box}, mode:o.mode, fill:o.fill }));
+    p.ops = travelling.map(o => ({ box:{...o.box}, mode:'auto', fill:o.fill }));
+    // Each photo re-fits inside the box. No match here means no logo there — drop it
+    // rather than filling, so a photo without that mark is left untouched.
     for (let k=p.ops.length-1; k>=0; k--) if (!applyOp(p.ops[k])) p.ops.splice(k,1);
-    if (p.ops.length === src.ops.length) ok++; else miss++;
+    if (p.ops.length === travelling.length) ok++; else partial++;
     S.idx = saveIdx;
   }
   selectPhoto(S.idx);
   S.busy = false;
-  status(miss
-    ? `Applied to <b>${ok}</b> photo${ok===1?'':'s'}. <b>${miss}</b> didn't match every mark — check those and drag a box where it's missing.`
-    : `Applied to <b>${ok}</b> other photo${ok===1?'':'s'}.`);
+  const bits = [`Applied <b>${travelling.length}</b> Casa Blanca mark${travelling.length===1?'':'s'} to <b>${ok}</b> photo${ok===1?'':'s'}.`];
+  if (partial) bits.push(`<b>${partial}</b> didn't have every mark — those spots were left alone, not filled.`);
+  if (stayput) bits.push(`<b>${stayput}</b> box fill${stayput===1?'':'s'} stayed on this photo.`);
+  status(bits.join(' '));
   toast('✓ Applied to all');
 });
 
