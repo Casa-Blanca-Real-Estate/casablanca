@@ -143,8 +143,9 @@ input[type=range]{width:140px;accent-color:var(--lav);}
         <span class="val" id="opacity-val">auto</span>
       </div>
       <div class="ctl">
-        <label for="grain">Grain</label>
-        <input type="checkbox" id="grain" checked>
+        <label>Fill</label>
+        <button class="btn-s on" id="fill-cr" data-fill="cr" style="padding:6px 10px;">Structure-first</button>
+        <button class="btn-s"    id="fill-pm" data-fill="pm" style="padding:6px 10px;">Texture</button>
       </div>
       <span class="spacer"></span>
       <button class="btn-p" id="btn-dl">↓ Download</button>
@@ -183,7 +184,7 @@ const UNBLEND_MAX = 0.60;
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-const S = { img:null, w:0, h:0, cur:null, history:[], marks:[], mode:'auto', dragging:false, box:null };
+const S = { img:null, w:0, h:0, cur:null, history:[], marks:[], mode:'auto', fill:'cr', dragging:false, box:null };
 const stage   = document.getElementById('stage');
 const overlay = document.getElementById('overlay');
 const sctx = stage.getContext('2d', { willReadFrequently:true });
@@ -347,18 +348,50 @@ function nccAt(gi, cw, ch, t, x, y){
  *  width and position, then a 1px refine, then a half-pixel polish. */
 function fitMark(crop, cw, ch, box){
   const gi = gradMag(crop.data, cw, ch);
-  let best = { s:-2, lw:box.w, x:box.x, y:box.y };
-  const lo = Math.max(24, box.w*0.5), hi = box.w*1.06;
-  const coarseStep = Math.max(2, (hi-lo)/18);
+  let best = { s:-2, lw:box.w, x:box.x, y:box.y }, bestScore = -1e9;
+  // A raw correlation is not comparable across template sizes — a smaller template fits
+  // noise more easily, so an uncorrected search always drifts to the smallest candidate.
+  // Scaling by sqrt(sample count) (the t-statistic's size term) makes sizes comparable.
+  const rank = (r, n) => r * Math.sqrt(n);
+  const lo = Math.max(24, box.w*0.62), hi = box.w*1.06;
+  const coarseStep = Math.max(2, (hi-lo)/16);
+
+  // Coarse sweep at quarter scale. Sliding a 300px-wide template across a full-resolution
+  // crop for every candidate width is billions of operations — a quarter-scale pass cuts
+  // both the template area and the number of positions by 16, then we refine at full res.
+  const D = 2, dw = (cw/D)|0, dh = (ch/D)|0;   // the wordmark is ~9:1, so /4 leaves too few rows to match on
+  const gd = new Float32Array(dw*dh);
+  for (let y=0;y<dh;y++) for (let x=0;x<dw;x++){
+    let acc = 0;
+    for (let j=0;j<D;j++) for (let i=0;i<D;i++) acc += gi[(y*D+j)*cw + x*D+i];
+    gd[y*dw+x] = acc/(D*D);
+  }
+  // The mark is inside the box the user drew — search that neighbourhood, not the whole
+  // padded crop, which exists to give the FILL source texture rather than to be searched.
+  const mx0 = Math.max(0, ((box.x - 24)/D)|0), my0 = Math.max(0, ((box.y - 24)/D)|0);
+  const mx1 = Math.min(dw, ((box.x + box.w + 24)/D)|0), my1 = Math.min(dh, ((box.y + box.h + 24)/D)|0);
   for (let lw = lo; lw <= hi; lw += coarseStep){
-    const t = logoTemplate(lw);
-    if (t.h >= ch || t.w >= cw) continue;
-    for (let y=0; y<=ch-t.h; y+=2) for (let x=0; x<=cw-t.w; x+=2){
-      const s = nccAt(gi, cw, ch, t, x, y);
-      if (s > best.s) best = { s, lw, x, y };
+    const t = logoTemplate(lw/D);
+    if (t.h >= dh || t.w >= dw) continue;
+    const n = t.w*t.h;
+    for (let y=my0; y<=Math.min(dh-t.h, my1); y++) for (let x=mx0; x<=Math.min(dw-t.w, mx1); x++){
+      const r = nccAt(gd, dw, dh, t, x, y), sc = rank(r, n);
+      if (sc > bestScore){ bestScore = sc; best = { s:r, lw, x: x*D, y: y*D }; }
     }
   }
-  if (best.s < -1) return best;
+  if (bestScore <= -1e8) return best;
+  // Refine at full resolution around the coarse winner, still ranking size-corrected.
+  bestScore = -1e9;
+  for (let lw = best.lw-coarseStep; lw <= best.lw+coarseStep; lw += 1){
+    const t = logoTemplate(lw);
+    if (t.h >= ch || t.w >= cw) continue;
+    const n = t.w*t.h;
+    for (let y=Math.max(0,best.y-2*D-2); y<=Math.min(ch-t.h,best.y+2*D+2); y++)
+      for (let x=Math.max(0,best.x-2*D-2); x<=Math.min(cw-t.w,best.x+2*D+2); x++){
+        const r = nccAt(gi, cw, ch, t, x, y), sc = rank(r, n);
+        if (sc > bestScore){ bestScore = sc; best = { s:r, lw, x, y }; }
+      }
+  }
   for (let lw = best.lw-coarseStep; lw <= best.lw+coarseStep; lw += 1){
     const t = logoTemplate(lw);
     if (t.h >= ch || t.w >= cw) continue;
@@ -388,16 +421,31 @@ function fitMark(crop, cw, ch, box){
 // Objectives that merely minimise texture are degenerate here — a flat mark left in place
 // looks "smoother" than the photo underneath, so they converge on doing nothing.
 function solveAlpha(crop, cw, ch, mask, ch_i){
-  const gm = gradMagF(mask, cw, ch);
+  // Only the mark's own bounding box carries any signal about its opacity — scanning the
+  // whole padded crop 75 times per channel is most of the cost for none of the answer.
+  let x0=cw, y0=ch, x1=0, y1=0;
+  for (let y=0;y<ch;y++) for (let x=0;x<cw;x++) if (mask[y*cw+x] > 0.01){
+    if (x<x0) x0=x; if (x>x1) x1=x; if (y<y0) y0=y; if (y>y1) y1=y;
+  }
+  if (x1 < x0) return 0.5;
+  x0=Math.max(0,x0-3); y0=Math.max(0,y0-3); x1=Math.min(cw-1,x1+3); y1=Math.min(ch-1,y1+3);
+  const bw = x1-x0+1, bh = y1-y0+1;
+  const sub = new Float32Array(bw*bh), val = new Float32Array(bw*bh);
+  for (let y=0;y<bh;y++) for (let x=0;x<bw;x++){
+    const src = (y0+y)*cw + x0+x;
+    sub[y*bw+x] = mask[src];
+    val[y*bw+x] = crop.data[src*4 + ch_i];
+  }
+  const gm = gradMagF(sub, bw, bh);
   let bestA = 0.5, bestG = 1e9;
-  const rec = new Float32Array(cw*ch);
+  const rec = new Float32Array(bw*bh);
   for (let a100 = 25; a100 < 100; a100++){
     const a = a100/100;
-    for (let i=0, p=ch_i; i<rec.length; i++, p+=4){
-      const am = a*mask[i];
-      rec[i] = Math.min(255, Math.max(0, (crop.data[p] - 255*am) / Math.max(1-am, 1e-6)));
+    for (let i=0; i<rec.length; i++){
+      const am = a*sub[i];
+      rec[i] = Math.min(255, Math.max(0, (val[i] - 255*am) / Math.max(1-am, 1e-6)));
     }
-    const g = Math.abs(ncc(gm, gradMagF(rec, cw, ch)));
+    const g = Math.abs(ncc(gm, gradMagF(rec, bw, bh)));
     if (g < bestG){ bestG = g; bestA = a; }
   }
   return bestA;
@@ -683,6 +731,150 @@ function patchMatchFill(buf, cw, ch, hole, P, iters, outer){
   }
   return true;
 }
+// ── CRIMINISI (STRUCTURE-FIRST FILL ORDER) ────────────────────────────────────
+// Criminisi et al. 2004, "Region Filling and Object Removal by Exemplar-Based Image
+// Inpainting". PatchMatch optimises every patch at once and has no opinion about the
+// ORDER things get filled; that's fine for texture but it lets a strong edge — a
+// floorboard seam, the line where a rug meets the floor — get averaged away before it
+// can propagate. Criminisi fills the hole boundary-inward, and at each step picks the
+// patch with the highest priority:
+//
+//   P(p) = C(p) · D(p)
+//     C(p)  confidence — how much of this patch is already known. Fills from the
+//           well-supported parts of the front first and decays as we move inward.
+//     D(p)  data — how strongly an isophote (an edge running through the image) meets
+//           the fill front here. This is the term that makes linear structure continue
+//           across the hole instead of dissolving.
+//
+// The chosen patch is then filled by copying the best-matching known patch, whole, so
+// edges arrive intact rather than as an average of candidates.
+function criminisiFill(buf, cw, ch, hole, P, rnd){
+  const N = cw*ch, half = P >> 1;
+  const pix = rgbaToF32(buf, N);
+  const M = localMean(pix, cw, ch, hole, Math.max(6, Math.round(Math.min(cw,ch)/8)));
+  const unknown = new Uint8Array(hole);           // 1 = still to fill
+  const conf = new Float32Array(N);
+  for (let i=0;i<N;i++) conf[i] = hole[i] ? 0 : 1;
+
+  // Valid sources: patches with no unknown pixel. Computed once against the ORIGINAL
+  // hole — filled-in pixels are never reused as source material, which stops the fill
+  // from feeding on itself and smearing.
+  const ok = new Uint8Array(N);
+  for (let y=half; y<ch-half; y++) for (let x=half; x<cw-half; x++){
+    let clean = 1;
+    for (let j=-half; j<=half && clean; j++){
+      const row = (y+j)*cw + x;
+      for (let i=-half; i<=half; i++) if (hole[row+i]) { clean = 0; break; }
+    }
+    ok[y*cw+x] = clean;
+  }
+  const srcs = [];
+  for (let i=0;i<N;i++) if (ok[i]) srcs.push(i);
+  if (srcs.length < 32) return false;
+
+  // Work inside the hole's bounding box (plus a margin) rather than the whole crop.
+  let bx0=cw, by0=ch, bx1=0, by1=0;
+  for (let y=0;y<ch;y++) for (let x=0;x<cw;x++) if (hole[y*cw+x]){
+    if (x<bx0) bx0=x; if (x>bx1) bx1=x; if (y<by0) by0=y; if (y>by1) by1=y;
+  }
+  bx0=Math.max(half,bx0-2); by0=Math.max(half,by0-2);
+  bx1=Math.min(cw-half-1,bx1+2); by1=Math.min(ch-half-1,by1+2);
+
+  const gray = new Float32Array(N);
+  for (let i=0;i<N;i++) gray[i] = (pix[i*3]+pix[i*3+1]+pix[i*3+2])/3;
+
+  const lastOffsets = [];   // offsets that recently worked — cheap, strong candidates
+  let remaining = 0;
+  for (let i=0;i<N;i++) if (unknown[i]) remaining++;
+  let guard = 0;
+
+  while (remaining > 0 && guard++ < 20000){
+    // 1. Highest-priority patch on the current fill front.
+    let bestP = -1, bp = -1, bestC = 0;
+    for (let y=by0; y<=by1; y++) for (let x=bx0; x<=bx1; x++){
+      const i = y*cw+x;
+      if (!unknown[i]) continue;
+      // on the front? (has at least one known 4-neighbour)
+      if (unknown[i-1] && unknown[i+1] && unknown[i-cw] && unknown[i+cw]) continue;
+      // confidence
+      let c = 0, n = 0;
+      for (let j=-half; j<=half; j++){
+        let ti = (y+j)*cw + x - half;
+        for (let k=-half; k<=half; k++, ti++){ c += conf[ti]; n++; }
+      }
+      c /= n;
+      // data term: isophote (gradient rotated 90°) against the front normal
+      const gx = (unknown[i+1] || unknown[i-1]) ? 0 : gray[i+1]-gray[i-1];
+      const gy = (unknown[i+cw] || unknown[i-cw]) ? 0 : gray[i+cw]-gray[i-cw];
+      const nx = (unknown[i+1]?1:0) - (unknown[i-1]?1:0);
+      const ny = (unknown[i+cw]?1:0) - (unknown[i-cw]?1:0);
+      const nl = Math.hypot(nx, ny) || 1;
+      // isophote = (-gy, gx); dot with the unit normal
+      const d = Math.abs((-gy)*(nx/nl) + gx*(ny/nl)) / 255 + 0.001;
+      const pr = c * d;
+      if (pr > bestP){ bestP = pr; bp = i; bestC = c; }
+    }
+    if (bp < 0) break;
+
+    // 2. Best-matching known patch, compared with local brightness removed so a patch
+    //    over dark floor doesn't borrow from a bright wall.
+    const py = (bp/cw)|0, px = bp%cw;
+    let bestD = Infinity, bs = -1;
+    const tryCand = (s) => {
+      const sy = (s/cw)|0, sx = s%cw;
+      if (sy<half || sy>=ch-half || sx<half || sx>=cw-half || !ok[s]) return;
+      let sum = 0, cnt = 0;
+      for (let j=-half; j<=half; j++){
+        let ti = (py+j)*cw + px - half, si = (sy+j)*cw + sx - half;
+        for (let k=-half; k<=half; k++, ti++, si++){
+          if (unknown[ti]) continue;
+          const a = ti*3, b = si*3;
+          const dr = (pix[a]  -M[a])   - (pix[b]  -M[b]);
+          const dg = (pix[a+1]-M[a+1]) - (pix[b+1]-M[b+1]);
+          const db = (pix[a+2]-M[a+2]) - (pix[b+2]-M[b+2]);
+          sum += dr*dr + dg*dg + db*db; cnt++;
+        }
+      }
+      if (!cnt) return;
+      const d = sum/cnt;
+      if (d < bestD){ bestD = d; bs = s; }
+    };
+    // Offsets that worked for nearby patches, then a random sample. Same trick
+    // PatchMatch uses — coherent neighbours plus randomness beats an exhaustive scan.
+    for (const off of lastOffsets) tryCand(bp + off);
+    for (let t=0; t<450; t++) tryCand(srcs[(rnd()*srcs.length)|0]);
+    if (bs < 0){ for (let t=0; t<3000 && bs<0; t++) tryCand(srcs[(rnd()*srcs.length)|0]); }
+    if (bs < 0) break;
+
+    // 3. Copy the winner in, whole, and record the new confidence.
+    const sy = (bs/cw)|0, sx = bs%cw;
+    for (let j=-half; j<=half; j++){
+      let ti = (py+j)*cw + px - half, si = (sy+j)*cw + sx - half;
+      for (let k=-half; k<=half; k++, ti++, si++){
+        if (!unknown[ti]) continue;
+        pix[ti*3] = pix[si*3]-M[si*3]+M[ti*3];
+        pix[ti*3+1] = pix[si*3+1]-M[si*3+1]+M[ti*3+1];
+        pix[ti*3+2] = pix[si*3+2]-M[si*3+2]+M[ti*3+2];
+        gray[ti] = (pix[ti*3]+pix[ti*3+1]+pix[ti*3+2])/3;
+        // Criminisi: every pixel filled by this patch inherits the patch's confidence,
+        // so the front decays as it moves inward and well-supported areas go first.
+        unknown[ti] = 0; conf[ti] = bestC;
+        remaining--;
+      }
+    }
+    lastOffsets.unshift(bs - bp);
+    if (lastOffsets.length > 8) lastOffsets.pop();
+  }
+
+  for (let i=0;i<N;i++){
+    if (!hole[i]) continue;
+    buf[i*4]   = Math.min(255, Math.max(0, pix[i*3]));
+    buf[i*4+1] = Math.min(255, Math.max(0, pix[i*3+1]));
+    buf[i*4+2] = Math.min(255, Math.max(0, pix[i*3+2]));
+  }
+  return true;
+}
+
 /** Jacobi diffusion — fallback when a hole is so large there isn't enough clean source
  *  texture around it for PatchMatch to draw on. */
 function diffuseFill(buf, cw, ch, hole, iters){
@@ -731,7 +923,7 @@ async function runRemoval(box){
   if (S.mode === 'auto' && !LOGO_READY){ toast('Logo still loading…'); return; }
   // Generous context: PatchMatch can only copy texture it can see, so give it a wide
   // margin of clean pixels around the mark to source from.
-  const P = Math.max(70, Math.round(box.w * 0.5));
+  const P = Math.max(60, Math.round(box.w * 0.42));
   const x0 = Math.max(0, box.x - P), y0 = Math.max(0, box.y - P);
   const x1 = Math.min(S.w, box.x + box.w + P), y1 = Math.min(S.h, box.y + box.h + P);
   const cw = x1-x0, ch = y1-y0;
@@ -743,7 +935,7 @@ async function runRemoval(box){
   const crop = sctx.getImageData(x0, y0, cw, ch);
   const spread = +document.getElementById('spread').value;
   const ovr = +document.getElementById('opacity').value;
-  const useGrain = document.getElementById('grain').checked;
+  const useGrain = true;   // only the diffusion fallback uses synthetic grain
 
   let mask, alpha = [0,0,0], fit = null, unblended = false, method = 'fill';
   if (S.mode === 'auto'){
@@ -786,8 +978,13 @@ async function runRemoval(box){
     // Rebuild the mark's whole footprint — including its anti-aliased edges, which is why
     // the threshold is low — from real texture around it.
     const hole = dilate(mask, cw, ch, S.mode === 'auto' ? 0.03 : 0.5, spread);
-    const done = patchMatchFill(crop.data, cw, ch, hole, 15, 6, 4);
-    method = done ? 'content-aware fill' : 'diffusion (not enough source texture)';
+    let seed = 20240917;
+    const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    const done = S.fill === 'cr'
+      ? criminisiFill(crop.data, cw, ch, hole, 11, rnd)
+      : patchMatchFill(crop.data, cw, ch, hole, 13, 4, 2);
+    method = done ? (S.fill === 'cr' ? 'structure-first fill' : 'content-aware fill')
+                  : 'diffusion (not enough source texture)';
     if (!done){
       // Fallback only: PatchMatch copies real grain, so it needs no synthetic noise.
       const amp = useGrain ? ringNoise(crop.data, cw, ch, hole) : 0;
@@ -839,6 +1036,16 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     document.getElementById('mode-auto').classList.toggle('on', S.mode==='auto');
     document.getElementById('mode-fill').classList.toggle('on', S.mode==='fill');
     status(S.mode==='auto' ? 'Drag a box around a Casa Blanca watermark.' : 'Drag a box over anything to fill it in from its surroundings.');
+  });
+});
+['fill-pm','fill-cr'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(){
+    S.fill = this.dataset.fill;
+    document.getElementById('fill-pm').classList.toggle('on', S.fill==='pm');
+    document.getElementById('fill-cr').classList.toggle('on', S.fill==='cr');
+    status(S.fill==='cr'
+      ? 'Structure-first: fills along strong edges before flat areas. Better across a boundary, slower.'
+      : 'Texture: multi-scale PatchMatch. Best over even texture.');
   });
 });
 document.getElementById('spread').addEventListener('input', function(){ document.getElementById('spread-val').textContent = this.value + 'px'; });
