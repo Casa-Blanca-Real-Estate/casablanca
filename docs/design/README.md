@@ -14,10 +14,16 @@ Then read the one surface brief you're working on.
 |---|---------|-------|----------|
 | 1 | Creative Studio dashboard (home) | [`surfaces/01-dashboard.md`](surfaces/01-dashboard.md) | `index.html` |
 | 2 | Editorial Carousel Builder | [`surfaces/02-editorial-carousel-builder.md`](surfaces/02-editorial-carousel-builder.md) | `tools/carousel/cb_editorial.html` |
+| 3 | Closed Carousel Builder | [`surfaces/03-closed-carousel-builder.md`](surfaces/03-closed-carousel-builder.md) | `tools/closed-carousel/` |
+| 4 | The Watermark tools — **combine into one** | [`surfaces/04-watermark-tools.md`](surfaces/04-watermark-tools.md) | `tools/watermarker/` + `tools/watermark-remover/` |
 
-More surfaces (Closed Carousel, For Sale Roundup, In Contract, Business Card,
-Watermarker, Profile Pic, Brand Assets) will get their own briefs later. They share
-the same chrome and the same design system, so decisions made here should generalize.
+Surface 4 is different in kind: it briefs **two existing tools with the goal of merging
+them into a single surface**, so the design decides the combination and we reflect it in
+the code afterward. The others are one-file-in, one-file-out redesigns.
+
+Not yet briefed: For Sale Roundup, In Contract Roundup, Business Card, Profile Pic,
+Brand Assets. For Sale and In Contract are near-clones of the Closed builder — decisions
+made on surface 3 should port to them, ideally by design rather than by copy-paste.
 
 ---
 
