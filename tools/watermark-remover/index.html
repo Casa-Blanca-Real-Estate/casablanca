@@ -276,16 +276,24 @@ document.getElementById('btn-url').addEventListener('click', () => {
 function evtXY(e){
   const r = stage.getBoundingClientRect();
   const p = e.touches ? e.touches[0] : e;
-  return { x: Math.round((p.clientX - r.left) * S.w / r.width), y: Math.round((p.clientY - r.top) * S.h / r.height) };
+  const ph = photo(); if (!ph) return { x:0, y:0 };
+  return { x: Math.round((p.clientX - r.left) * ph.w / r.width), y: Math.round((p.clientY - r.top) * ph.h / r.height) };
 }
 function drawBox(b){
-  octx.clearRect(0,0,S.w,S.h);
+  const ph = photo(); if (!ph) return;
+  octx.clearRect(0,0,ph.w,ph.h);
   if (!b) return;
-  octx.strokeStyle = '#aaa3cf'; octx.lineWidth = Math.max(2, S.w/500);
+  octx.strokeStyle = '#aaa3cf'; octx.lineWidth = Math.max(2, ph.w/500);
   octx.setLineDash([octx.lineWidth*3, octx.lineWidth*2]);
   octx.strokeRect(b.x, b.y, b.w, b.h);
 }
-function startDrag(e){ if (!S.img) return; e.preventDefault(); const p = evtXY(e); S.dragging = true; S.box = { x:p.x, y:p.y, w:0, h:0, ox:p.x, oy:p.y }; }
+function startDrag(e){
+  if (!photo() || S.busy) return;
+  e.preventDefault();
+  const p = evtXY(e);
+  S.dragging = true;
+  S.box = { x:p.x, y:p.y, w:0, h:0, ox:p.x, oy:p.y };
+}
 function moveDrag(e){
   if (!S.dragging) return; e.preventDefault();
   const p = evtXY(e), b = S.box;
