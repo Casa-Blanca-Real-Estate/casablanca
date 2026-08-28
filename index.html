@@ -855,6 +855,18 @@
     if(searchInput.value){searchInput.value='';}
     showTab(h);
   });
+  /* The anchors carry the hash, but navigating to the hash you are already on fires
+     no hashchange — which left clicking the active tab (or the lockup on Home) doing
+     nothing at all, with no way out of an active search but emptying the box. */
+  $('tabs').addEventListener('click',function(e){
+    var a=e.target.closest('.tab'); if(!a)return;
+    if(searchInput.value){searchInput.value='';}
+    showTab(a.getAttribute('data-tab'));
+  });
+  document.querySelector('.lockup').addEventListener('click',function(){
+    if(searchInput.value){searchInput.value='';}
+    showTab('home');
+  });
 
   searchInput.addEventListener('input',renderList);
   searchInput.addEventListener('keydown',function(e){
@@ -862,6 +874,7 @@
   });
 
   /* ================= auth ================= */
+  var booted=false;
   var loginModal=$('loginModal'),input=$('emailInput'),err=$('loginErr');
   function applyAuth(){
     var on=authed(), tile=$('acctTile'), name=$('acctName');
@@ -876,8 +889,8 @@
     }
     $('wEdit').hidden=!on;
     $('clAdd').hidden=!on;
-    renderChangelog();
-    renderList();
+    /* Skipped during boot — the boot sequence renders both itself, once. */
+    if(booted){ renderChangelog(); renderList(); }
   }
   function openLogin(){err.textContent='';input.value='';loginModal.classList.add('open');setTimeout(function(){input.focus();},40);}
   function closeLogin(){loginModal.classList.remove('open');}
@@ -1029,10 +1042,11 @@
 
   /* ================= boot ================= */
   paintTheme();
-  showTab(location.hash.slice(1));
   renderWorkshop();
+  applyAuth();          /* sets the account chip + gating before the first render */
   renderChangelog();
-  applyAuth();
+  showTab(location.hash.slice(1));
+  booted=true;
   hydrate();
 })();
 </script>
