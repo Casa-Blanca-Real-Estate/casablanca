@@ -10,16 +10,25 @@ Then read the one surface brief you're working on.
 
 ## Surfaces
 
-| # | Surface | Brief | Lives at |
-|---|---------|-------|----------|
-| 1 | Creative Studio dashboard (home) | [`surfaces/01-dashboard.md`](surfaces/01-dashboard.md) | `index.html` |
-| 2 | Editorial Carousel Builder | [`surfaces/02-editorial-carousel-builder.md`](surfaces/02-editorial-carousel-builder.md) | `tools/carousel/cb_editorial.html` |
-| 3 | Closed Carousel Builder | [`surfaces/03-closed-carousel-builder.md`](surfaces/03-closed-carousel-builder.md) | `tools/closed-carousel/` |
-| 4 | The Watermark tools — **combine into one** | [`surfaces/04-watermark-tools.md`](surfaces/04-watermark-tools.md) | `tools/watermarker/` + `tools/watermark-remover/` |
+| # | Surface | Brief | Lives at | State |
+|---|---------|-------|----------|-------|
+| 1 | Creative Studio dashboard (home) | [`surfaces/01-dashboard.md`](surfaces/01-dashboard.md) | `index.html` | **Redesigned and shipped** (2026-08-28) |
+| 2 | Editorial Carousel Builder | [`surfaces/02-editorial-carousel-builder.md`](surfaces/02-editorial-carousel-builder.md) | `tools/carousel/cb_editorial.html` | Briefed |
+| 3 | Closed Carousel Builder | [`surfaces/03-closed-carousel-builder.md`](surfaces/03-closed-carousel-builder.md) | `tools/closed-carousel/` | Briefed |
+| 4 | The Watermark tools — **combine into one** | [`surfaces/04-watermark-tools.md`](surfaces/04-watermark-tools.md) | `tools/watermarker/` | **Merged in code**, redesign pending |
 
-Surface 4 is different in kind: it briefs **two existing tools with the goal of merging
-them into a single surface**, so the design decides the combination and we reflect it in
-the code afterward. The others are one-file-in, one-file-out redesigns.
+Surface 4 was different in kind: it briefed **two existing tools with the goal of merging
+them into a single surface**. That merge has now happened in code — one tool, both
+directions, at `tools/watermarker/` — so the design pass redesigns a single existing
+surface rather than deciding the combination. See the status block in its brief for the
+decisions the merge already made and what it left open. The others are one-file-in,
+one-file-out redesigns.
+
+**Surface 1 is done and is the reference for the rest.** The dashboard carries the token
+vocabulary, the Day/Night pair, and the primitives the tool screens should reuse (row,
+badge, media rail, utility card, theme switch). Later surfaces should adopt those names
+rather than inventing a parallel set — the token-unification note in §3 is what that
+solved.
 
 Not yet briefed: For Sale Roundup, In Contract Roundup, Business Card, Profile Pic,
 Brand Assets. For Sale and In Contract are near-clones of the Closed builder — decisions
@@ -88,6 +97,10 @@ These are not preferences. Breaking them breaks the product.
 compared against `localStorage.cb_auth`. There is no server-side auth and the backend
 does not check anything. It is a UX affordance to hide advanced tools from agents, not
 a security boundary. Design it as a mode switch, not as a login.
+
+As of 2026-08-28 the allowlist gates the two Team-badged dashboard rows (In contract,
+Profile pic) and the dev-only editing affordances. The Watermarker is no longer gated —
+its removal half used to hard-redirect, which the redesigned dashboard contradicted.
 
 Allowlist (identical in `index.html`, `assets/studio-header.js`, and
 `tools/carousel/cb_editorial.html`):
@@ -266,7 +279,9 @@ tools/
   closed-carousel/              Closed Carousel Builder
   forsale-carousel/             For Sale Roundup Builder
   incontract-carousel/          In Contract Roundup Builder (members only)
-  business-card/  watermarker/  profile-pic/  brand/
+  watermarker/                  Watermarker — add AND remove (surface 4, merged)
+  watermark-remover/            Redirect stub to watermarker/
+  business-card/  profile-pic/  brand/
 netlify/functions/              Backend (see its README.md for the endpoint table)
 docs/design/                    ← you are here
 ```

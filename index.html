@@ -6,408 +6,517 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Casa Blanca — Creative Studio</title>
 <meta name="description" content="Casa Blanca Creative Studio — in-house tools for the brand.">
+<script>
+  /* Theme before first paint, so switching never flashes the other palette. */
+  try { var t = localStorage.getItem('cb_theme'); if (t === 'night' || t === 'day') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
 <style>
   @font-face{font-family:'Object Sans';src:url('assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
   @font-face{font-family:'Object Sans';src:url('assets/fonts/ObjectSans-Slanted.otf') format('opentype');font-weight:400;font-style:italic;font-display:swap}
   @font-face{font-family:'Object Sans';src:url('assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-style:normal;font-display:swap}
   @font-face{font-family:'Object Sans';src:url('assets/fonts/ObjectSans-HeavySlanted.otf') format('opentype');font-weight:800;font-style:italic;font-display:swap}
 
+  /* ============================================================
+     TOKENS — the single source of truth for the Studio surfaces.
+     Fixed accents first, then the Day/Night pairs. Everything the
+     theme switch changes lives in the two blocks below; nothing
+     re-renders on toggle, the custom properties simply re-resolve.
+     ============================================================ */
   :root{
-    --ink:#0f0f0f; --paper:#f4f3f0; --paper2:#e8e6e0; --soft:#faf9fd;
-    --accent:#aaa3cf; --plum:#1e1a2e; --plum2:#2d2640;
-    --muted:#888680; --line:#dddbd5; --mc:#ffe01b;
+    /* Fixed — identical in both themes */
+    --accent:#aaa3cf;        /* brand lavender: active tab, badges, arrows, hover bar */
+    --plum:#1e1a2e;          /* deep plum: workshop card, text on lavender */
+    --sage:#c0c2b5;          /* watermarker utility card */
+    --on-accent:#3c3654;     /* body text on the lavender card */
+    --on-sage:#3f4237;       /* body text on the sage card */
+    --sage-arrow:#5d6055;
+    --hdr-bg:#0f0f0f;        /* masthead black */
+    --hdr-muted:#9d97b3;
+    --hdr-div:#332e44;
+    --hdr-name:#e9e7e2;
+    --hdr-line:#3a3550;      /* search underline */
+    --hdr-ph:#6e6884;        /* search placeholder + glyph */
+    --danger:#b4452f;
+
+    /* Day */
+    --bg:#f4f3f0;
+    --panel:#ffffff;
+    --line:#dddbd5;
+    --hair:#e6e4de;
+    --ink:#0f0f0f;
+    --body:#55514a;
+    --muted:#888680;
+    --wire:#eceae5;
+    --wireline:#cfcdc6;
+    --hatch1:#e0ddd6;
+    --hatch2:#eceae5;
+    --motif-bar:#0f0f0f;
+    --motif-soft:#c9c6c0;
+    --caption:#5f5885;
+    --ph-ink:#a49dbd;
+    --tab-idle:#77736c;
+    --row-hover:#ffffff;
+    --soft:#faf9fd;
+    --mark-invert:0;         /* the house mark flips on dark grounds */
+    --scrim:rgba(10,9,15,.62);
   }
+  [data-theme="night"]{
+    --bg:#14121b;
+    --panel:#1a1724;
+    --line:#2a2635;
+    --hair:#242030;
+    --ink:#ffffff;
+    --body:#a7a0be;
+    --muted:#8d87a3;
+    --wire:#191622;
+    --wireline:#3a3550;
+    --hatch1:#2a2536;
+    --hatch2:#211d2c;
+    --motif-bar:#e9e7e2;
+    --motif-soft:#4d4762;
+    --caption:#b3abd6;
+    --ph-ink:#8d87a3;
+    --tab-idle:#8d87a3;
+    --row-hover:#1f1b2b;
+    --soft:#191622;
+    --mark-invert:1;
+    --scrim:rgba(4,3,8,.7);
+  }
+
+  /* ============================== base ============================== */
   *{box-sizing:border-box}
-  body{margin:0;background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;
-    font-family:'Object Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden}
+  body{font-family:'Object Sans',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;
+    background:var(--bg);color:var(--ink)}
   a{color:inherit;text-decoration:none}
+  button,input{font-family:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .hatch{background-image:repeating-linear-gradient(135deg,var(--hatch1) 0 6px,var(--hatch2) 6px 12px)}
+  [hidden]{display:none!important}
 
-  header{display:flex;align-items:center;justify-content:space-between;gap:20px;
-    background:var(--ink);color:#fff;padding:18px clamp(20px,5vw,56px)}
-  header .lhs{display:flex;align-items:center;gap:14px}
-  header img{height:22px;width:auto;display:block}
-  header .stax{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
-  .brandpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--plum);background:var(--accent);padding:8px 14px;border-radius:999px;transition:filter .12s}
-  .brandpill:hover{filter:brightness(1.08)}
-  .brandpill svg{width:13px;height:13px}
+  .page{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
 
-  .hero{background:var(--ink);color:#fff;padding:8px clamp(20px,5vw,56px) clamp(26px,4vw,40px);
-    border-bottom:1px solid rgba(255,255,255,.07)}
-  .hero h1{margin:0 0 8px;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.02em}
-  .hero h1 em{font-style:italic;font-weight:400;color:var(--accent)}
-  .hero p{margin:0;color:#bdbab4;font-size:clamp(14px,1.7vw,16px);max-width:60ch}
+  /* ============================== masthead ============================== */
+  .hdr{flex:0 0 auto;background:var(--hdr-bg);padding:26px 34px 24px;display:flex;align-items:center;
+    justify-content:space-between;gap:40px}
+  .lockup{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .lockup img{height:38px;width:auto;display:block}
+  .lockup span{font-size:13px;font-weight:800;letter-spacing:.42em;text-transform:uppercase;color:var(--accent);
+    text-align:center}
+  .hdr-r{display:flex;align-items:center;gap:26px}
 
-  /* Tabs */
-  .tabs{position:sticky;top:0;z-index:30;background:var(--paper);border-bottom:1px solid var(--line);
-    padding:0 clamp(20px,5vw,56px);display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tab{flex:none;background:none;border:none;font-family:inherit;font-size:13.5px;font-weight:800;letter-spacing:.01em;
-    color:var(--muted);padding:16px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
-  .tab:hover{color:var(--ink)}
-  .tab.on{color:var(--plum);border-bottom-color:var(--accent)}
-  .tab[hidden]{display:none}
+  .search{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--hdr-line);padding-bottom:8px;width:262px}
+  .search-glyph{width:12px;height:12px;border:1.5px solid var(--hdr-ph);flex:0 0 auto}
+  .search input{border:0;outline:none;background:transparent;font-size:14px;color:#fff;width:100%}
+  .search input::placeholder{color:var(--hdr-ph)}
 
-  main{padding:clamp(24px,3.5vw,40px) clamp(20px,5vw,56px) 48px;max-width:1200px;margin:0 auto;width:100%;flex:1 0 auto}
-  .panel{display:none}.panel.on{display:block}
-  .panel-intro{font-size:13px;letter-spacing:.02em;color:var(--muted);margin:0 0 22px}
-
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:22px}
-  .tool{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;
-    overflow:hidden;transition:transform .12s,box-shadow .12s,border-color .12s}
-  .tool:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 18px 34px -22px rgba(30,26,46,.55)}
-  .thumb{aspect-ratio:16/10;background:#0f0f0f;overflow:hidden}
-  .thumb img{width:100%;height:100%;object-fit:cover;object-position:top left;display:block}
-  .thumb.ph{display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(120% 120% at 30% 10%,var(--plum2),#0f0f0f 70%);color:#fff;position:relative}
-  .thumb.ph svg{width:46px;height:46px;opacity:.92}
-  .thumb.ph .mcwm{position:absolute;bottom:12px;font-size:11px;letter-spacing:.04em;color:#e9e6ea;display:flex;align-items:center;gap:6px}
-  .thumb.ph .mcwm .d{width:9px;height:9px;border-radius:50%;background:var(--mc)}
-
-  .meta{padding:16px 18px 20px;display:flex;flex-direction:column;flex:1}
-  .tags{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
-  .chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:4px 9px;border-radius:999px}
-  .chip.ig{color:var(--plum);background:var(--accent)}
-  .chip.internal{color:#5a554c;background:var(--paper2)}
-  .chip.members{color:#fff;background:var(--plum)}
-  .chip.form{color:#5a554c;background:var(--paper2)}
-  .chip.mc{color:#1a1a1a;background:var(--mc)}
-  .chip.pdf{color:#fff;background:#b4452f}
-  .meta h3{margin:0 0 6px;font-size:18px;font-weight:800;letter-spacing:-.01em}
-  .meta p{margin:0 0 14px;font-size:13.5px;color:#55514a;flex:1}
-  .meta .open{font-size:13px;font-weight:800;color:var(--plum);display:inline-flex;align-items:center;gap:7px}
-  .meta .open .arr{transition:transform .15s}.tool:hover .open .arr{transform:translateX(3px)}
-
-  /* Brand tab feature */
-  .feature{display:flex;gap:26px;flex-wrap:wrap;align-items:center;background:linear-gradient(100% 100% at 0 0,var(--plum2),var(--plum));
-    color:#fff;border-radius:18px;padding:30px clamp(22px,4vw,40px);margin-bottom:24px}
-  .feature .ftxt{flex:1;min-width:240px}
-  .feature h2{margin:0 0 8px;font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.015em}
-  .feature p{margin:0 0 18px;color:#d7d4e0;font-size:14.5px;max-width:52ch}
-  .feature .cta{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--plum);
-    font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px}
-  .feature .cta:hover{filter:brightness(1.07)}
-  .palpeek{display:flex;gap:8px;flex-wrap:wrap}
-  .palpeek .s{width:46px;height:46px;border-radius:10px;border:1px solid rgba(255,255,255,.18)}
-
-  footer{background:var(--ink);color:#9a968f;text-align:center;padding:30px 20px 36px;font-size:12px}
-  footer img{height:18px;opacity:.92;display:block;margin:0 auto 8px}
-  .devbtn{margin-top:16px;background:transparent;border:1px solid rgba(255,255,255,.22);color:#cbc8c2;
-    font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-    padding:8px 18px;border-radius:8px;cursor:pointer;transition:border-color .12s,color .12s}
-  .devbtn:hover{border-color:var(--accent);color:#fff}
-  .devbtn.on{border-color:var(--accent);color:var(--accent)}
-  .whatsnew{margin-left:10px;position:relative}
-  .whatsnew .dot{position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent);display:none}
+  .hdr-grp{display:flex;align-items:center;gap:14px}
+  .whatsnew{position:relative;background:none;border:0;padding:0;font-size:10px;font-weight:800;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--hdr-muted);cursor:pointer;white-space:nowrap}
+  .whatsnew:hover{color:#fff}
+  .whatsnew .dot{position:absolute;top:-4px;right:-9px;width:6px;height:6px;background:var(--accent);display:none}
   .whatsnew.unseen .dot{display:block}
-  .modal .box.cl{max-width:520px;max-height:80vh;overflow:auto;text-align:left}
-  .cl-entry{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;position:relative}
-  .cl-entry:first-child{border-top:none;margin-top:0;padding-top:0}
-  .cl-entry .d{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-weight:800}
-  .cl-entry h3{margin:4px 0 8px;font-size:17px;font-weight:800}
-  .cl-entry ul{margin:0;padding-left:18px;color:#55514a;font-size:13.5px}
-  .cl-entry li{margin-bottom:4px}
-  .cl-del{position:absolute;top:0;right:0;background:none;border:none;color:#b4452f;font-weight:800;font-size:12px;cursor:pointer}
-  .cl-del:hover{text-decoration:underline}
+  .hdr-div{width:1px;height:16px;background:var(--hdr-div)}
+  .acct{display:flex;align-items:center;gap:9px;background:none;border:0;padding:0;cursor:pointer}
+  .acct:hover{opacity:.8}
+  .acct-tile{width:24px;height:24px;background:var(--accent);color:var(--plum);font-size:9.5px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .acct-name{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--hdr-name)}
 
-  /* login + edit modals */
-  .modal{position:fixed;inset:0;background:rgba(10,9,15,.62);backdrop-filter:blur(3px);
+  /* ============================== tab band ============================== */
+  .tabband{flex:0 0 auto;background:var(--bg);border-bottom:1px solid var(--line);padding:0 34px}
+  .tabs{display:flex;justify-content:center;gap:6px;margin-bottom:-1px}
+  .tab{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800;letter-spacing:-.015em;
+    padding:13px 24px;cursor:pointer;color:var(--tab-idle);background:transparent;
+    border:1px solid transparent;border-top:3px solid transparent;white-space:nowrap}
+  .tab--home{padding:11px 22px}
+  .tab[aria-current="page"]{color:var(--ink);background:var(--bg);border-color:var(--line);
+    border-top-color:var(--accent);border-bottom-color:var(--bg)}
+  .tab svg{display:block;flex:0 0 auto}
+
+  /* ============================== main ============================== */
+  .main{flex:1 1 auto;min-height:0;display:flex;align-items:stretch;gap:30px;padding:26px 34px 0}
+
+  /* ------------------------------ sidebar ------------------------------ */
+  .side{width:256px;flex:0 0 256px;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding-bottom:26px}
+  .sidescroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px;
+    scrollbar-width:none;-ms-overflow-style:none}
+  .sidescroll::-webkit-scrollbar{width:0;height:0;display:none}
+
+  .wcard{display:flex;flex-direction:column;gap:14px;background:var(--plum);padding:18px 20px;flex:0 0 auto;
+    position:relative}
+  .wcard-top{display:flex;align-items:center;gap:11px}
+  .wcal{width:44px;height:44px;background:var(--accent);color:var(--plum);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;line-height:1;flex:0 0 auto}
+  .wcal .mo{font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .wcal .dy{font-size:19px;font-weight:800;margin-top:2px}
+  .wkicker{font-size:9.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--hdr-muted)}
+  .wtxt{display:flex;flex-direction:column;gap:5px}
+  .wtitle{font-size:16px;font-weight:800;letter-spacing:-.015em;color:#fff}
+  .wmeta{font-size:12.5px;line-height:1.45;color:var(--hdr-muted)}
+  /* Dev-only affordance, carried over from the old dashboard. Agents never see it. */
+  .wedit{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--hdr-div);color:var(--hdr-muted);
+    font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;padding:5px 8px;cursor:pointer}
+  .wedit:hover{border-color:var(--accent);color:#fff}
+
+  .util-label{font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);
+    padding-top:4px}
+
+  .ucard{position:relative;display:flex;flex-direction:column;gap:16px;padding:20px;flex:0 0 auto;color:var(--plum);
+    transition:background .15s}
+  .ucard--brand{background:var(--accent)}
+  .ucard--brand:hover{background:#b7b1dc}
+  .ucard--wmk{background:var(--sage)}
+  .ucard--wmk:hover{background:#cdcfc2}
+  .ucard-txt{display:flex;flex-direction:column;gap:6px;padding-right:34px}
+  .ucard-title{font-size:23px;font-weight:800;letter-spacing:-.025em}
+  .ucard-blurb{font-size:13px;line-height:1.45}
+  .ucard--brand .ucard-blurb{color:var(--on-accent)}
+  .ucard--wmk .ucard-blurb{color:var(--on-sage)}
+  .ucard-arrow{position:absolute;right:16px;bottom:12px;font-size:30px;line-height:1;font-weight:800}
+
+  .brand-top{display:flex;align-items:center;gap:12px}
+  .brand-tile{background:var(--plum);width:48px;height:48px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .brand-tile img{height:30px;width:auto;display:block;filter:invert(1)}
+  .brand-sw{display:grid;grid-template-columns:repeat(3,20px);gap:5px}
+  .brand-sw span{width:20px;height:20px;display:block}
+
+  .wmk-motif{display:flex;align-items:center;gap:10px}
+  .wmk-motif img{height:34px;width:auto;display:block;flex:0 0 auto}
+  .wmk-arrow{font-size:13px;color:var(--sage-arrow);flex:0 0 auto}
+
+  .iso{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);padding:14px 16px;flex:0 0 auto;transition:border-color .15s}
+  .iso:hover{border-color:var(--accent)}
+  .iso-title{font-size:15px;font-weight:800;letter-spacing:-.015em}
+  .iso-sub{font-size:12px;line-height:1.35;color:var(--body)}
+  .iso-arrow{font-size:14px;color:var(--caption);flex:0 0 auto}
+
+  .sidefoot{flex:0 0 auto;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border-top:1px solid var(--line);padding-top:14px}
+  .themebtn{width:36px;height:36px;border:1px solid var(--line);background:transparent;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+  .themebtn:hover{border-color:var(--accent)}
+  .fbbtn{border:1px solid var(--line);background:transparent;color:var(--body);font-size:9.5px;font-weight:800;
+    letter-spacing:.16em;text-transform:uppercase;padding:9px 12px;cursor:pointer}
+  .fbbtn:hover{border-color:var(--accent)}
+
+  /* ------------------------------ centre column ------------------------------ */
+  .center{flex:1 1 auto;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:20px;
+    padding-right:6px;padding-bottom:30px}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .head-txt{display:flex;flex-direction:column;gap:6px}
+  .head h2{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+  .subline{font-size:15px;line-height:1.5;color:var(--body);max-width:68ch}
+  .count{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+
+  .list{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)}
+  .list:empty{display:none}
+
+  /* ------------------------------ tool row (core primitive) ------------------------------ */
+  .trow{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,450px);gap:28px;align-items:stretch;
+    background:var(--panel);color:var(--ink);padding:22px 24px;border-bottom:1px solid var(--hair);
+    container-type:inline-size;overflow:hidden;transition:box-shadow .15s,background .15s}
+  .trow:hover{box-shadow:inset 3px 0 0 var(--accent);background:var(--row-hover)}
+  .row-l{display:flex;flex-direction:column;gap:9px;min-width:0;container-type:inline-size}
+  .titlerow{display:flex;align-items:center;gap:clamp(8px,2cqw,14px);min-width:0;flex-wrap:nowrap}
+  .cat{display:block;flex:0 0 auto;width:clamp(18px,7cqw,34px);height:clamp(18px,7cqw,34px);color:var(--ink)}
+  .cat--ig{color:var(--accent)}
+  .rowtitle{font-size:clamp(20px,10.5cqw,48px);font-weight:800;letter-spacing:-.035em;line-height:.95;
+    text-transform:uppercase;color:var(--ink);flex:1 1 auto;min-width:0;overflow-wrap:normal;hyphens:none}
+  .badge{font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--plum);
+    background:var(--accent);padding:4px 8px;flex:0 0 auto}
+  .blurb{font-size:clamp(15px,4.8cqw,21px);line-height:1.35;color:var(--body);max-width:40ch;min-width:0;
+    overflow-wrap:break-word}
+
+  .motifrow{margin-top:auto;padding-top:12px;display:flex;align-items:center;gap:14px;min-width:0}
+  .motifwrap{position:relative;flex:0 0 auto}
+  .motifscale{position:absolute;top:0;left:0;display:flex;gap:10px;align-items:flex-end;
+    transform:scale(.5);transform-origin:left top}
+  .motifscale--wmk{align-items:center}
+  .motifscale img{height:40px;width:auto;display:block;flex:0 0 auto;filter:invert(var(--mark-invert))}
+  .motif-arrow{font-size:15px;color:var(--caption);flex:0 0 auto}
+  .frame{border:1px solid var(--wireline);background:var(--panel);padding:7px;display:flex;flex-direction:column;
+    gap:5px;flex:0 0 auto}
+  .frame > i{display:block;flex:0 0 auto}
+  .caption{font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--caption);
+    line-height:1.4}
+
+  /* ------------------------------ media rail ------------------------------ */
+  .rail{position:relative;width:100%;max-width:450px;height:222px;justify-self:end;align-self:center;
+    overflow:hidden;background:transparent}
+  .tiles{position:absolute;inset:0;display:flex;gap:10px}
+  .tile{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:center;justify-content:center}
+  .tile img{width:100%;height:100%;object-fit:contain;object-position:center;display:block}
+  .tile--empty{border:1px dashed var(--wireline)}
+  .tile-label{font-size:9.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--ph-ink);
+    text-align:center;padding:0 10px}
+
+  /* Hover preview. PLACEHOLDER — swap this block for a real screenshot of the
+     tool's own screen when captures exist; the crossfade itself is final. */
+  .preview{position:absolute;inset:0;opacity:0;transition:opacity .18s;background:var(--wire);
+    border:1px solid var(--wireline);padding:11px 12px;display:flex;flex-direction:column;gap:9px;pointer-events:none}
+  .trow:hover .preview{opacity:1}
+  .pv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pv-kicker{font-size:9px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--caption)}
+  .pv-open{font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+  .pv-body{flex:1 1 auto;min-height:0;display:flex;gap:9px}
+  .pv-col{width:38%;display:flex;flex-direction:column;gap:6px}
+  .pv-field{height:19px;background:var(--panel);border:1px solid var(--wireline);flex:0 0 auto}
+  .pv-btn{height:19px;width:68%;background:var(--accent);margin-top:auto;flex:0 0 auto}
+  .pv-canvas{flex:1 1 auto;border:1px solid var(--wireline)}
+
+  /* ------------------------------ tail blocks ------------------------------ */
+  .notecell{background:var(--panel);border:1px dashed var(--wireline);padding:20px 24px;font-size:14.5px;
+    line-height:1.5;color:var(--body)}
+  .next{display:flex;flex-direction:column;gap:11px;border-top:1px solid var(--line);padding-top:18px}
+  .next-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .next-kicker{font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--ink)}
+  .next-note{font-size:13px;color:var(--body)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  /* Not links — the visible backlog. */
+  .chip{border:1px dashed var(--wireline);background:var(--soft);padding:9px 14px;font-size:13px;font-weight:800;
+    color:var(--ink)}
+  .footline{font-size:11.5px;color:var(--muted);margin-top:auto;padding-top:6px}
+  .empty{font-size:14.5px;line-height:1.5;color:var(--body);border:1px dashed var(--wireline);padding:20px 24px}
+
+  /* ============================== modals ============================== */
+  .modal{position:fixed;inset:0;background:var(--scrim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
     display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
   .modal.open{display:flex}
-  .modal .box{background:#fff;border-radius:16px;padding:30px;max-width:380px;width:100%;
-    box-shadow:0 40px 80px -30px rgba(0,0,0,.5)}
-  .modal h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.01em}
-  .modal p{margin:0 0 18px;color:#55514a;font-size:13.5px}
-  .modal label{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
-  .modal input,.modal textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font:inherit;margin-bottom:12px}
+  .modal .box{background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:30px;max-width:380px;
+    width:100%;max-height:86vh;overflow-y:auto}
+  .modal .box.wide{max-width:460px}
+  .modal .box.cl{max-width:560px}
+  .modal h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.025em}
+  .modal p{margin:0 0 18px;color:var(--body);font-size:13.5px;line-height:1.5}
+  .modal label{display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 5px}
+  .modal input,.modal textarea{width:100%;padding:11px 13px;border:1px solid var(--line);background:var(--bg);
+    color:var(--ink);font:inherit;font-size:14px;margin-bottom:12px}
   .modal textarea{resize:vertical;min-height:84px}
   .modal .row{display:flex;gap:10px}
-  .modal .row button{flex:1;font-family:inherit;font-weight:800;font-size:14px;padding:12px;border-radius:10px;cursor:pointer;border:1px solid var(--line)}
-  .modal .go{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .modal .go:hover{background:var(--plum2)}
-  .modal .cancel{background:#fff;color:#55514a}
-  .modal .err{color:#b4452f;font-size:12.5px;min-height:16px;margin-top:4px}
-  .modal .box.wide{max-width:460px}
+  .modal .row button{flex:1;font-family:inherit;font-weight:800;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;padding:13px;cursor:pointer;border:1px solid var(--line);background:var(--panel);
+    color:var(--body)}
+  .modal .go{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .modal .go:hover{background:var(--plum);border-color:var(--plum);color:#fff}
+  .modal .cancel:hover{border-color:var(--accent)}
+  .modal .err{color:var(--danger);font-size:12.5px;min-height:16px;margin-top:4px}
   .two{display:flex;gap:10px}.two>div{flex:1}
+  .cl-add{background:var(--soft);border:1px solid var(--line);padding:14px;margin-bottom:8px}
+  .cl-entry{border-top:1px solid var(--hair);padding:16px 0;position:relative}
+  .cl-entry .d{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .cl-entry h3{margin:4px 0 8px;font-size:16px;font-weight:800;letter-spacing:-.02em}
+  .cl-entry ul{margin:0;padding-left:18px}
+  .cl-entry li{font-size:13.5px;line-height:1.55;color:var(--body);margin-bottom:4px}
+  .cl-del{position:absolute;top:14px;right:0;background:transparent;border:1px solid var(--line);color:var(--body);
+    font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:5px 8px;
+    cursor:pointer}
+  .cl-del:hover{border-color:var(--danger);color:var(--danger)}
+  .cl-repeat{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;text-transform:none;
+    letter-spacing:normal;color:var(--body);margin:2px 0 12px;font-weight:400}
+  .cl-repeat input{width:auto;margin:0}
 
-  /* Next-workshop banner */
-  .workshop{display:flex;align-items:center;gap:16px;background:linear-gradient(100% 100% at 0 0,var(--plum2),var(--plum));
-    color:#fff;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 20px;margin:0 0 24px;position:relative}
-  .workshop .cal{flex:none;width:46px;height:46px;border-radius:10px;background:var(--accent);color:var(--plum);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-weight:800}
-  .workshop .cal .mo{font-size:9px;letter-spacing:.14em;text-transform:uppercase}
-  .workshop .cal .dy{font-size:20px;margin-top:2px}
-  .workshop .wtxt{flex:1;min-width:0}
-  .workshop .wkr{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:800}
-  .workshop .wtitle{font-size:clamp(15px,2.1vw,18px);font-weight:800;letter-spacing:-.01em;margin:3px 0 2px}
-  .workshop .wmeta{font-size:13px;color:#cfccd8}
-  .wedit{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
-    color:#fff;font-family:inherit;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-    padding:6px 11px;border-radius:7px;cursor:pointer}
-  .wedit:hover{background:rgba(255,255,255,.22)}
-  .wedit[hidden]{display:none}
-  @media(max-width:560px){.workshop .cal{display:none}}
+  /* The shared feedback tray (assets/feedback.js) is round-cornered by default;
+     square it off and re-token it so it belongs to this surface. */
+  .cb-fb-btn{display:none!important}
+  .cb-fb-tray{border-radius:0!important;background:var(--panel)!important;color:var(--ink)!important;
+    border:1px solid var(--line);box-shadow:none!important;top:auto!important;bottom:78px!important;left:34px!important;right:auto!important}
+  .cb-fb-tray input,.cb-fb-tray textarea{border-radius:0!important;background:var(--bg)!important;color:var(--ink)!important;
+    border-color:var(--line)!important}
+  .cb-fb-send{border-radius:0!important}
 
-  @media(max-width:760px){ header .stax{display:none} }
+  /* ============================== responsive ==============================
+     Below ~1000px the two-column row and the fixed sidebar stop working, so the
+     page gives up its "never scrolls" rule: the list stacks (media above text)
+     and the sidebar drops underneath. NOT part of the design pass — this
+     breakpoint was undesigned (open decision 6) and is a holding pattern. */
+  @media (max-width:1000px){
+    html,body{overflow:auto;height:auto}
+    .page{height:auto;min-height:100vh}
+    .main{flex-direction:column;padding:22px 24px 26px;gap:26px}
+    .side{width:auto;flex:0 0 auto;order:2;overflow:visible;padding-bottom:0}
+    .sidescroll{overflow:visible}
+    .center{order:1;overflow:visible;padding-right:0}
+    .trow{grid-template-columns:minmax(0,1fr);gap:18px}
+    .rail{order:-1;max-width:none;justify-self:stretch;height:190px}
+    .hdr{padding:20px 24px 18px}
+    .tabband{padding:0 24px}
+  }
+  @media (max-width:700px){
+    .hdr{flex-direction:column;align-items:flex-start;gap:18px}
+    .hdr-r{width:100%;justify-content:space-between;gap:14px}
+    .search{width:100%;max-width:none}
+    .lockup{align-items:flex-start}
+    .lockup span{text-align:left;letter-spacing:.3em;font-size:11px}
+    .tabs{justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{font-size:15px;padding:11px 16px}
+    .head h2{font-size:24px}
+  }
+  @media (max-width:560px){
+    .hdr-r{flex-wrap:wrap;row-gap:14px}
+    .search{flex:1 1 100%;width:auto}
+    .rail{height:150px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important}
+  }
 </style>
 </head>
 <body>
 
-<!-- Reusable Instagram glyph (defined once, referenced by every IG chip) -->
+<!-- Reusable Instagram glyph. Was a gradient-filled chip mark; now inherits
+     currentColor so the tab (ink/idle) and the row icon (lavender) share it. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <radialGradient id="ig" cx="30%" cy="107%" r="135%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient>
-  <symbol id="igGlyph" viewBox="0 0 24 24"><path fill="url(#ig)" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.67.93 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.33 1.35 20.66.93 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0z"/><path fill="url(#ig)" d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle fill="url(#ig)" cx="18.41" cy="5.59" r="1.44"/></symbol>
+  <symbol id="igGlyph" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.67.93 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.33 1.35 20.66.93 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0z"/><path fill="currentColor" d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle fill="currentColor" cx="18.41" cy="5.59" r="1.44"/></symbol>
 </defs></svg>
 
-<header>
-  <div class="lhs">
-    <img src="assets/cb-logo-white.png" alt="Casa Blanca">
-    <span class="stax">Creative Studio</span>
+<div class="page">
+
+  <!-- ============================== masthead ============================== -->
+  <header class="hdr">
+    <a class="lockup" href="#home" aria-label="Creative Studio home">
+      <img src="assets/cb-logo-white.png" alt="Casa Blanca">
+      <span>Creative Studio</span>
+    </a>
+    <div class="hdr-r">
+      <div class="search">
+        <span class="search-glyph" aria-hidden="true"></span>
+        <input id="toolSearch" type="search" placeholder="Search tools" aria-label="Search tools"
+               autocomplete="off" spellcheck="false">
+      </div>
+      <div class="hdr-grp">
+        <button class="whatsnew" id="whatsnewBtn" type="button">What&rsquo;s new<span class="dot"></span></button>
+        <span class="hdr-div" aria-hidden="true"></span>
+        <button class="acct" id="devBtn" type="button">
+          <span class="acct-tile" id="acctTile" hidden></span>
+          <span class="acct-name" id="acctName">Sign in</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================== tabs ============================== -->
+  <nav class="tabband" aria-label="Tool categories">
+    <div class="tabs" id="tabs">
+      <a class="tab tab--home" href="#home" data-tab="home" title="Home" aria-label="Home">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3.5l9 7"/><path d="M5.5 9.6V20h13V9.6"/><path d="M10 20v-5.5h4V20"/></svg>
+      </a>
+      <a class="tab" href="#instagram" data-tab="instagram" title="Instagram">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><use href="#igGlyph"/></svg><span>Instagram</span>
+      </a>
+      <a class="tab" href="#print" data-tab="print" title="Print &amp; forms"><span>Print &amp; forms</span></a>
+      <a class="tab" href="#photos" data-tab="photos" title="Photos"><span>Photos</span></a>
+    </div>
+  </nav>
+
+  <div class="main">
+    <!-- ============================== sidebar ============================== -->
+    <aside class="side">
+      <div class="sidescroll">
+        <!-- Display-only by decision (2026-08-28): no RSVP or check-in flow here.
+             The Edit button is the pre-existing dev affordance, not a sign-up. -->
+        <section class="wcard" id="workshop" hidden>
+          <div class="wcard-top">
+            <div class="wcal"><span class="mo" id="wMonth"></span><span class="dy" id="wDay"></span></div>
+            <div class="wkicker">Next<br>workshop</div>
+          </div>
+          <div class="wtxt">
+            <div class="wtitle" id="wTitle">Social Media &amp; Content</div>
+            <div class="wmeta" id="wMeta"></div>
+          </div>
+          <button class="wedit" id="wEdit" type="button" hidden>Edit</button>
+        </section>
+
+        <div class="util-label">Utilities:</div>
+
+        <a class="ucard ucard--brand" href="tools/brand/">
+          <div class="brand-top">
+            <div class="brand-tile"><img src="assets/brand/casa-blanca-mark-black.png" alt=""></div>
+            <div class="brand-sw" aria-hidden="true">
+              <span style="background:#0f0f0f"></span><span style="background:#1e1a2e"></span>
+              <span style="background:#f4f3f0"></span><span style="background:#e8e6e0"></span>
+              <span style="background:#c0c2b5"></span><span style="background:#3c3654"></span>
+            </div>
+          </div>
+          <div class="ucard-txt">
+            <div class="ucard-title">Brand assets</div>
+            <div class="ucard-blurb">Logos, colors, Object Sans, guidelines. Download any format.</div>
+          </div>
+          <span class="ucard-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+
+        <a class="ucard ucard--wmk" href="tools/watermarker/">
+          <div class="wmk-motif" aria-hidden="true">
+            <img src="assets/brand/casa-blanca-mark-black.png" alt="" style="opacity:.22">
+            <span class="wmk-arrow">&rarr;</span>
+            <img src="assets/brand/casa-blanca-mark-black.png" alt="" style="opacity:.55">
+            <span class="wmk-arrow">&rarr;</span>
+            <img src="assets/brand/casa-blanca-mark-black.png" alt="">
+          </div>
+          <div class="ucard-txt">
+            <div class="ucard-title">Watermarker</div>
+            <div class="ucard-blurb">Put the house watermark on a photo — or take one back off.</div>
+          </div>
+          <span class="ucard-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+
+        <!-- Links out to the existing request form; deliberately not a tool card. -->
+        <a class="iso" id="isoCard" target="_blank" rel="noopener"
+           href="https://docs.google.com/forms/d/e/1FAIpQLSeKggwwRk7MB2oidHKwZk6E-qVkhW3k2Ig0exbB8XCbxKX_Pw/viewform">
+          <span>
+            <span class="iso-title">ISO Request</span>
+            <span class="iso-sub" style="display:block">Send an &ldquo;in search of&rdquo; buyer request</span>
+          </span>
+          <span class="iso-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+      <div class="sidefoot">
+        <button class="themebtn" id="themeBtn" type="button" title="Switch to night" aria-label="Switch to night"></button>
+        <button class="fbbtn" id="feedbackBtn" type="button">Send feedback</button>
+      </div>
+    </aside>
+
+    <!-- ============================== list ============================== -->
+    <main class="center" id="center">
+      <div class="head">
+        <div class="head-txt">
+          <h2 id="tabHeading">Most used</h2>
+          <div class="subline" id="tabSubline"></div>
+        </div>
+        <div class="count" id="tabCount"></div>
+      </div>
+
+      <div class="list" id="toolList"></div>
+      <div class="empty" id="emptyState" hidden></div>
+      <div class="notecell" id="noteCell" hidden></div>
+
+      <!-- Backlog chips, not links. Source of truth: docs/design/HANDOFF-NOTES.md -->
+      <section class="next" id="comingNext" hidden>
+        <div class="next-top">
+          <div class="next-kicker">Coming next</div>
+          <div class="next-note">Not built yet — tracked in the design handoff notes.</div>
+        </div>
+        <div class="chips">
+          <span class="chip">Open house · Stories</span>
+          <span class="chip">Client testimonial</span>
+          <span class="chip">Neighborhood spotlight</span>
+        </div>
+      </section>
+
+      <div class="footline">Creative Studio · built in-house</div>
+    </main>
   </div>
-  <a class="brandpill" href="tools/brand/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2a10 10 0 1 0 0 20c1.7 0 2-1.5 1-2.6-1-1.2-.4-2.9 1.2-2.9H17a5 5 0 0 0 5-5c0-5-4.5-9.5-10-9.5z"/></svg>Brand Assets</a>
-</header>
-
-<section class="hero">
-  <h1>The Casa Blanca <em>Creative</em> Studio.</h1>
-  <p>In-house tools for the brand — carousels, cards, watermarks, headshots and more.</p>
-</section>
-
-<nav class="tabs" id="tabs">
-  <button class="tab on" data-tab="home">Home</button>
-  <button class="tab" data-tab="instagram">Instagram &amp; Content</button>
-  <button class="tab" data-tab="internal">Internal Tools</button>
-  <button class="tab" data-tab="brand">Brand</button>
-  <button class="tab" data-tab="members" id="membersTab" hidden>Members</button>
-</nav>
-
-<main>
-
-  <!-- HOME -->
-  <section class="panel on" id="p-home">
-    <div class="workshop" id="workshop" hidden>
-      <div class="cal"><span class="mo" id="wMonth"></span><span class="dy" id="wDay"></span></div>
-      <div class="wtxt">
-        <div class="wkr">Next workshop</div>
-        <div class="wtitle" id="wTitle">Social Media &amp; Content Workshop</div>
-        <div class="wmeta" id="wMeta"></div>
-      </div>
-      <button class="wedit" id="wEdit" type="button" hidden>Edit</button>
-    </div>
-
-    <p class="panel-intro">Most used — jump straight in.</p>
-    <div class="grid">
-
-      <a class="tool" href="tools/carousel/cb_editorial.html">
-        <div class="thumb"><img src="assets/thumbs/editorial.jpg" alt="Editorial Carousel Builder preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
-          <h3>Editorial Carousel Builder</h3>
-          <p>One listing → a multi-slide editorial carousel. Import, caption, export.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/closed-carousel/">
-        <div class="thumb"><img src="assets/thumbs/closed.jpg" alt="Closed Carousel Builder preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
-          <h3>Closed Carousel Builder</h3>
-          <p>Multi-closing announcement carousel — one slide per deal.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/brand/">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 1 0 0 20c1.7 0 2-1.5 1-2.6-1-1.2-.4-2.9 1.2-2.9H17a5 5 0 0 0 5-5c0-5-4.5-9.5-10-9.5z"/></svg><span class="mcwm">Brand kit</span></div>
-        <div class="meta">
-          <div class="tags"><span class="chip internal">Internal</span></div>
-          <h3>Brand Assets</h3>
-          <p>Logos, fonts, colors and guidelines — download what you need, any format.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-    </div>
-  </section>
-
-  <!-- INSTAGRAM & CONTENT -->
-  <section class="panel" id="p-instagram">
-    <p class="panel-intro">Social carousels &amp; content builders.</p>
-    <div class="grid">
-
-      <a class="tool" href="tools/carousel/cb_editorial.html">
-        <div class="thumb"><img src="assets/thumbs/editorial.jpg" alt="Editorial Carousel Builder preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
-          <h3>Editorial Carousel Builder</h3>
-          <p>One listing → a multi-slide editorial carousel. Import, caption, export.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/closed-carousel/">
-        <div class="thumb"><img src="assets/thumbs/closed.jpg" alt="Closed Carousel Builder preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
-          <h3>Closed Carousel Builder</h3>
-          <p>Multi-closing announcement carousel — one slide per deal.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/forsale-carousel/">
-        <div class="thumb"><img src="assets/thumbs/forsale.jpg" alt="For Sale Roundup Builder preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip ig"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><use href="#igGlyph"/></svg>Instagram</span></div>
-          <h3>For Sale Roundup Builder</h3>
-          <p>Multi-listing "for sale" announcement carousel — one slide per listing.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-    </div>
-  </section>
-
-  <!-- INTERNAL TOOLS -->
-  <section class="panel" id="p-internal">
-    <p class="panel-intro">Brand assets &amp; production utilities.</p>
-    <div class="grid">
-
-      <a class="tool" href="tools/brand/">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 1 0 0 20c1.7 0 2-1.5 1-2.6-1-1.2-.4-2.9 1.2-2.9H17a5 5 0 0 0 5-5c0-5-4.5-9.5-10-9.5z"/></svg><span class="mcwm">Brand kit</span></div>
-        <div class="meta">
-          <div class="tags"><span class="chip internal">Internal</span></div>
-          <h3>Brand Assets</h3>
-          <p>Logos, fonts, colors and guidelines — download what you need, any format.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/business-card/">
-        <div class="thumb"><img src="assets/thumbs/bizcard.jpg" alt="Business Card Generator preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip internal">Internal</span></div>
-          <h3>Business Card Generator</h3>
-          <p>Generate on-brand business cards for agents, print-ready.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/watermarker/">
-        <div class="thumb"><img src="assets/thumbs/watermarker.jpg" alt="Watermarker preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip internal">Internal</span></div>
-          <h3>Watermarker</h3>
-          <p>Stamp the Casa Blanca watermark onto photos and graphics.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/watermark-remover/">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l4-4 3 3 4-4 5 5"/><path d="m15 6 6 6M21 6l-6 6"/></svg><span class="mcwm">Watermark Remover</span></div>
-        <div class="meta">
-          <div class="tags"><span class="chip internal">Internal</span></div>
-          <h3>Watermark Remover</h3>
-          <p>Take a Casa Blanca watermark back off a listing photo. Drop the image or paste a link.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="assets/biz-card-ordering-guide.pdf" target="_blank" rel="noopener">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span class="mcwm">PDF guide</span></div>
-        <div class="meta">
-          <div class="tags"><span class="chip internal">Internal</span><span class="chip pdf">PDF</span></div>
-          <h3>Business Card Ordering Guide</h3>
-          <p>How to order printed cards — specs and vendor steps (PDF).</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="https://docs.google.com/forms/d/e/1FAIpQLSeKggwwRk7MB2oidHKwZk6E-qVkhW3k2Ig0exbB8XCbxKX_Pw/viewform" target="_blank" rel="noopener">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="mcwm"><span class="d"></span>via Mailchimp</span></div>
-        <div class="meta">
-          <div class="tags"><span class="chip form">Form</span><span class="chip mc">Mailchimp</span></div>
-          <h3>ISO Request Form</h3>
-          <p>Submit an "in search of" buyer request to the team.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-    </div>
-  </section>
-
-  <!-- BRAND -->
-  <section class="panel" id="p-brand">
-    <div class="feature">
-      <div class="ftxt">
-        <h2>The Casa Blanca brand kit.</h2>
-        <p>Logos, the Object Sans typeface, the color palette and brand guidelines — all in one place, downloadable in the formats agents need. Signed-in devs can add and update assets, and changes show up here for everyone.</p>
-        <a class="cta" href="tools/brand/">Open Brand Assets <span>→</span></a>
-      </div>
-      <div class="palpeek" aria-hidden="true">
-        <span class="s" style="background:#0f0f0f"></span><span class="s" style="background:#aaa3cf"></span>
-        <span class="s" style="background:#1e1a2e"></span><span class="s" style="background:#f4f3f0"></span>
-        <span class="s" style="background:#e8e6e0"></span><span class="s" style="background:#ffe01b"></span>
-      </div>
-    </div>
-    <div class="grid">
-      <a class="tool" href="tools/brand/#logos">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"/></svg><span class="mcwm">Logos</span></div>
-        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Logos</h3><p>Primary marks &amp; lockups, multiple formats.</p><span class="open">Open <span class="arr">→</span></span></div>
-      </a>
-      <a class="tool" href="tools/brand/#colors">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="1.4" fill="currentColor"/><circle cx="15" cy="9" r="1.4" fill="currentColor"/><circle cx="9.5" cy="15" r="1.4" fill="currentColor"/></svg><span class="mcwm">Colors</span></div>
-        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Colors</h3><p>The palette — copy hex, download CSS/JSON.</p><span class="open">Open <span class="arr">→</span></span></div>
-      </a>
-      <a class="tool" href="tools/brand/#type">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg><span class="mcwm">Type</span></div>
-        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Typography</h3><p>Object Sans — specimens &amp; font downloads.</p><span class="open">Open <span class="arr">→</span></span></div>
-      </a>
-      <a class="tool" href="tools/brand/#guidelines">
-        <div class="thumb ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span class="mcwm">Guidelines</span></div>
-        <div class="meta"><div class="tags"><span class="chip internal">Brand</span></div><h3>Guidelines</h3><p>Brand book, voice &amp; how-to docs.</p><span class="open">Open <span class="arr">→</span></span></div>
-      </a>
-    </div>
-  </section>
-
-  <!-- MEMBERS — shown only when signed in -->
-  <section class="panel" id="p-members">
-    <p class="panel-intro">Signed-in members &amp; dev tools.</p>
-    <div class="grid">
-      <a class="tool" href="tools/profile-pic/">
-        <div class="thumb"><img src="assets/thumbs/profilepic.jpg" alt="Profile Pic Generator preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip members">Members</span></div>
-          <h3>Profile Pic Generator</h3>
-          <p>Branded agent headshots — background removed in-browser.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-
-      <a class="tool" href="tools/incontract-carousel/">
-        <div class="thumb"><img src="assets/brand/incontract-template-ref.png" alt="In Contract Roundup Builder preview" loading="lazy"></div>
-        <div class="meta">
-          <div class="tags"><span class="chip members">Members</span></div>
-          <h3>In Contract Roundup Builder</h3>
-          <p>Two-listing "in contract" announcement slides — dev only, measured pixel-perfect from the brand template.</p>
-          <span class="open">Open <span class="arr">→</span></span>
-        </div>
-      </a>
-    </div>
-  </section>
-
-</main>
-
-<footer>
-  <img src="assets/cb-logo-white.png" alt="Casa Blanca">
-  Creative Studio · built in-house
-  <div><button class="devbtn whatsnew" id="whatsnewBtn" type="button">What’s new<span class="dot"></span></button><button class="devbtn" id="devBtn" type="button">Dev</button></div>
-</footer>
+</div>
 
 <div class="modal" id="clModal">
   <div class="box cl">
-    <h2>What’s new</h2>
+    <h2>What&rsquo;s new</h2>
     <p>Recent updates to the Creative Studio.</p>
-    <div id="clAdd" hidden style="background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px">
+    <div id="clAdd" class="cl-add" hidden>
       <label>Add an update (date · title)</label>
       <div class="two"><div><input id="clDate" type="date"></div><div><input id="clTitle" type="text" placeholder="Title"></div></div>
       <label>Items — one per line</label>
@@ -416,14 +525,14 @@
       <div class="err" id="clErr"></div>
     </div>
     <div id="clList"></div>
-    <div class="row" style="margin-top:18px;"><button class="go" id="clClose" type="button">Close</button></div>
+    <div class="row" style="margin-top:18px"><button class="go" id="clClose" type="button">Close</button></div>
   </div>
 </div>
 
 <div class="modal" id="loginModal">
   <div class="box">
-    <h2>Dev sign-in</h2>
-    <p>Enter an approved email to unlock members &amp; dev tools on this device.</p>
+    <h2>Sign in</h2>
+    <p>Enter an approved email to unlock team tools on this device.</p>
     <input id="emailInput" type="email" placeholder="you@casa-blanca.com" autocomplete="email" spellcheck="false">
     <div class="err" id="loginErr"></div>
     <div class="row">
@@ -447,8 +556,8 @@
       <div><label>Location</label><input id="wsLoc" type="text" placeholder="the office"></div>
       <div><label>Cadence</label><input id="wsCad" type="text" placeholder="every other Thursday"></div>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;text-transform:none;letter-spacing:normal;color:#55514a;margin:2px 0 12px">
-      <input id="wsRepeat" type="checkbox" style="width:auto;margin:0"> Repeat automatically every other week (the date rolls forward on its own)
+    <label class="cl-repeat">
+      <input id="wsRepeat" type="checkbox"> Repeat automatically every other week (the date rolls forward on its own)
     </label>
     <div class="err" id="wsErr"></div>
     <div class="row">
@@ -501,6 +610,7 @@
 ]
 </script>
 
+<script src="assets/feedback.js" defer></script>
 <script>
 (function(){
   /* ---------- shared ---------- */
@@ -511,32 +621,269 @@
   function authed(){return ALLOWED.indexOf(currentEmail())!==-1;}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function $(id){return document.getElementById(id);}
+  function el(tag,cls){var n=document.createElement(tag);if(cls)n.className=cls;return n;}
 
-  /* ---------- tabs ---------- */
-  var tabs=$('tabs');
-  function showTab(id){
-    [].forEach.call(tabs.children,function(t){t.classList.toggle('on',t.getAttribute('data-tab')===id);});
-    [].forEach.call(document.querySelectorAll('.panel'),function(p){p.classList.toggle('on',p.id==='p-'+id);});
-    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+  /* ================= theme =================
+     The palette lives entirely in CSS custom properties, so switching is one
+     attribute flip — nothing re-renders. Persisted per device. */
+  var SUN='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></svg>';
+  var MOON='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.6A8.6 8.6 0 1 1 9.4 3.8a6.9 6.9 0 0 0 10.8 10.8z"/></svg>';
+  function theme(){return document.documentElement.getAttribute('data-theme')==='night'?'night':'day';}
+  function paintTheme(){
+    var night=theme()==='night', b=$('themeBtn'), lbl=night?'Switch to day':'Switch to night';
+    b.innerHTML=night?MOON:SUN; b.title=lbl; b.setAttribute('aria-label',lbl);
   }
-  tabs.addEventListener('click',function(e){var b=e.target.closest('.tab');if(b)showTab(b.getAttribute('data-tab'));});
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    try{localStorage.setItem('cb_theme',t);}catch(e){}
+    paintTheme();
+  }
+  $('themeBtn').onclick=function(){setTheme(theme()==='night'?'day':'night');};
 
-  /* ---------- auth / dev ---------- */
+  /* ================= tool inventory =================
+     Everything the list needs at load: name, blurb, category icon, badge,
+     sample image, motif caption and href. */
+  var TOOLS={
+    editorial:{name:'Editorial',icon:'ig',href:'tools/carousel/cb_editorial.html',
+      blurb:'One listing, a multi-slide post. Copy written for you.',
+      caption:'Cover + interior slides · 1080×1350',sample:'assets/outputs/editorial.png'},
+    closed:{name:'Just closed',icon:'ig',href:'tools/closed-carousel/',
+      blurb:'A cover slide, then one slide per closing.',
+      caption:'Cover + one slide per closing',sample:'assets/outputs/closed.png'},
+    /* Sample pending — drop the export at assets/outputs/forsale.png and set `sample`. */
+    forsale:{name:'For sale roundup',icon:'ig',href:'tools/forsale-carousel/',
+      blurb:'Up to six active listings in one post.',
+      caption:'Cover + up to six listings',sample:null},
+    /* Sample pending — assets/outputs/incontract.png */
+    incontract:{name:'In contract',icon:'ig',href:'tools/incontract-carousel/',badge:'Team',team:true,
+      blurb:'Deals in contract, single or co-broker credit.',
+      caption:'Two listings · single or co-broker',sample:null},
+    watermarker:{name:'Watermarker',icon:'photo',href:'tools/watermarker/',
+      blurb:'Put the house watermark on a photo — or take one back off.',
+      caption:'Watermark on, or watermark off',sample:'assets/outputs/watermarker.png'},
+    bizcard:{name:'Business card',icon:'print',href:'tools/business-card/',
+      blurb:'Your details on the house card, ready for the printer.',
+      caption:'Front + back · 3.5 × 2 in, print-ready',sample:'assets/outputs/bizcard.png'},
+    guide:{name:'Ordering guide',icon:'print',href:'assets/biz-card-ordering-guide.pdf',badge:'PDF',ext:true,
+      blurb:'How to order printed cards — specs and vendor steps.',
+      caption:'PDF · specs and vendor steps',sample:null,phLabel:'Opens the PDF'},
+    profilepic:{name:'Profile pic',icon:'photo',href:'tools/profile-pic/',badge:'Team',team:true,
+      blurb:'Branded agent headshots, background removed in-browser.',
+      caption:'Headshot cut to the taupe standard',sample:'assets/outputs/profilepic.png'}
+  };
+  var ALL_KEYS=['editorial','closed','forsale','incontract','watermarker','bizcard','guide','profilepic'];
+
+  /* Abstract slide sketches. Drawn at full size, then scaled by half — see buildMotif. */
+  var MOTIF={
+    editorial:{frames:[
+      {w:68,h:86,rows:[{fill:1},{h:8,c:'bar'},{h:4,w:'70%',c:'soft'}]},
+      {w:68,h:86,rows:[{h:32,hatch:1},{h:5,w:'60%',c:'bar'},{h:4,c:'wl'},{h:4,c:'wl'},{h:4,w:'80%',c:'wl'}]}]},
+    closed:{frames:[
+      {w:68,h:86,center:1,rows:[{h:12,w:'64%',c:'bar'},{h:4,w:'42%',c:'soft'}]},
+      {w:68,h:86,rows:[{h:34,hatch:1},{h:5,w:'80%',c:'bar'},{h:4,w:'52%',c:'soft'},{h:4,w:'40%',c:'accent',push:1}]}]},
+    forsale:{frames:[
+      {w:68,h:86,rows:[{h:7,w:'62%',c:'bar'},{h:22,hatch:1},{h:22,hatch:1}]},
+      {w:68,h:86,rows:[{h:40,hatch:1},{h:5,w:'70%',c:'bar'},{h:4,w:'45%',c:'soft'}]}]},
+    incontract:{frames:[
+      {w:68,h:86,rows:[{h:7,w:'56%',c:'bar'},{h:26,hatch:1},{h:26,hatch:1}]},
+      {w:68,h:86,rows:[{h:38,hatch:1},{h:5,w:'66%',c:'bar'},{h:4,w:'44%',c:'soft'},{h:4,w:'36%',c:'accent',push:1}]}]},
+    bizcard:{frames:[
+      {w:58,h:92,rows:[{h:12,w:'46%',c:'bar',self:'flex-start'},{h:5,w:'70%',c:'bar',push:1},{h:3,w:'90%',c:'soft'},{h:3,w:'60%',c:'soft'}]},
+      {w:58,h:92,center:1,rows:[{h:10,w:'62%',c:'bar',self:'center'}]}]},
+    guide:{frames:[
+      {w:68,h:86,rows:[{h:6,w:'60%',c:'bar'},{h:3,c:'soft'},{h:3,c:'soft'},{h:3,w:'80%',c:'soft'},{h:3,c:'soft'},{h:3,w:'62%',c:'soft'}]}]},
+    profilepic:{frames:[
+      {w:68,h:86,rows:[{h:24,w:'24px',c:'soft',self:'center',mt:8,round:1},{h:30,w:'60%',c:'wl',self:'center',push:1}]}]},
+    watermarker:{wmk:1}
+  };
+
+  var TABS=[
+    {id:'home',heading:'Most used',sub:'The tools the studio opens most. Everything else sits in the tabs above.',
+      keys:['editorial','closed','forsale','bizcard','profilepic'],next:true},
+    {id:'instagram',heading:'Instagram & content',sub:'A listing goes in, a ready-to-post set comes out.',
+      keys:['editorial','closed','forsale','incontract'],next:true},
+    {id:'print',heading:'Print & forms',sub:'Cards that get printed, and requests that reach the studio.',
+      keys:['bizcard','guide']},
+    {id:'photos',heading:'Photos & headshots',sub:'Watermarks on or off, and headshots cut to the house standard.',
+      keys:['watermarker','profilepic'],
+      note:'Team badge means sign-in only. Everyone else never sees that card.'}
+  ];
+  var TABS_BY_ID={}; TABS.forEach(function(t){TABS_BY_ID[t.id]=t;});
+  var state={tab:'home'};
+
+  /* ================= row primitives ================= */
+  var ICON={
+    ig:'<svg class="cat cat--ig" viewBox="0 0 24 24" aria-hidden="true"><use href="#igGlyph"/></svg>',
+    print:'<svg class="cat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3.5h10V8"/><rect x="3" y="8" width="18" height="8"/><path d="M7 13h10v7.5H7z"/></svg>',
+    photo:'<svg class="cat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5h4l1.6-2.4h6.8L17 8.5h4V20H3z"/><circle cx="12" cy="14" r="3.6"/></svg>'
+  };
+  /* PLACEHOLDER: stands in for a real screenshot of each tool's own screen. */
+  var PREVIEW='<div class="preview" aria-hidden="true">'+
+    '<div class="pv-bar"><span class="pv-kicker">Tool preview</span><span class="pv-open">Open &rarr;</span></div>'+
+    '<div class="pv-body"><div class="pv-col">'+
+    '<div class="pv-field"></div><div class="pv-field"></div><div class="pv-field"></div><div class="pv-btn"></div>'+
+    '</div><div class="pv-canvas hatch"></div></div></div>';
+
+  function cvar(c){
+    return c==='bar'?'var(--motif-bar)':c==='soft'?'var(--motif-soft)':c==='accent'?'var(--accent)':'var(--wireline)';
+  }
+  function buildMotif(m){
+    var wrap=el('div','motifwrap'), scale=el('div','motifscale'+(m.wmk?' motifscale--wmk':''));
+    var rawW=0,rawH=0;
+    if(m.wmk){
+      rawW=176;rawH=44;
+      [0.22,0.55,1].forEach(function(op,i){
+        if(i){var ar=el('span','wmk-arrow motif-arrow');ar.textContent='→';scale.appendChild(ar);}
+        var img=el('img');img.src='assets/brand/casa-blanca-mark-black.png';img.alt='';img.style.opacity=op;
+        scale.appendChild(img);
+      });
+    }else{
+      m.frames.forEach(function(f,i){
+        rawW+=f.w+(i?10:0); rawH=Math.max(rawH,f.h);
+        var fr=el('div','frame');
+        fr.style.width=f.w+'px'; fr.style.height=f.h+'px';
+        if(f.center){fr.style.alignItems='center';fr.style.justifyContent='center';}
+        f.rows.forEach(function(r){
+          var b=el('i');
+          if(r.fill){b.className='hatch';b.style.flex='1 1 auto';b.style.width='100%';}
+          else{
+            b.style.height=r.h+'px'; b.style.width=r.w||'100%';
+            if(r.hatch)b.className='hatch'; else b.style.background=cvar(r.c);
+          }
+          if(r.self)b.style.alignSelf=r.self;
+          if(r.push)b.style.marginTop='auto';
+          if(r.mt)b.style.marginTop=r.mt+'px';
+          if(r.round)b.style.borderRadius='50%';
+          fr.appendChild(b);
+        });
+        scale.appendChild(fr);
+      });
+    }
+    wrap.style.width=Math.round(rawW*0.5)+'px';
+    wrap.style.height=Math.round(rawH*0.5)+'px';
+    wrap.appendChild(scale);
+    return wrap;
+  }
+
+  function mediaRail(t){
+    var rail=el('div','rail'), tiles=el('div','tiles');
+    if(t.sample){
+      var tile=el('div','tile'), img=el('img');
+      img.src=t.sample; img.alt=''; img.loading='lazy';
+      tile.appendChild(img); tiles.appendChild(tile);
+    }else{
+      var box=el('div','tile tile--empty'), lbl=el('span','tile-label');
+      lbl.textContent=t.phLabel||'No sample yet';
+      box.appendChild(lbl); tiles.appendChild(box);
+    }
+    rail.appendChild(tiles);
+    rail.insertAdjacentHTML('beforeend',PREVIEW);
+    return rail;
+  }
+
+  function toolRow(key){
+    var t=TOOLS[key], a=el('a','trow');
+    a.href=t.href;
+    if(t.ext){a.target='_blank';a.rel='noopener';}
+    var left=el('div','row-l'), tr=el('div','titlerow');
+    tr.innerHTML=ICON[t.icon]||'';
+    var nm=el('div','rowtitle'); nm.textContent=t.name; tr.appendChild(nm);
+    if(t.badge){var b=el('span','badge');b.textContent=t.badge;tr.appendChild(b);}
+    left.appendChild(tr);
+    var bl=el('div','blurb'); bl.textContent=t.blurb; left.appendChild(bl);
+    var mr=el('div','motifrow');
+    mr.appendChild(buildMotif(MOTIF[key]));
+    var cap=el('div','caption'); cap.textContent=t.caption; mr.appendChild(cap);
+    left.appendChild(mr);
+    a.appendChild(left);
+    a.appendChild(mediaRail(t));
+    return a;
+  }
+
+  /* ================= list + tabs + search ================= */
+  var searchInput=$('toolSearch');
+  /* Signed out, Team-badged tools are not rendered at all — not disabled, not teased. */
+  function granted(k){return !TOOLS[k].team||authed();}
+
+  function renderList(){
+    var q=(searchInput.value||'').trim().toLowerCase();
+    var list=$('toolList'), keys, heading, sub, note='', next=false;
+
+    if(q){
+      keys=ALL_KEYS.filter(function(k){
+        return granted(k) && (TOOLS[k].name+' '+TOOLS[k].blurb).toLowerCase().indexOf(q)!==-1;
+      });
+      heading='Search';
+      sub='Matching “'+(searchInput.value||'').trim()+'” across every tab.';
+    }else{
+      var tab=TABS_BY_ID[state.tab]||TABS[0];
+      keys=tab.keys.filter(granted);
+      heading=tab.heading; sub=tab.sub; note=tab.note||''; next=!!tab.next;
+    }
+
+    list.innerHTML='';
+    keys.forEach(function(k){list.appendChild(toolRow(k));});
+
+    $('tabHeading').textContent=heading;
+    $('tabSubline').textContent=sub;
+    $('tabCount').textContent=keys.length+' '+(q?(keys.length===1?'match':'matches'):(keys.length===1?'tool':'tools'));
+
+    var none=$('emptyState');
+    none.hidden=keys.length>0;
+    none.textContent=q?'Nothing matches “'+(searchInput.value||'').trim()+'”.':'Nothing here yet.';
+
+    $('noteCell').hidden=!note; $('noteCell').textContent=note;
+    $('comingNext').hidden=!next;
+  }
+
+  function showTab(id){
+    if(!TABS_BY_ID[id])id='home';
+    state.tab=id;
+    [].forEach.call($('tabs').children,function(a){
+      if(a.getAttribute('data-tab')===id){
+        a.setAttribute('aria-current','page');
+        if(a.scrollIntoView)a.scrollIntoView({block:'nearest',inline:'nearest'});
+      }else a.removeAttribute('aria-current');
+    });
+    renderList();
+    $('center').scrollTop=0;
+  }
+
+  window.addEventListener('hashchange',function(){
+    var h=location.hash.slice(1);
+    if(!TABS_BY_ID[h])return;
+    if(searchInput.value){searchInput.value='';}
+    showTab(h);
+  });
+
+  searchInput.addEventListener('input',renderList);
+  searchInput.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){searchInput.value='';renderList();searchInput.blur();}
+  });
+
+  /* ================= auth ================= */
   var loginModal=$('loginModal'),input=$('emailInput'),err=$('loginErr');
   function applyAuth(){
-    var on=authed();
-    $('membersTab').hidden=!on;
-    if(!on && tabs.querySelector('.tab.on').getAttribute('data-tab')==='members') showTab('home');
-    var btn=$('devBtn'); btn.textContent=on?'Signed in · Log out':'Dev'; btn.classList.toggle('on',on);
+    var on=authed(), tile=$('acctTile'), name=$('acctName');
+    if(on){
+      var local=currentEmail().split('@')[0].replace(/[^a-z0-9]/g,'');
+      tile.textContent=local.slice(0,2).toUpperCase(); tile.hidden=false;
+      name.textContent=local.charAt(0).toUpperCase()+local.slice(1);
+      $('devBtn').title='Signed in as '+currentEmail()+' — click to sign out';
+    }else{
+      tile.hidden=true; name.textContent='Sign in';
+      $('devBtn').title='Sign in to unlock team tools';
+    }
     $('wEdit').hidden=!on;
     $('clAdd').hidden=!on;
-    renderChangelog(); // re-render to add/remove delete buttons
+    renderChangelog();
+    renderList();
   }
   function openLogin(){err.textContent='';input.value='';loginModal.classList.add('open');setTimeout(function(){input.focus();},40);}
   function closeLogin(){loginModal.classList.remove('open');}
   function tryLogin(){
     var e=(input.value||'').trim().toLowerCase();
-    if(ALLOWED.indexOf(e)!==-1){localStorage.setItem('cb_auth',e);closeLogin();applyAuth();showTab('members');}
+    if(ALLOWED.indexOf(e)!==-1){localStorage.setItem('cb_auth',e);closeLogin();applyAuth();}
     else{err.textContent='That email isn’t on the list.';}
   }
   $('devBtn').onclick=function(){ if(authed()){localStorage.removeItem('cb_auth');applyAuth();} else openLogin(); };
@@ -544,7 +891,7 @@
   input.addEventListener('keydown',function(ev){if(ev.key==='Enter')tryLogin();});
   loginModal.addEventListener('click',function(ev){if(ev.target===loginModal)closeLogin();});
 
-  /* ---------- workshop (live + editable) ---------- */
+  /* ================= workshop (live + dev-editable) ================= */
   var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var workshop=null;
@@ -564,9 +911,9 @@
     return parseYMD(cfg.date);
   }
   function renderWorkshop(){
-    var el=$('workshop'); var cfg=workshop||{};
+    var box=$('workshop'), cfg=workshop||{};
     var d=workshopDate(cfg);
-    if(!d){ el.hidden=true; return; }
+    if(!d){ box.hidden=true; return; }
     var today=new Date(); today.setHours(0,0,0,0);
     $('wTitle').textContent=cfg.title||'Social Media & Content Workshop';
     $('wMonth').textContent=MO[d.getMonth()];
@@ -578,7 +925,7 @@
       meta='Next date TBA — check with the team.'+(cfg.cadence?' (Usually '+cfg.cadence+'.)':'');
     } else if(cfg.cadence){ meta+='  ·  '+cfg.cadence; }
     $('wMeta').textContent=meta;
-    el.hidden=false;
+    box.hidden=false;
   }
 
   var wsModal=$('wsModal');
@@ -589,7 +936,6 @@
     var c=workshop||{};
     var repeats=!!(c.anchor && +c.recurEveryDays>0);
     $('wsTitle').value=c.title||'Social Media & Content Workshop';
-    // show the upcoming computed date as the value to edit
     var d=workshopDate(c); $('wsDate').value=d?ymd(d):(c.date||c.anchor||'');
     $('wsTime').value=c.time||''; $('wsLoc').value=c.location||''; $('wsCad').value=c.cadence||'';
     $('wsRepeat').checked=repeats; syncDateLbl();
@@ -613,12 +959,12 @@
       }).catch(function(){ $('wsSave').disabled=false; $('wsErr').textContent='Network error — backend unreachable.'; });
   };
 
-  /* ---------- changelog (live + editable) ---------- */
+  /* ================= changelog ================= */
   var clModal=$('clModal'),clList=$('clList'),SEEN='cb_changelog_seen';
   var changelog=[]; try{ changelog=JSON.parse($('cl-data').textContent)||[]; }catch(e){ changelog=[]; }
 
   function renderChangelog(){
-    if(!Array.isArray(changelog)||!changelog.length){ clList.innerHTML='<p style="color:#888">No updates yet.</p>'; return; }
+    if(!Array.isArray(changelog)||!changelog.length){ clList.innerHTML='<p>No updates yet.</p>'; return; }
     window.__clLatest=changelog[0].date;
     var canEdit=authed();
     clList.innerHTML=changelog.map(function(e){
@@ -657,7 +1003,23 @@
       }).catch(function(){ alert('Could not delete — backend unreachable.'); });
   });
 
-  /* ---------- hydrate from live backend (fall back to inline defaults) ---------- */
+  /* ================= feedback ================= */
+  /* assets/feedback.js mounts its own pill (hidden here by CSS); the sidebar
+     button drives its tray so the widget stays shared with every tool. */
+  var fbBtn=$('feedbackBtn');
+  fbBtn.setAttribute('data-cb-feedback-trigger','1');
+  fbBtn.onclick=function(){
+    if(window.CBFeedback){ window.CBFeedback.toggle(); return; }
+    var pill=document.querySelector('.cb-fb-btn'); if(pill) pill.click();
+  };
+
+  /* ================= modals: escape closes ================= */
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Escape')return;
+    [clModal,loginModal,wsModal].forEach(function(m){m.classList.remove('open');});
+  });
+
+  /* ================= hydrate from live backend (fall back to inline defaults) ================= */
   function hydrate(){
     fetch(SITE,{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
       if(cfg&&cfg.workshop&&(cfg.workshop.date||cfg.workshop.anchor)){ workshop=cfg.workshop; renderWorkshop(); }
@@ -665,8 +1027,9 @@
     }).catch(function(){ /* offline — inline defaults already rendered */ });
   }
 
-  /* ---------- boot ---------- */
-  (function(){ var h=location.hash.slice(1); var valid=h&&tabs.querySelector('[data-tab="'+h+'"]:not([hidden])'); if(valid) showTab(h); })();
+  /* ================= boot ================= */
+  paintTheme();
+  showTab(location.hash.slice(1));
   renderWorkshop();
   renderChangelog();
   applyAuth();

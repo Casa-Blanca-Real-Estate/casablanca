@@ -3,10 +3,39 @@
 > Read [`../README.md`](../README.md) first. It carries the brand system, the technical
 > constraints, and the deliverable contract that apply to every surface.
 
-**File:** `index.html` (single file, ~670 lines, CSS and JS inline)
+**File:** `index.html` (single file, CSS and JS inline)
 **Route:** `/` — the front door of the whole platform
 **Reference:** `home-legacy.html` is the previous, non-tabbed version
 **Prior planning doc:** `docs/homepage-tabs-and-live-edit-plan.md`
+
+---
+
+## STATUS — redesign shipped 2026-08-28
+
+**This brief describes the OLD dashboard.** The redesign came back as the Claw design
+pass and is now live in `index.html`; everything below §4 documents what was replaced.
+Read it for history, not for current state.
+
+What shipped: a single-column list (one row per tool), four tabs — Home · Instagram ·
+Print & forms · Photos — a fixed left sidebar (next workshop, utilities, theme switch,
+feedback), and a Day/Night palette. Tools reuse these primitives: `.trow`, `.badge`,
+`.rail` + `.preview`, `.ucard`, `.themebtn`, and the `:root` token block.
+
+**DOM hooks — old → new.** Kept as-is: `workshop` · `wMonth` · `wDay` · `wTitle` ·
+`wMeta` · `wEdit` · `whatsnewBtn` · `devBtn` · every `wsModal` / `clModal` /
+`loginModal` field · `workshop-data` · `cl-data` · `igGlyph`.
+
+| Old | New | Note |
+|---|---|---|
+| `tabs` + `data-tab` | `tabs` + `data-tab` | Now four `<a href="#…">`; hash routing, `aria-current` marks the active tab |
+| `membersTab` | — | Gone. Team-badged rows simply aren't rendered when signed out |
+| `p-home` / `p-instagram` / `p-internal` / `p-brand` / `p-members` | `toolList` | One list, re-rendered per tab from the `TOOLS` inventory |
+| `igGlyph` (gradient fill) | `igGlyph` (`currentColor`) | Same id; recoloured so the tab and the row icon can share it |
+| — | `toolSearch` · `themeBtn` · `feedbackBtn` · `acctTile` · `acctName` · `tabHeading` · `tabSubline` · `tabCount` · `noteCell` · `comingNext` · `emptyState` | New |
+
+**Still open** (carried from the pass): real tool screenshots for the hover preview;
+samples for For sale roundup, In contract and Ordering guide (dashed placeholder until
+they land); the sub-900px breakpoint, which is a holding pattern, not a design.
 
 ---
 

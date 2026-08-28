@@ -60,6 +60,9 @@
     function onOutside(e) {
       if (!tray) return;
       if (tray.contains(e.target) || btn.contains(e.target)) return;
+      // A host page can render its own trigger (the Studio sidebar does) and dock
+      // it anywhere; clicking that must toggle the tray, not count as "outside".
+      if (e.target.closest && e.target.closest('[data-cb-feedback-trigger]')) return;
       close();
     }
 
@@ -121,6 +124,11 @@
     }
 
     btn.onclick = function () { if (tray) close(); else open(); };
+
+    // Public handle so a page with its own feedback affordance can drive the
+    // same tray instead of re-implementing it. The injected pill stays the
+    // default for every tool that doesn't have one.
+    window.CBFeedback = { open: open, close: close, toggle: function () { if (tray) close(); else open(); } };
   }
 
   if (document.body) mount();

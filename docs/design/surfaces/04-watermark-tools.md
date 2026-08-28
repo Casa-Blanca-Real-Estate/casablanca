@@ -3,10 +3,68 @@
 > Read [`../README.md`](../README.md) first. It carries the brand system, the technical
 > constraints, and the deliverable contract that apply to every surface.
 
-**Files:**
-`tools/watermarker/index.html` — ~800 lines, self-contained
-`tools/watermark-remover/index.html` — ~1195 lines, self-contained
-**Routes:** `/tools/watermarker/` · `/tools/watermark-remover/`
+**File:** `tools/watermarker/index.html` — self-contained
+**Route:** `/tools/watermarker/` (`/tools/watermark-remover/` redirects here)
+
+---
+
+## STATUS — code merge landed 2026-08-28, design pass still to come
+
+The two tools are now **one tool**, as §1 asks. This was the *functional* merge that the
+dashboard redesign assumed; the combined surface has not been redesigned yet, so §§2–7
+below still describe what each half does and remain the brief for that work.
+
+**What the merge decided** (§5's five questions, as built — all revisitable by the design):
+
+1. **Members gate: removed.** Removal is open to everyone. The dashboard advertises the
+   tool to all agents with no Team badge, so the hard redirect had to go either way; it
+   was a client-side allowlist, not a security boundary, and nothing is uploaded.
+2. **One mode switch, and the flow falls out of it.** A photo holds its original pixels,
+   an ordered list of removals, and its own mark colour; the canvas is the original
+   replayed through the ops, then stamped in Add mode. So both directions compose on one
+   photo — strip a mark, switch to Add, re-stamp it — without a pipeline UI.
+3. **Dev tools stay hidden** behind the faint footer word. Unchanged; the design decides.
+4. **The two batch models are one.** Single entry (drop / click / paste / URL), one
+   filmstrip, one selection, one pair of download buttons. This was most of the win.
+   Each direction keeps its own export: `_cb.jpg` (JPEG q0.95) vs `-clean.png`.
+5. **Virtually Staged is untouched**, still a peer of Colour. Open for the design.
+
+**Untouched on purpose:** the removal maths — mask rasterisation, gradient-domain
+fitting, per-channel opacity solve, Criminisi, multi-scale PatchMatch, `applyOp` — is
+carried over verbatim, as is non-linear undo and the match/opacity/method readout.
+
+**Also fixed:** the overlay now anchors to a shrink-wrapped box around the stage (the
+marquee used to drift on non-landscape photos); the remove side gained the brand font it
+declared but never loaded; one embedded copy of the wordmark serves as both the stamp and
+the removal mask (they were verified byte-identical first), so the remove side makes no
+network request; multi-file loads commit in the order the files were chosen.
+
+**DOM hooks — old → new.** Both halves were rewritten, so this is the mapping:
+
+| Old (watermarker) | Old (remover) | New |
+|---|---|---|
+| `cta-hero` | `h1.hero` | `hero` (+ `hero-sub`) |
+| `drop-zone` · `image-file` · `drop-icon` | `dz` · `file` | `dz` · `file` · `dz-lbl` |
+| — | `url` · `btn-url` | `url` · `btn-url` |
+| `add-btn` (Start Over) | — | `btn-startover` |
+| `settings-bar` | — | `add-bar` |
+| `color-note` · `apply-all-btn` · `vs-btn` | — | `color-note` · `apply-color-all` · `vs-btn` |
+| `dev-tools-bar` · `dev-tools-toggle` | — | `dev-bar` · `dev-toggle` |
+| `position` · `opacity-slider` · `opacity-label` · `size-segment` | — | unchanged |
+| `gallery-wrap` · `gallery-grid` · `gallery-counter` · `gallery-total` | `strip` | `strip` (live canvas thumbs) |
+| `preview-large` · `preview-canvas` | `stage` · `overlay` | `stage` · `overlay` (inside `.stage-box`) |
+| `preview-filename` | `status` | `status` |
+| `btn-dl-single` | `btn-dl` · `btn-dl-all` | `btn-dl` · `btn-dl-all` |
+| — | `mode-auto` · `mode-fill` | `mark-auto` · `mark-fill` |
+| — | `fill-cr` · `fill-pm` · `btn-undo` · `btn-reset` · `marks` · `btn-apply-all` · `apply-fills` | unchanged |
+| `toast` | `toast` | `toast` |
+| — | `input-card` · `work-card` | unchanged (+ `mode-add` / `mode-remove`) |
+
+The inline `onclick=`/`onchange=` attributes are gone; everything is bound in script.
+
+**Known limit:** filmstrip thumbs replay removals only for the photo currently on the
+stage. The others show the original plus a `n ✓` badge — the fills are
+resolution-dependent and can't be recomputed at thumb scale cheaply.
 
 ---
 
