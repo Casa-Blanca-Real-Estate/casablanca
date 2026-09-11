@@ -30,7 +30,7 @@ file points you there by section when you need it.
 | `tools/*/` | One directory per tool, single-file HTML each |
 | `agents/` | Static agent-site generator: `template.html` + `data/*.json` → `build.js` → `<slug>/index.html` (prototype, fictional demo agents) |
 | `netlify/functions/` | Serverless: StreetEasy import, Claude copy generation, image proxy, sessions |
-| `css/`, `js/` | Shared front-end (`main.css`, `animations.css`, `nav.js`, `scroll.js`) |
+| `css/`, `js/` | Shared front-end (`main.css`, `animations.css`, `nav.js`, `scroll.js`) plus the shared imaging modules `cb-cutout.js` / `cb-inpaint.js` — see `js/README.md` |
 | `docs/design/` | Design briefs per surface — start at `docs/design/README.md` |
 | `docs/context/` | Company + project context — start with `casa-blanca.md`, not the full file; `agent-site-template.md` for the Wix agent-site port |
 | `docs/dispatch/` | Scoped briefs handed to dedicated sessions |
