@@ -409,6 +409,7 @@
       </a>
       <a class="tab" href="#print" data-tab="print" title="Print &amp; forms"><span>Print &amp; forms</span></a>
       <a class="tab" href="#photos" data-tab="photos" title="Photos"><span>Photos</span></a>
+      <a class="tab" id="webTab" href="#web" data-tab="web" title="Agent sites" hidden><span>Agent sites</span></a>
     </div>
   </nav>
 
@@ -669,9 +670,14 @@
       caption:'PDF · specs and vendor steps',sample:null,phLabel:'Opens the PDF'},
     profilepic:{name:'Profile pic',icon:'photo',href:'tools/profile-pic/',badge:'Team',team:true,
       blurb:'Branded agent headshots, background removed in-browser.',
-      caption:'Headshot cut to the taupe standard',sample:'assets/outputs/profilepic.png'}
+      caption:'Headshot cut to the taupe standard',sample:'assets/outputs/profilepic.png'},
+    /* Early prototype, not a shipped tool — team-gated so it stays out of the agent-facing list.
+       Opens a generated sample page, not the directory index. See docs/dispatch/ for the port. */
+    agentsites:{name:'Agent sites',icon:'web',href:'agents/claire-dubois/',badge:'Prototype',team:true,
+      blurb:'One template plus a JSON file per agent, built into a page each.',
+      caption:'Sample build · placeholder agent',sample:null,phLabel:'Opens a generated page'}
   };
-  var ALL_KEYS=['editorial','closed','forsale','incontract','watermarker','bizcard','guide','profilepic'];
+  var ALL_KEYS=['editorial','closed','forsale','incontract','watermarker','bizcard','guide','profilepic','agentsites'];
 
   /* Abstract slide sketches. Drawn at full size, then scaled by half — see buildMotif. */
   var MOTIF={
@@ -694,6 +700,9 @@
       {w:68,h:86,rows:[{h:6,w:'60%',c:'bar'},{h:3,c:'soft'},{h:3,c:'soft'},{h:3,w:'80%',c:'soft'},{h:3,c:'soft'},{h:3,w:'62%',c:'soft'}]}]},
     profilepic:{frames:[
       {w:68,h:86,rows:[{h:24,w:'24px',c:'soft',self:'center',mt:8,round:1},{h:30,w:'60%',c:'wl',self:'center',push:1}]}]},
+    agentsites:{frames:[
+      {w:68,h:86,rows:[{h:5,c:'bar'},{h:26,hatch:1},{h:4,w:'72%',c:'soft'},{h:3,w:'54%',c:'soft'}]},
+      {w:68,h:86,rows:[{h:5,c:'bar'},{h:26,hatch:1},{h:4,w:'72%',c:'soft'},{h:3,w:'40%',c:'accent'}]}]},
     watermarker:{wmk:1}
   };
 
@@ -706,7 +715,10 @@
       keys:['bizcard','guide']},
     {id:'photos',heading:'Photos & headshots',sub:'Watermarks on or off, and headshots cut to the house standard.',
       keys:['watermarker','profilepic'],
-      note:'Team badge means sign-in only. Everyone else never sees that card.'}
+      note:'Team badge means sign-in only. Everyone else never sees that card.'},
+    {id:'web',heading:'Agent sites & web',sub:'Individual agent pages, built from one template.',
+      keys:['agentsites'],
+      note:'Prototype only — an old test build on a generic design, kept visible while the port is scoped.'}
   ];
   var TABS_BY_ID={}; TABS.forEach(function(t){TABS_BY_ID[t.id]=t;});
   var state={tab:'home'};
@@ -715,7 +727,8 @@
   var ICON={
     ig:'<svg class="cat cat--ig" viewBox="0 0 24 24" aria-hidden="true"><use href="#igGlyph"/></svg>',
     print:'<svg class="cat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3.5h10V8"/><rect x="3" y="8" width="18" height="8"/><path d="M7 13h10v7.5H7z"/></svg>',
-    photo:'<svg class="cat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5h4l1.6-2.4h6.8L17 8.5h4V20H3z"/><circle cx="12" cy="14" r="3.6"/></svg>'
+    photo:'<svg class="cat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5h4l1.6-2.4h6.8L17 8.5h4V20H3z"/><circle cx="12" cy="14" r="3.6"/></svg>',
+    web:'<svg class="cat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2"/><path d="M12 3.4c2.4 2.3 3.6 5.2 3.6 8.6s-1.2 6.3-3.6 8.6c-2.4-2.3-3.6-5.2-3.6-8.6S9.6 5.7 12 3.4z"/></svg>'
   };
   /* PLACEHOLDER: stands in for a real screenshot of each tool's own screen. */
   var PREVIEW='<div class="preview" aria-hidden="true">'+
@@ -836,8 +849,14 @@
     $('comingNext').hidden=!next;
   }
 
+  /* A tab with nothing left in it once team gating applies — reachable by hash on boot or by
+     signing out while it's open, not just by clicking a tab we hide. */
+  function tabOpen(id){
+    var t=TABS_BY_ID[id];
+    return !!t && (t.keys.filter(granted).length>0);
+  }
   function showTab(id){
-    if(!TABS_BY_ID[id])id='home';
+    if(!tabOpen(id))id='home';
     state.tab=id;
     [].forEach.call($('tabs').children,function(a){
       if(a.getAttribute('data-tab')===id){
@@ -889,6 +908,11 @@
     }
     $('wEdit').hidden=!on;
     $('clAdd').hidden=!on;
+    /* Every tool in this tab is team-only — signed out it would render an empty tab. */
+    $('webTab').hidden=!on;
+    /* Sign out while it's open: showTab moves the aria-current highlight too, but it also
+       renders, so during boot leave it — boot's own showTab call does one render and gates. */
+    if(booted && !tabOpen(state.tab)) showTab('home');
     /* Skipped during boot — the boot sequence renders both itself, once. */
     if(booted){ renderChangelog(); renderList(); }
   }
