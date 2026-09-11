@@ -322,5 +322,29 @@ function extend(cut, region, rows, userOpts) {
   };
 }
 
-global.CBExtend = { defaults: CB_EXTEND_DEFAULTS, autoRegion, hemCoverage, extend };
+/** Put an already-generated fill under the cutout. Same silhouette treatment the
+ *  offline path gets, so a server-generated strip and a PatchMatch strip are composited
+ *  identically — only where the pixels came from differs. */
+function compose(cut, fillImage, region, rows, userOpts) {
+  const o = Object.assign({}, CB_EXTEND_DEFAULTS, userOpts || {});
+  const w = cut.width, h = cut.height;
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h + rows;
+  const octx = ctxOf(out);
+  octx.drawImage(cut, 0, 0);
+
+  const strip = document.createElement('canvas');
+  strip.width = w; strip.height = rows;
+  const sctx = ctxOf(strip);
+  sctx.imageSmoothingQuality = 'high';
+  sctx.drawImage(fillImage, 0, 0, w, rows);
+  const img = sctx.getImageData(0, 0, w, rows);
+  const alpha = featherRegion(region, w, rows, o);
+  for (let i = 0; i < w * rows; i++) img.data[i * 4 + 3] = alpha[i];
+  sctx.putImageData(img, 0, 0);
+  octx.drawImage(strip, 0, h);
+  return out;
+}
+
+global.CBExtend = { defaults: CB_EXTEND_DEFAULTS, autoRegion, hemCoverage, extend, compose, featherRegion };
 })(typeof window !== 'undefined' ? window : globalThis);

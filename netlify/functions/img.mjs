@@ -2,10 +2,10 @@
 // Proxies a listing photo so the browser can draw it onto the <canvas> without
 // tainting it (StreetEasy's CDN doesn't send permissive CORS headers, which would
 // otherwise break canvas export). Returns the image bytes with ACAO.
-import { cors } from './_lib.mjs';
+import { cors, preflight } from './_lib.mjs';
 
 export default async (req) => {
-  if (req.method === 'OPTIONS') return new Response('', { status: 204, headers: cors() });
+  if (req.method === 'OPTIONS') return preflight();
 
   const u = new URL(req.url).searchParams.get('u');
   if (!u || !/^https?:\/\//i.test(u)) {

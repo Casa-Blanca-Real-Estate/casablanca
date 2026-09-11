@@ -22,5 +22,7 @@ export function json(body, status = 200) {
 }
 
 export function preflight() {
-  return new Response('', { status: 204, headers: cors() });
+  // null, not '': the fetch spec forbids a body on 204, and Node's undici throws on
+  // `new Response('', { status: 204 })` rather than ignoring it.
+  return new Response(null, { status: 204, headers: cors() });
 }

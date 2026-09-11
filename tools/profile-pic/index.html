@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* Backend base shim. Same-origin by default (works as-is on Netlify, the canonical
+   host). To run this tool from GitHub Pages, set localStorage.cb_backend to the
+   Netlify origin and /.netlify/functions/* calls route there. No-op when unset. */
+(function(){
+  var BASE=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
+  if(!BASE) return;
+  var P='/.netlify/functions/', of=window.fetch;
+  window.fetch=function(u,o){try{if(typeof u==='string'&&u.indexOf(P)===0)u=BASE+u;}catch(e){}return of.call(this,u,o);};
+})();
+</script>
 <script src="../../assets/studio-header.js" defer></script>
 <script src="../../js/cb-cutout.js"></script>
 <script src="../../js/cb-inpaint.js"></script>
@@ -855,8 +866,10 @@ input[type="range"]{
         <button class="btn-secondary" id="exAutoBtn">Auto shape</button>
         <span class="tu-spacer"></span>
         <button class="btn-secondary" id="exResetBtn">Remove</button>
+        <button class="btn-secondary" id="exGenBtn" disabled>Generative fill</button>
         <button class="btn-primary" id="exRunBtn" style="width:auto;padding:8px 18px;margin:0;">Fill</button>
       </div>
+      <p class="ex-status" id="exGenNote" style="margin:-2px 0 8px;"></p>
       <div class="tu-stage" id="exStage">
         <canvas id="exCanvas"></canvas>
       </div>
@@ -1980,6 +1993,7 @@ function exRefresh() {
   else if (frac > CBExtend.defaults.maxExtendFrac) { tone = 'warn'; msg += ' That is more cloth than there is to copy from — expect banding, and use the generative fill when it lands.'; }
   exStatus(msg, tone);
   exDraw();
+  genRefreshButton();
 }
 
 function exPos(ev) {
@@ -2129,6 +2143,7 @@ function exWire() {
   });
   exEl('exRunBtn').addEventListener('click', exRun);
   exEl('exResetBtn').addEventListener('click', exRemove);
+  exEl('exGenBtn').addEventListener('click', genRun);
 
   EX.cv.addEventListener('pointerdown', ev => {
     if (!EX.rows) return;
@@ -2178,6 +2193,189 @@ function exMount() {
   EX.region  = null;
   exEl('exRunBtn').textContent = EX.applied ? 'Re-fill' : 'Fill';
   exRefresh();
+}
+
+
+// ── Generative fill (server-side) ────────────────────────────────────────────
+// The paid path for the cases PatchMatch flags. Never automatic: it fires on a
+// click, it says what it will cost before you click, and every result is cached by
+// a hash of exactly what was sent, so a re-render never pays twice.
+
+const GEN_ENDPOINT = '/.netlify/functions/outpaint';
+const GEN_MAX_W    = 1152;    // what gets sent; the frame is 1080
+const GEN_CTX_ROWS = 200;     // rows of real garment sent above the fill, for context
+
+const GEN = { probe: null, busy: false };
+
+async function genProbe() {
+  if (GEN.probe) return GEN.probe;
+  try {
+    const r = await fetch(`${GEN_ENDPOINT}?w=1080&h=1080`, { method: 'GET' });
+    GEN.probe = await r.json();
+  } catch (e) {
+    GEN.probe = { ready: false, reason: 'the backend is unreachable from here' };
+  }
+  return GEN.probe;
+}
+
+// ── cache: IndexedDB, keyed by a hash of the exact bytes sent ──
+function genDB() {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open('cb-outpaint', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('fills');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror   = () => rej(rq.error);
+  });
+}
+async function genCacheGet(key) {
+  try {
+    const db = await genDB();
+    return await new Promise(res => {
+      const r = db.transaction('fills').objectStore('fills').get(key);
+      r.onsuccess = () => res(r.result || null);
+      r.onerror   = () => res(null);
+    });
+  } catch { return null; }
+}
+async function genCachePut(key, value) {
+  try {
+    const db = await genDB();
+    db.transaction('fills', 'readwrite').objectStore('fills').put(value, key);
+  } catch { /* a cache miss is not a failure */ }
+}
+async function genHash(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
+
+/** Build exactly what goes over the wire: the garment in context on brand colour, and
+ *  a black/white mask of the region. Cropped to a window — the model never needs the
+ *  face, and a smaller frame is a cheaper and faster call. */
+function genRequestImages() {
+  const base = exBaseCanvas(), w = base.width, rows = EX.rows;
+  const ctxRows = Math.min(EX.baseH, Math.max(rows, GEN_CTX_ROWS));
+  const k  = Math.min(1, GEN_MAX_W / w);
+  const sw = Math.round(w * k);
+  const sCtx  = Math.round(ctxRows * k);
+  const sRows = Math.round(rows * k);
+
+  const img = document.createElement('canvas');
+  img.width = sw; img.height = sCtx + sRows;
+  const ig = img.getContext('2d');
+  ig.fillStyle = '#c8beb8';
+  ig.fillRect(0, 0, img.width, img.height);
+  ig.imageSmoothingQuality = 'high';
+  ig.drawImage(base, 0, EX.baseH - ctxRows, w, ctxRows, 0, 0, sw, sCtx);
+
+  const mask = document.createElement('canvas');
+  mask.width = sw; mask.height = sCtx + sRows;
+  const mg = mask.getContext('2d');
+  mg.fillStyle = '#000';
+  mg.fillRect(0, 0, mask.width, mask.height);
+  const rc = document.createElement('canvas');
+  rc.width = w; rc.height = rows;
+  const rg = rc.getContext('2d');
+  const rd = rg.createImageData(w, rows);
+  for (let i = 0; i < w * rows; i++) {
+    const v = EX.region[i] > 8 ? 255 : 0;
+    rd.data[i*4] = rd.data[i*4+1] = rd.data[i*4+2] = v;
+    rd.data[i*4+3] = 255;
+  }
+  rg.putImageData(rd, 0, 0);
+  mg.imageSmoothingQuality = 'high';
+  mg.drawImage(rc, 0, sCtx, sw, sRows);
+
+  return { image: img.toDataURL('image/png'), mask: mask.toDataURL('image/png'), sCtx, sRows, sw };
+}
+
+function genCostLine(probe) {
+  if (!probe || !probe.ready) return '';
+  const n = Math.max(1, _agentStore.length);
+  const each = probe.estimatedUsd;
+  return `${probe.label} · ≈$${each.toFixed(3)} per image`
+       + (n > 1 ? ` · ${n} agents in this batch ≈ $${(each * n).toFixed(2)}` : '');
+}
+
+async function genRefreshButton() {
+  const btn = exEl('exGenBtn'), note = exEl('exGenNote');
+  if (!btn) return;
+  const probe = await genProbe();
+  if (probe.ready) {
+    btn.disabled = !EX.rows;
+    btn.title = genCostLine(probe);
+    note.textContent = genCostLine(probe);
+  } else {
+    btn.disabled = true;
+    btn.title = probe.reason || '';
+    note.textContent = 'Generative fill is off: ' + (probe.reason || 'no provider key');
+  }
+}
+
+async function genRun() {
+  if (GEN.busy || !EX.rows || !EX.region) return;
+  const probe = await genProbe();
+  if (!probe.ready) { showToast('⚠ No generative provider configured'); return; }
+
+  const btn = exEl('exGenBtn');
+  GEN.busy = true;
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span>Generating…';
+  exStatus('Sending the region to ' + probe.label + '…');
+
+  try {
+    const { image, mask, sCtx, sRows, sw } = genRequestImages();
+    const key = await genHash(image + '|' + mask + '|' + (probe.provider || ''));
+    let out = await genCacheGet(key), cached = !!out, ms = 0, cost = 0;
+
+    if (!out) {
+      const r = await fetch(GEN_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image, mask, width: sw, height: sCtx + sRows }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.image) throw new Error(j.error || `backend returned ${r.status}`);
+      out = j.image; ms = j.ms || 0; cost = j.estimatedUsd || 0;
+      await genCachePut(key, out);
+    }
+
+    // Take the generated strip out of the returned frame and compose it the same way
+    // the offline fill is composed — same feathered silhouette, same join.
+    const full = await loadImage(out);
+    const strip = document.createElement('canvas');
+    strip.width = sw; strip.height = sRows;
+    strip.getContext('2d').drawImage(full, 0, sCtx, sw, sRows, 0, 0, sw, sRows);
+
+    const base = exBaseCanvas();
+    const composed = CBExtend.compose(base, strip, EX.region, EX.rows, EXTEND_TUNING);
+
+    const srcExt = document.createElement('canvas');
+    srcExt.width = composed.width; srcExt.height = composed.height;
+    const sx = srcExt.getContext('2d');
+    sx.drawImage(TU.src, 0, 0, TU.src.width, Math.min(TU.src.height, EX.baseH), 0, 0, TU.src.width, Math.min(TU.src.height, EX.baseH));
+    sx.drawImage(composed, 0, EX.baseH, composed.width, EX.rows, 0, EX.baseH, composed.width, EX.rows);
+
+    mountTouchup(composed, srcExt);
+    EX.applied = true;
+    bwCanvas = makeBWCanvas(composed);
+    renderAll();
+    const entry = _agentStore.find(a => a.id === _activeAgentId);
+    if (entry) { entry.exBaseH = EX.baseH; composed.toBlob(b => { entry.editBlob = b; }, 'image/png'); }
+    exDraw();
+    exStatus(cached
+      ? `Generative fill restored from cache — this one has already been paid for.`
+      : `Generated by ${probe.label} in ${(ms / 1000).toFixed(1)}s, ≈$${cost.toFixed(3)}. Re-shape and run again if the silhouette is wrong.`);
+    showToast(cached ? '✓ Generative fill (cached)' : '✓ Generative fill applied');
+  } catch (e) {
+    exStatus(`Generative fill failed: ${String(e.message || e)}. The offline Fill still works — that is the fallback.`, 'warn');
+    showToast('⚠ Generative fill failed');
+  } finally {
+    GEN.busy = false;
+    btn.disabled = false;
+    btn.textContent = label.includes('Generating') ? 'Generative fill' : label;
+    genRefreshButton();
+  }
 }
 
 
