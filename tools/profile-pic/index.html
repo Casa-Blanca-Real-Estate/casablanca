@@ -3,6 +3,8 @@
 <head>
 <script src="../../assets/studio-header.js" defer></script>
 <script src="../../js/cb-cutout.js"></script>
+<script src="../../js/cb-inpaint.js"></script>
+<script src="../../js/cb-extend.js"></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 
 <script>
@@ -410,6 +412,14 @@ input[type="range"]{
   font-size: 10px; color: var(--cb-mid); margin: 8px 0 0;
   letter-spacing: .02em;
 }
+.ex-status{
+  font-size: 11px; color: var(--cb-mid); margin: 0 0 10px;
+  line-height: 1.5;
+}
+.ex-status.ex-warn{ color: var(--cb-black); }
+.ex-status.ex-warn::before{ content: '⚠ '; color: var(--cb-lavender); font-weight: 800; }
+#extendCard{ display:none; }
+#exCanvas{ display:block; margin:0 auto; cursor:crosshair; touch-action:none; }
 .tu-tips kbd{
   font: inherit; border: 1px solid var(--cb-border); border-radius: 3px;
   padding: 1px 4px; background: var(--cb-surface);
@@ -823,6 +833,41 @@ input[type="range"]{
     </div>
   </div>
 
+  <!-- Torso extension -->
+  <div class="card" id="extendCard">
+    <div class="tu-header" id="exToggle">
+      <span class="section-label" style="margin:0;">Extend Torso</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span class="tu-hint" style="font-size:10px;color:var(--cb-mid);">Click to expand</span>
+        <span class="tu-chevron">▶</span>
+      </span>
+    </div>
+    <div class="tu-body" id="exBody">
+      <p class="ex-status" id="exStatus"></p>
+      <div class="tu-toolbar">
+        <button class="btn-secondary tu-mode-btn active" id="exAddBtn">Add</button>
+        <button class="btn-secondary tu-mode-btn" id="exSubBtn">Subtract</button>
+        <span class="tu-group"><span class="section-label">Shape</span>
+          <button class="btn-secondary tu-mode-btn active" id="exRectBtn" title="Marquee">▭</button>
+          <button class="btn-secondary tu-mode-btn" id="exBrushBtn" title="Freehand">✎</button>
+          <input type="range" id="exBrush" min="10" max="400" value="90">
+        </span>
+        <button class="btn-secondary" id="exAutoBtn">Auto shape</button>
+        <span class="tu-spacer"></span>
+        <button class="btn-secondary" id="exResetBtn">Remove</button>
+        <button class="btn-primary" id="exRunBtn" style="width:auto;padding:8px 18px;margin:0;">Fill</button>
+      </div>
+      <div class="tu-stage" id="exStage">
+        <canvas id="exCanvas"></canvas>
+      </div>
+      <p class="tu-tips">
+        Drag a box over the strip below the body to add or subtract from the fill shape, then
+        <b>Fill</b>. The dashed lines show where the wordmark and name land — anything under them
+        is covered in the output anyway.
+      </p>
+    </div>
+  </div>
+
   <!-- Outputs -->
   <div>
     <div class="agent-tabs" id="agentTabs"></div>
@@ -1056,6 +1101,7 @@ function setDropCompact(file) {
 function resetAll() {
   photoFile = null; bgBlob = null; bwCanvas = null;
   TU.data = null; TU.cut = null; TU.hist.length = 0; TU.histIdx = -1;
+  EX.baseH = 0; EX.rows = 0; EX.region = null; EX.applied = false; EX.cache.clear();
   _agentStore.length = 0;
   _activeAgentId = null;
   _fileQueue.length = 0;
@@ -1078,6 +1124,7 @@ function resetAll() {
   agentTabs.innerHTML = '';
   addAgentBtn.style.display = 'none';
   document.getElementById('touchupCard').style.display = 'none';
+  document.getElementById('extendCard').style.display = 'none';
   const dlAllBtn = document.getElementById('dlAllBtn');
   if (dlAllBtn) dlAllBtn.remove();
 }
@@ -1182,7 +1229,7 @@ initDropZone();
 // ── Sliders ──
 vertSlider.addEventListener('input', () => {
   sliderVal.textContent = vertSlider.value;
-  if (bwCanvas) renderAll();
+  if (bwCanvas) { renderAll(); exRefresh(); }
 });
 horizSlider.addEventListener('input', () => {
   horizVal.textContent = horizSlider.value;
@@ -1190,7 +1237,7 @@ horizSlider.addEventListener('input', () => {
 });
 scaleSlider.addEventListener('input', () => {
   scaleVal.textContent = scaleSlider.value + '%';
-  if (bwCanvas) renderAll();
+  if (bwCanvas) { renderAll(); exRefresh(); }
 });
 
 // ── Nudge buttons ──
@@ -1247,6 +1294,7 @@ async function runGenerate() {
     const [bgImg, srcImg] = await Promise.all([loadImage(cutURL), loadImage(srcURL)]);
     bwCanvas = makeBWCanvas(bgImg);
     mountTouchup(bgImg, srcImg);
+    exMount();
     URL.revokeObjectURL(cutURL); URL.revokeObjectURL(srcURL);
 
     setProgress(92, 'Rendering outputs…');
@@ -1570,6 +1618,7 @@ function tuCommit() {
   _tuCommitTimer = setTimeout(() => {
     bwCanvas = makeBWCanvas(TU.cut);
     renderAll();
+    if (typeof exRefresh === 'function') exRefresh();
     const entry = _agentStore.find(a => a.id === _activeAgentId);
     if (entry) TU.cut.toBlob(b => { entry.editBlob = b; }, 'image/png');
   }, 30);
@@ -1759,9 +1808,376 @@ async function remountTouchupFor(entry) {
     const [cutImg, srcImg] = await Promise.all([loadImage(cutURL), loadImage(srcURL)]);
     bwCanvas = makeBWCanvas(cutImg);
     mountTouchup(cutImg, srcImg);
+    exMount();
   } finally {
     URL.revokeObjectURL(cutURL); URL.revokeObjectURL(srcURL);
   }
+}
+
+
+// ── Torso extension ──────────────────────────────────────────────────────────
+// Chest-cropped photo, frame taller than the body: the gap gets filled with the
+// sitter's own clothing rather than a trip through Photoshop. The shape of the
+// fill is a marquee you can redraw, because no silhouette heuristic survives the
+// range of photos agents send.
+//
+// EX.baseH is the cutout's height before any extension, so re-running always
+// rebuilds the strip from scratch instead of extending an extension.
+
+const EXTEND_TUNING = { workWidth: 384, patch: 13, iters: 4, outer: 2 };
+
+const EX = {
+  baseH: 0, rows: 0, region: null, edited: false,
+  mode: 'add', shape: 'rect', dragging: false, drag: null, last: null,
+  cache: new Map(), wired: false, applied: false,
+  cv: null, ctx: null,
+};
+
+const exEl = id => document.getElementById(id);
+
+/** How many cutout pixels of body the current frame is short, given the sliders. */
+function exNeeded() {
+  if (!bwCanvas || !EX.baseH) return { rows: 0, pxPer: 1 };
+  const w     = TU.cut ? TU.cut.width : bwCanvas.width;
+  const scale = parseFloat(scaleSlider.value) / 100;
+  const pxPer = (1080 * scale) / w;
+  const y0    = -(parseInt(vertSlider.value) || 0);
+  const gap   = 1080 - (y0 + EX.baseH * pxPer);
+  return { rows: Math.max(0, Math.ceil(gap / pxPer)), pxPer };
+}
+
+function exHash(region) {
+  let hsh = 2166136261;
+  for (let i = 0; i < region.length; i += 37) { hsh ^= region[i]; hsh = Math.imul(hsh, 16777619); }
+  return (hsh >>> 0).toString(36) + '.' + region.length.toString(36);
+}
+
+/** Region is w × rows; resample vertically when the frame changes so a hand-drawn
+ *  shape survives a nudge of the scale slider. */
+function exResizeRegion(region, w, from, to) {
+  if (from === to) return region;
+  const out = new Uint8ClampedArray(w * to);
+  for (let y = 0; y < to; y++) {
+    const sy = from > 0 ? Math.min(from - 1, Math.floor(y * from / to)) : 0;
+    out.set(region.subarray(sy * w, sy * w + w), y * w);
+  }
+  return out;
+}
+
+function exBaseCanvas() {
+  // The cutout with any previous strip cropped off — touch-up edits above the hem
+  // are kept, the old fill is not.
+  const w = TU.cut.width;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = EX.baseH;
+  c.getContext('2d').drawImage(TU.cut, 0, 0, w, EX.baseH, 0, 0, w, EX.baseH);
+  return c;
+}
+
+function exDraw() {
+  if (!EX.cv || !TU.cut) return;
+  const base = exBaseCanvas(), w = base.width;
+  const rows = EX.rows;
+  EX.cv.width = w; EX.cv.height = EX.baseH + rows;
+  const g = EX.ctx;
+  g.clearRect(0, 0, EX.cv.width, EX.cv.height);
+  g.fillStyle = '#c8beb8';
+  g.fillRect(0, 0, EX.cv.width, EX.cv.height);
+
+  const k = parseFloat(document.querySelector('input[name="contrast"]:checked')?.value ?? '1.0');
+  g.filter = `grayscale(1) contrast(${k}) brightness(1.03)`;
+  g.drawImage(base, 0, 0);
+  g.filter = 'none';
+
+  if (rows > 0 && EX.region) {
+    // the fill region, and what's already been filled underneath it
+    if (EX.applied && TU.cut.height > EX.baseH) {
+      g.filter = `grayscale(1) contrast(${k}) brightness(1.03)`;
+      g.drawImage(TU.cut, 0, EX.baseH, w, TU.cut.height - EX.baseH,
+                         0, EX.baseH, w, TU.cut.height - EX.baseH);
+      g.filter = 'none';
+    }
+    const overlay = g.createImageData(w, rows);
+    for (let i = 0; i < w * rows; i++) {
+      if (!EX.region[i]) continue;
+      overlay.data[i * 4]     = 170;   // --cb-lavender
+      overlay.data[i * 4 + 1] = 163;
+      overlay.data[i * 4 + 2] = 207;
+      overlay.data[i * 4 + 3] = Math.round(EX.region[i] * (EX.applied ? 0.28 : 0.5));
+    }
+    const ov = document.createElement('canvas');
+    ov.width = w; ov.height = rows;
+    ov.getContext('2d').putImageData(overlay, 0, 0);
+    g.drawImage(ov, 0, EX.baseH);
+  }
+
+  // Where the wordmark and the name land, so it's obvious how much of the fill is
+  // covered anyway. Coordinates from drawLogo()/drawName().
+  const { pxPer } = exNeeded();
+  const y0 = -(parseInt(vertSlider.value) || 0);
+  const line = (frac, label) => {
+    const y = (1080 * frac - y0) / pxPer;
+    if (y < 0 || y > EX.cv.height) return;
+    g.strokeStyle = 'rgba(15,15,15,.45)';
+    g.setLineDash([8, 6]); g.lineWidth = Math.max(1, EX.cv.width / 500);
+    g.beginPath(); g.moveTo(0, y); g.lineTo(EX.cv.width, y); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = 'rgba(15,15,15,.55)';
+    g.font = `600 ${Math.max(11, Math.round(EX.cv.width / 48))}px monospace`;
+    g.fillText(label, 8, y - 6);
+  };
+  line(0.8065, 'round · wordmark');
+  line(0.963,  'square · wordmark / name');
+
+  exFit();
+}
+
+function exFit() {
+  const stage = exEl('exStage');
+  const avail = stage.clientWidth - 2;
+  if (avail > 0) EX.cv.style.width = Math.round(Math.min(avail, EX.cv.width)) + 'px';
+  EX.cv.style.height = 'auto';
+}
+
+function exStatus(msg, tone) {
+  const el = exEl('exStatus');
+  el.textContent = msg;
+  el.className = 'ex-status' + (tone ? ' ex-' + tone : '');
+}
+
+function exRefresh() {
+  const card = exEl('extendCard');
+  if (!TU.cut || !EX.baseH) { card.style.display = 'none'; return; }
+  const { rows, pxPer } = exNeeded();
+  const w = TU.cut.width;
+
+  if (rows < 4 && !EX.applied) {
+    card.style.display = 'block';
+    EX.rows = 0; EX.region = null;
+    exStatus('The body already reaches the bottom of the frame at this scale — nothing to extend.');
+    exDraw();
+    return;
+  }
+  card.style.display = 'block';
+
+  const prevRows = EX.rows;
+  EX.rows = rows;
+  if (!EX.region || !EX.edited) {
+    EX.region = CBExtend.autoRegion(exBaseCanvas(), Math.max(1, rows), EXTEND_TUNING);
+  } else {
+    EX.region = exResizeRegion(EX.region, w, prevRows || 1, Math.max(1, rows));
+  }
+
+  const cov  = CBExtend.hemCoverage(exBaseCanvas());
+  const frac = rows / EX.baseH;
+  const hiddenRows = Math.max(0, Math.round((1080 - 1080 * 0.8065) / pxPer));
+
+  let msg = `Frame is short ${rows}px of body (${(frac * 100).toFixed(0)}% of the photo). `
+          + `The hem is ${(cov * 100).toFixed(0)}% body. `
+          + `About ${hiddenRows}px of the fill sits under the round wordmark.`;
+  let tone = '';
+  if (cov < 0.2) { tone = 'warn'; msg += ' The body barely touches the bottom of the photo — an extension here will look bolted on.'; }
+  else if (frac > CBExtend.defaults.maxExtendFrac) { tone = 'warn'; msg += ' That is more cloth than there is to copy from — expect banding, and use the generative fill when it lands.'; }
+  exStatus(msg, tone);
+  exDraw();
+}
+
+function exPos(ev) {
+  const r = EX.cv.getBoundingClientRect();
+  return {
+    x: Math.round((ev.clientX - r.left) * (EX.cv.width / r.width)),
+    y: Math.round((ev.clientY - r.top)  * (EX.cv.height / r.height)),
+  };
+}
+
+function exApplyRect(a, b) {
+  if (!EX.region || !EX.rows) return;
+  const w = EX.cv.width;
+  const x0 = Math.max(0, Math.min(a.x, b.x)), x1 = Math.min(w - 1, Math.max(a.x, b.x));
+  const y0 = Math.max(EX.baseH, Math.min(a.y, b.y)), y1 = Math.min(EX.baseH + EX.rows - 1, Math.max(a.y, b.y));
+  if (x1 < x0 || y1 < y0) return;
+  const v = EX.mode === 'add' ? 255 : 0;
+  for (let y = y0; y <= y1; y++) {
+    const row = (y - EX.baseH) * w;
+    for (let x = x0; x <= x1; x++) EX.region[row + x] = v;
+  }
+  EX.edited = true;
+}
+
+/** Freehand shaping — a rectangle can't make a shoulder, and a shoulder is usually
+ *  what the silhouette needs. Same add/subtract, round nib. */
+function exPaint(p) {
+  if (!EX.region || !EX.rows) return;
+  const w = EX.cv.width;
+  const r = Math.max(2, parseInt(exEl('exBrush').value, 10) / 2);
+  const v = EX.mode === 'add' ? 255 : 0;
+  const from = EX.last || p;
+  const steps = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y) / Math.max(1, r * 0.4)));
+  for (let s = 0; s <= steps; s++) {
+    const cx = from.x + (p.x - from.x) * (s / steps);
+    const cy = from.y + (p.y - from.y) * (s / steps);
+    const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(w - 1, Math.ceil(cx + r));
+    const y0 = Math.max(EX.baseH, Math.floor(cy - r));
+    const y1 = Math.min(EX.baseH + EX.rows - 1, Math.ceil(cy + r));
+    for (let y = y0; y <= y1; y++) {
+      const row = (y - EX.baseH) * w, dy = y - cy;
+      for (let x = x0; x <= x1; x++) {
+        const dx = x - cx;
+        if (dx * dx + dy * dy <= r * r) EX.region[row + x] = v;
+      }
+    }
+  }
+  EX.last = p;
+  EX.edited = true;
+}
+
+async function exRun() {
+  if (!EX.rows || !EX.region) return;
+  const btn = exEl('exRunBtn');
+  const base = exBaseCanvas();
+  const key = `${base.width}x${EX.baseH}|${EX.rows}|${exHash(EX.region)}`;
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span>Filling…';
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+
+  let res = EX.cache.get(key);
+  if (!res) {
+    res = CBExtend.extend(base, EX.region, EX.rows, EXTEND_TUNING);
+    EX.cache.set(key, res);
+    if (EX.cache.size > 12) EX.cache.delete(EX.cache.keys().next().value);
+  }
+
+  const srcImg = TU.src;                     // keep Restore working over the new rows
+  const srcExt = document.createElement('canvas');
+  srcExt.width = res.canvas.width; srcExt.height = res.canvas.height;
+  const sx = srcExt.getContext('2d');
+  sx.drawImage(srcImg, 0, 0, srcImg.width, Math.min(srcImg.height, EX.baseH), 0, 0, srcImg.width, Math.min(srcImg.height, EX.baseH));
+  sx.drawImage(res.canvas, 0, EX.baseH, res.canvas.width, EX.rows, 0, EX.baseH, res.canvas.width, EX.rows);
+
+  mountTouchup(res.canvas, srcExt);
+  EX.applied = true;
+  bwCanvas = makeBWCanvas(res.canvas);
+  renderAll();
+  const entry = _agentStore.find(a => a.id === _activeAgentId);
+  if (entry) {
+    entry.exBaseH = EX.baseH;
+    res.canvas.toBlob(b => { entry.editBlob = b; }, 'image/png');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Re-fill';
+  exDraw();
+  exStatus(res.ok
+    ? `Filled ${EX.rows}px from the body's own texture (${res.method}, ${res.ms}ms, `
+      + `texture kept ${Math.round(res.textureRatio * 100)}%). Re-shape and re-fill if the silhouette is wrong.`
+    : `${res.reason || res.method}. It is applied so you can judge it — hit Remove to drop it.`,
+    res.ok ? '' : 'warn');
+  showToast(res.ok ? '✓ Torso extended' : '⚠ Extension came back smooth — check it');
+}
+
+function exRemove() {
+  if (!EX.applied || !TU.cut) return;
+  const base = exBaseCanvas();
+  const srcCrop = document.createElement('canvas');
+  srcCrop.width = base.width; srcCrop.height = EX.baseH;
+  srcCrop.getContext('2d').drawImage(TU.src, 0, 0, base.width, EX.baseH, 0, 0, base.width, EX.baseH);
+  mountTouchup(base, srcCrop);
+  EX.applied = false;
+  bwCanvas = makeBWCanvas(base);
+  renderAll();
+  const entry = _agentStore.find(a => a.id === _activeAgentId);
+  if (entry) { entry.exBaseH = EX.baseH; base.toBlob(b => { entry.editBlob = b; }, 'image/png'); }
+  exEl('exRunBtn').textContent = 'Fill';
+  exRefresh();
+}
+
+function exWire() {
+  if (EX.wired) return;
+  EX.wired = true;
+  EX.cv  = exEl('exCanvas');
+  EX.ctx = EX.cv.getContext('2d', { willReadFrequently: true });
+
+  const toggle = exEl('exToggle'), body = exEl('exBody');
+  toggle.addEventListener('click', () => {
+    const open = body.classList.toggle('open');
+    toggle.querySelector('.tu-chevron').style.transform = open ? 'rotate(90deg)' : '';
+    const hint = toggle.querySelector('.tu-hint');
+    if (hint) hint.textContent = open ? 'Click to collapse' : 'Click to expand';
+    if (open) exFit();
+  });
+
+  const mode = m => {
+    EX.mode = m;
+    exEl('exAddBtn').classList.toggle('active', m === 'add');
+    exEl('exSubBtn').classList.toggle('active', m === 'sub');
+  };
+  exEl('exAddBtn').addEventListener('click', () => mode('add'));
+  exEl('exSubBtn').addEventListener('click', () => mode('sub'));
+  const shape = sh => {
+    EX.shape = sh;
+    exEl('exRectBtn').classList.toggle('active',  sh === 'rect');
+    exEl('exBrushBtn').classList.toggle('active', sh === 'brush');
+    EX.cv.style.cursor = sh === 'brush' ? 'none' : 'crosshair';
+  };
+  exEl('exRectBtn').addEventListener('click',  () => shape('rect'));
+  exEl('exBrushBtn').addEventListener('click', () => shape('brush'));
+  exEl('exAutoBtn').addEventListener('click', () => {
+    EX.edited = false;
+    EX.region = CBExtend.autoRegion(exBaseCanvas(), Math.max(1, EX.rows), EXTEND_TUNING);
+    exDraw();
+  });
+  exEl('exRunBtn').addEventListener('click', exRun);
+  exEl('exResetBtn').addEventListener('click', exRemove);
+
+  EX.cv.addEventListener('pointerdown', ev => {
+    if (!EX.rows) return;
+    ev.preventDefault();
+    EX.cv.setPointerCapture(ev.pointerId);
+    EX.dragging = true;
+    const p = exPos(ev);
+    EX.drag = { a: p, b: p };
+    EX.last = null;
+    if (EX.shape === 'brush') { exPaint(p); exDraw(); }
+  });
+  EX.cv.addEventListener('pointermove', ev => {
+    if (!EX.dragging) return;
+    const p = exPos(ev);
+    if (EX.shape === 'brush') { exPaint(p); exDraw(); return; }
+    EX.drag.b = p;
+    exDraw();
+    const g = EX.ctx, d = EX.drag;
+    g.strokeStyle = EX.mode === 'add' ? '#aaa3cf' : '#0f0f0f';
+    g.lineWidth = Math.max(2, EX.cv.width / 400);
+    g.setLineDash([g.lineWidth * 3, g.lineWidth * 2]);
+    g.strokeRect(Math.min(d.a.x, d.b.x), Math.min(d.a.y, d.b.y),
+                 Math.abs(d.b.x - d.a.x), Math.abs(d.b.y - d.a.y));
+    g.setLineDash([]);
+  });
+  const endDrag = () => {
+    if (!EX.dragging) return;
+    EX.dragging = false;
+    EX.last = null;
+    if (EX.shape === 'rect') exApplyRect(EX.drag.a, EX.drag.b);
+    exDraw();
+  };
+  EX.cv.addEventListener('pointerup', endDrag);
+  EX.cv.addEventListener('pointercancel', endDrag);
+  window.addEventListener('resize', exFit);
+}
+
+/** Called whenever a fresh cutout is mounted. */
+function exMount() {
+  exWire();
+  // A tab switch can hand back a cutout that already carries a strip; the agent
+  // remembers how tall it was before, so Remove still works.
+  const entry = _agentStore.find(a => a.id === _activeAgentId);
+  EX.baseH   = (entry && entry.exBaseH) || TU.cut.height;
+  EX.applied = TU.cut.height > EX.baseH;
+  EX.edited  = false;
+  EX.region  = null;
+  exEl('exRunBtn').textContent = EX.applied ? 'Re-fill' : 'Fill';
+  exRefresh();
 }
 
 
@@ -1917,6 +2333,7 @@ function renderAll() {
     file:     photoFile || (prev && prev.file) || null,
     cutBlob:  bgBlob    || (prev && prev.cutBlob) || null,
     editBlob: prev ? prev.editBlob : null,
+    exBaseH:  prev ? prev.exBaseH : null,
   };
   if (existIdx >= 0) { _agentStore[existIdx] = entry; }
   else               { _agentStore.push(entry); }

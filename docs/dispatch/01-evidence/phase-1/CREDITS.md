@@ -20,3 +20,7 @@ Discovered via the Openverse API. These are evidence for one review, not tool
 assets — delete the folder once Kimani's own before/afters replace them.
 
 Phase 2's screenshots use `hair-speck-knit-1.jpg`'s source photo (CC BY, credited above).
+
+Phase 4's screenshots use the `hair-speck-knit-1.jpg` and `fringe-green-2.jpg` source
+photos, plus one more for the patterned-fabric failure case:
+[flickr.com/photos/11983192@N00/4671351916](https://www.flickr.com/photos/11983192@N00/4671351916) (CC BY).
