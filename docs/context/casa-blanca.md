@@ -112,11 +112,17 @@ credentials — the IG long-lived token, Make keys, and blob credentials are env
 | Single Property Editorial Carousel Builder | v2 delivered but broken; moved here for faster iteration. |
 | ISO Email Automation (Make) | Core paths operational. Deferred: resubmission/cancellation, dual-agent ISO. |
 
-**Web presence:** Wix Studio is settled as the platform; main site untouched. A branded Wix Studio
-template for individual agent sites exists. **An agent directory (`agents.casa-blanca.com`) was
-proposed as a scalable alternative to individual sites — still pending with Erez and Hannah,
-including lead-routing implications.** A client-facing single-pager for `nyc.casa-blanca.com` was
-scoped on Framer (brief in full doc §8.4).
+**Web presence:**
+
+- **`casa-blanca.com` is Webflow.** Verified against the live site, September 2026. The full doc's
+  §5 says Wix Studio is the settled platform for it — that is wrong and superseded by this line.
+- **Agent sites are a Wix Studio template**, one site per agent, and **each agent gets a custom
+  domain of their own choosing** — so agent sites are separate root domains, not paths or
+  subdomains under `casa-blanca.com`. See `agent-site-template.md` for what the template contains.
+- **An agent directory (`agents.casa-blanca.com`) was proposed as a scalable alternative — still
+  pending with Erez and Hannah, including lead-routing implications.** The directory is the only
+  piece where a subdomain-vs-subdirectory choice actually applies.
+- A client-facing single-pager for `nyc.casa-blanca.com` was scoped on Framer (full doc §8.4).
 
 **Google Business Profile:** one 1-star review from a non-client; flagging strategy and response
 drafted. Agent review-building plan ready — agents ask past clients personally, no quotas, no
