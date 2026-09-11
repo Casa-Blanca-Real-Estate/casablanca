@@ -4,9 +4,12 @@ Internal browser-based tools for Casa Blanca, a boutique NYC residential brokera
 Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/tools person,
 3 days a week, working in blocks across several tracks).
 
-**Read `docs/context/casa-blanca.md` before substantive work.** It carries company background,
-current operational state, the full tool design system, and ways of working. §5 is a snapshot
-and drifts — confirm anything load-bearing with Kimani. §6 and §8.2 are the durable constraints.
+**Read `docs/context/casa-blanca.md` before substantive work.** It's the condensed working
+reference: who the company is, the hard constraints, the brand tokens, the stack and its gotchas,
+current tool state, and ways of working. Tool state drifts — confirm anything load-bearing with
+Kimani. `docs/context/casa-blanca-full.md` is the archival version (full company research, design
+system component library, buyer's guide, IG playbook, Framer brief, IG API setup); the condensed
+file points you there by section when you need it.
 
 ## Hard constraints — read before building
 
@@ -29,7 +32,7 @@ and drifts — confirm anything load-bearing with Kimani. §6 and §8.2 are the 
 | `netlify/functions/` | Serverless: StreetEasy import, Claude copy generation, image proxy, sessions |
 | `css/`, `js/` | Shared front-end (`main.css`, `animations.css`, `nav.js`, `scroll.js`) |
 | `docs/design/` | Design briefs per surface — start at `docs/design/README.md` |
-| `docs/context/` | Company + project context |
+| `docs/context/` | Company + project context — start with `casa-blanca.md`, not the full file |
 | `docs/dispatch/` | Scoped briefs handed to dedicated sessions |
 
 ## Session roles

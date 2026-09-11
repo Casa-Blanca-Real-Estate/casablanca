@@ -139,10 +139,16 @@ because it is the same class of model.
   `_lib.mjs` `cors()` helper, `netlify.toml` must declare the functions directory, **no esbuild
   bundling for functions touching `@netlify/blobs`** (§6).
 - **`ANTHROPIC_API_KEY` is already in the environment but is not usable for this** — it backs the
-  Haiku text features. The Anthropic API does not generate or edit images. This needs a new key
-  for an image-editing/inpainting model. **Bring Casanova a short comparison (quality on torsos,
-  price per image, latency, whether a mask can be supplied) and let Kimani pick the provider and
-  add the key. Do not sign up for anything yourself.**
+  Haiku text features. The Anthropic API does not generate or edit images. This needs a new key.
+- **Kimani's leading candidate is Google's Nano Banana 2**, via the Gemini API. Start there, but
+  compare it against the other options that expose an API and per-image pricing — Black Forest
+  Labs' FLUX Fill (built for inpaint/outpaint with a supplied mask), Stability, and the
+  fal/Replicate-hosted models — on: **torso quality specifically** (not general image quality),
+  price per generation, latency, whether you can hand it an explicit mask, and whether output
+  resolution clears 1080px without upscaling.
+- **Check pricing against the provider's live pricing page — don't trust a remembered number,
+  these move.** Bring Casanova the comparison; Kimani picks and adds the key. Don't sign up for
+  anything yourself.
 - Send the cutout plus the target frame and fill region, get the extended torso back, composite
   in the existing pipeline. Keep Phase 4 as the offline fallback when the call fails or he doesn't
   want to spend on a given image.
