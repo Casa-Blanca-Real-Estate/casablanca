@@ -18,3 +18,5 @@ green `#4e5b41`, with a 400% crop of the edge.
 
 Discovered via the Openverse API. These are evidence for one review, not tool
 assets — delete the folder once Kimani's own before/afters replace them.
+
+Phase 2's screenshots use `hair-speck-knit-1.jpg`'s source photo (CC BY, credited above).
