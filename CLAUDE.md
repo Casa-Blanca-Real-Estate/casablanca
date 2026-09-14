@@ -49,6 +49,11 @@ Open dispatches:
 | # | Brief | Owner |
 |---|---|---|
 | 01 | [Profile Pic Generator — cutout quality + torso outpainting](docs/dispatch/01-profile-pic-cutout-and-outpaint.md) | unassigned |
+| 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | unassigned |
+| 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | unassigned |
+
+The agent-site port runs in slices; 02 and 04 are the two that need none of the Wix design work.
+Slices 2–3 (the visual port) wait on the template capture in `agent-site-template.md` §5.
 
 ## Conventions
 

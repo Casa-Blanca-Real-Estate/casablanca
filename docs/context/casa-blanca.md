@@ -116,9 +116,14 @@ credentials — the IG long-lived token, Make keys, and blob credentials are env
 
 - **`casa-blanca.com` is Webflow.** Verified against the live site, September 2026. The full doc's
   §5 says Wix Studio is the settled platform for it — that is wrong and superseded by this line.
-- **Agent sites are a Wix Studio template**, one site per agent, and **each agent gets a custom
-  domain of their own choosing** — so agent sites are separate root domains, not paths or
-  subdomains under `casa-blanca.com`. See `agent-site-template.md` for what the template contains.
+- **Agent sites are a Wix Studio template**, one site per agent, and **each agent buys and owns
+  their own custom domain** — Casa Blanca does not purchase them, since owning the domain of an
+  agent who may leave is pointless. So agent sites are separate root domains, not paths or
+  subdomains under `casa-blanca.com`. **When an agent leaves, their site comes down.**
+  Realistic near-term scale is **~20 agent sites by end of 2026, not 200.**
+  Because pointing DNS is exactly the kind of task agents stall on, every site must be live on a
+  Casa-Blanca-controlled URL first, with the custom domain as an optional later swap.
+  See `agent-site-template.md` for what the template contains.
 - **An agent directory (`agents.casa-blanca.com`) was proposed as a scalable alternative — still
   pending with Erez and Hannah, including lead-routing implications.** The directory is the only
   piece where a subdomain-vs-subdirectory choice actually applies.

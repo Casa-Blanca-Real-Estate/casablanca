@@ -111,3 +111,28 @@ breakpoint settings, and any stack/grid spacing values.
 
 **Assets:** original images at full resolution, the buyer's-guide PDF, and the wordmark file the
 template uses.
+
+---
+
+## 6. The source of truth for a faithful port is the CSS, not the screenshots
+
+The served pages carry **~670KB of inline CSS** — 169 `font-size` declarations, 232 `@media`
+blocks, 187 `grid-template-*` declarations, and the real `letter-spacing` values
+(`-0.04em`, `-0.5px`, `1px`, `5px` …). Every number the Wix editor is holding is already in the
+page, per breakpoint.
+
+So don't reconstruct type scale, spacing, or grid behaviour by eye from a PNG. Extract the actual
+declarations for the elements being ported and use those; the screenshots are the **visual
+acceptance check**, and the record of what CSS can't express — motion, hover, focus, the iframed
+PDF app, and what "correct" is supposed to feel like.
+
+Practical method: fetch the page, pull the `<style>` blocks, find the element's class in the
+rendered DOM, and read its rules at each of the three breakpoints. A headless Chromium pass over
+the live page can dump computed styles if the cascade gets hard to follow by hand.
+
+**On Claude Design:** it earns its place on the *deltas* — the refinements Kimani wants that Wix
+couldn't do (the section-title-to-square-vector treatment, anything new) — where iterating by eye
+beats describing in prose. For faithful reproduction it adds a lossy hop: artboards are
+fixed-width static compositions and can't express `clamp()`, container queries, scroll-linked
+motion, or hover state, which is precisely where past clone attempts have fallen down. Port from
+the CSS; design the changes.
