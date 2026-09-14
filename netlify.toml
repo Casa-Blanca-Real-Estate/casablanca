@@ -1,4 +1,9 @@
 [build]
+  # Generates agents/<slug>/index.html, agents/index.html and the generated
+  # block in _redirects from agents/data/*.json. Everything else under
+  # publish = "." (the tools, css, js, assets) is published as-is, unchanged.
+  # The build fails loudly on bad agent data — see agents/SCHEMA.md.
+  command = "node agents/build.js"
   publish = "."
 
 [functions]
