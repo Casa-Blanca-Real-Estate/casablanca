@@ -1,0 +1,65 @@
+{
+  "identity": {
+    "name": "Sam Valk",
+    "slug": "sam-valk",
+    "displayName": "Sam",
+    "title": "Licensed Real Estate Agent",
+    "licenseNumber": "10401379863",
+    "licenseState": "NY"
+  },
+
+  "contact": {
+    "phone": "401-440-3132",
+    "email": "s.valk@casa-blanca.com",
+    "instagram": null,
+    "linkedin": null,
+    "streeteasy": null
+  },
+
+  "profile": {
+    "bio": null,
+    "neighborhoods": [],
+    "languages": [],
+    "specialties": [],
+    "acceptingClients": true,
+    "stats": null,
+    "team": [],
+    "testimonials": []
+  },
+
+  "deals": [
+    {
+      "address": "54 West 16th St",
+      "unit": "4E",
+      "price": 1280000
+    },
+    {
+      "address": "23 West 73rd St",
+      "unit": "#706A",
+      "price": 930000
+    }
+  ],
+
+  "assets": {
+    "photo": "sam-valk.jpg",
+    "photoAlt": "Sam Valk, Licensed Real Estate Agent at Casa Blanca Real Estate",
+    "photoColor": ["#c8bdb7", "#a89b94"],
+    "buyersGuidePdf": null
+  },
+
+  "seo": {
+    "pageTitle": null,
+    "metaDescription": null,
+    "ogImage": null,
+    "canonicalUrl": null,
+    "noindex": true
+  },
+
+  "delivery": {
+    "status": "live",
+    "customDomain": null,
+    "canonical": "cb",
+    "launchedOn": "2026-09-14",
+    "archivedOn": null
+  }
+}

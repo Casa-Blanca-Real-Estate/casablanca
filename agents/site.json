@@ -1,0 +1,14 @@
+{
+  "origin": "https://casa-blanca-studio.netlify.app",
+  "originConfirmed": false,
+  "brokerage": {
+    "name": "Casa Blanca Real Estate",
+    "shortName": "Casa Blanca",
+    "foundedYear": 2019,
+    "address": {
+      "line1": "10 Hubert Street",
+      "city": "New York",
+      "state": "NY"
+    }
+  }
+}

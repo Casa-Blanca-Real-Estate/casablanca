@@ -3,46 +3,77 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{NAME}} — Casa Blanca</title>
-  <meta name="description" content="{{NAME}}, {{TITLE}} at Casa Blanca Real Estate. Specializing in {{NEIGHBORHOODS_CSV}}." />
+  <title>{{PAGE_TITLE}}</title>
+  <meta name="description" content="{{META_DESCRIPTION}}" />
+  <link rel="canonical" href="{{CANONICAL_URL}}" />
+  <!--{{#if NOINDEX}}-->
+  <meta name="robots" content="noindex, nofollow" />
+  <!--{{/if}}-->
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+  <meta property="og:type" content="profile" />
+  <meta property="og:title" content="{{PAGE_TITLE}}" />
+  <meta property="og:description" content="{{META_DESCRIPTION}}" />
+  <meta property="og:url" content="{{CANONICAL_URL}}" />
+  <!--{{#if HAS_OG_IMAGE}}-->
+  <meta property="og:image" content="{{OG_IMAGE_URL}}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <!--{{/if}}-->
 
   <link rel="stylesheet" href="../../css/main.css" />
   <link rel="stylesheet" href="../../css/animations.css" />
   <link rel="stylesheet" href="../../css/agent-profile.css" />
 
   <style>
+    /* Object Sans is self-hosted. Never link a brand font to a third-party CDN. */
     @font-face {
       font-family: 'Object Sans';
       src: url('../../assets/fonts/ObjectSans-Regular.woff2') format('woff2');
       font-weight: 400;
+      font-style: normal;
       font-display: swap;
     }
     @font-face {
       font-family: 'Object Sans';
       src: url('../../assets/fonts/ObjectSans-Heavy.woff2') format('woff2');
       font-weight: 800;
+      font-style: normal;
       font-display: swap;
     }
     body {
-      font-family: 'Object Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Object Sans', 'Helvetica Neue', Arial, sans-serif;
     }
+    .agent-hero__license {
+      font-size: 0.8125rem;
+      color: #888680;
+      margin-bottom: 1.5rem;
+    }
+    .agent-deal-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .agent-deal-list li {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      justify-content: space-between;
+      font-size: 0.9375rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #dddbd5;
+    }
+    .agent-deal-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+    .agent-deal-list__meta { color: #888680; }
   </style>
 </head>
 <body>
 
   <!-- ── Navigation ── -->
   <nav class="nav" aria-label="Main navigation">
-    <a href="../../index.html" class="nav__logo">Casa<span>·</span>Blanca</a>
+    <a href="../index.html" class="nav__logo">Casa<span>·</span>Blanca</a>
     <ul class="nav__links">
-      <li><a href="../../index.html#about">About</a></li>
-      <li><a href="../../index.html#neighborhoods">Neighborhoods</a></li>
-      <li><a href="../../index.html#listings">Listings</a></li>
       <li><a href="../index.html">Our Team</a></li>
-      <li><a href="../../index.html#contact" class="nav__cta">Get in Touch</a></li>
+      <li><a href="mailto:{{EMAIL}}" class="nav__cta">Get in Touch</a></li>
     </ul>
     <button class="nav__hamburger" aria-label="Toggle menu">
       <span></span><span></span><span></span>
@@ -53,8 +84,6 @@
   <section class="agent-hero">
     <div class="container">
       <div class="agent-hero__breadcrumb">
-        <a href="../../index.html">Home</a>
-        <span>/</span>
         <a href="../index.html">Our Team</a>
         <span>/</span>
         <span>{{NAME}}</span>
@@ -63,87 +92,124 @@
       <div class="agent-hero__layout">
         <div class="agent-hero__photo-wrap">
           <div class="agent-hero__photo" style="background: linear-gradient(135deg, {{PHOTO_COLOR_A}}, {{PHOTO_COLOR_B}});">
-            {{PHOTO_OR_INITIALS}}
+            {{{PHOTO_BLOCK}}}
           </div>
+          <!--{{#if ACCEPTING_CLIENTS}}-->
           <div class="agent-hero__availability">
             <span class="agent-hero__status-dot"></span>
             Available for new clients
           </div>
+          <!--{{/if}}-->
         </div>
 
         <div class="agent-hero__info">
-          <p class="about__eyebrow hero-animate">Casa Blanca Agent</p>
+          <p class="about__eyebrow hero-animate">{{BROKERAGE_NAME}}</p>
           <h1 class="agent-hero__name hero-animate hero-animate--delay-1">{{NAME}}</h1>
           <p class="agent-hero__title hero-animate hero-animate--delay-1">{{TITLE}}</p>
+          <p class="agent-hero__license hero-animate hero-animate--delay-1">Lic. #: {{LICENSE_NUMBER}}</p>
 
+          <!--{{#if NEIGHBORHOODS}}-->
           <div class="agent-hero__neighborhoods hero-animate hero-animate--delay-2">
-            {{NEIGHBORHOOD_TAGS}}
+            <!--{{#each NEIGHBORHOODS}}--><span class="tag tag--lavender">{{NEIGHBORHOOD}}</span><!--{{/each}}-->
           </div>
+          <!--{{/if}}-->
 
+          <!--{{#if HAS_LANGUAGES}}-->
           <div class="agent-hero__langs hero-animate hero-animate--delay-2">
             <span class="agent-hero__langs-label">Languages:</span>
             {{LANGUAGE_LIST}}
           </div>
+          <!--{{/if}}-->
 
           <div class="agent-hero__actions hero-animate hero-animate--delay-3">
             <a href="mailto:{{EMAIL}}" class="btn btn--primary">Email {{FIRST_NAME}}</a>
-            <a href="tel:{{PHONE_RAW}}" class="btn btn--outline">{{PHONE}}</a>
-            {{STREETEASY_LINK}}
+            <a href="tel:{{PHONE_HREF}}" class="btn btn--outline">{{PHONE}}</a>
+            <!--{{#if STREETEASY_URL}}-->
+            <a href="{{STREETEASY_URL}}" class="btn btn--outline" target="_blank" rel="noopener">StreetEasy ↗</a>
+            <!--{{/if}}-->
           </div>
 
+          <!--{{#if STATS}}-->
           <div class="agent-stats hero-animate hero-animate--delay-3">
+            <!--{{#each STATS}}-->
             <div class="agent-stat">
-              <div class="agent-stat__num count-up" data-target="{{STAT_DEALS}}">{{STAT_DEALS}}</div>
-              <div class="agent-stat__label">Deals closed</div>
+              <div class="agent-stat__num count-up" data-target="{{STAT_VALUE}}" data-suffix="{{STAT_SUFFIX}}">{{STAT_DISPLAY}}</div>
+              <div class="agent-stat__label">{{STAT_LABEL}}</div>
             </div>
-            <div class="agent-stat">
-              <div class="agent-stat__num count-up" data-target="{{STAT_DAYS}}" data-suffix=" days">{{STAT_DAYS}}</div>
-              <div class="agent-stat__label">Avg. days on market</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat__num count-up" data-target="{{STAT_RATING}}" data-suffix="%">{{STAT_RATING}}%</div>
-              <div class="agent-stat__label">Client satisfaction</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat__num count-up" data-target="{{STAT_YEARS}}">{{STAT_YEARS}}</div>
-              <div class="agent-stat__label">Years in NYC</div>
-            </div>
+            <!--{{/each}}-->
           </div>
+          <!--{{/if}}-->
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Bio + Specialties ── -->
+  <!-- ── Bio + sidebar ── -->
   <section class="section" style="background:#fff;border-top:1px solid #dddbd5;">
     <div class="container">
       <div class="agent-bio-layout">
         <div class="agent-bio__content">
+          <!--{{#if HAS_BIO}}-->
           <p class="about__eyebrow fade-in">About {{FIRST_NAME}}</p>
           <h2 class="fade-in" style="font-size:clamp(1.5rem,3vw,2rem);margin-bottom:1.5rem;">{{FIRST_NAME}}'s approach</h2>
-          <p class="agent-bio__text fade-in">{{BIO}}</p>
+          <!--{{#each BIO_PARAGRAPHS}}-->
+          <p class="agent-bio__text fade-in">{{PARAGRAPH}}</p>
+          <!--{{/each}}-->
+          <!--{{/if}}-->
+
+          <!--{{#if DEALS}}-->
+          <p class="about__eyebrow fade-in" style="margin-top:3rem;">Past deals</p>
+          <h2 class="fade-in" style="font-size:clamp(1.5rem,3vw,2rem);margin-bottom:1.5rem;">{{FIRST_NAME}}'s closed transactions</h2>
+          <ul class="agent-deal-list fade-in">
+            <!--{{#each DEALS}}-->
+            <li>
+              <span>{{DEAL_ADDRESS}}</span>
+              <span class="agent-deal-list__meta">{{DEAL_META}}</span>
+            </li>
+            <!--{{/each}}-->
+          </ul>
+          <!--{{/if}}-->
         </div>
 
         <div class="agent-bio__sidebar fade-in">
+          <!--{{#if SPECIALTIES}}-->
           <div class="agent-sidebar-card">
             <h4>Specialties</h4>
             <ul class="agent-specialties">
-              {{SPECIALTY_ITEMS}}
+              <!--{{#each SPECIALTIES}}--><li>{{SPECIALTY}}</li><!--{{/each}}-->
             </ul>
           </div>
+          <!--{{/if}}-->
 
           <div class="agent-sidebar-card">
-            <h4>Reach {{FIRST_NAME}}</h4>
+            <h4>Drop {{FIRST_NAME}} a note</h4>
             <div class="agent-contact-links">
               <a href="mailto:{{EMAIL}}" class="agent-contact-link">
-                <span class="agent-contact-link__icon">✉</span>
+                <span class="agent-contact-link__icon" aria-hidden="true">✉</span>
                 {{EMAIL}}
               </a>
-              <a href="tel:{{PHONE_RAW}}" class="agent-contact-link">
-                <span class="agent-contact-link__icon">☎</span>
+              <a href="tel:{{PHONE_HREF}}" class="agent-contact-link">
+                <span class="agent-contact-link__icon" aria-hidden="true">☎</span>
                 {{PHONE}}
               </a>
-              {{INSTAGRAM_CONTACT}}
+              <!--{{#if INSTAGRAM_URL}}-->
+              <a href="{{INSTAGRAM_URL}}" class="agent-contact-link" target="_blank" rel="noopener">
+                <span class="agent-contact-link__icon" aria-hidden="true">ig</span>
+                Instagram
+              </a>
+              <!--{{/if}}-->
+              <!--{{#if LINKEDIN_URL}}-->
+              <a href="{{LINKEDIN_URL}}" class="agent-contact-link" target="_blank" rel="noopener">
+                <span class="agent-contact-link__icon" aria-hidden="true">in</span>
+                LinkedIn
+              </a>
+              <!--{{/if}}-->
+              <!--{{#if STREETEASY_URL}}-->
+              <a href="{{STREETEASY_URL}}" class="agent-contact-link" target="_blank" rel="noopener">
+                <span class="agent-contact-link__icon" aria-hidden="true">se</span>
+                StreetEasy
+              </a>
+              <!--{{/if}}-->
             </div>
           </div>
         </div>
@@ -152,7 +218,34 @@
   </section>
 
   <!-- ── Testimonials ── -->
-  {{TESTIMONIALS_SECTION}}
+  <!--{{#if TESTIMONIALS}}-->
+  <section class="agent-testimonials">
+    <div class="container">
+      <div class="fade-in">
+        <p class="section-header__eyebrow">Client Stories</p>
+        <h2 style="font-size:clamp(1.5rem,3vw,2rem);margin-top:0.5rem;">What clients say about {{FIRST_NAME}}</h2>
+      </div>
+      <div class="agent-testimonials-grid fade-in-group">
+        <!--{{#each TESTIMONIALS}}-->
+        <figure class="testimonial-card fade-in">
+          <div class="testimonial-card__quote" aria-hidden="true">"</div>
+          <blockquote class="testimonial-card__body">{{QUOTE}}</blockquote>
+          <figcaption class="testimonial-card__author">
+            <div class="testimonial-card__avatar" aria-hidden="true">{{AUTHOR_INITIALS}}</div>
+            <div>
+              <div class="testimonial-card__name">{{AUTHOR}}</div>
+              <!--{{#if HAS_DETAIL}}-->
+              <div class="testimonial-card__detail">{{DETAIL}}</div>
+              <!--{{/if}}-->
+              <div class="testimonial-card__detail"><time datetime="{{DATE}}">{{DATE}}</time></div>
+            </div>
+          </figcaption>
+        </figure>
+        <!--{{/each}}-->
+      </div>
+    </div>
+  </section>
+  <!--{{/if}}-->
 
   <!-- ── CTA ── -->
   <section class="section">
@@ -161,12 +254,12 @@
         <div class="cta-banner__accent"></div>
         <div>
           <p class="cta-banner__eyebrow">Work with {{FIRST_NAME}}</p>
-          <h2 class="cta-banner__title">Ready to start<br />your search?</h2>
-          <p class="cta-banner__body">{{FIRST_NAME}} is taking new clients. Reach out to start the conversation — no pressure, just an honest talk about what you're looking for.</p>
+          <h2 class="cta-banner__title">Start your home search.<br />Change your life.</h2>
+          <p class="cta-banner__body">Reach out to start the conversation — no pressure, just an honest talk about what you're looking for.</p>
         </div>
         <div class="cta-banner__actions">
           <a href="mailto:{{EMAIL}}" class="btn btn--lavender">Email {{FIRST_NAME}}</a>
-          <a href="../index.html" class="btn btn--outline" style="color:#fff;border-color:rgba(255,255,255,0.2);">See all agents</a>
+          <a href="../index.html" class="btn btn--outline" style="color:#fff;border-color:rgba(255,255,255,0.35);">See all agents</a>
         </div>
       </div>
     </div>
@@ -178,48 +271,43 @@
       <div class="footer__top">
         <div>
           <div class="footer__logo">Casa<span>·</span>Blanca</div>
-          <p class="footer__tagline">A boutique real estate brokerage serving New York City since 2006.</p>
+          <p class="footer__tagline">A boutique real estate brokerage serving New York City since {{BROKERAGE_FOUNDED}}.</p>
           <div class="footer__social">
-            <a href="#" class="footer__social-link" aria-label="Instagram">ig</a>
-            <a href="#" class="footer__social-link" aria-label="LinkedIn">in</a>
-            <a href="#" class="footer__social-link" aria-label="StreetEasy">se</a>
+            <!--{{#if INSTAGRAM_URL}}-->
+            <a href="{{INSTAGRAM_URL}}" class="footer__social-link" target="_blank" rel="noopener" aria-label="Instagram">ig</a>
+            <!--{{/if}}-->
+            <!--{{#if LINKEDIN_URL}}-->
+            <a href="{{LINKEDIN_URL}}" class="footer__social-link" target="_blank" rel="noopener" aria-label="LinkedIn">in</a>
+            <!--{{/if}}-->
+            <!--{{#if STREETEASY_URL}}-->
+            <a href="{{STREETEASY_URL}}" class="footer__social-link" target="_blank" rel="noopener" aria-label="StreetEasy">se</a>
+            <!--{{/if}}-->
           </div>
         </div>
         <div>
-          <div class="footer__col-title">Navigate</div>
+          <div class="footer__col-title">{{NAME}}</div>
           <ul class="footer__col-links">
-            <li><a href="../../index.html#about">About</a></li>
-            <li><a href="../../index.html#neighborhoods">Neighborhoods</a></li>
-            <li><a href="../../index.html#listings">Listings</a></li>
-            <li><a href="../index.html">Our Team</a></li>
+            <li>{{TITLE}}</li>
+            <li>Lic. #: {{LICENSE_NUMBER}}</li>
+            <li><a href="../index.html">All Casa Blanca agents</a></li>
           </ul>
         </div>
         <div>
-          <div class="footer__col-title">Neighborhoods</div>
+          <div class="footer__col-title">Drop me a note</div>
           <ul class="footer__col-links">
-            <li><a href="#">Upper West Side</a></li>
-            <li><a href="#">Harlem</a></li>
-            <li><a href="#">Washington Heights</a></li>
-            <li><a href="#">Tribeca</a></li>
-            <li><a href="#">West Village</a></li>
+            <li><a href="tel:{{PHONE_HREF}}">{{PHONE}}</a></li>
+            <li><a href="mailto:{{EMAIL}}">{{EMAIL}}</a></li>
           </ul>
         </div>
         <div>
-          <div class="footer__col-title">Contact</div>
+          <div class="footer__col-title">{{BROKERAGE_NAME}}</div>
           <ul class="footer__col-links">
-            <li><a href="mailto:hello@casa-blanca.com">hello@casa-blanca.com</a></li>
-            <li><a href="tel:+12125550100">212-555-0100</a></li>
-            <li style="color:rgba(255,255,255,0.3);font-size:0.9rem;line-height:1.6;margin-top:0.5rem;">145 West 57th Street<br />New York, NY 10019</li>
+            <li style="color:rgba(255,255,255,0.3);font-size:0.9rem;line-height:1.6;">{{BROKERAGE_ADDRESS_LINE1}}<br />{{BROKERAGE_ADDRESS_LINE2}}</li>
           </ul>
         </div>
       </div>
       <div class="footer__bottom">
-        <span>© 2025 Casa Blanca Real Estate LLC. All rights reserved.</span>
-        <div style="display:flex;gap:1.5rem;">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Use</a>
-          <a href="#">Fair Housing</a>
-        </div>
+        <span>© {{YEAR}} {{BROKERAGE_NAME}}. All rights reserved.</span>
       </div>
     </div>
   </footer>

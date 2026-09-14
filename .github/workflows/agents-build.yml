@@ -1,0 +1,28 @@
+# The Netlify deploy now runs `node agents/build.js`, so a typo in an agent
+# JSON file would fail the deploy for the whole site — the tools included.
+# This catches it on the PR instead.
+name: agent sites
+
+on:
+  pull_request:
+    paths:
+      - 'agents/**'
+      - 'netlify.toml'
+      - 'package.json'
+  push:
+    branches: [claude/main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test agents/build.test.js
+      - run: node agents/build.js --check
+      - name: the build must be reproducible — committed output matches a fresh build
+        run: |
+          node agents/build.js
+          git diff --exit-code -- agents _redirects

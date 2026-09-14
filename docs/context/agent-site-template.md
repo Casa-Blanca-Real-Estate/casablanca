@@ -33,11 +33,14 @@ mobile drawer.
 **Deals:** `SAM'S PAST DEALS` — per deal: address with unit, square footage, sale price.
 **Buyer's Guide:** a heading plus the PDF viewer; body copy is still Wix placeholder.
 
-### Fields the current `agents/data/*.json` schema is missing
+### Fields the prototype schema was missing
 
-Licence number · past deals (address, unit, sq ft, price) · LinkedIn · StreetEasy (present) ·
-buyer's-guide PDF reference · team members · the legal pages · per-page SEO fields ·
-custom domain · publish state.
+Licence number · past deals (address, unit, sq ft, price) · LinkedIn · buyer's-guide PDF
+reference · team members · per-page SEO fields · custom domain · publish state.
+
+All of these now exist — see **`agents/SCHEMA.md`**, which is the contract. Still not carried:
+the legal pages (Accessibility / Terms / Privacy), which are brokerage-level rather than
+per-agent, and the contact form, which is Slice 5.
 
 ## 2. Third-party pieces
 
@@ -64,20 +67,29 @@ custom domain · publish state.
 
 Verified by building and rendering `agents/claire-dubois/` in Chromium.
 
-- **The brand font never loads.** `template.html` requests `assets/fonts/ObjectSans-*.woff2`;
-  the repo only has `.otf`. Pages silently fall back to DM Sans pulled from Google Fonts — which
-  also breaks the "never link fonts externally" constraint.
-- **Photos don't work.** `build.js` computes a photo path and never uses it; every agent renders
-  as initials on a gradient. `agents/photos/` does not exist.
-- **`build.js` does no HTML escaping.** An `&` or `<` in a bio breaks the page or injects markup.
+**Fixed in Slice 0** (dispatch 02) — kept here as the record of what the prototype shipped with:
+
+- ~~**The brand font never loads.**~~ `.otf` converted to `.woff2`, self-hosted, Google Fonts link
+  dropped from both templates. Verified in Chromium: both faces fetch 200, nothing goes off-site.
+- ~~**Photos don't work.**~~ `agents/photos/` exists and is wired; initials on a gradient are now
+  the *documented* fallback for the (common) case of an agent with no photo.
+- ~~**`build.js` does no HTML escaping.**~~ Everything escapes by default; only markup the build
+  itself assembled can be emitted raw. Covered by `agents/build.test.js`.
+- ~~Testimonial initials produce `S&` from "Sarah & Leo W."~~ — initials skip punctuation.
+- ~~Content is placeholder and factually wrong~~ — the five fictional agents are deleted, and the
+  footer carries the real founding year (2019), the real HQ, and the current year.
+- Also fixed, and not previously listed: `build.js` could not run at all. `package.json` sets
+  `"type": "module"` and the script was CommonJS, so `node agents/build.js` threw on line 4.
+
+**Still open — these are the visual port's (Slices 2–3):**
+
 - **The footer is unstyled** — raw bullet lists, `ig in se` where social icons belong, overlapping
-  the CTA section.
-- Testimonial initials produce `S&` from "Sarah & Leo W.". The "See all agents" button is
-  invisible, light on light.
-- Content is placeholder and factually wrong: "serving New York City since 2006" (founded
-  February 2019), `© 2025`, `hello@casa-blanca.com`, neighbourhoods unrelated to the agent.
+  the CTA section. Untouched by Slice 0; the content is now correct, the styling is not.
+- The "See all agents" button is invisible, light on light.
 - Reveal animations hold content at `opacity: 0` until JavaScript runs. Fragile — reveals should
   animate from a visible baseline.
+- Nav and footer links point into `index.html`, which is the internal Creative Studio dashboard,
+  not a public site. The public-facing IA has to be decided with the port.
 - The design is a generic real-estate template with a text wordmark instead of the CB mark. It
   has nothing to do with the Wix template. **Keep the pipeline, replace the design.**
 

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Team — {{BROKERAGE_NAME}}</title>
+  <meta name="description" content="Meet the {{BROKERAGE_NAME}} team — neighborhood specialists who know every block, building, and deal in New York City." />
+  <link rel="canonical" href="{{CANONICAL_URL}}" />
+
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/animations.css" />
+
+  <style>
+    /* Object Sans is self-hosted. Never link a brand font to a third-party CDN. */
+    @font-face {
+      font-family: 'Object Sans';
+      src: url('../assets/fonts/ObjectSans-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Object Sans';
+      src: url('../assets/fonts/ObjectSans-Heavy.woff2') format('woff2');
+      font-weight: 800;
+      font-style: normal;
+      font-display: swap;
+    }
+    body {
+      font-family: 'Object Sans', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* ── Directory-specific styles ── */
+    .dir-hero { padding: 10rem 0 5rem; background: #f4f3f0; }
+
+    .dir-hero__eyebrow {
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #aaa3cf; margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .dir-hero__eyebrow::before {
+      content: ''; display: block; width: 2rem; height: 1px; background: #aaa3cf;
+    }
+    .dir-hero__headline { font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1.25rem; }
+    .dir-hero__sub { font-size: 1.125rem; color: #888680; max-width: 540px; }
+
+    /* ── Filters ── */
+    .dir-filters {
+      padding: 2rem 0; border-top: 1px solid #dddbd5; border-bottom: 1px solid #dddbd5;
+      background: #fff; position: sticky; top: 64px; z-index: 10;
+    }
+    .dir-filters__inner { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .dir-filters__label {
+      font-size: 0.8125rem; font-weight: 800; color: #888680;
+      letter-spacing: 0.05em; text-transform: uppercase; margin-right: 0.5rem;
+    }
+    .filter-btn {
+      padding: 0.4rem 1rem; border-radius: 100px; font-size: 0.8125rem;
+      font-weight: 800; letter-spacing: 0.03em; cursor: pointer;
+      border: 1.5px solid #dddbd5; background: transparent; color: #888680;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: #0f0f0f; color: #fff; border-color: #0f0f0f;
+    }
+
+    /* ── Agent grid ── */
+    .dir-grid { padding: 4rem 0 6rem; }
+    .dir-agents-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+
+    .dir-agent-card {
+      background: #fff; border: 1px solid #dddbd5; border-radius: 1.25rem;
+      overflow: hidden; display: flex; flex-direction: column;
+      text-decoration: none; color: inherit;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .dir-agent-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(15,15,15,0.12); }
+
+    .dir-agent-card__photo {
+      aspect-ratio: 4/3; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3.5rem; font-weight: 800; color: rgba(255,255,255,0.4);
+    }
+    .dir-agent-card__photo img {
+      width: 100%; height: 100%; object-fit: cover; object-position: center top;
+    }
+
+    .dir-agent-card__body { padding: 1.75rem; flex: 1; display: flex; flex-direction: column; }
+    .dir-agent-card__name { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.2rem; }
+    .dir-agent-card__title { font-size: 0.875rem; color: #888680; margin-bottom: 1rem; }
+    .dir-agent-card__neighborhoods {
+      display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; flex: 1;
+    }
+    .dir-agent-card__footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 1.25rem; border-top: 1px solid #dddbd5; font-size: 0.8125rem;
+    }
+    .dir-agent-card__langs { color: #888680; }
+    .dir-agent-card__cta {
+      font-weight: 800; font-size: 0.8125rem; color: #aaa3cf;
+      display: flex; align-items: center; gap: 0.3rem; transition: gap 0.2s;
+    }
+    .dir-agent-card:hover .dir-agent-card__cta { gap: 0.6rem; }
+
+    .dir-empty {
+      border: 1px dashed #dddbd5; border-radius: 1.25rem; padding: 4rem 2rem;
+      text-align: center; color: #888680; background: #fff;
+    }
+
+    /* ── Join banner ── */
+    .join-banner {
+      background: #0f0f0f; color: #fff; border-radius: 1.25rem; padding: 3rem;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 2rem; margin-top: 3rem;
+    }
+    .join-banner__eyebrow {
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #aaa3cf; margin-bottom: 0.75rem;
+    }
+    .join-banner__title { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .join-banner__sub { color: rgba(255,255,255,0.5); font-size: 0.9375rem; }
+
+    @media (max-width: 1024px) { .dir-agents-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) {
+      .dir-agents-grid { grid-template-columns: 1fr; }
+      .join-banner { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav class="nav" aria-label="Main navigation">
+    <a href="../index.html" class="nav__logo">Casa<span>·</span>Blanca</a>
+    <ul class="nav__links">
+      <li><a href="index.html" style="color:#aaa3cf;">Our Team</a></li>
+    </ul>
+    <button class="nav__hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="dir-hero">
+    <div class="container">
+      <p class="dir-hero__eyebrow hero-animate">{{BROKERAGE_NAME}}</p>
+      <h1 class="dir-hero__headline hero-animate hero-animate--delay-1">
+        The team behind<br />every deal.
+      </h1>
+      <p class="dir-hero__sub hero-animate hero-animate--delay-2">
+        A small, focused group of specialists. Each one knows their neighborhoods better than anyone — and they'll tell you when something's not worth it.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Filters ── -->
+  <!--{{#if HAS_FILTERS}}-->
+  <div class="dir-filters" id="filters">
+    <div class="container">
+      <div class="dir-filters__inner">
+        <span class="dir-filters__label">Filter by</span>
+        <button class="filter-btn active" data-filter="all" type="button">All agents</button>
+        <!--{{#each FILTERS}}-->
+        <button class="filter-btn" data-filter="{{FILTER_SLUG}}" type="button">{{FILTER_LABEL}}</button>
+        <!--{{/each}}-->
+      </div>
+    </div>
+  </div>
+  <!--{{/if}}-->
+
+  <!-- ── Agent grid ── -->
+  <section class="dir-grid">
+    <div class="container">
+      <!--{{#if HAS_AGENTS}}-->
+      <div class="dir-agents-grid fade-in-group" id="agents-grid">
+        <!--{{#each AGENTS}}-->
+        <a href="{{CARD_SLUG}}/index.html"
+           class="dir-agent-card fade-in"
+           data-neighborhoods="{{CARD_NEIGHBORHOOD_KEYS}}">
+          <div class="dir-agent-card__photo"
+               style="background:linear-gradient(135deg,{{CARD_COLOR_A}},{{CARD_COLOR_B}});">
+            {{{CARD_PHOTO_BLOCK}}}
+          </div>
+          <div class="dir-agent-card__body">
+            <div class="dir-agent-card__name">{{CARD_NAME}}</div>
+            <div class="dir-agent-card__title">{{CARD_TITLE}}</div>
+            <div class="dir-agent-card__neighborhoods">
+              <!--{{#each CARD_NEIGHBORHOODS}}--><span class="tag">{{NEIGHBORHOOD}}</span><!--{{/each}}-->
+            </div>
+            <div class="dir-agent-card__footer">
+              <span class="dir-agent-card__langs"><!--{{#if CARD_HAS_LANGUAGES}}-->{{CARD_LANGUAGES}}<!--{{/if}}--></span>
+              <span class="dir-agent-card__cta">View profile →</span>
+            </div>
+          </div>
+        </a>
+        <!--{{/each}}-->
+      </div>
+      <!--{{/if}}-->
+
+      <!--{{#unless HAS_AGENTS}}-->
+      <div class="dir-empty">
+        <p>No agent sites are live yet.</p>
+      </div>
+      <!--{{/unless}}-->
+
+      <div class="join-banner fade-in">
+        <div>
+          <div class="join-banner__eyebrow">Join the Team</div>
+          <div class="join-banner__title">We're always looking for great agents.</div>
+          <div class="join-banner__sub">If you know New York and care about your clients, let's talk.</div>
+        </div>
+        <a href="mailto:hannah@casa-blanca.com" class="btn btn--lavender">Get in touch</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <div>
+          <div class="footer__logo">Casa<span>·</span>Blanca</div>
+          <p class="footer__tagline">A boutique real estate brokerage serving New York City since {{BROKERAGE_FOUNDED}}.</p>
+        </div>
+        <div>
+          <div class="footer__col-title">Navigate</div>
+          <ul class="footer__col-links">
+            <li><a href="index.html">Our Team</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer__col-title">{{BROKERAGE_NAME}}</div>
+          <ul class="footer__col-links">
+            <li style="color:rgba(255,255,255,0.3);font-size:0.9rem;line-height:1.6;">{{BROKERAGE_ADDRESS_LINE1}}<br />{{BROKERAGE_ADDRESS_LINE2}}</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span>© {{YEAR}} {{BROKERAGE_NAME}}. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/nav.js"></script>
+  <script src="../js/scroll.js"></script>
+  <script>
+    // Filter by neighborhood. Buttons and card keys are both generated from
+    // agents/data/*.json — nothing here knows any agent or neighborhood by name.
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const agentCards = document.querySelectorAll('.dir-agent-card');
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter;
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        agentCards.forEach(card => {
+          const keys = (card.dataset.neighborhoods || '').split('|').filter(Boolean);
+          card.style.display = (filter === 'all' || keys.includes(filter)) ? '' : 'none';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
