@@ -35,6 +35,35 @@ Blobs store `brand`. Logos, the Object Sans fonts and the palette ship as static
 repo files (built-ins shown alongside live ones); dev-added assets persist in Blobs
 and propagate to everyone.
 
+**Agent CMS** (`/tools/agent-cms/`)
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`  | `/.netlify/functions/agent-store` | Roster of every agent record (summaries) |
+| `GET`  | `/.netlify/functions/agent-store?slug=X` | One full record — `{slug,status,draft,live,previewToken,…}` |
+| `GET`  | `/.netlify/functions/agent-store?slug=X&preview=TOKEN` | **Read-only, no CMS token.** One agent's draft, for a shareable preview link |
+| `POST` | `/.netlify/functions/agent-store` | `{action}` — `create`, `save`, `publish`, `status`, `rotatePreview`, `revertDraft` |
+| `DELETE` | `/.netlify/functions/agent-store` | `{slug}` — remove a record |
+| `POST` | `/.netlify/functions/agent-copy` | AI autofill, Haiku, fixed task set: `bio`, `seo`, `specialties`, `testimonial` |
+
+Stored in Netlify Blobs store `cb-agents`, one key per slug plus an `_index` key
+(`list()` is eventually consistent; a per-key `get` is not). Each record holds a `draft`
+the CMS edits and a `live` snapshot the build renders — the build reads `live`, never
+`draft`, and only when `status === "live"`.
+
+**Both of these require `Authorization: Bearer $CB_CMS_TOKEN` on every request, reads
+included** (the records carry agents' direct phone numbers and emails). With `CB_CMS_TOKEN`
+unset the functions return 503 to everything rather than falling open. The only exception is
+the per-agent `preview` token above, which is read-only and scoped to one agent.
+
+**This is a shared secret, not authentication** — it says *authorised*, never *who*, and
+anyone holding it can edit any agent. Read `docs/agent-cms/security-model.md` before
+pointing a second person at it. `agent-store` is pinned to `node_bundler = "none"` in
+`netlify.toml` because it imports `@netlify/blobs`.
+
+Env: `CB_CMS_TOKEN` (required), `NETLIFY_BUILD_HOOK` (optional — POSTed on publish and on
+suspend/restore; without it the CMS says plainly that nothing rebuilt).
+
 **Home page live content** (`/`)
 | Method | Path | Notes |
 |--------|------|-------|
@@ -59,7 +88,10 @@ in-platform edits reach everyone, point agents at the Netlify URL (or set
 
 1. **Environment variables** — Netlify → Site settings → Environment variables:
    - `FIRECRAWL_API_KEY` — used by `import` and `streeteasy`
-   - `ANTHROPIC_API_KEY` — used by `copy` and `claude`
+   - `ANTHROPIC_API_KEY` — used by `copy`, `claude` and `agent-copy`
+   - `CB_CMS_TOKEN` — shared secret for `agent-store` and `agent-copy`. Generate a long
+     random string (`openssl rand -hex 32`); the CMS prompts for it and holds it per tab.
+   - `NETLIFY_BUILD_HOOK` *(optional)* — build hook URL so publishing rebuilds the site
    - `ALLOWED_ORIGIN` *(optional)* — lock CORS for the `/api/*` functions (defaults to `*`)
 2. **Blobs** — `agents` and `sessions` use `@netlify/blobs`, which is zero-config on Netlify.
 3. **Function timeout** — bump to 26s (the AI calls can be slow) under Functions settings.

@@ -671,13 +671,18 @@
     profilepic:{name:'Profile pic',icon:'photo',href:'tools/profile-pic/',badge:'Team',team:true,
       blurb:'Branded agent headshots, background removed in-browser.',
       caption:'Headshot cut to the taupe standard',sample:'assets/outputs/profilepic.png'},
+    /* Needs the CMS token (Netlify env CB_CMS_TOKEN) — the dashboard sign-in is
+       not what protects it. See docs/agent-cms/security-model.md. */
+    agentcms:{name:'Agent CMS',icon:'web',href:'tools/agent-cms/',badge:'Team',team:true,
+      blurb:'Create, edit, preview and publish an agent’s site without touching JSON.',
+      caption:'Roster · draft → preview → live',sample:null,phLabel:'Asks for the CMS token'},
     /* Early prototype, not a shipped tool — team-gated so it stays out of the agent-facing list.
        Opens a generated sample page, not the directory index. See docs/dispatch/ for the port. */
     agentsites:{name:'Agent sites',icon:'web',href:'agents/claire-dubois/',badge:'Prototype',team:true,
       blurb:'One template plus a JSON file per agent, built into a page each.',
       caption:'Sample build · placeholder agent',sample:null,phLabel:'Opens a generated page'}
   };
-  var ALL_KEYS=['editorial','closed','forsale','incontract','watermarker','bizcard','guide','profilepic','agentsites'];
+  var ALL_KEYS=['editorial','closed','forsale','incontract','watermarker','bizcard','guide','profilepic','agentcms','agentsites'];
 
   /* Abstract slide sketches. Drawn at full size, then scaled by half — see buildMotif. */
   var MOTIF={
@@ -700,6 +705,9 @@
       {w:68,h:86,rows:[{h:6,w:'60%',c:'bar'},{h:3,c:'soft'},{h:3,c:'soft'},{h:3,w:'80%',c:'soft'},{h:3,c:'soft'},{h:3,w:'62%',c:'soft'}]}]},
     profilepic:{frames:[
       {w:68,h:86,rows:[{h:24,w:'24px',c:'soft',self:'center',mt:8,round:1},{h:30,w:'60%',c:'wl',self:'center',push:1}]}]},
+    agentcms:{frames:[
+      {w:68,h:86,rows:[{h:5,w:'52%',c:'bar'},{h:9,c:'wl'},{h:9,c:'wl'},{h:9,c:'wl'},{h:9,w:'74%',c:'accent',push:1}]},
+      {w:68,h:86,rows:[{h:5,c:'bar'},{h:26,hatch:1},{h:4,w:'72%',c:'soft'},{h:3,w:'44%',c:'accent'}]}]},
     agentsites:{frames:[
       {w:68,h:86,rows:[{h:5,c:'bar'},{h:26,hatch:1},{h:4,w:'72%',c:'soft'},{h:3,w:'54%',c:'soft'}]},
       {w:68,h:86,rows:[{h:5,c:'bar'},{h:26,hatch:1},{h:4,w:'72%',c:'soft'},{h:3,w:'40%',c:'accent'}]}]},
@@ -717,8 +725,8 @@
       keys:['watermarker','profilepic'],
       note:'Team badge means sign-in only. Everyone else never sees that card.'},
     {id:'web',heading:'Agent sites & web',sub:'Individual agent pages, built from one template.',
-      keys:['agentsites'],
-      note:'Prototype only — an old test build on a generic design, kept visible while the port is scoped.'}
+      keys:['agentcms','agentsites'],
+      note:'The CMS is where agent content is written and published; it needs the CMS token, not just a dashboard sign-in. The prototype below is an old test build on a generic design, kept visible while the visual port is scoped.'}
   ];
   var TABS_BY_ID={}; TABS.forEach(function(t){TABS_BY_ID[t.id]=t;});
   var state={tab:'home'};

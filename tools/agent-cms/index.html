@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent sites — Casa Blanca Creative Studio</title>
+<meta name="description" content="Create, edit, preview and publish Casa Blanca agent sites.">
+<meta name="robots" content="noindex, nofollow">
+<script>
+  /* Theme before first paint, so switching never flashes the other palette. */
+  try { var t = localStorage.getItem('cb_theme'); if (t === 'night' || t === 'day') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
+<style>
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Slanted.otf') format('opentype');font-weight:400;font-style:italic;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-style:normal;font-display:swap}
+
+  /* ============================================================
+     TOKENS — copied verbatim from index.html (the shipped design
+     reference, 2026-08-28). Same names, same values, same Day/Night
+     pair. Do not fork this block; if the dashboard's tokens change,
+     this file follows them.
+     ============================================================ */
+  :root{
+    --accent:#aaa3cf; --plum:#1e1a2e; --sage:#c0c2b5; --on-accent:#3c3654; --on-sage:#3f4237;
+    --sage-arrow:#5d6055; --hdr-bg:#0f0f0f; --hdr-muted:#9d97b3; --hdr-div:#332e44;
+    --hdr-name:#e9e7e2; --hdr-line:#3a3550; --hdr-ph:#6e6884; --danger:#b4452f;
+    --bg:#f4f3f0; --panel:#ffffff; --line:#dddbd5; --hair:#e6e4de; --ink:#0f0f0f;
+    --body:#55514a; --muted:#888680; --wire:#eceae5; --wireline:#cfcdc6;
+    --hatch1:#e0ddd6; --hatch2:#eceae5; --motif-bar:#0f0f0f; --motif-soft:#c9c6c0;
+    --caption:#5f5885; --ph-ink:#a49dbd; --tab-idle:#77736c; --row-hover:#ffffff;
+    --soft:#faf9fd; --mark-invert:0; --scrim:rgba(10,9,15,.62);
+  }
+  [data-theme="night"]{
+    --bg:#14121b; --panel:#1a1724; --line:#2a2635; --hair:#242030; --ink:#ffffff;
+    --body:#a7a0be; --muted:#8d87a3; --wire:#191622; --wireline:#3a3550;
+    --hatch1:#2a2536; --hatch2:#211d2c; --motif-bar:#e9e7e2; --motif-soft:#4d4762;
+    --caption:#b3abd6; --ph-ink:#8d87a3; --tab-idle:#8d87a3; --row-hover:#1f1b2b;
+    --soft:#191622; --mark-invert:1; --scrim:rgba(4,3,8,.7);
+  }
+
+  /* ============================== base ============================== */
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden}
+  body{font-family:'Object Sans',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;
+    background:var(--bg);color:var(--ink)}
+  a{color:inherit;text-decoration:none}
+  button,input,textarea,select{font-family:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  [hidden]{display:none!important}
+  .page{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+  /* ============================== masthead ==============================
+     The dashboard's .hdr, plus a back link. This surface does NOT load
+     assets/studio-header.js: that script injects a fixed back button and
+     then force-restyles the page's own header (padding-left:112px
+     !important). docs/design/README.md §4 offers (a) design around the
+     injection or (b) own the header properly — this takes (b), locally,
+     without rewriting the shared script for every other tool. */
+  .hdr{flex:0 0 auto;background:var(--hdr-bg);padding:22px 34px 20px;display:flex;align-items:center;
+    justify-content:space-between;gap:30px}
+  .hdr-l{display:flex;align-items:center;gap:22px;min-width:0}
+  .home{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--hdr-muted);white-space:nowrap}
+  .home:hover{color:#fff}
+  .lockup{display:flex;align-items:center;gap:13px;min-width:0}
+  .lockup img{height:26px;width:auto;display:block;flex:0 0 auto}
+  .lockup span{font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);
+    white-space:nowrap}
+  .hdr-r{display:flex;align-items:center;gap:22px}
+  .search{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--hdr-line);padding-bottom:7px;width:230px}
+  .search-glyph{width:12px;height:12px;border:1.5px solid var(--hdr-ph);flex:0 0 auto}
+  .search input{border:0;outline:none;background:transparent;font-size:14px;color:#fff;width:100%}
+  .search input::placeholder{color:var(--hdr-ph)}
+  .hdr-grp{display:flex;align-items:center;gap:14px}
+  .hdr-div{width:1px;height:16px;background:var(--hdr-div)}
+  .acct{display:flex;align-items:center;gap:9px;background:none;border:0;padding:0;cursor:pointer}
+  .acct:hover{opacity:.8}
+  .acct-tile{width:24px;height:24px;background:var(--accent);color:var(--plum);font-size:9.5px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .acct-name{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--hdr-name)}
+
+  /* ============================== main ============================== */
+  .main{flex:1 1 auto;min-height:0;display:flex;align-items:stretch;gap:30px;padding:24px 34px 0}
+  .side{width:252px;flex:0 0 252px;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding-bottom:24px}
+  .sidescroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:14px;
+    scrollbar-width:none;-ms-overflow-style:none}
+  .sidescroll::-webkit-scrollbar{width:0;height:0;display:none}
+  .center{flex:1 1 auto;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:20px;
+    padding-right:6px;padding-bottom:34px}
+
+  .util-label{font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);padding-top:4px}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .head-txt{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .head h2{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+  .subline{font-size:14.5px;line-height:1.5;color:var(--body);max-width:70ch}
+  .count{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  .list{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)}
+  .list:empty{display:none}
+  .empty{font-size:14.5px;line-height:1.5;color:var(--body);border:1px dashed var(--wireline);padding:20px 24px}
+  .notecell{background:var(--panel);border:1px dashed var(--wireline);padding:18px 22px;font-size:13.5px;
+    line-height:1.55;color:var(--body)}
+  .notecell b{color:var(--ink)}
+  .footline{font-size:11.5px;color:var(--muted);margin-top:auto;padding-top:6px}
+
+  /* ============================== utility card (dashboard .ucard) ============================== */
+  .ucard{position:relative;display:flex;flex-direction:column;gap:14px;padding:18px;flex:0 0 auto;color:var(--plum);
+    border:0;width:100%;text-align:left;cursor:pointer;font:inherit;transition:background .15s}
+  .ucard--brand{background:var(--accent)}
+  .ucard--brand:hover{background:#b7b1dc}
+  .ucard-txt{display:flex;flex-direction:column;gap:5px;padding-right:30px}
+  .ucard-title{font-size:20px;font-weight:800;letter-spacing:-.025em}
+  .ucard-blurb{font-size:12.5px;line-height:1.45}
+  .ucard--brand .ucard-blurb{color:var(--on-accent)}
+  .ucard-arrow{position:absolute;right:14px;bottom:10px;font-size:26px;line-height:1;font-weight:800}
+
+  /* ============================== badge (dashboard .badge) ============================== */
+  .badge{font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--plum);
+    background:var(--accent);padding:4px 8px;flex:0 0 auto;white-space:nowrap}
+  .badge--draft{background:var(--wire);color:var(--body);box-shadow:inset 0 0 0 1px var(--wireline)}
+  .badge--live{background:var(--accent);color:var(--plum)}
+  .badge--suspended{background:var(--danger);color:#fff}
+  .badge--archived{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 1px var(--wireline)}
+  .badge--ai{background:var(--accent);color:var(--plum)}
+  .badge--edited{background:transparent;color:var(--caption);box-shadow:inset 0 0 0 1px var(--wireline)}
+
+  /* ============================== roster row (dashboard .trow) ============================== */
+  .trow{display:grid;grid-template-columns:minmax(260px,1fr) 190px;gap:24px;align-items:center;
+    background:var(--panel);color:var(--ink);padding:18px 22px;border-bottom:1px solid var(--hair);
+    overflow:hidden;transition:box-shadow .15s,background .15s}
+  .trow:last-child{border-bottom:0}
+  .trow:hover{box-shadow:inset 3px 0 0 var(--accent);background:var(--row-hover)}
+  .row-l{display:flex;gap:16px;min-width:0;align-items:flex-start}
+  /* The dashboard's media rail (.rail, 450x222) is a tool-screenshot strip; at
+     20 roster rows it would be unreadable. .face is the same idea at row scale —
+     a bordered media tile with a documented initials fallback. Called out in the
+     PR rather than quietly forked. */
+  .face{width:52px;height:52px;flex:0 0 auto;background:var(--wire);border:1px solid var(--wireline);
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .face img{width:100%;height:100%;object-fit:cover;display:block}
+  .face span{font-size:15px;font-weight:800;letter-spacing:.04em;color:var(--caption)}
+  .row-txt{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .titlerow{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+  .rowtitle{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.05;color:var(--ink);
+    text-transform:uppercase;overflow-wrap:anywhere}
+  .rowmeta{font-size:12.5px;line-height:1.5;color:var(--body);overflow-wrap:anywhere}
+  .rowmeta .sep{color:var(--wireline);padding:0 5px}
+  .rowmeta a{border-bottom:1px solid var(--wireline)}
+  .rowmeta a:hover{border-bottom-color:var(--accent)}
+  .dirty{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--caption)}
+  .dirty i{width:6px;height:6px;background:var(--accent);display:block;flex:0 0 auto}
+  .row-r{display:flex;flex-direction:column;align-items:flex-end;gap:9px;justify-self:end}
+  .stamp{font-size:11px;color:var(--muted);text-align:right;line-height:1.4;white-space:pre-line}
+  .rowacts{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+
+  /* ============================== buttons ============================== */
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--body);font-family:inherit;
+    font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:8px 11px;
+    cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
+  .btn:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn--go{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .btn--go:hover:not(:disabled){background:var(--plum);border-color:var(--plum);color:#fff}
+  .btn--danger:hover:not(:disabled){border-color:var(--danger);color:var(--danger)}
+  .btn--ai{border-color:var(--accent);color:var(--caption)}
+  .btn--ai:hover:not(:disabled){background:var(--accent);color:var(--plum)}
+  .btn--lg{font-size:11px;padding:12px 16px}
+  .themebtn{width:34px;height:34px;border:1px solid var(--line);background:transparent;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+  .themebtn:hover{border-color:var(--accent)}
+  .fbbtn{border:1px solid var(--line);background:transparent;color:var(--body);font-size:9.5px;font-weight:800;
+    letter-spacing:.16em;text-transform:uppercase;padding:9px 12px;cursor:pointer}
+  .fbbtn:hover{border-color:var(--accent)}
+  .sidefoot{flex:0 0 auto;margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border-top:1px solid var(--line);padding-top:13px}
+
+  /* ============================== sidebar filters ============================== */
+  .filters{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)}
+  .filt{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;cursor:pointer;
+    background:transparent;border:0;border-bottom:1px solid var(--hair);font-family:inherit;text-align:left;
+    font-size:12.5px;font-weight:800;letter-spacing:-.01em;color:var(--body)}
+  .filt:last-child{border-bottom:0}
+  .filt:hover{background:var(--soft);color:var(--ink)}
+  .filt[aria-pressed="true"]{color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
+  .filt .n{font-size:11px;font-weight:800;color:var(--muted)}
+
+  /* ============================== agent view: page sections ============================== */
+  .secnav{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)}
+  .secnav a{padding:9px 14px;border-bottom:1px solid var(--hair);font-size:12.5px;font-weight:800;
+    letter-spacing:-.01em;color:var(--body)}
+  .secnav a:last-child{border-bottom:0}
+  .secnav a:hover{background:var(--soft);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
+
+  .sect{border:1px solid var(--line);background:var(--panel);scroll-margin-top:10px}
+  .sect-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    padding:16px 22px;border-bottom:1px solid var(--hair);background:var(--soft)}
+  .sect-hd h3{margin:0;font-size:18px;font-weight:800;letter-spacing:-.025em;color:var(--ink)}
+  .eyebrow{font-size:9.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--caption);
+    margin-bottom:5px}
+  .sect-note{font-size:11.5px;color:var(--muted);line-height:1.5;max-width:44ch}
+  .sect-bd{padding:20px 22px;display:flex;flex-direction:column;gap:18px}
+
+  /* The hero band: a live read of what the top of the page will say, at the
+     page's own display type. Not a WYSIWYG — a mirror, so the section reads
+     as the page it edits. */
+  .heroband{display:flex;align-items:center;gap:20px;background:var(--hdr-bg);padding:22px 24px;overflow:hidden}
+  .heroband .face{width:78px;height:78px;background:#1c1a22;border-color:#2e2a38}
+  .heroband .face span{color:var(--hdr-ph)}
+  .hb-txt{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .hb-name{font-size:clamp(24px,4.4vw,40px);font-weight:800;letter-spacing:-.045em;line-height:.94;
+    text-transform:uppercase;color:#fff;overflow-wrap:anywhere}
+  .hb-sub{font-size:12px;color:var(--hdr-muted);line-height:1.5}
+  .hb-lic{font-size:9.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+  .hb-empty{color:var(--hdr-ph);font-style:italic;text-transform:none;letter-spacing:-.02em}
+
+  /* ============================== fields ============================== */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+  .grid--3{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .fld-hd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-height:20px}
+  .fld label{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .fld input,.fld textarea,.fld select{width:100%;padding:10px 12px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
+  .fld textarea{resize:vertical;min-height:120px;line-height:1.55}
+  .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--accent);outline:none;
+    box-shadow:0 0 0 3px rgba(170,163,207,.28)}
+  .fld .help{font-size:11px;line-height:1.5;color:var(--muted)}
+  .fld .ct{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--muted);margin-left:auto}
+  .fld .ct.over{color:var(--danger)}
+  .fld--ai input,.fld--ai textarea{background:var(--soft);border-color:var(--accent)}
+  .flags{border-left:2px solid var(--accent);background:var(--soft);padding:9px 12px;display:flex;
+    flex-direction:column;gap:4px}
+  .flags .fl-hd{font-size:9.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--caption)}
+  .flags p{margin:0;font-size:12px;line-height:1.5;color:var(--body)}
+
+  /* repeatable rows: deals, testimonials, team */
+  .rows{display:flex;flex-direction:column;gap:12px}
+  .rrow{border:1px solid var(--line);background:var(--bg);padding:14px}
+  .rrow-hd{display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap}
+  .rrow-n{font-size:9.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .rrow-acts{margin-left:auto;display:flex;gap:6px}
+
+  /* ============================== publish card ============================== */
+  .pcard{border:1px solid var(--line);background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:12px}
+  .pcard-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pcard-k{font-size:9.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .pcard-v{font-size:12px;color:var(--body);text-align:right;overflow-wrap:anywhere}
+  .pcard-acts{display:flex;flex-direction:column;gap:7px}
+  .savestate{font-size:11px;color:var(--muted);min-height:15px;line-height:1.4}
+  .savestate.bad{color:var(--danger)}
+
+  /* ============================== preview ============================== */
+  .pvbar{flex:0 0 auto;background:var(--accent);color:var(--plum);padding:11px 24px;display:flex;
+    align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .pvbar-t{font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+  .pvbar-n{font-size:12px;line-height:1.45;color:var(--on-accent);max-width:78ch}
+  .pv{flex:1 1 auto;min-height:0;overflow-y:auto;background:var(--bg)}
+  .pvwrap{max-width:900px;margin:0 auto;padding:0 24px 70px}
+  .pv-hero{background:var(--hdr-bg);margin:0 -24px 40px;padding:56px 24px;display:flex;gap:34px;
+    align-items:center;flex-wrap:wrap}
+  .pv-hero .face{width:150px;height:150px;background:#1c1a22;border-color:#2e2a38}
+  .pv-hero .face span{font-size:40px;color:var(--hdr-ph)}
+  .pv-hero-txt{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:12px}
+  .pv-eyebrow{font-size:10px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
+  .pv-name{font-size:clamp(34px,7vw,66px);font-weight:800;letter-spacing:-.05em;line-height:.92;
+    text-transform:uppercase;color:#fff;margin:0}
+  .pv-title{font-size:14px;color:var(--hdr-muted)}
+  .pv-lic{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+  .pv-tags{display:flex;gap:7px;flex-wrap:wrap}
+  .pv-tag{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--plum);
+    background:var(--accent);padding:5px 9px}
+  .pv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--line);
+    border:1px solid var(--line);margin-bottom:40px}
+  .pv-stat{background:var(--panel);padding:18px 16px;display:flex;flex-direction:column;gap:5px}
+  .pv-stat b{font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+  .pv-stat span{font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .pv-sec{margin-bottom:44px}
+  .pv-sec > h2{margin:0 0 16px;font-size:11px;font-weight:800;letter-spacing:.26em;text-transform:uppercase;
+    color:var(--caption);border-bottom:1px solid var(--line);padding-bottom:10px}
+  .pv-bio{font-size:16px;line-height:1.7;color:var(--body);max-width:66ch;white-space:pre-wrap}
+  .pv-deal{display:flex;align-items:baseline;justify-content:space-between;gap:18px;padding:14px 0;
+    border-bottom:1px solid var(--hair);flex-wrap:wrap}
+  .pv-deal b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+  .pv-deal span{font-size:13px;color:var(--muted)}
+  .pv-quote{border-left:2px solid var(--accent);padding:4px 0 4px 18px;margin-bottom:22px}
+  .pv-quote p{margin:0 0 8px;font-size:15px;line-height:1.65;color:var(--body)}
+  .pv-quote footer{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .pv-contact{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px}
+  .pv-c{display:flex;flex-direction:column;gap:4px}
+  .pv-c span{font-size:9.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .pv-c a,.pv-c b{font-size:14px;font-weight:400;color:var(--ink);overflow-wrap:anywhere}
+  .pv-c a{border-bottom:1px solid var(--wireline)}
+  .pv-missing{font-size:13px;color:var(--muted);font-style:italic}
+
+  /* ============================== modals (dashboard .modal) ============================== */
+  .modal{position:fixed;inset:0;background:var(--scrim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.open{display:flex}
+  .modal .box{background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:28px;max-width:400px;
+    width:100%;max-height:86vh;overflow-y:auto}
+  .modal .box.wide{max-width:560px}
+  .modal h2{margin:0 0 6px;font-size:21px;font-weight:800;letter-spacing:-.025em}
+  .modal p{margin:0 0 16px;color:var(--body);font-size:13px;line-height:1.55}
+  .modal p.tight{margin-bottom:8px}
+  .modal label{display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 5px}
+  .modal input,.modal textarea{width:100%;padding:10px 12px;border:1px solid var(--line);background:var(--bg);
+    color:var(--ink);font:inherit;font-size:14px;margin-bottom:11px}
+  .modal textarea{resize:vertical;min-height:110px}
+  .modal .row{display:flex;gap:9px;margin-top:4px}
+  .modal .row .btn{flex:1;text-align:center}
+  .modal .err{color:var(--danger);font-size:12.5px;min-height:16px;margin:2px 0 6px;line-height:1.45}
+  .modal ul{margin:0 0 16px;padding-left:18px}
+  .modal li{font-size:13px;line-height:1.6;color:var(--body);margin-bottom:5px}
+  .modal code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--soft);
+    padding:2px 5px;border:1px solid var(--line)}
+
+  .cb-fb-btn{display:none!important}
+  .cb-fb-tray{border-radius:0!important;background:var(--panel)!important;color:var(--ink)!important;
+    border:1px solid var(--line);box-shadow:none!important;top:auto!important;bottom:74px!important;
+    left:34px!important;right:auto!important}
+  .cb-fb-tray input,.cb-fb-tray textarea{border-radius:0!important;background:var(--bg)!important;
+    color:var(--ink)!important;border-color:var(--line)!important}
+  .cb-fb-send{border-radius:0!important}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--plum);color:#fff;
+    font-size:12.5px;padding:12px 20px;z-index:60;max-width:min(560px,90vw);line-height:1.45;
+    opacity:0;pointer-events:none;transition:opacity .18s}
+  .toast.on{opacity:1}
+  .toast.bad{background:var(--danger)}
+
+  /* ============================== responsive ==============================
+     Same holding pattern as the dashboard below 1000px: give up the
+     never-scrolls rule, stack the sidebar under the content. */
+  @media (max-width:1000px){
+    html,body{overflow:auto;height:auto}
+    .page{height:auto;min-height:100vh}
+    .main{flex-direction:column;padding:20px 22px 26px;gap:22px}
+    .side{width:auto;flex:0 0 auto;order:2;overflow:visible;padding-bottom:0}
+    .sidescroll{overflow:visible}
+    .center{order:1;overflow:visible;padding-right:0}
+    .trow{grid-template-columns:minmax(0,1fr);gap:16px}
+    .row-r{align-items:flex-start;justify-self:start}
+    .rowacts{justify-content:flex-start}
+    .stamp{text-align:left}
+    .hdr{padding:18px 22px 16px}
+    .pv{overflow:visible}
+  }
+  @media (max-width:700px){
+    .hdr{flex-direction:column;align-items:flex-start;gap:16px}
+    .hdr-l,.hdr-r{width:100%;justify-content:space-between;gap:14px}
+    .search{width:100%;max-width:none}
+    .head h2{font-size:23px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+
+<div class="page" id="page">
+
+  <header class="hdr">
+    <div class="hdr-l">
+      <a class="home" href="../../index.html#web"><span aria-hidden="true">&lsaquo;</span> Studio</a>
+      <a class="lockup" href="#/">
+        <img src="../../assets/cb-logo-white.png" alt="Casa Blanca">
+        <span>Agent sites</span>
+      </a>
+    </div>
+    <div class="hdr-r">
+      <div class="search">
+        <span class="search-glyph" aria-hidden="true"></span>
+        <input id="rosterSearch" type="search" placeholder="Search agents" aria-label="Search agents"
+               autocomplete="off" spellcheck="false">
+      </div>
+      <div class="hdr-grp">
+        <span class="hdr-div" aria-hidden="true"></span>
+        <button class="acct" id="acctBtn" type="button">
+          <span class="acct-tile" id="acctTile" hidden></span>
+          <span class="acct-name" id="acctName">Locked</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Preview banner — only in preview mode -->
+  <div class="pvbar" id="pvBar" hidden>
+    <div>
+      <div class="pvbar-t" id="pvBarTitle">Preview &middot; not published</div>
+      <div class="pvbar-n" id="pvBarNote"></div>
+    </div>
+    <div class="rowacts" id="pvBarActs"></div>
+  </div>
+
+  <div class="main" id="mainWrap">
+    <aside class="side">
+      <div class="sidescroll" id="sideScroll"></div>
+      <div class="sidefoot">
+        <button class="themebtn" id="themeBtn" type="button" title="Switch to night" aria-label="Switch to night"></button>
+        <button class="fbbtn" id="feedbackBtn" type="button">Send feedback</button>
+      </div>
+    </aside>
+    <main class="center" id="center"></main>
+  </div>
+
+  <!-- Full-bleed preview surface -->
+  <div class="pv" id="pvSurface" hidden><div class="pvwrap" id="pvWrap"></div></div>
+</div>
+
+<!-- ============================== unlock ============================== -->
+<div class="modal" id="tokenModal">
+  <div class="box">
+    <h2>Unlock the agent CMS</h2>
+    <p class="tight">This tool writes the public sites of real agents, so the backend checks a
+      shared secret on every request &mdash; the dashboard&rsquo;s email sign-in is a UI affordance
+      and doesn&rsquo;t protect anything.</p>
+    <p>Paste the CMS token (Netlify env <code>CB_CMS_TOKEN</code>). It&rsquo;s held for this tab only
+      and never written to disk.</p>
+    <label for="tokenInput">CMS token</label>
+    <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+    <div class="err" id="tokenErr"></div>
+    <div class="row"><button class="btn btn--go btn--lg" id="tokenGo" type="button">Unlock</button></div>
+  </div>
+</div>
+
+<!-- ============================== new agent ============================== -->
+<div class="modal" id="newModal">
+  <div class="box">
+    <h2>New agent site</h2>
+    <p>Creates an empty draft. Nothing is public until you publish it.</p>
+    <label for="newName">Full name</label>
+    <input id="newName" type="text" placeholder="Sam Valk" autocomplete="off">
+    <label for="newSlug">URL slug</label>
+    <input id="newSlug" type="text" placeholder="sam-valk" autocomplete="off" spellcheck="false">
+    <div class="err" id="newErr"></div>
+    <div class="row">
+      <button class="btn" id="newCancel" type="button">Cancel</button>
+      <button class="btn btn--go" id="newGo" type="button">Create draft</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== AI autofill ============================== -->
+<div class="modal" id="aiModal">
+  <div class="box wide">
+    <h2 id="aiTitle">Draft with AI</h2>
+    <p id="aiBlurb"></p>
+    <div id="aiInputWrap">
+      <label for="aiNotes" id="aiNotesLbl">Source material</label>
+      <textarea id="aiNotes" placeholder="Paste your notes, or a spotlight transcript&hellip;"></textarea>
+    </div>
+    <div class="err" id="aiErr"></div>
+    <p class="tight" style="font-size:12px;color:var(--muted)">Everything it returns is a draft you
+      edit. It will not invent credentials, sales figures, licence numbers or biography &mdash; if the
+      source doesn&rsquo;t support something it leaves it out and says so.</p>
+    <div class="row">
+      <button class="btn" id="aiCancel" type="button">Cancel</button>
+      <button class="btn btn--go" id="aiGo" type="button">Generate draft</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== confirm ============================== -->
+<div class="modal" id="confirmModal">
+  <div class="box">
+    <h2 id="cfTitle">Are you sure?</h2>
+    <p id="cfBody"></p>
+    <ul id="cfList" hidden></ul>
+    <div class="row">
+      <button class="btn" id="cfCancel" type="button">Cancel</button>
+      <button class="btn btn--go" id="cfGo" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== JSON ============================== -->
+<div class="modal" id="jsonModal">
+  <div class="box wide">
+    <h2>Record JSON</h2>
+    <p>The draft as the build will read it. Edit and apply, or copy it into
+      <code>agents/data/</code> if the storage decision lands on git.</p>
+    <textarea id="jsonText" spellcheck="false" style="min-height:280px;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
+    <div class="err" id="jsonErr"></div>
+    <div class="row">
+      <button class="btn" id="jsonClose" type="button">Close</button>
+      <button class="btn" id="jsonCopy" type="button">Copy</button>
+      <button class="btn btn--go" id="jsonApply" type="button">Apply to draft</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../../assets/feedback.js" defer></script>
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════
+   Casa Blanca — Agent site CMS (Dispatch 03, Slice 4)
+
+   Two views: a roster of every agent, and a scoped agent view laid
+   out in the order the public pages are laid out, so editing a field
+   feels like editing the page it appears on.
+
+   Storage and security are documented, not assumed:
+     docs/agent-cms/storage-decision.md
+     docs/agent-cms/security-model.md
+
+   SCHEMA OWNERSHIP: Dispatch 02 owns the per-agent JSON schema. When
+   this was written 02 had not landed, so SECTIONS below tracks its
+   draft field list (dispatch 02 §1 + agent-site-template.md §1) and
+   must be reconciled against agents/SCHEMA.md once 02 ships. The
+   server mirrors the same spec in netlify/functions/agent-store.mjs —
+   change both together, and neither unilaterally.
+
+   All data-derived DOM is built with textContent / createElement,
+   never innerHTML. The CMS token lives in sessionStorage and any
+   script on this origin could read it, so the page loads nothing
+   third-party. See security-model.md §4.
+   ═══════════════════════════════════════════════════════════════ */
+
+var BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
+var STORE=BACKEND+'/.netlify/functions/agent-store';
+var COPY=BACKEND+'/.netlify/functions/agent-copy';
+var TOKEN_KEY='cb_cms_token';
+
+function $(id){return document.getElementById(id);}
+function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;
+  if(text!=null)n.textContent=text;return n;}
+function tok(){try{return sessionStorage.getItem(TOKEN_KEY)||'';}catch(e){return '';}}
+function setTok(v){try{v?sessionStorage.setItem(TOKEN_KEY,v):sessionStorage.removeItem(TOKEN_KEY);}catch(e){}}
+
+/* ───────────────────────── theme (dashboard .themebtn) ───────────────────────── */
+var SUN='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></svg>';
+var MOON='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.6A8.6 8.6 0 1 1 9.4 3.8a6.9 6.9 0 0 0 10.8 10.8z"/></svg>';
+function theme(){return document.documentElement.getAttribute('data-theme')==='night'?'night':'day';}
+function paintTheme(){var night=theme()==='night',b=$('themeBtn'),l=night?'Switch to day':'Switch to night';
+  b.innerHTML=night?MOON:SUN;b.title=l;b.setAttribute('aria-label',l);}
+$('themeBtn').onclick=function(){var t=theme()==='night'?'day':'night';
+  document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cb_theme',t);}catch(e){}paintTheme();};
+
+/* ───────────────────────── toast ───────────────────────── */
+var toastT=null;
+function toast(msg,bad){var t=$('toast');t.textContent=msg;t.className='toast on'+(bad?' bad':'');
+  clearTimeout(toastT);toastT=setTimeout(function(){t.className='toast'+(bad?' bad':'');},bad?5200:2600);}
+
+/* ───────────────────────── api ───────────────────────── */
+function api(url,opts){
+  opts=opts||{};
+  var h={'Content-Type':'application/json'};
+  if(opts.auth!==false)h.Authorization='Bearer '+tok();
+  return fetch(url,{method:opts.method||'GET',headers:h,
+    body:opts.body?JSON.stringify(opts.body):undefined,cache:'no-store'})
+    .then(function(r){
+      return r.json().catch(function(){return {error:'The backend returned something that isn’t JSON (HTTP '+r.status+').'};})
+        .then(function(d){
+          if(r.status===401){setTok('');openToken('That token was rejected.');throw new Error('unauthorized');}
+          if(!r.ok)throw new Error((d&&d.message)||(d&&d.error)||('Request failed ('+r.status+')'));
+          return d;
+        });
+    },function(){throw new Error('Backend unreachable — the functions only run on Netlify, not from a local file.');});
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THE SHAPE OF AN AGENT PAGE
+
+   Grouped the way the real pages group things, in page order, so the
+   editor reads as the site. `page` says where the group surfaces —
+   the shared block repeats at the bottom of every page, which is why
+   contact is one section and not four.
+   ═══════════════════════════════════════════════════════════════ */
+
+var SECTIONS=[
+  {id:'hero',title:'Hero',page:'Sales — the home page',hero:true,
+   note:'The first thing anyone sees. Name, what you do, and the licence line the template repeats on every page.',
+   fields:[
+    {p:'identity.name',l:'Full name',t:'text',req:true,help:'As it should appear in the page title and the footer.'},
+    {p:'identity.displayName',l:'Display name',t:'text',help:'If the page should say “Sam” where the full name is too formal. Optional.'},
+    {p:'identity.title',l:'Title',t:'text',ph:'Licensed Real Estate Salesperson'},
+    {p:'identity.licenseNumber',l:'Licence number',t:'text',ph:'10401379863',
+     help:'Renders as “Lic. #:”. Never guess this — leave it empty and the line is omitted.'}
+   ],
+   groups:[{l:'Coverage',fields:[
+    {p:'content.neighborhoods',l:'Neighbourhoods',t:'tags',help:'Comma separated.'},
+    {p:'content.languages',l:'Languages',t:'tags',help:'Comma separated.'}
+   ]},
+   {l:'Stats',note:'Every one of these is a public claim. Leave a stat blank rather than estimating it — blank fields are simply not rendered.',
+    grid3:true,fields:[
+    {p:'stats.closedDeals',l:'Deals closed',t:'int'},
+    {p:'stats.avgDaysOnMarket',l:'Avg days on market',t:'int'},
+    {p:'stats.satisfactionRate',l:'Satisfaction %',t:'int'},
+    {p:'stats.yearsExperience',l:'Years in NYC',t:'int'}
+   ]},
+   {l:'Photo',fields:[
+    {p:'assets.heroPhoto',l:'Hero photo URL',t:'url',
+     help:'Agents are slow with photos — without one the page falls back to initials, which is fine.'},
+    {p:'assets.heroAlt',l:'Photo alt text',t:'text'}
+   ]}]},
+
+  {id:'about',title:'About',page:'About — the “Meet…” block',
+   note:'The bio and what this agent actually does. The one section worth spending time on.',
+   fields:[
+    {p:'content.bio',l:'Bio',t:'textarea',ai:'bio',max:4000,
+     help:'Third person, normal capitalization. Published claims about a real career — nothing goes in that a source doesn’t support.'},
+    {p:'content.specialties',l:'Specialties',t:'tags',ai:'specialties',
+     help:'Comma separated. The AI pass only returns what the bio supports; an empty result is a correct one.'}
+   ]},
+
+  {id:'team',title:'The team',page:'About — “Meet the team”',
+   note:'Per-member cards. Skip the section entirely if the agent works alone.',
+   rows:{key:'team',label:'Team member',cap:12,
+     fields:[{p:'name',l:'Name',t:'text'},{p:'title',l:'Title',t:'text'},
+             {p:'email',l:'Email',t:'text'},{p:'phone',l:'Phone',t:'text'}]}},
+
+  {id:'deals',title:'Past deals',page:'Deals',
+   note:'The most genuinely per-agent content on the site, and what search engines have to index. Worth filling properly.',
+   rows:{key:'deals',label:'Deal',cap:60,
+     fields:[{p:'address',l:'Address',t:'text',ph:'54 West 16th St'},{p:'unit',l:'Unit',t:'text',ph:'4E'},
+             {p:'sqft',l:'Square feet',t:'text',ph:'1,020'},{p:'price',l:'Sale price',t:'text',ph:'$1,280,000'}]}},
+
+  {id:'stories',title:'Client stories',page:'About',
+   note:'Google review ingestion is a later slice; imported entries will show a Google source badge here when it lands.',
+   rows:{key:'testimonials',label:'Testimonial',cap:40,ai:'testimonial',
+     fields:[{p:'quote',l:'Quote',t:'textarea',max:1200},{p:'author',l:'Attribution',t:'text',ph:'Adriana M.'},
+             {p:'detail',l:'Detail',t:'text',ph:'Buyer · Upper West Side'},{p:'date',l:'Date',t:'date'},
+             {p:'source',l:'Source',t:'select',opts:[['manual','Added by hand'],['google','Google review']]}]}},
+
+  {id:'contact',title:'Drop me a note',page:'Repeated at the bottom of every page',
+   note:'The shared block: phone, email, and the social row. These land in links on the live page, so anything that isn’t a real http, mailto or tel URL is dropped on save.',
+   fields:[
+    {p:'contact.phone',l:'Phone',t:'text',ph:'401-440-3132'},
+    {p:'contact.email',l:'Email',t:'text',ph:'s.valk@casa-blanca.com'},
+    {p:'contact.instagram',l:'Instagram',t:'url'},
+    {p:'contact.streeteasy',l:'StreetEasy',t:'url'},
+    {p:'contact.linkedin',l:'LinkedIn',t:'url'}
+   ]},
+
+  {id:'guide',title:'Buyer’s guide',page:'Buyer’s Guide',
+   note:'On Wix this is an iframed third-party flipbook app. Self-hosted it becomes a PDF we own — point at the file for now.',
+   fields:[{p:'assets.buyersGuidePdf',l:'Buyer’s guide PDF',t:'url'}]},
+
+  {id:'seo',title:'Search listing',page:'Every page — the <head>',
+   note:'What Google shows. The AI pass writes both from the bio and won’t add a claim the bio doesn’t carry.',
+   fields:[
+    {p:'seo.title',l:'Page title',t:'text',max:70,ai:'seo',help:'At most 60 characters is safe.'},
+    {p:'seo.description',l:'Meta description',t:'textarea',max:200,help:'120–155 characters.'},
+    {p:'seo.ogImage',l:'Share image URL',t:'url'},
+    {p:'seo.canonical',l:'Canonical URL',t:'url'}
+   ]},
+
+  {id:'delivery',title:'Delivery',page:'Where the site lives',
+   note:'Every site goes live on a Casa-Blanca-controlled URL first. The custom domain is the agent’s own and an optional later swap — never a launch blocker.',
+   fields:[
+    {p:'delivery.studioUrl',l:'Casa Blanca URL',t:'url',ph:'https://casa-blanca.com/agents/sam-valk'},
+    {p:'delivery.customDomain',l:'Custom domain',t:'text',ph:'samvalk.com',help:'Bought and owned by the agent. Optional.'}
+   ]}
+];
+
+var AI_TASKS={
+  bio:{title:'Draft a bio',blurb:'Paste Kimani’s notes or a spotlight transcript. Everything in the bio has to come from what you paste here.',
+    label:'Notes or transcript',needsInput:true},
+  seo:{title:'Draft the search listing',blurb:'Writes the page title and meta description from the bio already on this record.',needsInput:false},
+  specialties:{title:'Pull specialties from the bio',blurb:'Reads the bio and returns only specialties it actually supports.',needsInput:false},
+  testimonial:{title:'Clean up this testimonial',blurb:'Fixes typos, capitalization and review-site boilerplate. It will not strengthen the praise or rewrite the client’s voice.',needsInput:false}
+};
+
+/* ───────────────────────── record helpers ───────────────────────── */
+function get(o,path){var p=path.split('.'),c=o;for(var i=0;i<p.length;i++){if(c==null)return undefined;c=c[p[i]];}return c;}
+function set(o,path,v){var p=path.split('.'),c=o;for(var i=0;i<p.length-1;i++){if(typeof c[p[i]]!=='object'||c[p[i]]==null)c[p[i]]={};c=c[p[i]];}c[p[p.length-1]]=v;}
+
+function blankDraft(){
+  var d={ai:{}};
+  SECTIONS.forEach(function(s){
+    (s.fields||[]).concat((s.groups||[]).reduce(function(a,g){return a.concat(g.fields);},[]))
+      .forEach(function(f){ set(d,f.p,f.t==='tags'?[]:(f.t==='int'?null:'')); });
+    if(s.rows)d[s.rows.key]=[];
+  });
+  return d;
+}
+function initials(name){
+  return String(name||'').trim().split(/\s+/).filter(function(w){return /[A-Za-z0-9]/.test(w[0]);})
+    .slice(0,2).map(function(w){return w[0].toUpperCase();}).join('')||'—';
+}
+function slugify(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50);}
+function ago(iso){
+  if(!iso)return 'never';
+  var d=new Date(iso);if(isNaN(d))return 'never';
+  var m=Math.floor((Date.now()-d.getTime())/60000);
+  if(m<1)return 'just now'; if(m<60)return m+' min ago';
+  var h=Math.floor(m/60); if(h<24)return h+(h===1?' hour ago':' hours ago');
+  var dd=Math.floor(h/24); if(dd<30)return dd+(dd===1?' day ago':' days ago');
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function faceEl(photo,name,cls){
+  var f=el('div','face'+(cls?' '+cls:''));
+  if(photo){var i=el('img');i.src=photo;i.alt='';i.loading='lazy';
+    i.onerror=function(){f.innerHTML='';f.appendChild(el('span',null,initials(name)));};f.appendChild(i);}
+  else f.appendChild(el('span',null,initials(name)));
+  return f;
+}
+// AI provenance: a field is an unreviewed draft until the human edits it or
+// marks it reviewed. Publishing warns about whatever is still unreviewed.
+function aiState(draft,path){var m=draft.ai&&draft.ai[path];if(!m)return null;return m.edited?'edited':'draft';}
+function unreviewed(draft){
+  var out=[];
+  Object.keys((draft&&draft.ai)||{}).forEach(function(k){ if(!draft.ai[k].edited)out.push(k); });
+  return out;
+}
+function labelFor(path){
+  var hit=null;
+  SECTIONS.forEach(function(s){
+    (s.fields||[]).concat((s.groups||[]).reduce(function(a,g){return a.concat(g.fields);},[]))
+      .forEach(function(f){ if(f.p===path)hit=s.title+' · '+f.l; });
+  });
+  return hit||path;
+}
+
+/* ───────────────────────── app state ───────────────────────── */
+var S={view:'roster',slug:'',record:null,draft:null,roster:[],buildHook:false,
+        filter:'all',q:'',saving:false,dirty:false,saveTimer:null,lastFlags:{},preview:null};
+
+function markDirty(){
+  S.dirty=true; paintSave('Unsaved changes');
+  clearTimeout(S.saveTimer); S.saveTimer=setTimeout(saveDraft,2000);
+}
+function paintSave(msg,bad){
+  var n=$('saveState'); if(!n)return;
+  n.textContent=msg||''; n.className='savestate'+(bad?' bad':'');
+}
+window.addEventListener('beforeunload',function(e){ if(S.dirty){e.preventDefault();e.returnValue='';} });
+
+/* ═══════════════════════ ROSTER ═══════════════════════ */
+
+var STATUS_ORDER=['all','draft','live','suspended','archived'];
+var STATUS_LABEL={all:'All agents',draft:'Drafts',live:'Live',suspended:'Suspended',archived:'Archived'};
+
+function rosterFiltered(){
+  var q=S.q.trim().toLowerCase();
+  return S.roster.filter(function(r){
+    if(S.filter!=='all'&&r.status!==S.filter)return false;
+    if(!q)return true;
+    return (r.name+' '+r.slug+' '+(r.customDomain||'')).toLowerCase().indexOf(q)!==-1;
+  });
+}
+
+function renderRosterSide(){
+  var w=$('sideScroll'); w.innerHTML='';
+
+  var nw=el('button','ucard ucard--brand');
+  nw.type='button';
+  var txt=el('div','ucard-txt');
+  txt.appendChild(el('div','ucard-title','New agent'));
+  txt.appendChild(el('div','ucard-blurb','Start an empty draft. Nothing is public until you publish it.'));
+  nw.appendChild(txt);
+  var ar=el('span','ucard-arrow','→'); ar.setAttribute('aria-hidden','true'); nw.appendChild(ar);
+  nw.onclick=openNew;
+  w.appendChild(nw);
+
+  w.appendChild(el('div','util-label','Filter:'));
+  var fl=el('div','filters');
+  STATUS_ORDER.forEach(function(k){
+    var n=k==='all'?S.roster.length:S.roster.filter(function(r){return r.status===k;}).length;
+    var b=el('button','filt'); b.type='button';
+    b.setAttribute('aria-pressed',S.filter===k?'true':'false');
+    b.appendChild(el('span',null,STATUS_LABEL[k]));
+    b.appendChild(el('span','n',String(n)));
+    b.onclick=function(){S.filter=k;render();};
+    fl.appendChild(b);
+  });
+  w.appendChild(fl);
+
+  var note=el('div','notecell');
+  note.appendChild(el('b',null,'Suspending takes a site down.'));
+  note.appendChild(document.createTextNode(' When an agent leaves, suspend them here — the ' +
+    'published copy is kept, so restoring later republishes the same page rather than an empty one.'));
+  w.appendChild(note);
+}
+
+function renderRoster(){
+  renderRosterSide();
+  var c=$('center'); c.innerHTML='';
+
+  var rows=rosterFiltered();
+  var head=el('div','head'), ht=el('div','head-txt');
+  ht.appendChild(el('h2',null,S.q?'Search':STATUS_LABEL[S.filter]));
+  ht.appendChild(el('div','subline',S.q
+    ? 'Matching “'+S.q.trim()+'”.'
+    : 'Every agent site, and what state it is in. Open one to edit it.'));
+  head.appendChild(ht);
+  head.appendChild(el('div','count',rows.length+' '+(rows.length===1?'agent':'agents')));
+  c.appendChild(head);
+
+  if(!rows.length){
+    c.appendChild(el('div','empty',S.roster.length
+      ? 'Nothing matches that.'
+      : 'No agent sites yet. “New agent” in the sidebar starts the first one.'));
+  }else{
+    var list=el('div','list');
+    rows.forEach(function(r){ list.appendChild(rosterRow(r)); });
+    c.appendChild(list);
+  }
+
+  if(!S.buildHook){
+    var warn=el('div','notecell');
+    warn.appendChild(el('b',null,'No build hook configured.'));
+    warn.appendChild(document.createTextNode(' Publishing will save and flip the status, but it '+
+      'cannot kick a Netlify build — set NETLIFY_BUILD_HOOK in the site environment, or rebuild by hand.'));
+    c.appendChild(warn);
+  }
+  c.appendChild(el('div','footline','Creative Studio · agent sites'));
+}
+
+function rosterRow(r){
+  var row=el('div','trow');
+  var left=el('div','row-l');
+  left.appendChild(faceEl(r.heroPhoto,r.name));
+
+  var txt=el('div','row-txt');
+  var tr=el('div','titlerow');
+  var a=el('a','rowtitle',r.name); a.href='#/agent/'+r.slug; tr.appendChild(a);
+  tr.appendChild(el('span','badge badge--'+r.status,r.status));
+  if(r.dirty){
+    var d=el('span','dirty'); d.appendChild(el('i')); d.appendChild(el('span',null,'Unpublished edits'));
+    tr.appendChild(d);
+  }
+  txt.appendChild(tr);
+
+  var meta=el('div','rowmeta');
+  if(r.title){meta.appendChild(el('span',null,r.title));meta.appendChild(el('span','sep','/'));}
+  meta.appendChild(el('span',null,'/'+r.slug));
+  txt.appendChild(meta);
+
+  var dom=el('div','rowmeta');
+  if(r.customDomain){
+    var dl=el('a',null,r.customDomain);
+    dl.href=/^https?:/.test(r.customDomain)?r.customDomain:'https://'+r.customDomain;
+    dl.target='_blank'; dl.rel='noopener'; dom.appendChild(dl);
+  }else if(r.studioUrl){
+    var sl=el('a',null,r.studioUrl.replace(/^https?:\/\//,''));
+    sl.href=r.studioUrl; sl.target='_blank'; sl.rel='noopener'; dom.appendChild(sl);
+  }else{
+    dom.appendChild(el('span',null,'No URL set yet'));
+    dom.style.color='var(--muted)';
+  }
+  txt.appendChild(dom);
+  left.appendChild(txt);
+  row.appendChild(left);
+
+  var right=el('div','row-r');
+  right.appendChild(el('div','stamp','Edited '+ago(r.updatedAt)+
+    (r.publishedAt?'\nPublished '+ago(r.publishedAt):'\nNever published')));
+  var acts=el('div','rowacts');
+  var open=el('a','btn','Open'); open.href='#/agent/'+r.slug; acts.appendChild(open);
+  if(r.status==='live'){
+    var sus=el('button','btn btn--danger','Suspend'); sus.type='button';
+    sus.onclick=function(){ confirmSuspend(r); };
+    acts.appendChild(sus);
+  }else if(r.status==='suspended'){
+    var res=el('button','btn','Restore'); res.type='button';
+    res.onclick=function(){ setStatus(r.slug,'live'); };
+    acts.appendChild(res);
+  }
+  right.appendChild(acts);
+  row.appendChild(right);
+  return row;
+}
+
+function confirmSuspend(r){
+  confirmBox('Suspend '+r.name+'?','Their site comes down at the next build. The published copy is kept, '+
+    'so you can restore it later and the same page goes back up.',null,function(){ setStatus(r.slug,'suspended'); });
+}
+
+function setStatus(slug,status){
+  api(STORE,{method:'POST',body:{action:'status',slug:slug,status:status,by:whoami()}})
+    .then(function(d){
+      toast(status==='live'?'Restored — '+buildWord(d.build):'Suspended — '+buildWord(d.build));
+      if(S.view==='agent'&&S.slug===slug){S.record=d.record;renderAgent();}
+      return loadRoster();
+    })
+    .catch(function(e){ toast(e.message,true); });
+}
+function buildWord(b){
+  return b==='triggered'?'a build is running.'
+    :b==='not-configured'?'no build hook is set, so nothing rebuilt.'
+    :b==='failed'?'the build hook did not answer — rebuild by hand.'
+    :'no rebuild needed.';
+}
+function whoami(){try{return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}catch(e){return '';}}
+
+/* ═══════════════════════ AGENT VIEW ═══════════════════════ */
+
+function renderAgentSide(){
+  var w=$('sideScroll'); w.innerHTML='';
+  var r=S.record;
+
+  var back=el('a','btn btn--lg','‹ All agents'); back.href='#/'; back.style.textAlign='center';
+  w.appendChild(back);
+
+  var p=el('div','pcard');
+  var srow=el('div','pcard-row');
+  srow.appendChild(el('span','pcard-k','Status'));
+  srow.appendChild(el('span','badge badge--'+r.status,r.status));
+  p.appendChild(srow);
+
+  [['Edited',ago(r.updatedAt)],['Published',r.publishedAt?ago(r.publishedAt):'Never']].forEach(function(kv){
+    var row=el('div','pcard-row');
+    row.appendChild(el('span','pcard-k',kv[0]));
+    row.appendChild(el('span','pcard-v',kv[1]));
+    p.appendChild(row);
+  });
+  var ss=el('div','savestate'); ss.id='saveState'; p.appendChild(ss);
+
+  var acts=el('div','pcard-acts');
+  var save=el('button','btn','Save draft'); save.type='button'; save.id='saveBtn';
+  save.onclick=function(){clearTimeout(S.saveTimer);saveDraft();};
+  acts.appendChild(save);
+
+  var prev=el('button','btn','Preview'); prev.type='button';
+  prev.onclick=function(){
+    var go=function(){location.hash='#/preview/'+S.slug;};
+    if(S.dirty){clearTimeout(S.saveTimer);saveDraft().then(go,function(){});}else go();
+  };
+  acts.appendChild(prev);
+
+  var pub=el('button','btn btn--go','Publish'); pub.type='button';
+  pub.onclick=publish;
+  acts.appendChild(pub);
+
+  if(r.status==='live'){
+    var sus=el('button','btn btn--danger','Suspend'); sus.type='button';
+    sus.onclick=function(){confirmSuspend({slug:r.slug,name:get(S.draft,'identity.name')||r.slug});};
+    acts.appendChild(sus);
+  }else if(r.status==='suspended'){
+    var res=el('button','btn','Restore'); res.type='button';
+    res.onclick=function(){setStatus(r.slug,'live');};
+    acts.appendChild(res);
+  }
+  if(r.live){
+    var rev=el('button','btn','Revert to published'); rev.type='button';
+    rev.onclick=function(){
+      confirmBox('Discard unpublished edits?','The draft goes back to exactly what is live right now. '+
+        'This cannot be undone.',null,function(){
+        api(STORE,{method:'POST',body:{action:'revertDraft',slug:S.slug,by:whoami()}})
+          .then(function(d){S.record=d.record;S.draft=d.record.draft;S.dirty=false;renderAgent();toast('Reverted to the published copy.');})
+          .catch(function(e){toast(e.message,true);});
+      });
+    };
+    acts.appendChild(rev);
+  }
+  p.appendChild(acts);
+  w.appendChild(p);
+
+  w.appendChild(el('div','util-label','Page sections:'));
+  var nav=el('div','secnav');
+  SECTIONS.forEach(function(s){
+    var a=el('a',null,s.title); a.href='#'; a.onclick=function(e){
+      e.preventDefault();
+      var n=document.getElementById('sect-'+s.id);
+      if(n)n.scrollIntoView({block:'start',behavior:'smooth'});
+    };
+    nav.appendChild(a);
+  });
+  w.appendChild(nav);
+
+  // Read-only link, scoped to this agent, revocable. Safe to send the agent.
+  var pv=el('div','pcard');
+  pv.appendChild(el('span','pcard-k','Preview link'));
+  pv.appendChild(el('div','sect-note','Read-only, this agent only, and safe to send them. '+
+    'Rotating it kills every copy already shared.'));
+  var pacts=el('div','pcard-acts');
+  var cp=el('button','btn','Copy preview link'); cp.type='button';
+  cp.onclick=function(){
+    var url=location.origin+location.pathname+'#/preview/'+S.slug+'?t='+(S.record.previewToken||'');
+    copy(url,'Preview link copied.');
+  };
+  pacts.appendChild(cp);
+  var rot=el('button','btn btn--danger','Rotate link'); rot.type='button';
+  rot.onclick=function(){
+    confirmBox('Rotate the preview link?','Any link you have already sent stops working immediately.',null,function(){
+      api(STORE,{method:'POST',body:{action:'rotatePreview',slug:S.slug}})
+        .then(function(d){S.record=d.record;renderAgent();toast('Preview link rotated.');})
+        .catch(function(e){toast(e.message,true);});
+    });
+  };
+  pacts.appendChild(rot);
+  var js=el('button','btn','View JSON'); js.type='button'; js.onclick=openJson;
+  pacts.appendChild(js);
+  pv.appendChild(pacts);
+  w.appendChild(pv);
+}
+
+function renderAgent(){
+  var keepScroll=$('center').scrollTop;
+  renderAgentSide();
+  var c=$('center'); c.innerHTML='';
+  var name=get(S.draft,'identity.name')||S.record.slug;
+
+  var head=el('div','head'), ht=el('div','head-txt');
+  ht.appendChild(el('h2',null,name));
+  ht.appendChild(el('div','subline','A simplified version of this agent’s public site. '+
+    'The sections below are the page’s own sections, in the order they appear on it.'));
+  head.appendChild(ht);
+  head.appendChild(el('div','count','/'+S.record.slug));
+  c.appendChild(head);
+
+  SECTIONS.forEach(function(s){ c.appendChild(sectionEl(s)); });
+  c.appendChild(el('div','footline','Draft saves automatically. Nothing reaches the public site until you publish.'));
+  c.scrollTop=keepScroll;
+  paintSave(S.dirty?'Unsaved changes':'');
+}
+
+function sectionEl(s){
+  var sec=el('section','sect'); sec.id='sect-'+s.id;
+
+  var hd=el('div','sect-hd'), hl=el('div');
+  hl.appendChild(el('div','eyebrow',s.page));
+  hl.appendChild(el('h3',null,s.title));
+  hd.appendChild(hl);
+  if(s.note)hd.appendChild(el('div','sect-note',s.note));
+  sec.appendChild(hd);
+
+  var bd=el('div','sect-bd');
+
+  if(s.hero)bd.appendChild(heroBand());
+
+  if(s.fields)bd.appendChild(fieldGrid(s.fields));
+
+  (s.groups||[]).forEach(function(g){
+    var wrap=el('div');
+    wrap.appendChild(el('div','util-label',g.l));
+    if(g.note)wrap.appendChild(el('div','sect-note',g.note));
+    var grid=fieldGrid(g.fields,g.grid3);
+    grid.style.marginTop='10px';
+    wrap.appendChild(grid);
+    bd.appendChild(wrap);
+  });
+
+  if(s.rows)bd.appendChild(rowsEditor(s.rows));
+
+  sec.appendChild(bd);
+  return sec;
+}
+
+function heroBand(){
+  var b=el('div','heroband');
+  b.appendChild(faceEl(get(S.draft,'assets.heroPhoto'),get(S.draft,'identity.name')));
+  var t=el('div','hb-txt');
+  var nm=get(S.draft,'identity.name');
+  var n=el('div','hb-name'+(nm?'':' hb-empty'),nm||'Name not set yet');
+  t.appendChild(n);
+  var sub=[get(S.draft,'identity.title'),(get(S.draft,'content.neighborhoods')||[]).join(' · ')]
+    .filter(Boolean).join(' — ');
+  t.appendChild(el('div','hb-sub',sub||'No title or neighbourhoods yet'));
+  var lic=get(S.draft,'identity.licenseNumber');
+  if(lic)t.appendChild(el('div','hb-lic','Lic. #: '+lic));
+  b.appendChild(t);
+  b.id='heroBand';
+  return b;
+}
+function repaintHero(){
+  var old=$('heroBand'); if(!old)return;
+  old.parentNode.replaceChild(heroBand(),old);
+}
+
+function fieldGrid(fields,three){
+  var g=el('div','grid'+(three?' grid--3':''));
+  fields.forEach(function(f){ g.appendChild(fieldEl(f)); });
+  return g;
+}
+
+function fieldEl(f){
+  var wrap=el('div','fld');
+  var hd=el('div','fld-hd');
+  var id='f_'+f.p.replace(/\./g,'_');
+  var input=makeInput(f,id,get(S.draft,f.p));
+  var ct=null;
+
+  // The generated/edited chip has to change the moment the human types, not at
+  // the next full render — "show generated vs. edited state" is the whole point
+  // of tracking it. So the header repaints itself in place.
+  function paintHead(){
+    hd.innerHTML='';
+    ct=null;
+    var st=aiState(S.draft,f.p);
+    wrap.className='fld'+(st==='draft'?' fld--ai':'');
+
+    var lab=el('label',null,f.l+(f.req?' *':'')); lab.htmlFor=id;
+    hd.appendChild(lab);
+
+    if(st==='draft'){
+      hd.appendChild(el('span','badge badge--ai','AI draft'));
+      var okb=el('button','btn','Mark reviewed'); okb.type='button';
+      okb.onclick=function(){ S.draft.ai[f.p].edited=true; paintHead(); markDirty(); };
+      hd.appendChild(okb);
+    }else if(st==='edited'){
+      hd.appendChild(el('span','badge badge--edited','AI · edited'));
+    }
+    if(f.ai){
+      var gen=el('button','btn btn--ai','✦ '+(st?'Redraft':'Draft with AI')); gen.type='button';
+      gen.onclick=function(){ openAi(f.ai,f.p); };
+      hd.appendChild(gen);
+    }
+    if(f.max){ ct=el('span','ct'); hd.appendChild(ct); paintCount(); }
+  }
+
+  function paintCount(){
+    if(!ct)return;
+    var len=String(input.value||'').length;
+    ct.textContent=len+'/'+f.max;
+    ct.className='ct'+(len>f.max?' over':'');
+  }
+
+  function sync(){
+    set(S.draft,f.p,readInput(f,input));
+    var meta=S.draft.ai&&S.draft.ai[f.p];
+    if(meta&&!meta.edited){ meta.edited=true; paintHead(); }
+    paintCount();
+    if(/^identity\.|^assets\.heroPhoto$|^content\.neighborhoods$/.test(f.p))repaintHero();
+    markDirty();
+  }
+  input.addEventListener('input',sync);
+  input.addEventListener('change',sync);
+
+  paintHead();
+  wrap.appendChild(hd);
+  wrap.appendChild(input);
+  if(f.help)wrap.appendChild(el('div','help',f.help));
+
+  var fl=S.lastFlags[f.p];
+  if(fl&&fl.length){
+    var box=el('div','flags');
+    box.appendChild(el('div','fl-hd','What it left out'));
+    fl.forEach(function(x){ box.appendChild(el('p',null,x)); });
+    wrap.appendChild(box);
+  }
+  return wrap;
+}
+
+function makeInput(f,id,val){
+  var n;
+  if(f.t==='textarea'){ n=el('textarea'); n.value=val==null?'':String(val); }
+  else if(f.t==='select'){
+    n=el('select');
+    (f.opts||[]).forEach(function(o){
+      var op=el('option',null,o[1]); op.value=o[0]; n.appendChild(op);
+    });
+    n.value=val||(f.opts&&f.opts[0][0])||'';
+  }
+  else if(f.t==='tags'){ n=el('input'); n.type='text'; n.value=(val||[]).join(', '); }
+  else if(f.t==='int'){ n=el('input'); n.type='number'; n.min='0'; n.value=(val===null||val===undefined)?'':String(val); }
+  else if(f.t==='date'){ n=el('input'); n.type='date'; n.value=val||''; }
+  else { n=el('input'); n.type=f.t==='url'?'url':'text'; n.value=val==null?'':String(val); }
+  if(id)n.id=id;
+  if(f.ph)n.placeholder=f.ph;
+  return n;
+}
+function readInput(f,n){
+  if(f.t==='tags')return n.value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  // Blank stays blank: an empty stat must not become 0 on the public page.
+  if(f.t==='int')return n.value.trim()===''?null:Math.max(0,Math.floor(Number(n.value)||0));
+  return n.value;
+}
+
+/* ───────────────────────── repeatable rows ───────────────────────── */
+function rowsEditor(spec){
+  var wrap=el('div','rows');
+  var arr=S.draft[spec.key]||(S.draft[spec.key]=[]);
+
+  arr.forEach(function(row,i){
+    var r=el('div','rrow');
+    var hd=el('div','rrow-hd');
+    hd.appendChild(el('span','rrow-n',spec.label+' '+(i+1)));
+    if(spec.key==='testimonials'&&row.source==='google')
+      hd.appendChild(el('span','badge badge--edited','Google review'));
+    var acts=el('div','rrow-acts');
+    if(spec.ai){
+      var ai=el('button','btn btn--ai','✦ Clean up'); ai.type='button';
+      ai.onclick=function(){ openAi(spec.ai,spec.key+'['+i+']',i); };
+      acts.appendChild(ai);
+    }
+    if(i>0){
+      var up=el('button','btn','↑'); up.type='button';
+      up.onclick=function(){arr.splice(i-1,0,arr.splice(i,1)[0]);markDirty();renderAgent();};
+      acts.appendChild(up);
+    }
+    var del=el('button','btn btn--danger','Remove'); del.type='button';
+    del.onclick=function(){arr.splice(i,1);markDirty();renderAgent();};
+    acts.appendChild(del);
+    hd.appendChild(acts);
+    r.appendChild(hd);
+
+    var grid=el('div','grid');
+    spec.fields.forEach(function(f){
+      var cell=el('div','fld');
+      var id='r_'+spec.key+'_'+i+'_'+f.p;
+      var lab=el('label',null,f.l); lab.htmlFor=id; cell.appendChild(lab);
+      var input=makeInput(f,id,row[f.p]);
+      function sync(){ row[f.p]=readInput(f,input); markDirty(); }
+      input.addEventListener('input',sync); input.addEventListener('change',sync);
+      cell.appendChild(input);
+      if(f.t==='textarea')cell.style.gridColumn='1/-1';
+      grid.appendChild(cell);
+    });
+    r.appendChild(grid);
+    wrap.appendChild(r);
+  });
+
+  var add=el('button','btn','+ Add '+spec.label.toLowerCase()); add.type='button';
+  add.disabled=arr.length>=spec.cap;
+  add.onclick=function(){
+    var blank={}; spec.fields.forEach(function(f){ blank[f.p]=f.t==='select'?(f.opts[0][0]):''; });
+    arr.push(blank); markDirty(); renderAgent();
+    var last=document.querySelectorAll('#sect-'+sectionIdFor(spec.key)+' .rrow');
+    if(last.length)last[last.length-1].scrollIntoView({block:'center',behavior:'smooth'});
+  };
+  wrap.appendChild(add);
+  if(!arr.length){
+    var e=el('div','sect-note','Nothing here yet — the section is left off the page entirely.');
+    wrap.insertBefore(e,add);
+  }
+  return wrap;
+}
+function sectionIdFor(key){
+  var id=''; SECTIONS.forEach(function(s){ if(s.rows&&s.rows.key===key)id=s.id; }); return id;
+}
+
+/* ───────────────────────── save / publish ───────────────────────── */
+function saveDraft(){
+  if(!S.draft||S.view!=='agent')return Promise.resolve();
+  if(S.saving)return Promise.resolve();
+  S.saving=true; paintSave('Saving…');
+  var btn=$('saveBtn'); if(btn)btn.disabled=true;
+  return api(STORE,{method:'POST',body:{action:'save',slug:S.slug,draft:S.draft,by:whoami()}})
+    .then(function(d){
+      S.saving=false; S.dirty=false; S.record=d.record;
+      if($('saveBtn'))$('saveBtn').disabled=false;
+      paintSave('Saved '+ago(d.record.updatedAt));
+      loadRoster();
+    })
+    .catch(function(e){
+      S.saving=false;
+      if($('saveBtn'))$('saveBtn').disabled=false;
+      paintSave(e.message,true);
+      throw e;
+    });
+}
+
+function publish(){
+  var missing=[];
+  if(!get(S.draft,'identity.name'))missing.push('A full name');
+  if(missing.length){ toast(missing.join(', ')+' is required before publishing.',true); return; }
+
+  var un=unreviewed(S.draft);
+  var body='This replaces what is live with the current draft'+
+    (S.buildHook?' and starts a Netlify build.':'. No build hook is configured, so you will need to rebuild by hand.');
+  var list=null;
+  if(un.length){
+    body='Some AI drafts have not been reviewed yet. Nothing auto-publishes — read them first, '+
+      'or publish anyway if you have already checked them elsewhere.';
+    list=un.map(labelFor);
+  }
+  confirmBox(un.length?'Publish with unreviewed AI drafts?':'Publish this site?',body,list,function(){
+    api(STORE,{method:'POST',body:{action:'publish',slug:S.slug,draft:S.draft,by:whoami()}})
+      .then(function(d){
+        S.record=d.record; S.draft=d.record.draft; S.dirty=false;
+        renderAgent(); loadRoster();
+        toast('Published — '+buildWord(d.build));
+      })
+      .catch(function(e){ toast(e.message,true); });
+  });
+}
+
+/* ═══════════════════════ PREVIEW ═══════════════════════
+   The point of the slice: something Kimani or the agent can look at
+   before it goes public. This renders the draft's content in the
+   public page's own section order. It is honestly NOT the finished
+   site design — the visual port off Wix is Slices 2–3 — and the
+   banner says so rather than implying otherwise. */
+
+function renderPreview(){
+  var rec=S.preview||{}, d=rec.draft;
+  $('pvBar').hidden=false; $('mainWrap').hidden=true; $('pvSurface').hidden=false;
+
+  $('pvBarTitle').textContent=rec.status==='live'
+    ? 'Preview · this agent is live' : 'Preview · draft, not published';
+  $('pvBarNote').textContent='Content preview on the current generic template. The finished agent-site '+
+    'design is the Wix port (Slices 2–3) and is not built yet, so treat this as a read of the words '+
+    'and what is missing, not of the layout.';
+
+  var acts=$('pvBarActs'); acts.innerHTML='';
+  if(!rec.readonly){
+    var back=el('a','btn','‹ Back to editing'); back.href='#/agent/'+S.slug; acts.appendChild(back);
+  }
+
+  var w=$('pvWrap'); w.innerHTML='';
+  if(!d){
+    w.appendChild(el('div','empty','Nothing to preview — that link may have been rotated, '+
+      'or the agent no longer exists.'));
+    return;
+  }
+
+  var name=get(d,'identity.displayName')||get(d,'identity.name')||'Name not set';
+  var first=String(get(d,'identity.name')||'').split(' ')[0]||'this agent';
+
+  /* hero */
+  var hero=el('div','pv-hero');
+  hero.appendChild(faceEl(get(d,'assets.heroPhoto'),get(d,'identity.name')));
+  var ht=el('div','pv-hero-txt');
+  ht.appendChild(el('div','pv-eyebrow','Casa Blanca Agent'));
+  ht.appendChild(el('h1','pv-name',name));
+  if(get(d,'identity.title'))ht.appendChild(el('div','pv-title',get(d,'identity.title')));
+  if(get(d,'identity.licenseNumber'))ht.appendChild(el('div','pv-lic','Lic. #: '+get(d,'identity.licenseNumber')));
+  var tags=(get(d,'content.neighborhoods')||[]);
+  if(tags.length){
+    var tw=el('div','pv-tags');
+    tags.forEach(function(t){ tw.appendChild(el('span','pv-tag',t)); });
+    ht.appendChild(tw);
+  }
+  if((get(d,'content.languages')||[]).length)
+    ht.appendChild(el('div','pv-title','Languages: '+get(d,'content.languages').join(' · ')));
+  hero.appendChild(ht);
+  w.appendChild(hero);
+
+  /* stats — only the ones that are actually filled in */
+  var statDefs=[['closedDeals','Deals closed',''],['avgDaysOnMarket','Avg days on market',''],
+                ['satisfactionRate','Client satisfaction','%'],['yearsExperience','Years in NYC','']];
+  var stats=statDefs.filter(function(s){var v=get(d,'stats.'+s[0]);return v!==null&&v!==undefined&&v!=='';});
+  if(stats.length){
+    var sw=el('div','pv-stats');
+    stats.forEach(function(s){
+      var c=el('div','pv-stat');
+      c.appendChild(el('b',null,String(get(d,'stats.'+s[0]))+s[2]));
+      c.appendChild(el('span',null,s[1]));
+      sw.appendChild(c);
+    });
+    w.appendChild(sw);
+  }
+
+  /* about */
+  var about=pvSection('Meet '+first);
+  if(get(d,'content.bio'))about.appendChild(el('div','pv-bio',get(d,'content.bio')));
+  else about.appendChild(el('div','pv-missing','No bio yet — this section will not render on the live page.'));
+  var spec=(get(d,'content.specialties')||[]);
+  if(spec.length){
+    var stw=el('div','pv-tags'); stw.style.marginTop='18px';
+    spec.forEach(function(x){ stw.appendChild(el('span','pv-tag',x)); });
+    about.appendChild(stw);
+  }
+  w.appendChild(about);
+
+  /* team */
+  if((d.team||[]).length){
+    var team=pvSection('Meet the team');
+    var tg=el('div','pv-contact');
+    d.team.forEach(function(m){
+      var c=el('div','pv-c');
+      c.appendChild(el('span',null,m.title||'Team'));
+      c.appendChild(el('b',null,m.name||'—'));
+      if(m.email)c.appendChild(el('div','pv-missing',m.email));
+      c.style.borderLeft='2px solid var(--accent)'; c.style.paddingLeft='14px';
+      tg.appendChild(c);
+    });
+    team.appendChild(tg);
+    w.appendChild(team);
+  }
+
+  /* deals */
+  var deals=pvSection(first+'’s past deals');
+  if((d.deals||[]).length){
+    d.deals.forEach(function(x){
+      var row=el('div','pv-deal');
+      row.appendChild(el('b',null,[x.address,x.unit].filter(Boolean).join(', ')||'—'));
+      var m=[x.sqft?x.sqft+' sq ft':'',x.price].filter(Boolean).join('  ·  ');
+      row.appendChild(el('span',null,m));
+      deals.appendChild(row);
+    });
+  }else{
+    deals.appendChild(el('div','pv-missing','No deals recorded yet. This is the page that earns the '+
+      'agent their search traffic — worth filling before publishing.'));
+  }
+  w.appendChild(deals);
+
+  /* stories */
+  if((d.testimonials||[]).length){
+    var st=pvSection('What clients say');
+    d.testimonials.forEach(function(t){
+      var q=el('div','pv-quote');
+      q.appendChild(el('p',null,t.quote||''));
+      var f=el('footer');
+      f.appendChild(el('span',null,[t.author,t.detail].filter(Boolean).join(' · ')||'Anonymous'));
+      if(t.source==='google')f.appendChild(el('span','badge badge--edited','Google review'));
+      if(t.date)f.appendChild(el('span',null,t.date));
+      q.appendChild(f);
+      st.appendChild(q);
+    });
+    w.appendChild(st);
+  }
+
+  /* contact — the shared block */
+  var ct=pvSection('Drop me a note');
+  var cg=el('div','pv-contact');
+  [['Phone',get(d,'contact.phone'),get(d,'contact.phone')?'tel:'+String(get(d,'contact.phone')).replace(/[^+\d]/g,''):''],
+   ['Email',get(d,'contact.email'),get(d,'contact.email')?'mailto:'+get(d,'contact.email'):''],
+   ['Instagram',get(d,'contact.instagram'),get(d,'contact.instagram')],
+   ['StreetEasy',get(d,'contact.streeteasy'),get(d,'contact.streeteasy')],
+   ['LinkedIn',get(d,'contact.linkedin'),get(d,'contact.linkedin')]].forEach(function(row){
+    var c=el('div','pv-c');
+    c.appendChild(el('span',null,row[0]));
+    if(row[1]){
+      var a=el('a',null,String(row[1]).replace(/^https?:\/\//,''));
+      a.href=row[2]; a.target='_blank'; a.rel='noopener'; c.appendChild(a);
+    }else c.appendChild(el('div','pv-missing','Not set'));
+    cg.appendChild(c);
+  });
+  ct.appendChild(cg);
+  if(get(d,'assets.buyersGuidePdf')){
+    var g=el('div','pv-c'); g.style.marginTop='20px';
+    g.appendChild(el('span',null,'Buyer’s guide'));
+    var ga=el('a',null,'Open the PDF'); ga.href=get(d,'assets.buyersGuidePdf');
+    ga.target='_blank'; ga.rel='noopener'; g.appendChild(ga);
+    ct.appendChild(g);
+  }
+  w.appendChild(ct);
+
+  /* seo */
+  var seo=pvSection('How this looks in search');
+  var sc=el('div','pv-c');
+  sc.appendChild(el('span',null,'Title'));
+  sc.appendChild(el('b',null,get(d,'seo.title')||'— not set, Google will pick something —'));
+  seo.appendChild(sc);
+  var sd=el('div','pv-c'); sd.style.marginTop='14px';
+  sd.appendChild(el('span',null,'Description'));
+  sd.appendChild(el('b',null,get(d,'seo.description')||'— not set —'));
+  seo.appendChild(sd);
+  w.appendChild(seo);
+
+  $('pvSurface').scrollTop=0;
+}
+function pvSection(title){
+  var s=el('section','pv-sec');
+  s.appendChild(el('h2',null,title));
+  return s;
+}
+
+/* ═══════════════════════ AI ═══════════════════════ */
+var aiCtx=null;
+function openAi(task,path,rowIdx){
+  aiCtx={task:task,path:path,row:rowIdx};
+  var meta=AI_TASKS[task];
+  $('aiTitle').textContent=meta.title;
+  $('aiBlurb').textContent=meta.blurb;
+  $('aiInputWrap').hidden=!meta.needsInput;
+  if(meta.needsInput)$('aiNotesLbl').textContent=meta.label;
+  $('aiErr').textContent='';
+  $('aiGo').disabled=false; $('aiGo').textContent='Generate draft';
+
+  if(task==='seo'&&!get(S.draft,'content.bio'))
+    $('aiErr').textContent='There is no bio on this record yet, so it will only have the name, title and neighbourhoods to work from.';
+  if(task==='specialties'&&!get(S.draft,'content.bio'))
+    $('aiErr').textContent='There is no bio to read. Write or draft the bio first.';
+
+  $('aiModal').classList.add('open');
+  if(meta.needsInput)setTimeout(function(){$('aiNotes').focus();},40);
+}
+function closeAi(){ $('aiModal').classList.remove('open'); aiCtx=null; }
+$('aiCancel').onclick=closeAi;
+$('aiModal').addEventListener('click',function(e){ if(e.target===$('aiModal'))closeAi(); });
+
+$('aiGo').onclick=function(){
+  if(!aiCtx)return;
+  var t=aiCtx.task, body={task:t};
+  if(t==='bio'){
+    body.notes=$('aiNotes').value;
+    body.name=get(S.draft,'identity.name'); body.title=get(S.draft,'identity.title');
+    body.neighborhoods=get(S.draft,'content.neighborhoods'); body.specialties=get(S.draft,'content.specialties');
+    body.languages=get(S.draft,'content.languages');
+    if(!String(body.notes||'').trim()){ $('aiErr').textContent='Paste something for it to work from first.'; return; }
+  }else if(t==='seo'){
+    body.bio=get(S.draft,'content.bio'); body.name=get(S.draft,'identity.name');
+    body.title=get(S.draft,'identity.title'); body.neighborhoods=get(S.draft,'content.neighborhoods');
+  }else if(t==='specialties'){
+    body.bio=get(S.draft,'content.bio');
+    if(!String(body.bio||'').trim()){ $('aiErr').textContent='There is no bio to read yet.'; return; }
+  }else if(t==='testimonial'){
+    var row=S.draft.testimonials[aiCtx.row];
+    body.quote=row.quote; body.source=row.source;
+    if(!String(body.quote||'').trim()){ $('aiErr').textContent='This testimonial is empty.'; return; }
+  }
+
+  $('aiGo').disabled=true; $('aiGo').textContent='Thinking…'; $('aiErr').textContent='';
+  api(COPY,{method:'POST',body:body})
+    .then(function(d){ applyAi(t,d); closeAi(); })
+    .catch(function(e){
+      $('aiGo').disabled=false; $('aiGo').textContent='Generate draft';
+      $('aiErr').textContent=e.message;
+    });
+};
+
+function applyAi(task,d){
+  var now=new Date().toISOString(), stamp={at:now,model:d.model||'',edited:false};
+  S.draft.ai=S.draft.ai||{};
+  var flags=Array.isArray(d.flags)?d.flags.filter(Boolean):[];
+
+  if(task==='bio'){
+    set(S.draft,'content.bio',d.bio||'');
+    S.draft.ai['content.bio']=stamp;
+    S.lastFlags['content.bio']=flags;
+  }else if(task==='seo'){
+    set(S.draft,'seo.title',d.title||'');
+    set(S.draft,'seo.description',d.description||'');
+    S.draft.ai['seo.title']=stamp;
+    S.draft.ai['seo.description']={at:now,model:d.model||'',edited:false};
+    S.lastFlags['seo.title']=flags;
+  }else if(task==='specialties'){
+    set(S.draft,'content.specialties',Array.isArray(d.specialties)?d.specialties:[]);
+    S.draft.ai['content.specialties']=stamp;
+    S.lastFlags['content.specialties']=(d.specialties&&d.specialties.length)?flags
+      :flags.concat(['Nothing in the bio supported a specialty, so the list was left empty.']);
+  }else if(task==='testimonial'){
+    var row=S.draft.testimonials[aiCtx.row];
+    if(row){ row.quote=d.quote||row.quote; }
+    toast(d.changed?'Cleaned up. Check it still sounds like them.':'Already clean — nothing changed.');
+  }
+  markDirty();
+  renderAgent();
+  if(task!=='testimonial'){
+    toast(flags.length?'Draft ready — read the notes about what it left out.':'Draft ready — yours to edit.');
+    var n=document.getElementById('f_'+(task==='seo'?'seo_title':task==='specialties'?'content_specialties':'content_bio'));
+    if(n)n.scrollIntoView({block:'center',behavior:'smooth'});
+  }
+}
+
+/* ═══════════════════════ modals ═══════════════════════ */
+function openToken(msg){
+  $('tokenErr').textContent=msg||'';
+  $('tokenInput').value='';
+  $('tokenModal').classList.add('open');
+  setTimeout(function(){$('tokenInput').focus();},40);
+}
+function tryToken(){
+  var v=$('tokenInput').value.trim();
+  if(!v){ $('tokenErr').textContent='Paste the token first.'; return; }
+  setTok(v);
+  $('tokenGo').disabled=true; $('tokenErr').textContent='Checking…';
+  api(STORE).then(function(d){
+    $('tokenGo').disabled=false;
+    $('tokenModal').classList.remove('open');
+    S.roster=d.roster||[]; S.buildHook=!!d.buildHook;
+    paintAcct(); route();
+  }).catch(function(e){
+    $('tokenGo').disabled=false;
+    if(e.message!=='unauthorized')$('tokenErr').textContent=e.message;
+  });
+}
+$('tokenGo').onclick=tryToken;
+$('tokenInput').addEventListener('keydown',function(e){ if(e.key==='Enter')tryToken(); });
+
+$('acctBtn').onclick=function(){
+  if(tok()){ setTok(''); paintAcct(); toast('Locked. The token is gone from this tab.'); openToken(); }
+  else openToken();
+};
+function paintAcct(){
+  var on=!!tok(), t=$('acctTile'), n=$('acctName');
+  t.hidden=!on; t.textContent='CB';
+  n.textContent=on?'Unlocked':'Locked';
+  $('acctBtn').title=on?'Locked to this tab — click to clear the token':'Enter the CMS token';
+}
+
+function openNew(){
+  $('newName').value=''; $('newSlug').value=''; $('newErr').textContent='';
+  $('newModal').classList.add('open');
+  setTimeout(function(){$('newName').focus();},40);
+}
+$('newCancel').onclick=function(){ $('newModal').classList.remove('open'); };
+$('newModal').addEventListener('click',function(e){ if(e.target===$('newModal'))$('newModal').classList.remove('open'); });
+$('newName').addEventListener('input',function(){
+  if(!$('newSlug').dataset.touched)$('newSlug').value=slugify($('newName').value);
+});
+$('newSlug').addEventListener('input',function(){ $('newSlug').dataset.touched='1'; });
+$('newGo').onclick=function(){
+  var name=$('newName').value.trim(), slug=slugify($('newSlug').value||name);
+  if(!name){ $('newErr').textContent='A name is required.'; return; }
+  if(!slug){ $('newErr').textContent='That slug has no usable characters.'; return; }
+  var draft=blankDraft(); set(draft,'identity.name',name);
+  set(draft,'identity.title','Licensed Real Estate Salesperson');
+  $('newGo').disabled=true; $('newErr').textContent='Creating…';
+  api(STORE,{method:'POST',body:{action:'create',slug:slug,draft:draft,by:whoami()}})
+    .then(function(){
+      $('newGo').disabled=false; $('newModal').classList.remove('open');
+      return loadRoster().then(function(){ location.hash='#/agent/'+slug; });
+    })
+    .catch(function(e){ $('newGo').disabled=false; $('newErr').textContent=e.message; });
+};
+
+var cfFn=null;
+function confirmBox(title,body,listItems,fn){
+  $('cfTitle').textContent=title; $('cfBody').textContent=body;
+  var ul=$('cfList'); ul.innerHTML='';
+  if(listItems&&listItems.length){
+    listItems.forEach(function(x){ ul.appendChild(el('li',null,x)); });
+    ul.hidden=false;
+  }else ul.hidden=true;
+  cfFn=fn; $('confirmModal').classList.add('open');
+}
+$('cfCancel').onclick=function(){ $('confirmModal').classList.remove('open'); cfFn=null; };
+$('confirmModal').addEventListener('click',function(e){
+  if(e.target===$('confirmModal')){ $('confirmModal').classList.remove('open'); cfFn=null; }
+});
+$('cfGo').onclick=function(){ var f=cfFn; $('confirmModal').classList.remove('open'); cfFn=null; if(f)f(); };
+
+function openJson(){
+  $('jsonText').value=JSON.stringify(S.draft,null,2);
+  $('jsonErr').textContent='';
+  $('jsonModal').classList.add('open');
+}
+$('jsonClose').onclick=function(){ $('jsonModal').classList.remove('open'); };
+$('jsonModal').addEventListener('click',function(e){ if(e.target===$('jsonModal'))$('jsonModal').classList.remove('open'); });
+$('jsonCopy').onclick=function(){ copy($('jsonText').value,'Record JSON copied.'); };
+$('jsonApply').onclick=function(){
+  var parsed;
+  try{ parsed=JSON.parse($('jsonText').value); }
+  catch(e){ $('jsonErr').textContent='That isn’t valid JSON: '+e.message; return; }
+  if(!parsed||typeof parsed!=='object'){ $('jsonErr').textContent='Expected a JSON object.'; return; }
+  S.draft=parsed; markDirty(); $('jsonModal').classList.remove('open'); renderAgent();
+  toast('Applied to the draft. The server drops anything not in the schema on save.');
+};
+
+function copy(text,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){toast(msg);},function(){fallbackCopy(text,msg);});
+  }else fallbackCopy(text,msg);
+}
+function fallbackCopy(text,msg){
+  var ta=el('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast(msg); }catch(e){ toast('Could not copy — select it by hand.',true); }
+  document.body.removeChild(ta);
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  ['newModal','aiModal','confirmModal','jsonModal'].forEach(function(id){ $(id).classList.remove('open'); });
+});
+
+/* ═══════════════════════ feedback (shared widget) ═══════════════════════ */
+var fb=$('feedbackBtn');
+fb.setAttribute('data-cb-feedback-trigger','1');
+fb.onclick=function(){
+  if(window.CBFeedback){ window.CBFeedback.toggle(); return; }
+  var pill=document.querySelector('.cb-fb-btn'); if(pill)pill.click();
+};
+
+/* ═══════════════════════ routing ═══════════════════════ */
+function loadRoster(){
+  return api(STORE).then(function(d){
+    S.roster=d.roster||[]; S.buildHook=!!d.buildHook;
+    if(S.view==='roster')render();
+  }).catch(function(e){
+    if(e.message!=='unauthorized')toast(e.message,true);
+  });
+}
+
+function parseHash(){
+  var h=location.hash.replace(/^#/,'');
+  var qs=''; var qi=h.indexOf('?');
+  if(qi>=0){ qs=h.slice(qi+1); h=h.slice(0,qi); }
+  var parts=h.split('/').filter(Boolean);
+  var params={};
+  qs.split('&').forEach(function(kv){
+    if(!kv)return; var i=kv.indexOf('=');
+    params[decodeURIComponent(i<0?kv:kv.slice(0,i))]=i<0?'':decodeURIComponent(kv.slice(i+1));
+  });
+  return {parts:parts,params:params};
+}
+
+function route(){
+  var r=parseHash(), a=r.parts[0]||'', slug=r.parts[1]||'';
+
+  // A preview link carries its own read-only token in the fragment — which
+  // browsers never send to a server, so it stays out of logs and referrers.
+  // It reads one agent and nothing else, so it needs no CMS token.
+  if(a==='preview'&&slug){
+    var t=r.params.t||'';
+    S.view='preview'; S.slug=slug;
+    if(t){
+      api(STORE+'?slug='+encodeURIComponent(slug)+'&preview='+encodeURIComponent(t),{auth:false})
+        .then(function(d){ S.preview={draft:d.draft,status:d.status,readonly:true}; render(); })
+        .catch(function(e){ S.preview=null; render(); toast(e.message,true); });
+      return;
+    }
+    if(!tok()){ openToken(); return; }
+    api(STORE+'?slug='+encodeURIComponent(slug))
+      .then(function(d){ S.record=d.record; S.preview={draft:d.record.draft,status:d.record.status,readonly:false}; render(); })
+      .catch(function(e){ if(e.message!=='unauthorized')toast(e.message,true); });
+    return;
+  }
+
+  if(!tok()){ openToken(); return; }
+
+  if(a==='agent'&&slug){
+    if(S.view==='agent'&&S.slug===slug&&S.draft){ render(); return; }
+    S.view='agent'; S.slug=slug; S.lastFlags={};
+    api(STORE+'?slug='+encodeURIComponent(slug))
+      .then(function(d){
+        S.record=d.record; S.draft=d.record.draft||blankDraft(); S.draft.ai=S.draft.ai||{};
+        S.dirty=false; render();
+      })
+      .catch(function(e){
+        if(e.message==='unauthorized')return;
+        toast(e.message,true); location.hash='#/';
+      });
+    return;
+  }
+
+  S.view='roster'; S.slug=''; S.record=null; S.draft=null; S.preview=null;
+  render(); loadRoster();
+}
+
+function render(){
+  // The search box only drives the roster; hide it where it would do nothing.
+  document.querySelector('.search').hidden=S.view!=='roster';
+  $('pvBar').hidden=S.view!=='preview';
+  $('pvSurface').hidden=S.view!=='preview';
+  $('mainWrap').hidden=S.view==='preview';
+  if(S.view==='preview'){ renderPreview(); return; }
+  if(S.view==='agent'&&S.draft){ renderAgent(); return; }
+  renderRoster();
+}
+
+// Leaving an agent flushes the draft first. If that save FAILS, navigating on
+// anyway would drop the edits silently — beforeunload doesn't fire on a hash
+// change — so stay put and say so instead.
+var suppressHash=false;
+window.addEventListener('hashchange',function(){
+  if(suppressHash){ suppressHash=false; return; }
+  if(S.dirty&&S.view==='agent'){
+    var here='#/agent/'+S.slug;
+    clearTimeout(S.saveTimer);
+    saveDraft().then(route,function(){
+      toast('Could not save — staying on this agent so nothing is lost.',true);
+      if(location.hash!==here){ suppressHash=true; location.hash=here; }
+    });
+    return;
+  }
+  route();
+});
+$('rosterSearch').addEventListener('input',function(){
+  S.q=this.value;
+  if(S.view==='roster')renderRoster();
+});
+
+/* ═══════════════════════ boot ═══════════════════════ */
+paintTheme();
+paintAcct();
+route();
+
+})();
+</script>
+</body>
+</html>

@@ -33,6 +33,7 @@ file points you there by section when you need it.
 | `css/`, `js/` | Shared front-end (`main.css`, `animations.css`, `nav.js`, `scroll.js`) |
 | `docs/design/` | Design briefs per surface — start at `docs/design/README.md` |
 | `docs/context/` | Company + project context — start with `casa-blanca.md`, not the full file; `agent-site-template.md` for the Wix agent-site port |
+| `docs/agent-cms/` | The agent CMS (Dispatch 03) — start at its `README.md`; carries the storage and security decisions |
 | `docs/dispatch/` | Scoped briefs handed to dedicated sessions |
 
 ## Session roles
