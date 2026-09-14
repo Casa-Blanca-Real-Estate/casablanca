@@ -21,6 +21,18 @@ The build also runs on every Netlify deploy (`netlify.toml` → `[build] command
 failure fails the whole deploy**, tools included — which is why `.github/workflows/agents-build.yml`
 runs `--check` and the tests on every PR that touches `agents/`.
 
+### Two hosts, one of which never runs the build
+
+The repo is served from **Netlify** (`casa-blanca-creative-studio.netlify.app`, which runs the
+build) **and from GitHub Pages** (`kjcamron.github.io/casablanca/`, which serves the repo as-is
+and runs nothing). So:
+
+- **Generated output is committed**, and the CI check asserts a fresh build reproduces it byte for
+  byte. Commit `agents/<slug>/index.html`, `agents/index.html` and `_redirects` with the data
+  change that caused them, or Pages serves stale pages.
+- **`_redirects` is Netlify-only.** On Pages a `suspended` or `archived` agent's URL 404s instead
+  of redirecting. The page still comes down either way, which is the part that matters.
+
 ---
 
 ## Scale this is designed for
