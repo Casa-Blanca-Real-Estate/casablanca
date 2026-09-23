@@ -4,6 +4,10 @@ Internal browser-based tools for Casa Blanca, a boutique NYC residential brokera
 Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/tools person,
 3 days a week, working in blocks across several tracks).
 
+**Current priority (from 2026-09-23): the comp report tool** — planning in
+`docs/comp-report/`, starting from `00-orientation.md`. Everything that was in flight before it
+is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`.
+
 **Read `docs/context/casa-blanca.md` before substantive work.** It's the condensed working
 reference: who the company is, the hard constraints, the brand tokens, the stack and its gotchas,
 current tool state, and ways of working. Tool state drifts — confirm anything load-bearing with
@@ -21,6 +25,13 @@ file points you there by section when you need it.
 - Image proxying genuinely needs the server (canvas taint) — cannot go client-side.
 - Fork the working reference template rather than clean-room rewriting. Patch surgically,
   validate each step. No big-bang rewrites.
+- **`publish = "."` serves the entire repo root to the public web.** Anything internal-only must
+  be on the forced-404 list in `netlify.toml` — `docs/`, `netlify/`, `agents/data/` and the build
+  and config files already are. A new top-level folder of notes, data or source is public until
+  you add it there. Check with `curl` against the live site after deploy.
+- **The comp report tool will need accounts and data retention** — a deliberate exception to
+  "no accounts", being scoped in `docs/comp-report/`. Until its design doc lands, the rule
+  stands for every other tool.
 
 ## Layout
 
@@ -35,6 +46,8 @@ file points you there by section when you need it.
 | `docs/context/` | Company + project context — start with `casa-blanca.md`, not the full file; `agent-site-template.md` for the Wix agent-site port |
 | `docs/agent-cms/` | The agent CMS (Dispatch 03) — start at its `README.md`; carries the storage and security decisions |
 | `docs/dispatch/` | Scoped briefs handed to dedicated sessions |
+| `docs/comp-report/` | The comp report tool — orientation, sources (kickoff transcripts, the reference StreetEasy export), and the master design doc when it's written |
+| `docs/parked/` | Work paused for a priority change, with the state it was left in and how to resume |
 
 ## Session roles
 
@@ -47,14 +60,15 @@ Work is split across Claude Code sessions with defined ownership.
 
 Open dispatches:
 
-| # | Brief | Owner |
+| # | Brief | State |
 |---|---|---|
-| 01 | [Profile Pic Generator — cutout quality + torso outpainting](docs/dispatch/01-profile-pic-cutout-and-outpaint.md) | unassigned |
-| 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | unassigned |
-| 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | unassigned |
+| 01 | [Profile Pic Generator — cutout quality + torso outpainting](docs/dispatch/01-profile-pic-cutout-and-outpaint.md) | **Parked.** Stack #41–#45 open; #41 has changes requested |
+| 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | Done — merged #46 |
+| 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | Done — merged #47 |
 
-The agent-site port runs in slices; 02 and 04 are the two that need none of the Wix design work.
-Slices 2–3 (the visual port) wait on the template capture in `agent-site-template.md` §5.
+The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
+the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and
+Google reviews) is unblocked but not dispatched. All parked — see `docs/parked/`.
 
 ## Conventions
 
