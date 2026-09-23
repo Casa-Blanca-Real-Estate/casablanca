@@ -1,6 +1,6 @@
 # Comp report tool — orientation
 
-**Status:** pre-design. This is the record of what we know on 2026-09-23 — requirements from the
+**Status:** pre-design. This is the record of what we know as of 2026-09-23 — requirements from the
 kickoff, what the input data actually looks like, NYC practice, and the questions still open.
 The master design doc gets written from this once the questions are settled. Nothing here is a
 decision yet unless it says so.
@@ -231,19 +231,79 @@ unless an agent runs dozens of reports a month. Model tier is Kimani's call; the
 top tier is that Hannah is judging this against ChatGPT's output, and principle 1 takes the
 arithmetic off the model regardless.
 
-## 7. Open questions
+## 7. Decisions — Kimani, 2026-09-23
 
-Tracked in the kickoff conversation of 2026-09-23; answers get folded back into this file.
+1. **Audience: all agents**, with a smaller test group of agents throughout the build before the
+   proper release.
+2. **Auth: Google sign-in restricted to Casa's Workspace domain, plus a regular sign-in** for an
+   authorised allowlist of non-Casa emails.
+3. **Condos first, co-ops after** the full shape is proven. Kimani's point, which stands: the
+   condo analysis already has to account for every factor a co-op analysis runs on — floor,
+   building, condition, charges — so co-ops are the same scaffolding with square footage removed,
+   not a second engine. **Design consequence:** $/sqft must be one benchmark among the factors,
+   never the thing the rest of the model hangs off.
+4. **Departing agents' reports are kept** for now; exporting them to the agent is a later call.
+5. **More inputs requested** from Noble and a regular-account agent: standard-tier exports, a
+   co-op export, reports made without AI, and Noble's examples of a perfect and a bad report,
+   with his reasoning for each.
+6. **Hannah's StreetEasy PDF** failed to upload twice; it goes into `sources/` directly. Her
+   ChatGPT account's audit of her own comp workflow arrived instead — see §8.
+7. **Buyer vs. seller:** Hannah says there's no meaningful difference in the comp itself.
+   Revisit if a reason appears. (The *communication* still varies by audience — see §8.)
+8. **StreetEasy data in Casa-branded reports: cleared.**
+9. **Subject property capture: both** — prefill from a StreetEasy URL, and manual entry.
+10. **Noble owns the house method — after a working prototype exists**, so he's reacting to
+    something real. He'll also shape onboarding, help, hints and tips.
 
-1. Launch audience — all ~200 agents, or a pilot group first?
-2. Is Casa on Google Workspace, with agents on `@casa-blanca.com` Google accounts?
-3. Which StreetEasy exports do ordinary agents have — does their Comp Report CSV match Hannah's?
-   Can Noble's plain-search method export? More sample exports needed, including a co-op.
-4. Hannah's StreetEasy PDF and her actual ChatGPT output / client email — the quality bar.
-5. Co-ops in v1, or condos first?
-6. Audience of the output — buyers, sellers, both, and preemptive "information sharing" comps?
-7. When an agent leaves, what happens to their saved reports?
-8. Does StreetEasy's agreement with Casa permit re-presenting its data in Casa-branded reports?
-9. How is the subject property captured — StreetEasy URL prefill via the existing Firecrawl
-   integration, manual entry, or both?
-10. Should Noble own the house comp method the assistant is taught?
+**Raised by Kimani, under discussion:** a client-viewable web page per report as a premium
+deliverable alongside the PDF; and an agentic assistant whose tools let it change analysis
+parameters case by case, wrapped around the deterministic engine.
+
+## 8. The ChatGPT workflow audit — what we take, what we don't
+
+`sources/2026-09-23-chatgpt-workflow-audit.md`, generated from Hannah's own ChatGPT history.
+
+**Take — these are right, and several sharpen the draft principles in §5:**
+
+- **The job is answering a transaction question, not "analyse the comps."** Is $X supported?
+  What's it worth against the closest five? The report opens with a brief: property, question,
+  audience, method, goal, output. The audit's six-field prompt structure becomes UI.
+- **Neutral valuation first, then the argument.** "Help me show $11.5M is a good price" invites
+  reverse-engineering every assumption. The target price is compared *against* an independently
+  computed value, never fed into it. Reconciles with Hannah's "agent states their range first":
+  the agent commits a hypothesis, the valuation is computed without it, then the gap is shown.
+- **Assumption errors outnumber arithmetic errors.** Assumptions are a structured, locked,
+  versioned layer — never conversational context. A revision makes v2; it never overwrites.
+- **Several benchmarks, one explicit rule:** median, mean, weighted mean, and the single most
+  comparable sale, each with its implied subject value, and a stated rule for which one leads.
+- **Inclusion tiers with reasons:** primary / secondary / excluded, each with a reason — the
+  comp universe shouldn't be rediscovered every session.
+- **Provenance and freshness on every figure:** source and as-of date, stale values flagged.
+- **Two output layers:** an analyst view and a send-to-client view, from the same numbers.
+- **Facts → locked assumptions → calculations → QA → narrative.** Narrative last.
+
+**Don't take as-is:**
+
+- **The scope.** It describes Hannah's workload — "comp analyst + valuation modeler +
+  transaction strategist + financial modeler + copywriter," rent-to-own structures with rent
+  credits and 14-month closings. That's the ceiling of what the most sophisticated user in the
+  company does, not the floor for ~200 agents whose need is the six-hours-to-twenty-minutes comp.
+  **Offer-scenario and carry modelling is a later module.** The data model should admit it
+  (immutable versioned scenarios are the right pattern regardless), but v1 doesn't build it.
+- **Its luxury skew.** Scarcity premiums, parking contributions and $2–3M terrace adjustments
+  dominate its examples. The model has to work for a Brooklyn one-bedroom first; luxury
+  adjustments are optional layers.
+- **Its adjustment numbers.** The outdoor weighting bands (balcony 15–25%, terrace 25–35%,
+  exceptional 35–50%) are plausible but unsourced — ChatGPT's defaults, and the audit's own
+  complaint is that ChatGPT picks these inconsistently. They're placeholder house defaults until
+  Noble sets them.
+- **A similarity score as the selector.** Scoring is useful for ranking and flagging, but Noble's
+  point is that bad comps aren't a filtering problem and Hannah's is that a human has to look.
+  The score sorts and warns; the agent decides.
+- **Inputs the export doesn't carry.** Its scoring formula assumes outdoor square footage,
+  condition, distance and parking type. The StreetEasy CSV has none of them as fields — outdoor
+  space appears only as a "Terrace" or "Balcony" feature with no size, parking only as an
+  amenity, and there are no coordinates. These must be agent-entered, looked up from the listing,
+  or marked as estimated.
+- **Excel as a client deliverable.** Hannah was explicit that clients don't want the
+  spreadsheet. An analyst-view export at most.

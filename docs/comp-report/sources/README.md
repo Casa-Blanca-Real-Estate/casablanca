@@ -7,10 +7,12 @@ Raw inputs from the 2026-09-23 kickoff. Read these for the original voice; read
 |---|---|
 | `2026-09-23-hannah-briefing.txt` | Hannah (CEO) walking Kimani through her current comp process live, on 100 Barclay St #17L. Noble and Karen come up as the people who teach agents comps. The last few minutes drift to unrelated topics (Ian's listing-site tool). |
 | `2026-09-23-noble-call.txt` | Kimani with Noble, who teaches comps to Casa Blanca agents: how agents search, where StreetEasy's comps tool fails, and the v1 scope call. |
+| `2026-09-23-chatgpt-workflow-audit.md` | Hannah's own ChatGPT account, asked by Kimani to audit how she has used it for comps. Written by ChatGPT about its user, so the tone flatters; the diagnosis of where its answers went inconsistent is the valuable part. Its examples skew to her luxury deals (60 Collister at $11.5M, a ~$28M Tribeca combination). Assessed in `../00-orientation.md` §8. |
 | `streeteasy-comp-export-100-barclay-17l-2026-09-23.csv` | The StreetEasy Comp Report CSV Hannah exported during the briefing. 11 comps, 31 columns. **This is the parser's reference fixture** — its quirks are documented in `../00-orientation.md` §3. |
 
-Hannah also generated a StreetEasy-branded comp report PDF during the briefing. **It has not
-been received yet** — it's the visual reference for what agents currently send clients.
+Hannah also generated a StreetEasy-branded comp report PDF during the briefing — the visual
+reference for what agents currently send clients. **Two chat uploads failed to deliver it**, so
+it's to be committed here directly as `streeteasy-comp-report-100-barclay-17l-2026-09-23.pdf`.
 
 ## Reading the transcripts
 
