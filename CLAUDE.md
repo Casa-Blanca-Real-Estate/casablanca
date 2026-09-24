@@ -4,8 +4,9 @@ Internal browser-based tools for Casa Blanca, a boutique NYC residential brokera
 Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/tools person,
 3 days a week, working in blocks across several tracks).
 
-**Current priority (from 2026-09-23): the comp report tool** — planning in
-`docs/comp-report/`, starting from `00-orientation.md`. Everything that was in flight before it
+**Current priority (from 2026-09-23): the comp report tool.** The master design is
+`docs/comp-report/01-design.md` — every comp report dispatch builds from it; `00-orientation.md`
+holds the research and sources behind it. Everything that was in flight before it
 is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`.
 
 **Read `docs/context/casa-blanca.md` before substantive work.** It's the condensed working
@@ -29,9 +30,10 @@ file points you there by section when you need it.
   be on the forced-404 list in `netlify.toml` — `docs/`, `netlify/`, `agents/data/` and the build
   and config files already are. A new top-level folder of notes, data or source is public until
   you add it there. Check with `curl` against the live site after deploy.
-- **The comp report tool will need accounts and data retention** — a deliberate exception to
-  "no accounts", being scoped in `docs/comp-report/`. Until its design doc lands, the rule
-  stands for every other tool.
+- **The comp report tool is a scoped exception to two rules:** it's React + Vite + TypeScript
+  (source in `tools-src/comp-report/`, built to `tools/comp-report/`), and it has accounts
+  (Netlify Identity) and retained data (Netlify Database). See `docs/comp-report/01-design.md`.
+  Single-file HTML and no accounts still hold for every other tool.
 
 ## Layout
 
@@ -46,7 +48,7 @@ file points you there by section when you need it.
 | `docs/context/` | Company + project context — start with `casa-blanca.md`, not the full file; `agent-site-template.md` for the Wix agent-site port |
 | `docs/agent-cms/` | The agent CMS (Dispatch 03) — start at its `README.md`; carries the storage and security decisions |
 | `docs/dispatch/` | Scoped briefs handed to dedicated sessions |
-| `docs/comp-report/` | The comp report tool — orientation, sources (kickoff transcripts, the reference StreetEasy export), and the master design doc when it's written |
+| `docs/comp-report/` | The comp report tool — `01-design.md` (the master design), `00-orientation.md` (research, requirements), `sources/` (kickoff transcripts, the reference StreetEasy export, the ChatGPT workflow audit) |
 | `docs/parked/` | Work paused for a priority change, with the state it was left in and how to resume |
 
 ## Session roles

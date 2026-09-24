@@ -1,6 +1,7 @@
 # Comp report tool — orientation
 
-**Status:** pre-design. This is the record of what we know as of 2026-09-23 — requirements from the
+**Status:** superseded for decisions by `01-design.md` (2026-09-24), which is what dispatches build
+from. This remains the record of the research and requirements behind it — what we knew as of 2026-09-23 — requirements from the
 kickoff, what the input data actually looks like, NYC practice, and the questions still open.
 The master design doc gets written from this once the questions are settled. Nothing here is a
 decision yet unless it says so.
