@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { devApi } from './dev/api-plugin.ts';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Comp report tool — the Vite build.
@@ -82,7 +83,7 @@ export default defineConfig({
   base: '/tools/comp-report/',
   // No public/ directory: shared brand files are referenced by absolute path.
   publicDir: false,
-  plugins: [react(), studioShared(), buildInfo()],
+  plugins: [react(), studioShared(), devApi(), buildInfo()],
   build: {
     outDir,
     emptyOutDir: true,
