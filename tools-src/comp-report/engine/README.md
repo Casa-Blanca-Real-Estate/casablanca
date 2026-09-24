@@ -91,8 +91,9 @@ out.results.on_facts.base;       // { value: 4225352, unit: 'usd', confidence: '
 - **Imports.** Import from `engine/index.ts`. Relative imports carry their `.ts` extension and the
   house method is a JSON module (`with { type: 'json' }`), so Node runs the files directly and Vite
   and esbuild bundle them unchanged — checked with Vite 8.3 and esbuild 0.25. A TypeScript config
-  that type-checks the engine needs `allowImportingTsExtensions` (with `noEmit`), `resolveJsonModule`
-  and `module` `esnext`, `nodenext` or `preserve`; see `tsconfig.json` here.
+  that type-checks the engine needs `allowImportingTsExtensions` (with `noEmit`) and JSON modules,
+  which `moduleResolution: "bundler"` turns on; the comp report's own `tsconfig.json` (CR-1) takes it
+  as it is — checked with TypeScript 7.0.
 - **No dependencies.** The engine imports nothing outside this folder — not even for XLSX, which it
   reads with its own small ZIP, DEFLATE and XML readers.
 - **Tests:** `npm run test:engine` (Node's built-in runner, no build step). **Type check:**
@@ -491,8 +492,9 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
   serialise in code-unit order; strings never compare by locale. The engine uses only +, −, ×, ÷,
   comparisons and rounding — operations IEEE 754 pins exactly. `Math.pow`, `**`, `exp` and `log` are
   left to each JavaScript engine to approximate, so they're not used (integer powers are by
-  repeated squaring). A purity test reads the engine's syntax tree and fails on any clock, network,
-  DOM, randomness, locale or engine-dependent maths, or any import from outside this folder.
+  repeated squaring). A purity test reads the engine's source — Node strips the types, a small
+  lexer sets comments, strings and regular expressions aside — and fails on any clock, network, DOM,
+  randomness, locale or engine-dependent maths, or any import from outside this folder.
 - Money rounds half away from zero, once per line or figure.
 
 ---
