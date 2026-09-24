@@ -196,6 +196,15 @@ test('an unrecognised status is kept, warned, and kept out of every statistic', 
   assert.equal(out.results.on_facts.evidence.sold.counts.total, 4);
 });
 
+test('title lines above the headers are skipped, not mistaken for them', () => {
+  const titled = 'Comps for 100 Barclay Street #17L\nPrepared 9/23/2026\n\n' + fixtureText(HANNAH_CSV);
+  const parsed = parse(titled);
+  assert.deepEqual(parsed.comps.map((c) => c.identity.key), original.comps.map((c) => c.identity.key));
+  assert.deepEqual(parsed.comps.map((c) => c.facts), original.comps.map((c) => c.facts));
+  assert.deepEqual(parsed.columns.unknown, []);
+  assert.ok(parsed.warnings.some((w) => w.code === 'file_note' && /skipped 2 lines above the column headers/.test(w.message)));
+});
+
 test('empty and header-only files, and a bad export date', () => {
   assert.throws(() => parse(''), ParseError);
   assert.throws(() => parse('\n\n'), ParseError);

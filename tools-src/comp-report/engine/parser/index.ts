@@ -108,8 +108,12 @@ function build(
 ): ParsedExport {
   if (!isIsoDate(options.as_of)) throw new ParseError(`as_of must be an ISO date (YYYY-MM-DD), got ${JSON.stringify(options.as_of)}`);
   const warnings: ParseWarning[] = fileNotes.map((message) => ({ code: 'file_note' as const, message }));
-  const headerIndex = rows.findIndex((r) => r.some((c) => !isBlank(c)));
+  const headerIndex = findHeaderRow(rows);
   if (headerIndex < 0) throw new ParseError('the file is empty');
+  const skipped = rows.slice(0, headerIndex).filter((r) => r.some((c) => !isBlank(c))).length;
+  if (skipped > 0) {
+    warnings.push({ code: 'file_note', message: `skipped ${skipped} line${skipped === 1 ? '' : 's'} above the column headers` });
+  }
   const headers = rows[headerIndex]!.map((c) => cellText(c));
   const dataRows = rows.slice(headerIndex + 1);
   const mapping = mapColumns(headers);
@@ -151,6 +155,21 @@ function build(
     comps,
     warnings,
   };
+}
+
+/**
+ * The header row: among the first rows, the one naming the most known columns
+ * — so a title line above the headers doesn't turn every column unknown.
+ * Without two recognisable headers anywhere, the first non-blank row.
+ */
+function findHeaderRow(rows: Cell[][]): number {
+  let best = -1;
+  let bestCount = 1;
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const count = mapColumns(rows[i]!.map((c) => cellText(c))).mapped.length;
+    if (count > bestCount) { best = i; bestCount = count; }
+  }
+  return best >= 0 ? best : rows.findIndex((r) => r.some((c) => !isBlank(c)));
 }
 
 function reportColumns(mapping: ColumnMapping, warnings: ParseWarning[]): void {
