@@ -9,6 +9,9 @@ Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/t
 holds the research and sources behind it. Everything that was in flight before it
 is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`.
 
+**Pending decisions for Kimani, across every track, are in `docs/decisions.md`** — each with its
+context and a field to answer in. Don't guess at an open decision; check there first.
+
 **Read `docs/context/casa-blanca.md` before substantive work.** It's the condensed working
 reference: who the company is, the hard constraints, the brand tokens, the stack and its gotchas,
 current tool state, and ways of working. Tool state drifts — confirm anything load-bearing with
@@ -47,26 +50,30 @@ file points you there by section when you need it.
 | `docs/design/` | Design briefs per surface — start at `docs/design/README.md` |
 | `docs/context/` | Company + project context — start with `casa-blanca.md`, not the full file; `agent-site-template.md` for the Wix agent-site port |
 | `docs/agent-cms/` | The agent CMS (Dispatch 03) — start at its `README.md`; carries the storage and security decisions |
-| `docs/dispatch/` | Scoped briefs handed to dedicated sessions |
+| `docs/dispatch/` | Scoped briefs handed to dedicated sessions — `README.md` has the protocol and the session roster |
+| `docs/decisions.md` | Pending decisions for Kimani, with context and answer fields |
 | `docs/comp-report/` | The comp report tool — `01-design.md` (the master design), `00-orientation.md` (research, requirements), `sources/` (kickoff transcripts, the reference StreetEasy export, the ChatGPT workflow audit) |
 | `docs/parked/` | Work paused for a priority change, with the state it was left in and how to resume |
 
 ## Session roles
 
-Work is split across Claude Code sessions with defined ownership.
+Work is split across Claude Code sessions with defined ownership. **The protocol and the session
+roster are in `docs/dispatch/README.md`** — read it before taking on a dispatch.
 
 - **Casanova** — overseer. Holds the whole picture, plans, writes dispatches, reviews and merges
   PRs, keeps repo context current. Does not take on the large builds itself.
-- **Dispatched sessions** — own one brief from `docs/dispatch/` end to end. Branch per phase,
-  PR to `claude/main`, Casanova reviews. Don't self-merge.
+- **Dispatched sessions** — own one brief from `docs/dispatch/` end to end, open a PR to
+  `claude/main` when done, and sign their work with their session name.
+  **They never merge. Only Casanova or Kimani merges**, unless Kimani tells a session otherwise.
 
-Open dispatches:
-
-| # | Brief | State |
-|---|---|---|
-| 01 | [Profile Pic Generator — cutout quality + torso outpainting](docs/dispatch/01-profile-pic-cutout-and-outpaint.md) | **Parked.** Stack #41–#45 open; #41 has changes requested |
-| 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | Done — merged #46 |
-| 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | Done — merged #47 |
+| # | Dispatch | To | State |
+|---|---|---|---|
+| 01 | [Profile Pic Generator — cutout quality + torso outpainting](docs/dispatch/01-profile-pic-cutout-and-outpaint.md) | unnamed | **Parked.** Stack #41–#45 open; #41 has changes requested |
+| 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | unnamed | Done — merged #46 |
+| 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | unnamed | Done — merged #47 |
+| 04 | [Comp report — adjustment research (CR-R)](docs/dispatch/04-comp-report-research.md) | Surveyor | Ready |
+| 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | Ready |
+| 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | Ready |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and
