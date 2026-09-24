@@ -72,7 +72,7 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | unnamed | Done — merged #46 |
 | 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | unnamed | Done — merged #47 |
 | 04 | [Comp report — adjustment research (CR-R)](docs/dispatch/04-comp-report-research.md) | Surveyor | Ready |
-| 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | In progress — phase 1 in #48 |
+| 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | In progress — #48; waiting on Kimani (Identity, plan, OAuth client) |
 | 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | Ready |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
