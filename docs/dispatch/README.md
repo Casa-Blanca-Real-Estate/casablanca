@@ -40,7 +40,7 @@ or renames them.
 | Name | Role | Dispatches | Status |
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
-| **Surveyor** *(proposed)* | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — in review, PR to `claude/main` open |
+| **Surveyor** *(proposed)* | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | In review — PR #49 open |
 | **Mason** *(proposed)* | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1) | Ready to start |
 | **Abacus** *(proposed)* | The comp report's calculation engine and parser | 06 (CR-2) | Ready to start |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
