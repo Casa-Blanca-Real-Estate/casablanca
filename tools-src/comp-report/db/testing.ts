@@ -40,6 +40,14 @@ function urlFor(base: string, user: string, database: string): string {
   return u.toString();
 }
 
+/** A pool on a test database. Dropping the database ends its connections
+ *  from the server side; listened for, that's not an uncaught exception. */
+export function testPool(connectionString: string, max = 4): pg.Pool {
+  const pool = new pg.Pool({ connectionString, max });
+  pool.on('error', () => undefined);
+  return pool;
+}
+
 export interface TestDatabase {
   name: string;
   owner: string;

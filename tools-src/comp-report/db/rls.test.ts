@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import pg from 'pg';
 import { DatabaseUnavailable, withActor, type Actor, type PoolLike, type Queryable } from '../server/db.ts';
-import { createTestDatabase, skipWithoutDatabase, type TestDatabase } from './testing.ts';
+import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
 
 const AGENT_A: Actor = { kind: 'user', email: 'ana@casa-blanca.com', role: 'agent' };
 const AGENT_B: Actor = { kind: 'user', email: 'ben@casa-blanca.com', role: 'agent' };
@@ -43,7 +43,7 @@ describe('comp_report schema — owner can create roles (Neon-like)', { skip: sk
 
   before(async () => {
     db = await createTestDatabase({ ownerCanCreateRoles: true });
-    pool = new pg.Pool({ connectionString: db.ownerUrl, max: 4 });
+    pool = testPool(db.ownerUrl, 4);
     await provision(pool, AGENT_A, AGENT_B, ADMIN, MENTOR);
   });
   after(async () => {
@@ -232,7 +232,7 @@ describe('comp_report schema — owner cannot create roles', { skip: skipWithout
 
   before(async () => {
     db = await createTestDatabase({ ownerCanCreateRoles: false });
-    pool = new pg.Pool({ connectionString: db.ownerUrl, max: 2 });
+    pool = testPool(db.ownerUrl, 2);
     await provision(pool, AGENT_A, AGENT_B);
   });
   after(async () => {
@@ -269,7 +269,7 @@ describe('withActor refuses unsafe databases', { skip: skipWithoutDatabase }, ()
     await owner.connect();
     await owner.query('grant usage on schema comp_report to cr_test_bypass');
     await owner.end();
-    const pool = new pg.Pool({ connectionString: db.urlAs('cr_test_bypass'), max: 1 });
+    const pool = testPool(db.urlAs('cr_test_bypass'), 1);
     try {
       await assert.rejects(as(pool, AGENT_A, async () => 1), (e) => e instanceof DatabaseUnavailable && e.reason === 'unsafe_role');
     } finally {
@@ -279,7 +279,7 @@ describe('withActor refuses unsafe databases', { skip: skipWithoutDatabase }, ()
 
   test("a database without the comp_report schema is refused (e.g. someone else's)", async () => {
     const bare = await createTestDatabase({ migrate: false });
-    const pool = new pg.Pool({ connectionString: bare.ownerUrl, max: 1 });
+    const pool = testPool(bare.ownerUrl, 1);
     try {
       await assert.rejects(as(pool, AGENT_A, async () => 1), (e) => e instanceof DatabaseUnavailable && e.reason === 'not_migrated');
     } finally {

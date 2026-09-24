@@ -31,6 +31,7 @@ export interface PoolClientLike extends Queryable {
 }
 export interface PoolLike {
   connect(): Promise<PoolClientLike>;
+  on?(event: 'error', listener: (error: Error) => void): unknown;
 }
 
 export class DatabaseUnavailable extends Error {
@@ -54,6 +55,10 @@ export function databasePool(env: Record<string, string | undefined> = process.e
   } else {
     cachedPool = null;
   }
+  // An idle pooled connection can be closed from the other end (Neon suspends
+  // an idle database). Unlistened, that error would crash the function; the
+  // pool just replaces the connection on next use.
+  cachedPool?.on?.('error', (error) => console.error('comp-report: idle database connection lost:', error.message));
   return cachedPool;
 }
 

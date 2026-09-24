@@ -13,7 +13,7 @@ import { handleTurn, type TurnDeps } from '../server/api/turn.ts';
 import { withActor, type PoolLike } from '../server/db.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import { startFakeAnthropic, type FakeAnthropic, type Script } from '../dev/fake-anthropic.ts';
-import { createTestDatabase, skipWithoutDatabase, type TestDatabase } from './testing.ts';
+import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
 
 type Block = Record<string, unknown>;
 
@@ -33,7 +33,7 @@ describe('the streamed assistant turn', { skip: skipWithoutDatabase }, () => {
 
   before(async () => {
     db = await createTestDatabase();
-    pool = new pg.Pool({ connectionString: db.ownerUrl, max: 4 });
+    pool = testPool(db.ownerUrl, 4);
     fake = await startFakeAnthropic();
     scripts = fake.scripts;
     requests = fake.requests;

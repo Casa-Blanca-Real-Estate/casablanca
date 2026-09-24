@@ -11,7 +11,7 @@ import { withActor, type PoolLike } from '../server/db.ts';
 import { handleIdentityEvent } from '../server/identity-events.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import type { AuthDeps } from '../server/session.ts';
-import { createTestDatabase, skipWithoutDatabase, type TestDatabase } from './testing.ts';
+import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
 
 const PEOPLE: Record<string, Partial<IdentityUser>> = {
   'tok-ana-000000000': { email: 'ana@casa-blanca.com', name: 'Ana Agent' },
@@ -28,7 +28,7 @@ describe('comp report API', { skip: skipWithoutDatabase }, () => {
 
   before(async () => {
     db = await createTestDatabase();
-    pool = new pg.Pool({ connectionString: db.ownerUrl, max: 4 });
+    pool = testPool(db.ownerUrl, 4);
     deps = {
       verifier: {
         async verify(token: string) {
@@ -80,7 +80,7 @@ describe('comp report API', { skip: skipWithoutDatabase }, () => {
     assert.equal(report.ownerEmail, 'ana@casa-blanca.com');
 
     // A fresh connection pool — nothing cached in the process — still has it.
-    const fresh = new pg.Pool({ connectionString: db.ownerUrl, max: 1 });
+    const fresh = testPool(db.ownerUrl, 1);
     try {
       const listed = await (await handleReports(req('tok-ana-000000000'), { ...deps, pool: fresh as unknown as PoolLike })).json();
       assert.deepEqual(listed.reports.map((r: { id: string }) => r.id), [report.id]);
