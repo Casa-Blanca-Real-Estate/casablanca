@@ -115,6 +115,7 @@ out.results.on_facts.base;       // { value: 4225352, unit: 'usd', confidence: '
   don't matter ("Bedrooms" is Beds, "List Price" is Listing Price). A shuffled export parses
   identically. **Unknown columns are kept** on each comp (`extra_columns`) and reported; **missing
   ones are warnings** that say what the gap costs. "Year Built" is recognised if a variant carries it.
+  The header row is the one that names the most known columns, so a title line above it is skipped.
 - **Values:** `"$4,650,000"` → 4650000; `"2,201 ft²"` → 2201; a leading `~` (`"~1,840 ft²"`) marks
   the value **approximate**; `"8/27/2026"` → `2026-08-27`; XLSX numbers and date serials read directly
   (including 1904-dated workbooks). A figure written like `"$4.65M"` is read but marked approximate.
@@ -549,6 +550,6 @@ engine/
     money.ts            carry, price evaluation, monthly cost, deal terms
     output.ts           the output's types
   util/                 dates without Date, canonical JSON, SHA-256, UTF-8, arithmetic
-  test/                 106 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
+  test/                 107 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
                         and the test-only house method
 ```
