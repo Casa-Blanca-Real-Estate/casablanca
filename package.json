@@ -5,6 +5,7 @@
   "description": "Netlify Functions backing the Casa Blanca tools, plus the Vite build for the comp report (tools-src/comp-report/).",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.0",
+    "@comp-report/anthropic-sdk": "npm:@anthropic-ai/sdk@^0.128.0",
     "@netlify/blobs": "^8.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
