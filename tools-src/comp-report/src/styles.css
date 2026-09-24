@@ -1,0 +1,55 @@
+/* Casa Blanca brand tokens — docs/context/casa-blanca.md §3. Work the palette; don't add colors. */
+@font-face { font-family: 'Object Sans'; src: url('/assets/fonts/ObjectSans-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Object Sans'; src: url('/assets/fonts/ObjectSans-Heavy.woff2') format('woff2'); font-weight: 800; font-style: normal; font-display: swap; }
+
+:root {
+  --cb-black: #0f0f0f;
+  --cb-white: #cfcfcf;
+  --cb-sand: #c0c2b5;
+  --cb-lavender: #aaa3cf;
+  --cb-bg: #f4f3f0;
+  --cb-surface: #ffffff;
+  --cb-border: #dddbd5;
+  --cb-mid: #888680;
+  --gutter: clamp(20px, 5vw, 56px);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--cb-bg);
+  color: var(--cb-black);
+  font: 400 13px/1.5 'Object Sans', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* The studio header script pads the first <header> to clear its "‹ Studio" button. */
+.bar {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--cb-black); color: #fff;
+  padding: 18px var(--gutter);
+}
+.bar img { height: 22px; width: auto; display: block; }
+.bar-label { font-size: 10px; font-weight: 800; letter-spacing: .32em; text-transform: uppercase; color: var(--cb-lavender); }
+
+.hero { background: var(--cb-black); color: #fff; padding: 8px var(--gutter) clamp(28px, 4vw, 44px); }
+.hero h1 {
+  margin: 0 0 14px;
+  font-size: clamp(40px, 8vw, 80px); font-weight: 800; line-height: .92;
+  letter-spacing: -.05em; text-transform: uppercase;
+}
+.hero p { margin: 0; max-width: 60ch; color: var(--cb-sand); font-size: 14px; }
+
+.page { max-width: 960px; margin: 0 auto; padding: clamp(24px, 3.5vw, 40px) var(--gutter) 64px; }
+
+.label {
+  font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--cb-mid); margin: 0 0 10px;
+}
+.card {
+  background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 14px;
+  padding: 20px 22px; margin: 0 0 16px;
+}
+.card-title { margin: 0 0 4px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.muted { margin: 0; color: var(--cb-mid); }

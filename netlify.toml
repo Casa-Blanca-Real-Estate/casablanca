@@ -1,9 +1,14 @@
 [build]
-  # Generates agents/<slug>/index.html, agents/index.html and the generated
-  # block in _redirects from agents/data/*.json. Everything else under
-  # publish = "." (the tools, css, js, assets) is published as-is, unchanged.
-  # The build fails loudly on bad agent data — see agents/SCHEMA.md.
-  command = "node agents/build.js"
+  # `npm run build` runs two builds in order and stops at the first failure:
+  #   1. node agents/build.js — agents/<slug>/index.html, agents/index.html and
+  #      the generated block in _redirects, from agents/data/*.json. Fails
+  #      loudly on bad agent data — see agents/SCHEMA.md.
+  #   2. vite build — the comp report, tools-src/comp-report/ → tools/comp-report/
+  #      (gitignored). It writes nothing outside that folder.
+  # Everything else under publish = "." (the hand-written tools, css, js,
+  # assets) is published as-is, unchanged. A failed build publishes nothing:
+  # the last good deploy stays live.
+  command = "npm run build"
   publish = "."
 
 [functions]
@@ -102,6 +107,45 @@
   force = true
 [[redirects]]
   from = "/tools/agent-cms/verify.spec.mjs"
+  to = "/404.html"
+  status = 404
+  force = true
+# The comp report's source, config and build tooling. Only its build output,
+# /tools/comp-report/, is meant to be served. The root config names are listed
+# ahead of need (Dispatch 05): the comp report keeps its own config inside
+# tools-src/, but a root tsconfig or Vite config would otherwise go public.
+[[redirects]]
+  from = "/tools-src/*"
+  to = "/404.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/tsconfig.json"
+  to = "/404.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/tsconfig.base.json"
+  to = "/404.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/vite.config.ts"
+  to = "/404.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/vite.config.js"
+  to = "/404.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/vite.config.mjs"
+  to = "/404.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/vitest.config.ts"
   to = "/404.html"
   status = 404
   force = true

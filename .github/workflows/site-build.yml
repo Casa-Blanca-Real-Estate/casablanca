@@ -1,0 +1,35 @@
+# netlify.toml runs `npm run build` — the agent sites, then the comp report —
+# on every deploy. A failure anywhere in it stops the whole site deploying: the
+# last good deploy stays live, but nothing new ships, agent-site publishes
+# included. This runs the same build on every PR so it fails here first.
+name: site build
+
+on:
+  pull_request:
+  push:
+    branches: [claude/main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: typecheck the comp report
+        run: npm run typecheck
+      - name: the Netlify build
+        run: npm run build
+      - name: the build wrote nothing outside its gitignored output
+        # Catches a build that rewrites a hand-written tool or drifts the
+        # committed agent pages — anything but tools/comp-report/ (ignored).
+        run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+      - name: the build produced the comp report
+        run: |
+          test -f tools/comp-report/index.html
+          test -f tools/comp-report/build.json
