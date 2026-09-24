@@ -48,13 +48,17 @@ const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
 
 /**
  * Resolves one property's facts for one result. `stated` holds the stated
- * facts that target it, in input order.
+ * facts that target it, in input order; `suggestions` the parser's guesses,
+ * which rank after the record's own facts and before anything stated.
  */
 export function resolveFacts(
   targetLabel: string, record: PropertyFacts, stated: readonly StatedFact[], ctx: FactContext,
+  suggestions: readonly { field: FactField; value: Sourced<unknown> }[] = [],
 ): ResolvedFacts {
   const out: ResolvedFacts = { facts: {}, chosen_from: {}, contradictions: [], estimates: [], pending: [], hypotheticals_ignored: [] };
-  const fields = new Set<FactField>([...(Object.keys(record) as FactField[]), ...stated.map((s) => s.field)]);
+  const fields = new Set<FactField>([
+    ...(Object.keys(record) as FactField[]), ...stated.map((s) => s.field), ...suggestions.map((s) => s.field),
+  ]);
   for (const field of [...fields].sort()) {
     const recordValue = record[field] as Sourced<unknown> | undefined;
     // Stated facts for this field, oldest first (stable, so input order breaks ties).
@@ -70,6 +74,10 @@ export function resolveFacts(
       if (usableIn(s.value, ctx)) chosen = { value: s.value, from: s.id };
     }
     if (!chosen && recordValue && usableIn(recordValue, ctx)) chosen = { value: recordValue, from: 'record' };
+    for (let i = suggestions.length - 1; i >= 0 && !chosen; i--) {
+      const x = suggestions[i]!;
+      if (x.field === field && usableIn(x.value, ctx)) chosen = { value: x.value, from: 'suggestion' };
+    }
 
     for (const s of statements) {
       if (s.value.source === 'hypothetical' && ctx.mode !== 'what_if') out.hypotheticals_ignored.push(s.id);
@@ -77,7 +85,9 @@ export function resolveFacts(
     if (recordValue?.source === 'hypothetical' && ctx.mode !== 'what_if') out.hypotheticals_ignored.push(`${targetLabel}.${field}`);
 
     // The newest candidate still awaiting confirmation is pending.
-    const newest = statements.length > 0 ? statements[statements.length - 1]!.value : recordValue;
+    const suggested = suggestions.filter((x) => x.field === field).map((x) => x.value);
+    const newest = statements.length > 0 ? statements[statements.length - 1]!.value
+      : suggested.length > 0 ? suggested[suggested.length - 1]! : recordValue;
     if (newest && newest.confidence === 'inferred') {
       const newestId = statements.length > 0 ? statements[statements.length - 1]!.id : null;
       out.pending.push({

@@ -4,10 +4,13 @@
 // missing — no area, no floor — is not an error; it's called out in the output.)
 
 import { findLine, FACTOR_BY_ID, type MagnitudeShape } from '../catalog/factors.ts';
+import { FACT_CHECKS, isObj, nonNegInt, posInt } from '../facts-schema.ts';
 import { isIsoDate } from '../util/dates.ts';
 import {
   CONFIDENCES, SOURCES, type AgentValue, type EngineInput, type FactField, type Sourced,
 } from '../types.ts';
+
+export { FACT_CHECKS } from '../facts-schema.ts';
 
 export class EngineInputError extends Error {
   readonly issues: string[];
@@ -17,50 +20,6 @@ export class EngineInputError extends Error {
     this.issues = issues;
   }
 }
-
-type Check = (v: unknown) => boolean;
-
-const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
-const nonNegInt: Check = (v) => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
-const posInt: Check = (v) => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
-const int: Check = (v) => typeof v === 'number' && Number.isSafeInteger(v);
-const bool: Check = (v) => typeof v === 'boolean';
-const strings: Check = (v) => Array.isArray(v) && v.every((s) => typeof s === 'string');
-const oneOf = (...xs: string[]): Check => (v) => typeof v === 'string' && xs.includes(v);
-const listOf = (...xs: string[]): Check => (v) => Array.isArray(v) && v.every((s) => typeof s === 'string' && xs.includes(s));
-
-/** What each fact field must hold. Money is whole dollars; areas whole square feet. */
-export const FACT_CHECKS: Record<FactField, { check: Check; expects: string }> = {
-  property_type: { check: oneOf('condo', 'coop', 'condop', 'townhouse', 'multi_family', 'other'), expects: 'a property type' },
-  area_sqft: { check: posInt, expects: 'whole square feet above zero' },
-  beds: { check: nonNegInt, expects: 'a whole number of bedrooms' },
-  baths: { check: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0, expects: 'a number of bathrooms' },
-  floor: { check: int, expects: 'a whole floor number' },
-  sale_price: { check: posInt, expects: 'whole dollars above zero' },
-  list_price: { check: posInt, expects: 'whole dollars above zero' },
-  status_date: { check: isIsoDate, expects: 'a YYYY-MM-DD date' },
-  days_on_market: { check: nonNegInt, expects: 'whole days' },
-  common_charges_monthly: { check: nonNegInt, expects: 'whole dollars a month' },
-  taxes_monthly: { check: nonNegInt, expects: 'whole dollars a month' },
-  maintenance_monthly: { check: nonNegInt, expects: 'whole dollars a month' },
-  building_units: { check: posInt, expects: 'a whole number of units' },
-  building_stories: { check: posInt, expects: 'a whole number of stories' },
-  year_built: { check: (v) => int(v) && (v as number) >= 1600 && (v as number) <= 2100, expects: 'a year' },
-  outdoor_private: { check: bool, expects: 'true or false' },
-  outdoor_kinds: { check: listOf('balcony', 'terrace', 'roof_deck', 'garden', 'patio', 'outdoor_space'), expects: 'outdoor kinds' },
-  outdoor_area_sqft: { check: nonNegInt, expects: 'whole square feet' },
-  outdoor_shared: { check: bool, expects: 'true or false' },
-  views: { check: strings, expects: 'a list of view kinds' },
-  parking: { check: strings, expects: 'a list of parking kinds' },
-  service: {
-    check: (v) => isObj(v) && oneOf('full_time', 'part_time', 'virtual', 'hours_unspecified', 'none_listed')(v['doorman']) && bool(v['concierge']),
-    expects: '{ doorman, concierge }',
-  },
-  unit_type: { check: listOf('penthouse', 'duplex', 'triplex', 'loft'), expects: 'unit type tags' },
-  finishes: { check: strings, expects: 'a list of tags' },
-  amenities: { check: strings, expects: 'a list of tags' },
-  policies: { check: strings, expects: 'a list of tags' },
-};
 
 function checkSourced(where: string, field: FactField, s: unknown, issues: string[]): void {
   if (!isObj(s)) { issues.push(`${where}: must be a sourced value { value, source, as_of, confidence }`); return; }
@@ -133,6 +92,10 @@ export function validateInput(input: EngineInput): void {
         issues.push(`${where}.record.status.evidence_class must be sold, in_contract, active or null`);
       }
       checkFacts(`${where}.record.facts`, c.record.facts, issues);
+      (c.record.suggestions ?? []).forEach((x, j) => {
+        if (!isObj(x) || !(x.field in FACT_CHECKS)) issues.push(`${where}.record.suggestions[${j}] must be { field, value }`);
+        else checkSourced(`${where}.record.suggestions[${j}]`, x.field, x.value, issues);
+      });
       if (!isObj(c.record.flags)) issues.push(`${where}.record.flags is required`);
     });
     if (anchors > 1) issues.push('at most one comp can be the anchor');
@@ -194,6 +157,10 @@ export function validateInput(input: EngineInput): void {
         issues.push(`${where}.value: percentages are written as percent (5 means 5%), and must be within ±100`);
       }
       if ('dollars' in a.value && !Number.isSafeInteger(a.value.dollars)) issues.push(`${where}.value.dollars must be whole dollars`);
+      // A value is a magnitude: the comparison supplies the direction. Only the market's movement can be negative.
+      if (a.factor !== 'recency_market' && numbers.some((n) => n < 0)) {
+        issues.push(`${where}.value must not be negative — the comparison says which way a comp moves; record a judgment (assessment) to say which side is better`);
+      }
     }
     (a.comp_ids ?? []).forEach((id, j) => compRef(`${where}.comp_ids[${j}]`, id));
     if (!isIsoDate(a.as_of)) issues.push(`${where}.as_of must be a YYYY-MM-DD date`);

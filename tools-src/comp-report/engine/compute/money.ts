@@ -19,7 +19,9 @@ import { weakest } from './facts.ts';
 import { figure } from './results.ts';
 import type { DealTermsOut, MonthlyCost, PriceEvaluation, PriceEvaluationResult, Result, ResultKind } from './output.ts';
 
-export function evaluatePrice(price: Dollars, result: Result, subjectFacts: Partial<PropertyFacts>, asOf: IsoDate): PriceEvaluationResult {
+export function evaluatePrice(
+  price: Dollars, result: Result, subjectFacts: Partial<PropertyFacts>, asOf: IsoDate, reportType: ReportPropertyType,
+): PriceEvaluationResult {
   const area = subjectFacts.area_sqft;
   const range = result.range;
   const base = result.base;
@@ -33,7 +35,7 @@ export function evaluatePrice(price: Dollars, result: Result, subjectFacts: Part
   }
   const s2a = result.sale_to_ask;
   return {
-    per_sqft: area ? figure(price / area.value, 'usd_per_sqft', weakest(area.confidence), `the price ÷ the subject's ${area.value} sqft`, asOf) : null,
+    per_sqft: area && reportType === 'condo' ? figure(price / area.value, 'usd_per_sqft', weakest(area.confidence), `the price ÷ the subject's ${area.value} sqft`, asOf) : null,
     vs_range: range
       ? {
         position: price < range.low.value ? 'below' : price > range.high.value ? 'above' : 'within',
@@ -57,13 +59,14 @@ export function evaluatePrice(price: Dollars, result: Result, subjectFacts: Part
 }
 
 export function evaluatePrices(
-  prices: readonly NamedPrice[], results: Record<ResultKind, Result>, subjectFacts: Record<ResultKind, Partial<PropertyFacts>>, asOf: IsoDate,
+  prices: readonly NamedPrice[], results: Record<ResultKind, Result>, subjectFacts: Record<ResultKind, Partial<PropertyFacts>>,
+  asOf: IsoDate, reportType: ReportPropertyType,
 ): PriceEvaluation[] {
   return prices.map((p) => ({
     ...p,
     per_result: {
-      on_facts: evaluatePrice(p.price, results.on_facts, subjectFacts.on_facts, asOf),
-      with_estimates: evaluatePrice(p.price, results.with_estimates, subjectFacts.with_estimates, asOf),
+      on_facts: evaluatePrice(p.price, results.on_facts, subjectFacts.on_facts, asOf, reportType),
+      with_estimates: evaluatePrice(p.price, results.with_estimates, subjectFacts.with_estimates, asOf, reportType),
     },
   }));
 }
@@ -155,7 +158,7 @@ export function dealTerms(
     template: terms.template,
     captured: terms,
     deposit,
-    price_evaluations: evaluatePrices(named, results, subjectFacts, asOf),
+    price_evaluations: evaluatePrices(named, results, subjectFacts, asOf, reportType),
     monthly_cost: terms.financing && terms.price !== undefined
       ? {
         on_facts: monthlyCost(terms.financing, terms.price, subjectFacts.on_facts, reportType),

@@ -17,6 +17,7 @@
 // The export date is an input: the engine has no clock.
 
 import { EXPORT_SCHEMA, PARSER_VERSION } from '../version.ts';
+import { FACT_CHECKS } from '../facts-schema.ts';
 import { isIsoDate, type IsoDate } from '../util/dates.ts';
 import { cp1252Decode, utf8DecodeStrict } from '../util/utf8.ts';
 import type { CompRecord, Confidence, PropertyFacts, Sourced, UnitTypeTag } from '../types.ts';
@@ -45,7 +46,7 @@ export type ParseWarningCode =
   | 'missing_column' | 'unknown_column' | 'duplicate_column' | 'renamed_column'
   | 'unreadable_value' | 'value_adjusted' | 'closing_record' | 'approx_area'
   | 'unrecognised_status' | 'missing_address' | 'duplicate_property' | 'ragged_row'
-  | 'encoding' | 'file_note' | 'no_rows';
+  | 'encoding' | 'file_note' | 'no_rows' | 'zero_price';
 
 export interface ParseWarning {
   code: ParseWarningCode;
@@ -232,31 +233,47 @@ function buildComp(
   }
 
   const facts: PropertyFacts = {};
-  const set = <K extends keyof PropertyFacts>(key: K, value: PropertyFacts[K] | undefined) => {
-    if (value !== undefined) facts[key] = value;
+  // Every value the parser keeps passes the same checks compute() applies, so
+  // no export can produce a comp the engine refuses.
+  const set = <K extends keyof PropertyFacts>(key: K, value: PropertyFacts[K] | undefined, column: string) => {
+    if (value === undefined) return;
+    if (FACT_CHECKS[key].check(value.value)) { facts[key] = value; return; }
+    if ((key === 'sale_price' || key === 'list_price') && value.value === 0) {
+      warnings.push({
+        code: 'zero_price', row, column,
+        message: `row ${row}, ${column}: a $0 ${key === 'sale_price' ? 'sale price is usually a non-market transfer, not a sale' : 'asking price is no asking price'} — read as no price`,
+      });
+      return;
+    }
+    warnings.push({
+      code: 'unreadable_value', row, column,
+      message: `row ${row}, ${column}: ${JSON.stringify(value.value)} isn't ${FACT_CHECKS[key].expects} — read as missing`,
+    });
   };
-  set('property_type', sourced(readPropertyType(cell('property_type')), 'property_type'));
-  const area = sourced(readArea(cell('sqft')), 'sqft');
-  set('area_sqft', area);
+  const fact = <K extends keyof PropertyFacts, T>(key: K, id: string, r: Read<T>) =>
+    set(key, sourced(r, id) as PropertyFacts[K] | undefined, header(id));
+  fact('property_type', 'property_type', readPropertyType(cell('property_type')));
+  fact('area_sqft', 'sqft', readArea(cell('sqft')));
+  const area = facts.area_sqft;
   if (area?.confidence === 'approx') {
     warnings.push({ code: 'approx_area', row, column: 'Sqft', message: `row ${row}: the area ${cellText(cell('sqft'))} is marked approximate by StreetEasy (likely AI-inferred); its $/sqft inherits that` });
   }
-  set('beds', sourced(readCount(cell('beds')), 'beds'));
-  set('baths', sourced(readHalfCount(cell('baths')), 'baths'));
-  set('floor', sourced(readFloor(cell('floor')), 'floor'));
-  set('sale_price', sourced(readMoney(cell('sale_price')), 'sale_price'));
-  set('list_price', sourced(readMoney(cell('list_price')), 'list_price'));
-  set('status_date', sourced(readDate(cell('status_date'), date1904), 'status_date'));
-  set('common_charges_monthly', sourced(readMoney(cell('common_charges')), 'common_charges'));
-  set('taxes_monthly', sourced(readMoney(cell('taxes')), 'taxes'));
-  set('maintenance_monthly', sourced(readMoney(cell('maintenance')), 'maintenance'));
-  set('building_units', sourced(readCount(cell('building_units')), 'building_units'));
-  set('building_stories', sourced(readCount(cell('building_stories')), 'building_stories'));
-  set('year_built', sourced(readCount(cell('year_built')), 'year_built'));
+  fact('beds', 'beds', readCount(cell('beds')));
+  fact('baths', 'baths', readHalfCount(cell('baths')));
+  fact('floor', 'floor', readFloor(cell('floor')));
+  fact('sale_price', 'sale_price', readMoney(cell('sale_price')));
+  fact('list_price', 'list_price', readMoney(cell('list_price')));
+  fact('status_date', 'status_date', readDate(cell('status_date'), date1904));
+  fact('common_charges_monthly', 'common_charges', readMoney(cell('common_charges')));
+  fact('taxes_monthly', 'taxes', readMoney(cell('taxes')));
+  fact('maintenance_monthly', 'maintenance', readMoney(cell('maintenance')));
+  fact('building_units', 'building_units', readCount(cell('building_units')));
+  fact('building_stories', 'building_stories', readCount(cell('building_stories')));
+  fact('year_built', 'year_built', readCount(cell('year_built')));
 
   // A closing record's zeros mean "no listing data", not zero.
   const dom = readCount(cell('days_on_market'));
-  if (!(closing && dom.value === 0)) set('days_on_market', sourced(dom, 'days_on_market'));
+  if (!(closing && dom.value === 0)) fact('days_on_market', 'days_on_market', dom);
   const engagementCount = (id: string): number | null => {
     const r = readCount(cell(id));
     return closing && r.value === 0 ? null : r.value;
@@ -278,13 +295,16 @@ function buildComp(
     facts.finishes = exact(f.finishes, 'Home Features other than views, outdoor space and unit type');
     facts.unit_type = exact(f.unit_type, f.unit_type.length ? 'from the Home Features' : 'no penthouse, duplex, triplex or loft listed among the Home Features');
   }
+  // A penthouse guessed from the unit label is a suggestion for the agent to
+  // confirm; the exact fact from the Home Features stands meanwhile.
+  const suggestions: CompRecord['suggestions'] = [];
   const unitRaw = identity.unit.raw;
   if (unitLabelSuggestsPenthouse(unitRaw) && !facts.unit_type?.value.includes('penthouse')) {
     const types: UnitTypeTag[] = [...(facts.unit_type?.value ?? []), 'penthouse'];
-    facts.unit_type = {
-      value: types.sort(), source: 'se_export', as_of: asOf, confidence: 'inferred',
-      note: `the unit label ${unitRaw} suggests a penthouse — confirm`,
-    };
+    suggestions.push({
+      field: 'unit_type',
+      value: { value: types.sort(), source: 'se_export', as_of: asOf, confidence: 'inferred', note: `the unit label ${unitRaw} suggests a penthouse — confirm` },
+    });
   }
   if (tags.amenities.length > 0) {
     const a = deriveFromAmenities(tags.amenities);
@@ -334,5 +354,6 @@ function buildComp(
     origin: { parser_version: PARSER_VERSION, row, as_of: asOf },
   };
   if (Object.keys(extra).length > 0) record.extra_columns = extra;
+  if (suggestions.length > 0) record.suggestions = suggestions;
   return record;
 }

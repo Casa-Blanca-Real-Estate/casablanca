@@ -44,6 +44,8 @@ export interface ResultContext {
   method: MethodSettings;
   subjectFacts: Partial<PropertyFacts>;
   estimates: EstimateUse[];
+  /** Evidence classes whose membership the agent's estimates changed ("with estimates" only). */
+  estimateAffected?: ReadonlySet<EvidenceClass>;
 }
 
 export const LABELS: Record<LeadIndicator, string> = {
@@ -59,12 +61,17 @@ export function figure(value: number, unit: FigureUnit, confidence: Confidence, 
   return { value, unit, source: 'engine', as_of: asOf, confidence, derivation };
 }
 
+/**
+ * Median, mean, lowest and highest. `floor` weakens every figure's confidence —
+ * for a set whose membership rests on an estimate.
+ */
 export function statSummary(
   entries: { id: string; value: number; confidence: Confidence }[], unit: FigureUnit, what: string, asOf: IsoDate, money = false,
+  floor: Confidence | null = null,
 ): StatSummary | null {
   if (entries.length === 0) return null;
   const values = entries.map((e) => e.value);
-  const conf = weakest(...entries.map((e) => e.confidence));
+  const conf = weakest(floor, ...entries.map((e) => e.confidence));
   const r = (x: number) => (money ? roundHalfAway(x) : x);
   const ids = entries.map((e) => e.id);
   const byValue = (target: number) => entries.find((e) => e.value === target)!;
@@ -75,8 +82,8 @@ export function statSummary(
     comp_ids: ids,
     median: figure(r(median(values)!), unit, conf, `median ${what} of ${entries.length} comp${entries.length === 1 ? '' : 's'}`, asOf),
     mean: figure(r(mean(values)!), unit, conf, `mean ${what} of ${entries.length} comp${entries.length === 1 ? '' : 's'}`, asOf),
-    min: figure(lo, unit, byValue(lo).confidence, `lowest ${what} (${byValue(lo).id})`, asOf),
-    max: figure(hi, unit, byValue(hi).confidence, `highest ${what} (${byValue(hi).id})`, asOf),
+    min: figure(lo, unit, weakest(floor, byValue(lo).confidence), `lowest ${what} (${byValue(lo).id})`, asOf),
+    max: figure(hi, unit, weakest(floor, byValue(hi).confidence), `highest ${what} (${byValue(hi).id})`, asOf),
   };
 }
 
@@ -143,6 +150,8 @@ function impliedFrom(family: Family, value: number | null, subjectArea: Sourced<
 
 export function buildResult(states: readonly CompState[], ctx: ResultContext, warnings: Warning[]): Result {
   const { kind, asOf } = ctx;
+  const floorFor = (cls: EvidenceClass): Confidence | null => (ctx.estimateAffected?.has(cls) ? 'guesstimate' : null);
+  const soldFloor = floorFor('sold');
   const subjectArea = (ctx.subjectFacts.area_sqft as Sourced<number> | undefined) ?? null;
   const unitRateOn = ctx.reportType === 'condo';
   const anchorState = states.find((s) => s.input.anchor) ?? null;
@@ -170,8 +179,8 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
         included: included.length,
         with_unit_rate: withRate.length,
       },
-      price_per_sqft: statSummary(withRate.map((s) => ({ id: s.id, value: s.unit_rate!, confidence: s.unit_rate_confidence! })), 'usd_per_sqft', `$/sqft (${basis} basis)`, asOf),
-      price: statSummary(included.filter((s) => s.price).map((s) => ({ id: s.id, value: s.price!.value, confidence: s.price!.confidence })), 'usd', `${basis === 'sale' ? 'sale' : 'asking'} price`, asOf, true),
+      price_per_sqft: statSummary(withRate.map((s) => ({ id: s.id, value: s.unit_rate!, confidence: s.unit_rate_confidence! })), 'usd_per_sqft', `$/sqft (${basis} basis)`, asOf, false, floorFor(cls)),
+      price: statSummary(included.filter((s) => s.price).map((s) => ({ id: s.id, value: s.price!.value, confidence: s.price!.confidence })), 'usd', `${basis === 'sale' ? 'sale' : 'asking'} price`, asOf, true, floorFor(cls)),
     };
   }
 
@@ -190,15 +199,15 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
       const used = which === 'anchor' ? entries.filter((e) => e.id === anchorId) : entries;
       if (which === 'anchor' && anchorWhyNot) return { ...base, reason: anchorWhyNot };
       if (used.length === 0) {
+        const anchorLacks = !anchorState?.price ? 'the anchor has no sale price' : "the anchor has no interior area, so no $/sqft";
         return {
           ...base,
-          reason: family === 'unit_rate'
-            ? (which === 'anchor' ? "the anchor has no $/sqft (it has no area)" : 'no primary sold comp has both a price and an area')
-            : 'no primary sold comp has a price',
+          reason: which === 'anchor' ? anchorLacks
+            : family === 'unit_rate' ? 'no primary sold comp has both a price and an area' : 'no primary sold comp has a price',
         };
       }
       const value = indicatorValue(used, which, anchorId)!;
-      const conf = weakest(...used.map((e) => e.confidence));
+      const conf = weakest(soldFloor, ...used.map((e) => e.confidence));
       const what = which === 'anchor' ? `the anchor, ${anchorId}` : `${which} of ${used.length} primary sold comp${used.length === 1 ? '' : 's'}`;
       const implied = impliedFrom(family, value, subjectArea);
       return {
@@ -236,25 +245,29 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
     const pool = leadWhich === 'anchor' ? entries.filter((e) => e.id === anchorId) : entries;
     if (pool.length === 0) return null;
     const value = impliedFrom(leadFamily, indicatorValue(pool, leadWhich, anchorId), subjectArea);
-    return value === null ? null : { value, confidence: weakest(...pool.map((e) => e.implied_confidence)) };
+    return value === null ? null : { value, confidence: weakest(soldFloor, ...pool.map((e) => e.implied_confidence)) };
   };
 
   // The bracket: lowest to highest implied value among primary sold comps, in the lead's family.
   const leadEntries = leadFamily === 'unit_rate' && !unitRateOn ? [] : familyEntries(states, leadFamily, subjectArea, none);
   const withImplied = leadEntries.filter((e) => e.implied !== null);
+  const soldIncludedCount = evidence.sold.counts.included;
+  const lo = withImplied.length > 0 ? withImplied.reduce((a, b) => (b.implied! < a.implied! ? b : a)) : null;
+  const hi = withImplied.length > 0 ? withImplied.reduce((a, b) => (b.implied! > a.implied! ? b : a)) : null;
   const rangeWhyNot = leadFamily === 'unit_rate' && !unitRateOn ? 'unit-rate indicators are off for co-ops'
-    : leadEntries.length === 0 ? (evidence.sold.counts.included === 0 ? 'no primary sold comps' : 'no primary sold comp can give this indicator')
-      : leadEntries.length >= 2 && withImplied.length === 0 ? "no implied values without the subject's interior area"
-        : withImplied.length < 2 ? 'a range needs at least two primary sold comps — one comp is a point, and a range is never a point'
-          : null;
+    : soldIncludedCount === 0 ? 'no primary sold comps'
+      : leadEntries.length === 0 ? 'no primary sold comp can give this indicator'
+        : withImplied.length === 0 ? "no implied values without the subject's interior area"
+          : soldIncludedCount === 1 ? 'a range needs at least two primary sold comps — one comp is a point, and a range is never a point'
+            : withImplied.length === 1 ? `only one of the ${soldIncludedCount} primary sold comps gives this indicator — the others lack ${leadFamily === 'unit_rate' ? 'an area or ' : ''}a price — and a range is never a point`
+              : lo!.implied === hi!.implied ? 'the primary sold comps all imply the same value — a range is never a point'
+                : null;
   let bracket: RangeOut | null = null;
-  if (withImplied.length >= 2) {
-    const lo = withImplied.reduce((a, b) => (b.implied! < a.implied! ? b : a));
-    const hi = withImplied.reduce((a, b) => (b.implied! > a.implied! ? b : a));
+  if (rangeWhyNot === null && lo && hi) {
     const how = leadFamily === 'unit_rate' ? "its adjusted $/sqft × the subject's area" : 'its adjusted price';
     bracket = {
-      low: figure(lo.implied!, 'usd', lo.implied_confidence, `lowest implied value among ${withImplied.length} primary sold comps: ${lo.id}, ${how}`, asOf),
-      high: figure(hi.implied!, 'usd', hi.implied_confidence, `highest implied value among ${withImplied.length} primary sold comps: ${hi.id}, ${how}`, asOf),
+      low: figure(lo.implied!, 'usd', weakest(soldFloor, lo.implied_confidence), `lowest implied value among ${withImplied.length} primary sold comps: ${lo.id}, ${how}`, asOf),
+      high: figure(hi.implied!, 'usd', weakest(soldFloor, hi.implied_confidence), `highest implied value among ${withImplied.length} primary sold comps: ${hi.id}, ${how}`, asOf),
       comp_ids: withImplied.map((e) => e.id),
     };
   }
@@ -299,14 +312,14 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
       const ask = s.facts.list_price;
       return sale && ask ? [{ id: s.id, value: (sale.value / ask.value - 1) * 100, confidence: weakest(sale.confidence, ask.confidence) }] : [];
     }),
-    'percent', 'sale-to-last-ask', asOf,
+    'percent', 'sale-to-last-ask', asOf, false, soldFloor,
   );
   const days_on_market = {} as Record<EvidenceClass, StatSummary | null>;
   for (const cls of ['sold', 'in_contract', 'active'] as const) {
     days_on_market[cls] = statSummary(
       states.filter((s) => s.included && s.evidence_class === cls && s.facts.days_on_market)
         .map((s) => ({ id: s.id, value: s.facts.days_on_market!.value, confidence: s.facts.days_on_market!.confidence })),
-      'days', `days on market (${cls.replace('_', ' ')})`, asOf,
+      'days', `days on market (${cls.replace('_', ' ')})`, asOf, false, floorFor(cls),
     );
   }
   const soldRates = evidence.sold.price_per_sqft;
@@ -359,15 +372,18 @@ function carrySummary(states: readonly CompState[], ctx: ResultContext): CarrySu
     return c ? [{ id: s.id, carry: c, area: s.facts.area_sqft ?? null }] : [];
   });
   const med = median(comps.map((c) => c.carry.value));
-  const perSqft = comps.filter((c) => c.area).map((c) => c.carry.value / c.area!.value);
-  const medPsf = median(perSqft);
-  const compConf = weakest(...comps.map((c) => c.carry.confidence));
+  // Per square foot only for condos: co-op square footage is unreliable (§6.3).
+  const bySqft = reportType === 'condo' ? comps.filter((c) => c.area) : [];
+  const medPsf = median(bySqft.map((c) => c.carry.value / c.area!.value));
+  const floor = ctx.estimateAffected && ctx.estimateAffected.size > 0 ? 'guesstimate' : null;
+  const compConf = weakest(floor, ...comps.map((c) => c.carry.confidence));
+  const psfConf = weakest(floor, ...bySqft.map((c) => weakest(c.carry.confidence, c.area!.confidence)));
   const what = reportType === 'coop' ? 'maintenance' : 'common charges + taxes';
   return {
     subject: subject ? figure(subject.value, 'usd_per_month', subject.confidence, `subject's ${what}`, asOf) : null,
-    subject_per_sqft: subject && subjectArea ? figure(subject.value / subjectArea.value, 'usd_per_sqft_per_month', weakest(subject.confidence, subjectArea.confidence), `subject's ${what} ÷ its area`, asOf) : null,
+    subject_per_sqft: subject && subjectArea && reportType === 'condo' ? figure(subject.value / subjectArea.value, 'usd_per_sqft_per_month', weakest(subject.confidence, subjectArea.confidence), `subject's ${what} ÷ its area`, asOf) : null,
     comp_median: med === null ? null : figure(roundHalfAway(med), 'usd_per_month', compConf, `median ${what} of ${comps.length} primary comps (all statuses — carry isn't price evidence)`, asOf),
-    comp_median_per_sqft: medPsf === null ? null : figure(medPsf, 'usd_per_sqft_per_month', compConf, `median ${what} per sqft of ${perSqft.length} primary comps`, asOf),
+    comp_median_per_sqft: medPsf === null ? null : figure(medPsf, 'usd_per_sqft_per_month', psfConf, `median ${what} per sqft of ${bySqft.length} primary comps`, asOf),
     comp_ids: comps.map((c) => c.id),
     subject_vs_median_percent: subject && med ? figure((subject.value / med - 1) * 100, 'percent', weakest(subject.confidence, compConf), `subject's ${what} against the comp median`, asOf) : null,
   };

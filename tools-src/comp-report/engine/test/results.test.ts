@@ -138,15 +138,33 @@ test('like for like: a co-op in a condo report never enters a statistic', () => 
   assert.ok(out.warnings.some((w) => w.code === 'property_type_mismatch'));
 });
 
-test('co-ops switch unit rates off and lead on adjusted prices', () => {
+test('co-ops switch $/sqft off everywhere and lead on adjusted prices', () => {
   const coopComps = comps().map((c) => ({ ...c, record: { ...c.record, facts: { ...c.record.facts, property_type: { ...c.record.facts.property_type!, value: 'coop' as const } } } }));
-  const r = compute(input({ property_type: 'coop', comps: coopComps })).results.on_facts;
+  const out = compute(input({
+    property_type: 'coop', comps: coopComps, prices: [{ id: 'p', label: 'List', kind: 'list', price: 4_500_000 }],
+    subject: { identity: SUBJECT_IDENTITY, facts: subjectFacts({ maintenance_monthly: agentFact(6_000) }) },
+  }));
+  const r = out.results.on_facts;
   assert.equal(r.indicators.unit_rate.status, 'off');
   assert.equal(r.indicators.unit_rate.median.status, 'unavailable');
   assert.equal(r.lead.indicator, 'adjusted_price.median');
   assert.equal(r.base!.value, 4_600_000);
   assert.equal(r.range!.low.value, 2_240_000);
   assert.equal(r.range!.high.value, 5_700_000);
+  // No $/sqft figure anywhere — square footage is unreliable for co-ops (§6.3).
+  for (const cls of ['sold', 'in_contract', 'active'] as const) assert.equal(r.evidence[cls].price_per_sqft, null);
+  assert.equal(r.asks_vs_sold.sold_band, null);
+  assert.equal(r.carry.subject_per_sqft, null);
+  assert.equal(r.carry.comp_median_per_sqft, null);
+  assert.equal(out.prices[0]!.per_result.on_facts.per_sqft, null);
+  for (const c of out.comps) {
+    const pr = c.per_result.on_facts;
+    assert.equal(pr.price_per_sqft, null);
+    assert.equal(pr.adjusted_price_per_sqft, null);
+    assert.equal(pr.implied_value, null);
+    assert.equal(pr.carry_per_sqft, null);
+    assert.match(pr.no_unit_rate_because!, /co-op/);
+  }
 });
 
 test("trust but verify: a stated fact is used, and a contradiction with the export is flagged", () => {
@@ -240,6 +258,48 @@ test('a malformed input is refused with every problem listed', () => {
   assert.match(issues, /charm is not an adjustable factor line/);
   assert.match(issues, /percentages are written as percent/);
   assert.match(issues, /whole square feet/);
+});
+
+test('an estimate that takes a comp out of "with estimates" is disclosed, and what rests on it is labelled', () => {
+  const out = compute(input({
+    stated_facts: [{ id: 'type', target: { comp_id: KEY.leonard66 }, field: 'property_type', value: agentFact('coop', 'guesstimate') }],
+  }));
+  const [a, b] = [out.results.on_facts, out.results.with_estimates];
+  assert.equal(a.evidence.sold.counts.included, 5);
+  assert.equal(b.evidence.sold.counts.included, 4);
+  assert.notEqual(b.base!.value, a.base!.value);
+  assert.ok(b.estimates_used.some((e) => e.id === 'type' && e.target === KEY.leonard66));
+  assert.equal(out.divergence.same, false);
+  // Every remaining sold comp is exact or approximate — but which comps count rests on the estimate.
+  assert.equal(b.base!.confidence, 'guesstimate');
+  assert.equal(b.range!.high.confidence, 'guesstimate');
+  assert.equal(b.evidence.sold.price_per_sqft!.median.confidence, 'guesstimate');
+  assert.equal(b.evidence.in_contract.price_per_sqft!.median.confidence, 'exact'); // untouched class
+  assert.notEqual(a.base!.confidence, 'guesstimate');
+});
+
+test('identical implied values are a point, not a range', () => {
+  const [first] = comps().filter((c) => c.id === KEY.chambers);
+  const twin = { ...first!, id: 'twin', record: { ...first!.record, identity: { ...first!.record.identity, key: 'twin' } } };
+  const out = compute(input({ comps: [first!, twin] }));
+  assert.equal(out.results.on_facts.bracket, null);
+  assert.equal(out.results.on_facts.range, null);
+  assert.match(out.results.on_facts.range_unavailable_because!, /all imply the same value/);
+  assert.equal(out.results.on_facts.base!.value, Math.round(SOLD_RATE.chambers * 2000));
+});
+
+test("agent values are magnitudes: negatives are refused, except the market's own movement", () => {
+  const refused = (() => {
+    try { compute(input({ agent_adjustments: [{ id: 'neg', factor: 'views', value: { percent: -5 }, as_of: ANALYSIS_DATE }] })); }
+    catch (e) { return e; }
+    return null;
+  })();
+  assert.ok(refused instanceof EngineInputError);
+  assert.match((refused as EngineInputError).issues.join(), /must not be negative — the comparison says which way/);
+  // A falling market is negative, and allowed.
+  const falling = compute(input({ agent_adjustments: [{ id: 'mkt', factor: 'recency_market', value: { percent_per_unit: -0.5 }, as_of: ANALYSIS_DATE }] }));
+  const line = falling.comps.find((c) => c.id === KEY.chambers)!.per_result.with_estimates.adjustments.find((l) => l.line === 'recency_market')!;
+  assert.ok(line.dollars! < 0);
 });
 
 test("each missing subject fact is a gap that names the field to ask for", () => {

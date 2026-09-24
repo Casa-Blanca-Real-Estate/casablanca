@@ -129,10 +129,18 @@ test('tags are split, and service, outdoor presence, parking and views are deriv
   assert.equal(get(KEY.leonard108).facts.views, undefined); // no Home Features at all: unknown, not "none"
   const reade = get(KEY.reade);
   assert.deepEqual(reade.facts.outdoor_kinds?.value, ['roof_deck', 'terrace']);
-  assert.deepEqual(reade.facts.unit_type?.value, ['penthouse']);
-  assert.equal(reade.facts.unit_type?.confidence, 'inferred'); // from the "PHA" label — the agent confirms
+  // No penthouse among its Home Features — that exact fact stands — but its "PHA" label suggests one.
+  assert.deepEqual(reade.facts.unit_type?.value, []);
+  assert.equal(reade.facts.unit_type?.confidence, 'exact');
+  assert.equal(reade.suggestions?.length, 1);
+  assert.deepEqual(reade.suggestions![0]!.value.value, ['penthouse']);
+  assert.equal(reade.suggestions![0]!.value.confidence, 'inferred');
   const out = compute(input());
-  assert.ok(out.pending_confirmation.some((p) => p.target === KEY.reade && p.what === 'unit_type'));
+  const pending = out.pending_confirmation.find((p) => p.target === KEY.reade && p.what === 'unit_type')!;
+  assert.deepEqual(pending.value, ['penthouse']);
+  // Confirmed by the agent, it's used.
+  const confirmed = compute(input({ stated_facts: [{ id: 'ph', target: { comp_id: KEY.reade }, field: 'unit_type', value: { value: ['penthouse'], source: 'agent', as_of: '2026-09-24', confidence: 'exact' } }] }));
+  assert.ok(!confirmed.pending_confirmation.some((p) => p.target === KEY.reade && p.what === 'unit_type'));
 });
 
 test('CSV edge cases: BOM, CRLF, quoted commas, quotes and line breaks, blank lines', () => {
@@ -203,6 +211,25 @@ test('title lines above the headers are skipped, not mistaken for them', () => {
   assert.deepEqual(parsed.comps.map((c) => c.facts), original.comps.map((c) => c.facts));
   assert.deepEqual(parsed.columns.unknown, []);
   assert.ok(parsed.warnings.some((w) => w.code === 'file_note' && /skipped 2 lines above the column headers/.test(w.message)));
+});
+
+test('zeros that mean "no data" are read as missing, and never stop the engine', () => {
+  const zeroes = parse(rewrite((h, rows) => [h, rows.map((r) => r.map((v, i) => {
+    if (r[0] === '79 Laight Street, New York, NY' && h[i] === 'Listing Price') return '$0'; // the closing's missing ask
+    if (r[0] === '181 Hudson Street, New York, NY' && h[i] === 'Sale Price') return '$0'; // a $0 transfer
+    if (r[0] === '66 Leonard Street, New York, NY' && h[i] === 'Units in Building') return '0';
+    return v;
+  }))]));
+  const get = (key: string) => zeroes.comps.find((c) => c.identity.key === key)!;
+  assert.equal(get(KEY.laight).facts.list_price, undefined);
+  assert.equal(get(KEY.hudson).facts.sale_price, undefined);
+  assert.equal(get(KEY.leonard66).facts.building_units, undefined);
+  assert.equal(zeroes.warnings.filter((w) => w.code === 'zero_price').length, 2);
+  assert.match(zeroes.warnings.find((w) => w.code === 'zero_price' && w.row === 3)!.message, /non-market transfer/);
+  assert.ok(zeroes.warnings.some((w) => w.code === 'unreadable_value' && w.column === 'Units in Building'));
+  const out = compute(input({ comps: compInputsFromExport(zeroes, { tier: 'primary' }) }));
+  assert.equal(out.comps.find((c) => c.id === KEY.hudson)!.flags.price_missing, true);
+  assert.equal(out.results.on_facts.evidence.sold.price_per_sqft!.n, 4);
 });
 
 test('empty and header-only files, and a bad export date', () => {

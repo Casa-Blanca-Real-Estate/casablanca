@@ -171,6 +171,11 @@ export interface CompRecord {
   origin: { parser_version: string; row: number; as_of: IsoDate } | null;
   /** Columns the parser didn't recognise, kept as written: header → value. */
   extra_columns?: Record<string, string>;
+  /**
+   * Values the parser only guessed — a penthouse from a "PH" unit label.
+   * Inferred, so pending until the agent confirms; the record's own facts stand meanwhile.
+   */
+  suggestions?: { field: FactField; value: Sourced<unknown> }[];
 }
 
 export interface SubjectInput {

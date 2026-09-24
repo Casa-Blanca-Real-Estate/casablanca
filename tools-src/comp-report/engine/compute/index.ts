@@ -14,7 +14,7 @@ import { addMonths, daysBetween, type IsoDate } from '../util/dates.ts';
 import { compareStrings, roundHalfAway } from '../util/numbers.ts';
 import { sha256Tag } from '../util/sha256.ts';
 import { ENGINE_VERSION } from '../version.ts';
-import type { CompInput, EngineInput, PropertyFacts, PropertyType, Sourced, StatedFact } from '../types.ts';
+import type { CompInput, EngineInput, EvidenceClass, PropertyFacts, PropertyType, Sourced, StatedFact } from '../types.ts';
 import { adjustmentLines, resolveLines } from './adjust.ts';
 import { compareComp, monthlyCarry } from './compare.ts';
 import { resolveFacts, weakest, type ResolvedFacts } from './facts.ts';
@@ -89,8 +89,8 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
     estimates.push(...subject.estimates);
     compResolved[kind] = new Map();
 
-    const states: CompState[] = comps.map((c) => {
-      const resolved = resolveFacts(c.id, c.record.facts, statedFor(stated, c.id), ctx);
+    const states: CompState[] = comps.map((c, idx) => {
+      const resolved = resolveFacts(c.id, c.record.facts, statedFor(stated, c.id), ctx, c.record.suggestions ?? []);
       compResolved[kind].set(c.id, resolved);
       const facts = resolved.facts as Partial<PropertyFacts>;
       const cls = c.record.status.evidence_class;
@@ -106,14 +106,19 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       }
       const price = (cls === 'sold' ? facts.sale_price : facts.list_price) as Sourced<number> | undefined;
       const area = facts.area_sqft as Sourced<number> | undefined;
-      const unitRate = price && area ? price.value / area.value : null;
-      const noRate = cls === null ? 'no evidence class'
-        : !area ? "no interior area — it can't give a $/sqft"
-          : !price ? `no ${cls === 'sold' ? 'sale' : 'asking'} price` : null;
+      // Co-ops switch $/sqft off entirely: their square footage is unreliable (§6.3).
+      const unitRate = reportType === 'condo' && price && area ? price.value / area.value : null;
+      const noRate = reportType === 'coop' ? "co-op reports don't use $/sqft — square footage is unreliable there (§6.3)"
+        : cls === null ? 'no evidence class'
+          : !area ? "no interior area — it can't give a $/sqft"
+            : !price ? `no ${cls === 'sold' ? 'sale' : 'asking'} price` : null;
       const compared = compareComp(c.id, subject.facts as Partial<PropertyFacts>, facts, cls, assessments, { kind, mode, reportType, asOf });
       pending.push(...compared.pending);
       const included = reasons.length === 0;
-      if (included) estimates.push(...resolved.estimates, ...compared.estimates);
+      // An estimate matters here if the comp counts in this result — or counted on the facts and an
+      // estimate took it out (its type, its sale date).
+      const countedOnFacts = kind === 'with_estimates' && statesByKind.on_facts[idx]!.included;
+      if (included || countedOnFacts) estimates.push(...resolved.estimates, ...compared.estimates);
       const lines = cls === 'sold' && price
         ? adjustmentLines(c.id, compared.comparisons, price.value, area?.value ?? null, (subject.facts.area_sqft as Sourced<number> | undefined)?.value ?? null,
           subject.facts as Partial<PropertyFacts>, facts, { kind, houseMethod, agentAdjustments })
@@ -142,7 +147,14 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       };
     });
     statesByKind[kind] = states;
-    results[kind] = buildResult(states, { kind, asOf, reportType, method, subjectFacts: subjectFacts[kind], estimates }, warnings);
+    // Classes whose membership an estimate changed: their figures rest on it, whatever each comp's own confidence.
+    const estimateAffected = new Set<EvidenceClass>();
+    if (kind === 'with_estimates') {
+      states.forEach((s, idx) => {
+        if (s.evidence_class && s.included !== statesByKind.on_facts[idx]!.included) estimateAffected.add(s.evidence_class);
+      });
+    }
+    results[kind] = buildResult(states, { kind, asOf, reportType, method, subjectFacts: subjectFacts[kind], estimates, estimateAffected }, warnings);
   }
 
   // ── Comps ──
@@ -165,7 +177,7 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       }));
       const adjConf = s.lines.some((l) => l.source === 'agent' && resolution.applied.get(l.line)?.applied) ? 'guesstimate' : 'exact';
       const subjectArea = subjectFacts[kind].area_sqft as Sourced<number> | undefined;
-      const adjustedRate = s.evidence_class === 'sold' && s.price && s.area ? (s.price.value + resolution.forUnitRate) / s.area.value : null;
+      const adjustedRate = reportType === 'condo' && s.evidence_class === 'sold' && s.price && s.area ? (s.price.value + resolution.forUnitRate) / s.area.value : null;
       perResult[kind] = {
         included: s.included,
         not_included_because: s.not_included_because,
@@ -183,7 +195,7 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
         implied_value: adjustedRate !== null && subjectArea
           ? figure(roundHalfAway(adjustedRate * subjectArea.value), 'usd', weakest(s.unit_rate_confidence, adjConf, subjectArea.confidence), `adjusted $/sqft × subject's ${subjectArea.value} sqft`, asOf) : null,
         monthly_carry: carry ? figure(carry.value, 'usd_per_month', carry.confidence, carry.basis, asOf) : null,
-        carry_per_sqft: carry && s.area ? figure(carry.value / s.area.value, 'usd_per_sqft_per_month', weakest(carry.confidence, s.area.confidence), `${carry.basis} ÷ interior area`, asOf) : null,
+        carry_per_sqft: carry && s.area && reportType === 'condo' ? figure(carry.value / s.area.value, 'usd_per_sqft_per_month', weakest(carry.confidence, s.area.confidence), `${carry.basis} ÷ interior area`, asOf) : null,
         ask_vs_sold: s.evidence_class !== 'sold' && s.unit_rate !== null && band
           ? {
             position: s.unit_rate < band.low.value ? 'below' : s.unit_rate > band.high.value ? 'above' : 'within',
@@ -332,7 +344,9 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
   const b = results.with_estimates;
   const diff = (x: number | null, y: number | null) => (x === null || y === null ? null : y - x);
   const divergence: Divergence = {
-    same: b.estimates_used.length === 0,
+    // Same when the estimates move neither the base nor the range.
+    same: (a.base?.value ?? null) === (b.base?.value ?? null) && (a.range?.low.value ?? null) === (b.range?.low.value ?? null) &&
+      (a.range?.high.value ?? null) === (b.range?.high.value ?? null),
     base: {
       on_facts: a.base?.value ?? null, with_estimates: b.base?.value ?? null,
       difference: diff(a.base?.value ?? null, b.base?.value ?? null),
@@ -357,7 +371,7 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
     }
   }
 
-  const prices = evaluatePrices(input.prices ?? [], results, subjectFacts, asOf);
+  const prices = evaluatePrices(input.prices ?? [], results, subjectFacts, asOf, reportType);
   const output: EngineOutput = {
     meta: {
       engine_version: ENGINE_VERSION,

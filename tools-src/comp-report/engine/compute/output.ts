@@ -260,7 +260,7 @@ export interface Result {
 }
 
 export interface Divergence {
-  /** True when "with estimates" rests on nothing the facts don't. */
+  /** True when the agent's estimates move neither the base nor the range. */
   same: boolean;
   base: { on_facts: Dollars | null; with_estimates: Dollars | null; difference: Dollars | null; difference_percent: number | null };
   range_low: { on_facts: Dollars | null; with_estimates: Dollars | null; difference: Dollars | null };
