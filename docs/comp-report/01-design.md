@@ -1,77 +1,116 @@
 # Comp report tool — master design
 
-**v0.1 · 2026-09-24 · owner: Casanova.** The guiding document for every comp report dispatch.
+**v0.2 · 2026-09-24 · owner: Casanova.** The guiding document for every comp report dispatch.
 Dispatches cite sections of this file; when a build finding contradicts it, the dispatch says so
 in its PR and Casanova updates this file — the doc follows reality, not the other way round.
+Background and sources: `00-orientation.md`. Decisions are dated in §17.
 
-Background and sources: `00-orientation.md` (what Hannah and Noble asked for, the reference export
-taken apart, NYC practice, the ChatGPT workflow audit). Decisions are dated in §14.
+### What changed in v0.2 — reread these
+
+1. **§2 is new: three kinds of agent input.** "Your call", stated facts, and method settings are
+   captured the same way (form or chat) but routed differently. The chat keeps capturing them.
+2. **§3: no lock button.** Drafting pins the numbers as a version; later edits fork a new one
+   silently. Pushing back on the AI while drafting can change the numbers.
+3. **§6.6: no placeholder numbers in the product.** Every adjustment magnitude, weight and bound
+   is *to be determined*. Unset factors are "considered, not calculated." Test values live only in
+   a test config the product refuses to load.
+4. **§6.4: two results — "on the facts" and "with estimates."** Agent guesstimates never enter
+   the facts-only result.
+5. **§6.7: rudimentary carrying cost and price evaluation in v1** — not deferred entirely.
+6. **§7 is new: decisions are made by code, then Jev, then the LLM** — the cheapest thing that
+   can decide correctly. Jev's confidence decides whether a change applies, is suggested, or is
+   asked.
+7. **§8.3: assistant rules revised** — what-ifs allowed on the agent's own values; speculation
+   labelled "context, not calculated"; undo and redo show what they did.
+8. **§9: numeric grounding warns instead of blocking.** Only compliance blocks.
+9. **§11 is new: the training gate** — post-launch, designed now.
+10. **Appendix A is new: the adjustment catalog** — 36 factors, defined, none with a number.
+11. **§16: a research dispatch (CR-R)** on how adjustments are actually derived, runnable now.
 
 ---
 
 ## 1. What it is
 
 A Creative Studio tool where an agent brings the comps they found on StreetEasy, works through
-them with an AI assistant, locks a defensible price range, and leaves with a client-ready email
-and a Casa Blanca–branded report. Target: **six hours down to twenty minutes**, with the agent
-doing the ~15% that needs a human — choosing what's truly comparable, and judging condition.
+them with an AI assistant, settles a defensible price range, and leaves with a client-ready email
+and a Casa Blanca–branded report.
 
-**Users:** every Casa agent (piloted with a small group first), admins (Kimani, Hannah), and an
-allowlist of authorised non-Casa people. Noble becomes the owner of the house comp method once a
-working prototype exists (§5.6).
+**North star: six hours down to twenty minutes** — a direction to design toward, not a limit. A
+diligent agent going back and forth to understand a comp in depth is the tool working, not
+failing.
+
+**Users:** Casa agents, piloted with a small group first, then released behind the training gate
+(§11); admins (Kimani, Hannah); an allowlist of authorised non-Casa people. The heaviest users
+will be the most active, highest-ticket agents — so luxury factors matter from the start, and
+the architecture handles them the same way it handles everything else (§6.5).
 
 **v1 does:** condo reports from a StreetEasy comp export; subject capture by StreetEasy URL or by
-hand; an assistant that operates the analysis; a locked, versioned valuation; client email in
-three lengths; a PDF of the client report; saved, recoverable reports and chats.
+hand; an assistant that operates the analysis; two results (§6.4); rudimentary carrying cost and
+price evaluation (§6.7); versioned numbers; client email in three lengths; a PDF of the client
+report; saved, recoverable reports and chats.
 
-**v1 does not:** co-ops (designed for — §5.4 — built next), offer-scenario and carrying-cost
-modelling, data sources beyond StreetEasy, sending email from the tool, the client web page
-(designed for — §8.4), Excel for clients.
+**v1 does not:** co-ops (designed for — §6.3 — built next), full offer-scenario modelling (rent
+credits, deposits, closing timelines), sources beyond StreetEasy, sending email, the client web
+page (designed for — §10.4), Excel for clients, the training gate (post-launch — §11).
 
-## 2. The workflow
+## 2. Three kinds of agent input
 
-Seven stages. The assistant is available from stage 3 onward; everything it does is also doable by
-hand.
+The word "assumptions" covers three different things. They need opposite treatment, so the tool
+keeps them apart.
 
-1. **Brief.** Subject property — prefilled from its StreetEasy URL via the existing Firecrawl
-   import, or entered — and property type. Then the audit's six fields as a form: the question
-   ("Is $3.5M supported?"), audience, method, goal, output. **The agent enters their own range
-   here** — a committed hypothesis, kept out of the valuation (§6.4).
-2. **Import.** Upload the StreetEasy comp export (CSV or XLSX). The parser normalises it and
-   reports what it couldn't read.
-3. **Review.** One row per comp: tier (primary / secondary / excluded / unreviewed) with a reason,
-   a link to the listing, and a "reviewed" mark once the agent has looked at it. Gaps are flagged
-   (a same-building comp with no square footage; the subject's floor). The assistant proposes
-   tiers from the data; the agent decides.
-4. **Value.** The engine computes every indicator, the adjustment bridge and the range, live. The
-   agent and the assistant adjust parameters within house limits; the range moves as they do.
-5. **Lock.** The agent locks the valuation: an immutable, versioned snapshot. Only now is the
-   agent's own range shown against the data.
-6. **Communicate.** The writer drafts from the locked snapshot for the chosen audience — full
-   email, short email, text — and the report narrative. QA gates run (§7). The agent edits.
-7. **Export.** Copy the email; print the client report to PDF. The report is saved with its
+| Kind | Example | Treatment |
+|---|---|---|
+| **Your call** — the agent's opinion of value | "I think it trades at $3.4–3.6M" | **Never touches the calculation.** Withheld from the assistant while it helps with the valuation. Shown against the data as the teaching moment (§8.4). |
+| **Stated facts** — things about a property the agent asserts | "The terrace is about 400 sq ft." "It was gut-renovated in 2022." "Charges are $3,500." | **Feed the calculation**, attributed to the agent as `exact` or `guesstimate`. A guesstimate only enters the "with estimates" result (§6.4). |
+| **Method settings** — how the analysis should run | "Only look at the last six months." "Treat 181 Hudson as secondary." "Add 5% for the terrace." | **Change the analysis parameters**, with the agent's reason. A setting that carries a number is the agent's estimate and lands only in *with estimates* (§6.6). |
+
+**All three can be given in the opening form or in chat, at any point.** The assistant captures
+each statement as it happens, files it under the right kind, and shows it as a chip the agent can
+confirm, edit or remove — "Noted: terrace ≈ 400 sq ft (your estimate) — used in *with estimates*."
+Captured inputs live in the report's structured state, never only in chat history.
+
+**The opening form** is the audit's six-part brief — property, question, audience, method, goal,
+output — plus the agent's call. It's asked once, at intake. Later edits never re-ask it.
+
+## 3. The workflow
+
+1. **Intake.** Subject property (StreetEasy URL prefill via the existing Firecrawl import, or by
+   hand) and property type; the brief; the agent's call; any stated facts.
+2. **Import.** The StreetEasy comp export. The parser normalises it and reports what it
+   couldn't read. Each comp is tagged on arrival (§7).
+3. **Review ⇄ value — the loop.** One row per comp: tier (primary / secondary / excluded /
+   unreviewed) with a reason, a link to the listing, a "reviewed" mark once the agent has looked
+   at it. The engine recomputes live as tiers, facts and settings change. **This loop is where the
+   agent lives**, and it can be re-entered at any time — new comps imported, a fact corrected, a
+   setting changed. Nothing about the intake is asked again.
+4. **Communicate.** The writer drafts from the current numbers for the chosen audience — full
+   email, short email, text — and the report narrative. **Drafting pins those numbers as a
+   version** (v1, v2 …). QA runs (§9). The agent edits.
+5. **Export.** Copy the email; print the client report to PDF. The report is saved with its
    versions, its chat and its exports.
 
-Any change after a lock unlocks into a new working version and a new lock is v2. Nothing
-overwrites.
+**No lock button.** Every draft is bound to the version it was written from. Change anything
+afterwards — including by pushing back on the AI while drafting ("actually, drop 79 Laight") — and
+the tool silently starts the next version; drafts from the earlier one show "numbers changed since
+this draft — regenerate?" The integrity guarantee is that every draft's numbers are known and
+fixed; the agent never has to perform a ceremony to get it.
 
-## 3. Non-negotiables
+## 4. Non-negotiables
 
-1. **Code computes, the model explains.** Every figure is computed by the engine and traceable to
-   the rows and parameters it came from. The model argues, organises and writes; it never
-   produces a number. Enforced, not requested: see the numeric grounding gate, §7.1.
-2. **Sold and ask are different evidence** — separate statistics, labelled, never averaged
-   together.
-3. **A range, never a point.** Client outputs state the range. The engine's base value exists for
-   the analyst view only.
-4. **Neutral valuation before the argument.** The target price is compared against the valuation,
-   never fed into it. The narrative argues from locked numbers and cannot move them.
-5. **Judgment is structural.** Tier with a reason; mark reviewed; hypothesis first.
-6. **Provenance on every figure** — source, as-of date, confidence.
-7. **Compliance built in** — never "appraisal"; disclaimer on every export; generated copy
-   checked against federal and NYC fair housing rules (§11).
+1. **Code computes, the model explains.** Every figure comes from the engine or from something the
+   agent stated, and is traceable to its source. The model argues, organises and writes.
+2. **Nothing invents a number** — not the model, not Jev, and not the house method: a magnitude
+   nobody has determined is shown as undetermined, never guessed (§6.6).
+3. **Sold and ask are different evidence** — separate statistics, never averaged together.
+4. **A range, never a point**, for value. A list-price recommendation is a strategy, not a value
+   claim, and may be a single number.
+5. **Neutral valuation before the argument.** The agent's call never feeds the numbers.
+6. **Judgment is structural** — tier with a reason, mark reviewed, the call committed up front.
+7. **Provenance on every figure** — source, as-of date, confidence.
+8. **Compliance built in** — never "appraisal"; disclaimer and StreetEasy attribution on every
+   export; generated copy screened against federal and NYC fair housing rules (§14).
 
-## 4. Architecture
+## 5. Architecture
 
 ```
 Browser — React + Vite SPA at /tools/comp-report/
@@ -79,394 +118,568 @@ Browser — React + Vite SPA at /tools/comp-report/
    ▼
 Netlify Functions — the authenticated API          ◄── Netlify Identity (Google + invites)
    │   reports, imports, engine snapshots, assistant turns, writer, QA
-   ├──► Netlify Database (Postgres) ── reports, comps, events, valuations, transcripts
+   ├──► Netlify Database (Postgres) ── reports, comps, statements, events, versions, transcripts
    ├──► Netlify Blobs ─────────────── uploaded exports, generated files
-   ├──► Anthropic API ─────────────── assistant, writer, lint (§6.6)
+   ├──► Jev (TypeSafe AI) ─────────── typed judgments with confidence (§7)
+   ├──► Anthropic API ─────────────── assistant and writer (§8)
    └──► Firecrawl ─────────────────── StreetEasy listing lookup (existing integration)
 ```
 
-**The engine is one TypeScript module run in two places:** in the browser so the range moves the
-instant a comp is toggled, and in the functions so every stored snapshot is computed
-authoritatively. Same code, same version string — the stored result is what the browser showed.
+**The engine is one TypeScript module run in two places** — in the browser so the range moves the
+instant a comp is toggled, and in the functions so every stored version is computed
+authoritatively. Same code, same version string.
 
-**The server owns the transcript and the report state** (§6.3).
+**The server owns the transcript and the report state** (§8.3).
 
-## 5. The calculation engine
+## 6. The calculation engine
 
-Pure TypeScript. No DOM, no network, no clock — inputs in, results out. This is the heart of the
-tool and the part that must be most trustworthy, so it is built and tested first and alone (§13,
-CR-2).
+Pure TypeScript. No DOM, no network, no clock — inputs in, results out. Built and tested first and
+alone (§16, CR-2).
 
-### 5.1 Types
+### 6.1 Types
 
-- **Money** in integer dollars. **Area** in integer square feet. Floats only for ratios and
-  percentages. Display rounding is a presentation concern, never applied inside the engine.
-- **Every input field is sourced:**
-  `{ value, source: 'se_export' | 'listing' | 'agent' | 'ai_proposed' | 'engine', as_of, confidence: 'exact' | 'approx' | 'inferred' | 'estimated', note? }`.
-  A stale or low-confidence input is visible wherever it's used.
+- **Money** in integer dollars; **area** in integer square feet; floats only for ratios. Display
+  rounding (three significant figures for prices) is presentation, never applied inside the
+  engine.
+- **Every input is sourced:**
+  `{ value, source, as_of, confidence, note? }` where
+  `source` is `se_export` · `se_pdf` · `listing` · `agent` · `hypothetical` · `engine`, and
+  `confidence` is `exact` · `approx` (marked approximate at its source, e.g. `~1,840 ft²`) ·
+  `inferred` (derived from listing text or a Jev judgment — needs the agent's confirmation) ·
+  `guesstimate` (the agent's estimate).
 
-### 5.2 The StreetEasy parser
+### 6.2 Inputs — what StreetEasy gives us
 
-Reference fixture: `sources/streeteasy-comp-export-100-barclay-17l-2026-09-23.csv`.
+**The CSV export is the primary input.** Reference fixture:
+`sources/streeteasy-comp-export-100-barclay-17l-2026-09-23.csv`.
 
 - **Map columns by header name, never position.** Unknown columns are kept and reported; missing
-  expected columns are warnings, not crashes. The parser is versioned and every import records the
-  version.
-- Parse `"2,201 ft²"`, `"$4,650,000"`, `"$2,112 ft²"`. A leading `~` means approximate — likely
-  StreetEasy's AI-inferred square footage — and sets `confidence: 'approx'`.
-- **Never trust the export's `$/Sqft` column.** Recompute from sale price (sold) or asking price
-  (in contract, active), with the basis recorded. The export silently switches basis by status
-  and truncates rather than rounds.
-- A `/closing/` URL is a **public-record closing** without listing data: no ask, no days on
-  market, no engagement, no features. Flag it.
-- Split `Home Features`, `Building Amenities` and `Building Policies` on `;` into tags. Derive
-  service level (full-time doorman / doorman / elevator only / walk-up), outdoor presence
-  (terrace, balcony, roof deck — **presence only; the export carries no outdoor size**), parking,
-  and views.
-- **The subject is never in the export.** It comes from the brief.
-- XLSX is the same schema in a different container.
-- **Expected second variant:** exports from standard-tier StreetEasy accounts (requested
-  2026-09-23). Parser version 2 is expected once one arrives.
+  ones are warnings. The parser is versioned; every import records its version.
+- Parse `"2,201 ft²"`, `"$4,650,000"`, `"$2,112 ft²"`; a leading `~` sets `approx`.
+- **Never trust the `$/Sqft` column.** Recompute from sale price (sold) or asking price (in
+  contract, active), recording the basis. StreetEasy switches basis by status and truncates.
+- A `/closing/` URL is a public-record closing without listing data. Flag it.
+- Split features, amenities and policies on `;` into tags; derive service level, outdoor presence
+  (**presence only — no size in the export**), parking and views from them.
+- The subject is never in the export. XLSX is the same schema.
+- **Expected second variant:** standard-tier StreetEasy exports (requested 2026-09-24).
 
-### 5.3 Indicators
+**StreetEasy's own PDF report** (`sources/streeteasy-comp-report-…pdf`) carries **year built**,
+photos and floor plans, none of which are in the CSV. Year built comes from the listing lookup in
+v1; parsing the PDF is a later enrichment.
 
-Evidence classes — **sold** (sale basis), **in contract** (ask basis, pending), **active** (ask
-basis, competition) — never mix inside one statistic.
+**The PDF is also the clearest statement of why this tool exists.** Its headline — "Average sale
+price $4,535,000, $2,179/ft²" — is the average of all eleven homes, **mixing closed sales with
+asking prices** and labelling the result a sale price. Its "$2.2M–$6.0M estimated sale price
+range" is simply the lowest price to the highest across every status. Its sold-only figure,
+$1,906/ft², matches this engine's exactly. This is what agents send clients today.
 
-Two indicator families, which is what makes co-ops a subtraction rather than a rewrite:
+### 6.3 Indicators
 
-- **Unit-rate indicators** ($/sqft) — need square footage on both subject and comp. Median,
-  mean, weighted mean (weights from tier and recency), and the single most comparable sold comp as
-  an anchor. Each yields an implied subject value.
-- **Adjusted-price indicators** — each sold comp's price, adjusted for its differences from the
-  subject (§5.5), is an indication of the subject's price. Reconciled by the same four statistics.
+Evidence classes — **sold**, **in contract** (ask basis), **active** (ask basis) — never mix
+inside one statistic.
 
-Condos compute both; unit-rate usually leads. Co-ops switch unit-rate off.
+- **Unit-rate indicators** ($/sqft) — need area on both subject and comp: median, mean, and the
+  **anchor** (the single most comparable sold comp — the agent marks it; Jev suggests one).
+  Each yields an implied subject value.
+- **Adjusted-price indicators** — each sold comp's price, with any *determined* adjustments
+  applied, as an indication of the subject's price. Same statistics.
 
-**Also computed:** sale-to-last-ask ratio per sold comp and summarised (negotiation margin),
-days on market, and where active and in-contract asks sit against the sold band.
+Condos compute both. Co-ops switch unit-rate off — which is why co-ops are the same scaffolding
+without square footage, not a second engine.
 
-### 5.4 Reconciliation and range
+**Also computed:** sale-to-last-ask per sold comp and summarised; days on market; where active and
+in-contract asks sit against the sold band.
 
-- A **benchmark rule** picks the leading indicator — e.g. median when the primaries contain an
-  outlier; the anchor comp when primaries are fewer than four. The rule is a parameter, stated in
-  the analyst view, and the assistant may propose a change with a reason.
-- **Base** = the leading indicator's implied value. **Low–high** from the spread of primary
-  indications, rounded to increments by price band.
-- **Target comparison:** target vs. base as a percentage, target $/sqft vs. the benchmark, where
-  the target falls in the range.
+### 6.4 Two results
 
-### 5.5 Adjustments
+- **On the facts** — inputs whose confidence is `exact` or `approx`, and adjustments with
+  determined values only.
+- **With estimates** — the same, plus the agent's `guesstimate` inputs and any adjustments the
+  agent has stated a value for.
 
-Each adjustment is a line: `{ comp | all, type, amount or %, direction, reason, set_by }`. The
-bridge — base, each line, result — is the audit trail and the "complete mathematical bridge"
-Hannah keeps asking ChatGPT for.
+Both are always shown, side by side. **Where they diverge is itself information:** a wide gap
+means the range rests on guesses. The agent chooses which result the client copy uses; if it's
+the second, the estimates are disclosed automatically.
 
-v1 types: **floor**, **outdoor space** (by class when size is unknown; effective square footage
-by weighting when it's known), **view**, **condition** (agent-set), **service level**, **size**
-(large-unit non-linearity, optional). Recency is a *weight* in v1, not an adjustment.
+A missing input the calculation needs is called out, not assumed. If it can't be pulled from the
+listing and the agent doesn't know it, it's left out of both results and the output says so.
 
-### 5.6 The house method
+### 6.5 The range, and why the model is additive
 
-Every default and limit lives in one versioned config file, `house-method.v0.json`, not in code:
-the benchmark rules, adjustment defaults and bounds, weights, rounding increments. **Every value
-in v0 is a placeholder** — the outdoor bands come from the ChatGPT audit, the rest from general
-practice — and says so. Noble signs off v1 after the prototype. Every valuation records which
-house-method version produced it, so old reports reproduce exactly.
+- **Base** = the leading indicator's implied value; the agent picks the lead from the indicators
+  shown side by side. The default shown is the median, labelled as the default method pending
+  Noble.
+- **Range** = lowest to highest implied value among the agent's **primary sold** comps. This is
+  bracketing on a curated like-for-like set — not StreetEasy's lowest-to-highest of everything.
+  The agent can narrow it, with a reason.
+- **The model is additive.** The base case is a featureless unit; each factor in Appendix A
+  switches on when a property has it and the data exists. A Brooklyn one-bedroom and a Tribeca
+  penthouse run the same engine — the penthouse just has more factors active.
 
-### 5.7 Tests
+### 6.6 Adjustments and the house method — no invented numbers
 
-Hand-verified fixtures. The first comes from Hannah's export and must reproduce:
+Every factor in the **adjustment catalog (Appendix A)** exists in the engine as a definition: what
+it captures, what data it needs, where the data can come from. **None has a number yet.**
 
-- all five sold comps: mean **$1,906/sqft**, median **$2,112**; sold comps on floor 10+: mean
-  **$2,279**
-- in-contract and active $/sqft on **ask** basis (1,625 · 2,387 · 2,400; 2,763 · 3,091)
-- `~1,840` flagged approximate; 79 Laight #1A flagged as a closing; 100 Barclay #11F with no area
-  contributing no unit-rate indication; 101 Leonard #5B with no floor
-- sale-to-ask: −3.0%, +12.3%, −4.0%, −4.2%
+- A factor that applies but has no determined value is **"considered, not calculated"**: it
+  appears in the bridge as a line marked *value not yet determined*, the assistant can discuss it,
+  and it moves no number.
+- **The agent may state a value** for any factor ("I'd add 5% for the terrace"). It's recorded as
+  theirs, labelled the agent's estimate, and lands only in *with estimates*.
+- **Magnitudes, weights and bounds all live in one versioned house-method file.** In production
+  every value in it is `null` — to be determined — until Noble sets it, informed by the research in
+  CR-R (§16). Every version records which house method produced it.
+- **Test values live in a separate test-only config** so the arithmetic can be exercised. The
+  engine refuses to load it outside tests.
 
-## 6. The AI layer
+### 6.7 Carrying cost and price evaluation — rudimentary, in v1
 
-### 6.1 Three roles
+- **Carry** for the subject and every comp: common charges plus taxes for condos, maintenance for
+  co-ops; carry per square foot where area is known; the subject against the comp median.
+- **Price evaluation** for any price the agent names — a list price, an offer, the client's
+  target, a what-if: its $/sqft, where it falls in each result's range, its distance from each
+  indicator, and what the comps' typical sale-to-ask implies about negotiating room.
+- **Monthly cost estimate**, optional: the agent enters rate, down payment and term; the engine
+  returns principal and interest plus carry. Labelled an estimate. Definitions follow the audit's
+  §9 — housing cash outflow, ownership carrying cost, principal (not an expense) — so the terms
+  mean one thing everywhere.
+- Every evaluation can be saved as a named, immutable **scenario**. Full offer modelling — rent
+  credits, deposits, closing timelines — comes later on the same scenario structure.
 
-| Role | What | Shape | Model |
-|---|---|---|---|
-| **Assistant** | Operates the engine through tools, one conversation per report | stateful, streamed | Claude Opus 5.5 |
-| **Writer** | Drafts client copy from a locked snapshot | stateless, one call per draft | Claude Opus 5.5 |
-| **Linters** | Compliance classification; feature tagging from listing text; header mapping when an export changes | stateless, small | Claude Haiku 4.5 |
+### 6.8 Tests
 
-**Model is a per-role config value, never hard-coded.** Claude Sonnet 5 is the measured
-challenger for the assistant: during the pilot, run Noble's good and bad examples through both and
-keep Sonnet if it holds (§13, CR-7).
+Hand-verified fixtures. Hannah's export must reproduce: all five sold comps — mean **$1,906/sqft**
+(StreetEasy's PDF agrees), median **$2,112**; sold comps on floor 10+ — mean **$2,279**;
+in-contract and active $/sqft on **ask** basis (1,625 · 2,387 · 2,400; 2,763 · 3,091); `~1,840`
+flagged approximate; 79 Laight #1A flagged as a closing; 100 Barclay #11F contributing no
+unit-rate indication; 101 Leonard #5B with no floor; sale-to-ask −3.0%, +12.3%, −4.0%, −4.2%.
+**Also:** a test that rebuilds StreetEasy's blended $4,535,000 and $2.2M–$6.0M from the raw rows,
+and asserts the engine never returns either as a result.
 
-**Why one model per conversation:** Opus 5.5's reasoning blocks are readable only by the model
-that produced them (and Fable 5.1), and prompt caches are per model. Switching models inside one
-conversation silently drops the prior reasoning and forfeits the cache. Splitting work across
-models is fine *between* calls — which is why the writer and linters are separate calls.
+## 7. Who decides what: code, then Jev, then the LLM
 
-### 6.2 Assistant tools
+**Use the cheapest thing that can make the decision correctly.**
 
-The assistant changes **parameters**; the engine recomputes.
+| Tier | Decides | Examples |
+|---|---|---|
+| **Code** | Anything a rule can decide — free, exact, auditable | evidence classes, statistics, the range, recency filtering, the parser, numeric grounding, carry and price evaluation |
+| **Jev** | Typed judgments over text and data, with calibrated confidence | comparability score (for sorting), tier suggestion, view / outdoor / condition / service class from listing text, sale-condition flags, whether a comp differs from the subject on a factor and in which direction, fair-housing screening, practice-report rubric scoring (§11) |
+| **LLM** | Conversation and writing | the assistant, capturing the agent's statements with their values, gap questions, audience and method, the writer, feedback prose |
+
+### 7.1 Jev
+
+TypeSafe AI's "System One" model, released in early access on 2026-09-15. It returns **typed
+values only** — pick one of up to 255 options, score on ordered levels, or yes/no — each with
+calibrated probabilities and a confidence score. **It generates no text and does no regression.**
+Around 70–500 ms per call; $0.042 per million input tokens, output free. Input is text plus
+structured state; no images yet.
+
+**It cannot output a dollar figure — which enforces §4.2 by construction.** For an adjustment, Jev
+decides *whether* the comp differs from the subject and *which kind and degree* ("view: comp
+better, large difference, confidence 0.91"); the house method turns that class into a number once
+one is determined. Until then the bridge shows the judgment with *value not yet determined*.
+
+**Confidence drives how a judgment lands:**
+
+- **High** → applied immediately, visible and undoable
+- **Middling** → shown as a suggestion with its reason
+- **Low** → asked of the agent
+
+Thresholds are house-method values, calibrated on Noble's examples.
+
+**Where it runs:** on import, with no LLM involved (every comp classified on arrival, for
+fractions of a cent), and as tools the assistant calls when the conversation needs a
+re-assessment.
+
+**It sits behind a "decision provider" interface** with Claude Haiku 4.5 (structured outputs) as
+the fallback. Jev is nine days old at the time of writing, invite-only, and doesn't document data
+handling — so Casa needs its own account and terms, client names never go to it, and the tool
+must keep working if it's unavailable.
+
+## 8. The assistant
+
+### 8.1 Models
+
+| Role | Shape | Model |
+|---|---|---|
+| **Assistant** | stateful, streamed, one conversation per report | Claude Opus 5.5 |
+| **Writer** | stateless, one call per draft, from pinned numbers | Claude Opus 5.5 |
+| **Fallback decision provider** | stateless | Claude Haiku 4.5 |
+
+Model is a per-role config value. **Claude Sonnet 5 is the measured challenger** for the assistant,
+evaluated on Noble's examples in the pilot. One model per conversation: Opus 5.5's reasoning blocks
+are readable only by the model that produced them, and caches are per model, so switching mid-chat
+silently drops both. Work splits across models *between* calls.
+
+### 8.2 Tools
+
+The assistant changes parameters and captures inputs; the engine recomputes.
 
 | Tool | Does |
 |---|---|
-| `get_report` | Current state: subject, comps, parameters, indicators, gaps |
+| `get_report` | Current state: subject, comps, statements, parameters, both results, gaps |
+| `record_statement` | Capture something the agent said — kind (call / fact / setting), field, value, `exact` or `guesstimate` — as a chip the agent confirms |
 | `set_comp_tier` | Tier a comp, with a reason |
-| `set_adjustment` / `clear_adjustment` | Within house-method bounds, with a reason |
-| `set_benchmark_rule` | With a reason |
-| `set_recency_window` | With a reason |
-| `flag_gap` | Ask the agent for a missing input, or offer a lookup |
-| `lookup_listing` | Firecrawl a comp's or the subject's listing for features, area, description; results arrive as `listing`-sourced, `inferred` fields for the agent to confirm |
-| `set_brief` | Audience, method, goal — from how the agent talks |
+| `set_method` | Lead indicator, recency window, anchor — with a reason |
+| `assess` | Jev-backed: comparability, tier suggestion, feature classes, factor differences |
+| `lookup_listing` | Firecrawl a listing; results arrive as `listing`-sourced, `inferred` fields for confirmation |
+| `flag_gap` | Ask for a missing input, or offer a lookup |
+| `what_if` | Set up a hypothetical **using values the agent gave** — a terrace, a different size, an offer price |
+| `evaluate_price` | Run §6.7 on a price the agent names |
+| `add_context` | A note of context or speculation, rendered as *context, not calculated* — it never enters a number |
+| `set_brief` | Audience, method, goal |
 
-**It can never:** write a price, an area, a rent or any other figure; lock a valuation; see the
-agent's hypothesis before the lock (§6.4); edit anything after the lock except by drafting through
-the writer.
+**It can never:** originate a price, area, rent or any figure; set an adjustment's magnitude; see
+the agent's call before the gap is shown (§8.4).
 
-### 6.3 Rules and mechanics
+### 8.3 Rules
 
-1. **Bounded.** Parameters outside house-method bounds need the agent's explicit confirmation.
-2. **Visible and reversible.** Every change is an event — actor (agent or AI), what, why, and the
-   range before and after. Changes apply immediately (speed matters) and undo is one click.
-3. **Undo is a new event, never a rewrite.** Opus 5.5 rejects edited conversation history, so the
-   transcript and the event log are append-only by construction.
-4. **The server owns the transcript and the state.** The browser sends only the agent's new
-   message. Each request runs any pending tool calls through the engine server-side, then makes
-   **one** model call and streams it; the browser re-requests to continue the loop. That keeps
-   every request to a single model call (time limits, §12) and keeps state authoritative.
-5. **Stay portable across Opus 5.5 and Sonnet 5 until the eval decides.** Engine-state updates
-   reach the model as user-turn content, not mid-conversation system messages (Sonnet 5 lacks
-   them).
+1. **Bounded — once there are bounds.** House limits exist only when the house method has numbers.
+   When they do, each control shows its limits inline; going outside needs the agent's reason.
+   Until then, agent-stated values are labelled and confined to *with estimates*.
+2. **Speculation is allowed if it's labelled.** The assistant may reason beyond what the parameters
+   capture — "a corner unit on this block usually commands more" — but only as *context, not
+   calculated*, visually distinct and never folded into the numbers.
+3. **Visible and reversible without clutter.** Changes apply immediately. Undo and redo buttons;
+   each click raises a small card saying exactly what changed — *"Undid: 181 Hudson #1A excluded →
+   primary. Range $3.95–4.40M → $3.60–4.40M."* The full history sits in a collapsible panel,
+   closed by default.
+4. **What-ifs are the agent's.** Hypotheticals are welcome — labelled `hypothetical`, built from
+   the agent's values, never mixed into either result, and in client copy only if the agent
+   includes them.
+5. **Append-only.** Undo is a new event, never a rewrite. Opus 5.5 rejects edited conversation
+   history, so the transcript and event log are append-only by construction.
+6. **The server owns the transcript and state.** The browser sends only the agent's new message.
+   Each request runs any pending tool calls through the engine server-side, then makes **one**
+   model call and streams it; the browser re-requests to continue. One model call per request keeps
+   within function time limits (§15) and keeps state authoritative.
+7. **Stay portable across Opus 5.5 and Sonnet 5** until the eval decides: engine-state updates go
+   in as user-turn content, not mid-conversation system messages (Sonnet 5 lacks them).
 
-### 6.4 Keeping the valuation neutral
+### 8.4 Keeping the valuation neutral — and the teaching moment
 
-The hypothesis field never enters the assistant's context during stages 3–4. It can't stop an
-agent typing "I think it's $3.5M" into the chat, so there's a backstop: after a hypothesis exists,
-every parameter change shows how much it moved the base *toward or away from* the hypothesis, and
-the analyst view totals it. Target-seeking becomes visible rather than silent.
+The agent's call never enters the assistant's context while it's helping with the valuation. **The
+gap — your call against the data — appears once every comp has been reviewed**, so the first thing
+the agent compares against is a considered comp set, not the raw import. That comparison is the
+teaching moment, and in practice mode (§11) it's the lesson.
 
-### 6.5 Calling Claude — implementation notes
+The call can't be kept out of the chat if the agent types it, so there's a backstop: after a call
+exists, every change shows how far it moved the base *toward or away from* the call, and the
+analyst view totals it — including the agent's own estimates. Target-seeking becomes visible.
 
-For Opus 5.5 (`claude-opus-5-5`), current as of 2026-09-24 — verify against the `claude-api`
-skill when building:
+### 8.5 Calling Claude
 
-- **Thinking is always on.** Don't send `thinking: {type: "disabled"}` or `budget_tokens` —
-  both 400. **Effort is the control:** its default is `medium`; set it explicitly. Conversational
-  turns at `low`, the valuation-proposal pass at `medium` or `high`, measured.
-  Per-message effort changes effort without resetting the cache (beta).
-- **No forced tool use** — `tool_choice` `any` / `tool` returns 400. Use `auto`, `strict: true`
-  tool schemas, steering in the prompt, and check a call was made.
-- **Append-only history** (§6.3.3) — pass thinking blocks back unchanged.
-- **Progress notes arrive as thinking blocks.** Set `display: "updates"` (beta) and render them, or
-  the chat goes silent through long turns.
-- **Handle `stop_reason: "refusal"`** before reading content, and opt into server-side fallbacks
-  from day one.
-- **Stream** every assistant and writer call. Size `max_tokens` for thinking plus the reply.
-- **Cache** a stable system prompt and tool list first. Opus 5.5 cache reads are $0.20 per
-  million tokens, so a warm cache makes long report chats cheap.
+For Opus 5.5 (`claude-opus-5-5`), as of 2026-09-24 — verify against the `claude-api` skill when
+building:
 
-### 6.6 Cost
+- **Thinking is always on**; `thinking: {type: "disabled"}` and `budget_tokens` both 400. **Effort
+  is the control** — default `medium`; set it explicitly. Conversational turns at `low`, heavier
+  analysis turns higher, measured. Per-message effort (beta) changes it without resetting the cache.
+- **No forced tool use** — `tool_choice` `any` / `tool` 400s. Use `auto`, `strict: true` schemas,
+  steering in the prompt, and check a call was made.
+- **Pass thinking blocks back unchanged**; history is append-only (§8.3.5).
+- **Progress notes arrive as thinking blocks** — set `display: "updates"` (beta) and render them.
+- **Handle `stop_reason: "refusal"`** before reading content; opt into server-side fallbacks.
+- **Stream** everything; size `max_tokens` for thinking plus the reply; cache a stable system
+  prompt and tool list first.
 
-List pricing per million tokens, input / output: **Opus 5.5 $4 / $20** (cache reads $0.20),
-**Sonnet 5 $2 / $10**, **Haiku 4.5 $1 / $5**.
+### 8.6 Cost
 
-Estimated per report — ~150K input tokens, mostly cache reads, and ~20K output:
-**Opus 5.5 ≈ $0.35–1.00**, Sonnet 5 ≈ $0.20–0.60. At 800 reports a month — every agent, about
-four each — Opus runs roughly $300–800. **Log real usage per call from day one** and replace these
-estimates with measurements in the pilot.
+Per million tokens, input / output: **Opus 5.5 $4 / $20** (cache reads $0.20), Sonnet 5 $2 / $10,
+Haiku 4.5 $1 / $5; Jev $0.042 input, output free. Estimated **Opus 5.5 ≈ $0.35–1.00 per report**.
+Jev's share rounds to zero. The training gate lowers volume. **Log real usage per call from day
+one**; the pilot replaces these estimates with measurements.
 
-## 7. QA gates
+## 9. QA
 
-Run on every writer output before it can be exported or copied. A failure blocks and highlights.
+Run on every draft before it can be copied or exported.
 
-1. **Numeric grounding.** Extract every number from the text — currency, percentages, areas,
-   counts, dates — normalise ("$3.4M" = "3.4 million" = "$3,400,000"), and match each to a value in
-   the locked snapshot or the brief, within the stated precision. **An unmatched number blocks.**
-   This is what makes non-negotiable 1 real.
-2. **Range, not point.** The stated range equals the locked range; no single-price value claims
-   in client copy.
-3. **Compliance.** Banned terms (appraisal, appraised value), a fair housing term list covering
-   federal and NYC Human Rights Law classes, then a Haiku pass for subtler stacked signals. The
-   disclaimer and brokerage identity are present.
-4. **Freshness.** Inputs older than a threshold are either disclosed in the copy or confirmed by
-   the agent.
+1. **Numeric grounding — warn and acknowledge.** Every number in the text is extracted,
+   normalised, and matched against the pinned version and the agent's statements. Numbers the agent
+   stated — a client's target, a stated fact — resolve automatically as *agent-stated*. Anything
+   else is highlighted and resolved one of two ways: the text attributes it ("your client's goal of
+   $3.6M"), or the agent acknowledges it and keeps it. Acknowledgments are logged. **Export
+   proceeds.**
+2. **Range language — warn.** Point-value claims ("worth $3.5M") are flagged. List-price
+   recommendations are not.
+3. **Compliance — the only hard block.** "Appraisal" and "appraised value" in client copy, and
+   high-confidence fair-housing hits, must be fixed. Lower-confidence fair-housing flags warn and
+   need acknowledgment. The disclaimer and StreetEasy attribution are inserted automatically.
+4. **Freshness — warn.** Old inputs are disclosed or confirmed.
+5. **Estimates — automatic.** If the copy uses *with estimates*, the estimates are disclosed.
 
-## 8. Outputs
+## 10. Outputs
 
-### 8.1 Two layers
+### 10.1 Two layers
 
-- **Analyst view** — every comp including exclusions and their reasons, all indicators, the full
-  bridge, provenance, the event log, target-seeking totals. For the agent.
+- **Analyst view** — every comp including exclusions and reasons, both results, all indicators,
+  the bridge with its undetermined lines, provenance, statements, the event history,
+  target-seeking totals.
 - **Client view** — the range, the primary evidence, the bridge in plain language, market signals,
-  assumptions and their dates, disclaimer, agent contact. For the client.
+  assumptions and their dates, disclosures, agent contact.
 
-### 8.2 Email — the primary deliverable
+### 10.2 Email — the primary deliverable
 
-Full email, short email, and text, per audience. Copy to clipboard as rich HTML that pastes cleanly
-into Gmail, with plain text alongside. The tool doesn't send.
+Full email, short email, text; per audience. Copied as rich HTML that pastes cleanly into Gmail,
+with plain text alongside. The tool doesn't send.
 
-### 8.3 The client report and PDF
+### 10.3 The client report and PDF
 
-**One template renders the client view.** Kimani designs it (Claude Design), then it's ported to
-HTML and CSS as a self-contained component whose only input is the locked snapshot. PDF v1 is a
-browser print of that template with `@page` CSS; server-side rendering comes only if agents
-struggle with the print dialog.
+**One HTML template renders the client view** from day one. Kimani designs it (Claude Design); it's
+ported to HTML and CSS as a self-contained component whose only input is a pinned version. PDF v1 is
+a browser print of it; server-side rendering only if agents struggle with the print dialog.
 
-**What the template has to hold** — design against real content, not lorem ipsum. From Hannah's
-export: addresses like *"25 North Moore Street, #9C"*; five to eight primary comps plus a mention
-of secondaries; prices to $5,995,000; $/sqft to four digits; statuses sold / in contract / active;
-dates; days on market to 300; the range as two prices; the thesis in one or two sentences; a
-bridge of three to six lines; agent name, licence number, photo and contact; the disclaimer.
+**Design against real content.** From Hannah's comps: addresses like *"25 North Moore Street,
+#9C"*; five to eight primary comps plus a note of secondaries; prices to $5,995,000; four-digit
+$/sqft; three statuses; dates; days on market to 300; two results, each a two-price range; a
+one- or two-sentence thesis; a bridge of three to six lines, some reading *value not yet
+determined*; carry per comp; agent name, licence number, photo, contact; the disclaimer; "Data
+provided by StreetEasy." StreetEasy's own report places the Casa Blanca wordmark top right beside
+the agent card — a useful starting point for what agents expect.
 
-### 8.4 The client web page — phase 2, designed for now
+### 10.4 The client web page — phase 2, designed for now
 
-A hosted, frozen copy of the same client view: unguessable URL, excluded from search engines,
-expiring, versioned. Client view only — never the analyst view, target or strategy. Listing photos
-linked, not hosted. Open tracking disclosed. Brokerage disclosures to be confirmed before it ships.
-Because it renders the same template, it's nearly free once §8.3 exists.
+A hosted, frozen copy of the same template: unguessable URL, excluded from search, expiring,
+versioned; client view only; listing photos linked, not hosted; open tracking disclosed; brokerage
+disclosures confirmed before it ships.
 
-## 9. Data model
+## 11. The training gate — post-launch, designed now
 
-Netlify Database (Postgres). Every table is scoped by report owner through Postgres row-level
-security — each request sets the user and role on the connection, and policies enforce them — as
-well as by scoping in every query. Belt and braces: a missed `WHERE` clause must not expose one
-agent's report to another.
+**Proposal for Hannah.** Agents unlock the full tool by showing they can build a comp themselves,
+so the tool amplifies judgment instead of replacing the learning of it. It also shows Casa, for the
+first time, where agents struggle.
+
+- **Practice mode is the same tool with the help switched off.** The agent does the intake,
+  import, tiering with reasons, their call and the client email themselves — no assistant, engine
+  results hidden. Every practice report is a real comp they needed anyway, so it isn't busywork.
+- **Submit → graded → the reveal.** Code checks what code can check (same property type, recency,
+  a range rather than a point, correct arithmetic). Jev scores the judgment criteria on the rubric
+  ("is each exclusion reason substantive?"). The LLM writes feedback. **Noble makes the pass/fail
+  call** until the rubric is trusted. Then the reveal: their range against the computed one, their
+  tiers against the tool's suggestions, with reasons. The reveal is the lesson.
+- **Unlock:** new agents — a set number of practice reports, at least one passed. Experienced
+  agents — one passed submission, or a direct grant by Noble or an admin, so top agents aren't
+  forced to grind. A mentor sign-off path would tie it into Casa's mentorship programme.
+- **Aggregate results by rubric criterion** feed Noble's teaching.
+- **Open:** Hannah approves the gate; Noble sets the rubric and the number.
+- **The risk** is friction for agents who are already hard to move. The mitigation is that practice
+  mode produces something they'd send anyway.
+
+## 12. Data model
+
+Netlify Database (Postgres). Every table is scoped by report owner through row-level security —
+each request sets the user and role on the connection — as well as by scoping in every query.
 
 | Table | Holds |
 |---|---|
-| `users` | **email (the key)**, name, identity provider and its user id, role (`agent` / `admin` / `external`), status, last login |
-| `allowlist` | authorised non-Casa emails and admin grants — who added them, when, why |
-| `reports` | owner, title, property type, brief, **hypothesis** (withheld from the assistant), status (`draft` / `locked` / `archived`), current working state |
-| `subjects` | the subject's sourced fields, one per report |
+| `users` | **email (the key)**, name, identity provider and its id, role (`agent` / `admin` / `external`), status, **capability (`practice` / `full`), unlocked by whom and why** |
+| `allowlist` | authorised non-Casa emails and admin grants — who, when, why |
+| `reports` | owner, title, property type, **mode (`practice` / `full`)**, brief, **the agent's call** (withheld from the assistant), status, working state |
+| `subjects` | the subject's sourced fields |
 | `imports` | uploaded file (Blobs key), format, parser version, warnings |
-| `comps` | the verbatim source row, normalised sourced fields, evidence class, tier, reason, who set it, reviewed-at |
-| `events` | append-only: every change, actor, reason, range before and after |
-| `valuations` | immutable locked snapshots: version, engine and house-method versions, inputs hash, full inputs and outputs |
-| `narratives` | writer drafts per valuation: audience, kind, content, model, prompt version, QA results, whether the agent edited it |
-| `exports` | PDFs and later web pages: which valuation and narratives, file key or public slug, expiry |
-| `messages` | the transcript — full content blocks stored verbatim for replay, model, token usage |
-| `usage` | per model call: user, report, model, tokens, estimated cost |
+| `comps` | verbatim source row, normalised sourced fields, evidence class, tier, reason, who set it, reviewed-at, anchor flag |
+| `statements` | everything the agent stated, in form or chat — kind, field, value, confidence, the message it came from, confirmed-at |
+| `judgments` | every Jev (or fallback) decision — target, question, answer, probabilities, confidence, provider and version, how it landed (applied / suggested / asked) |
+| `events` | append-only: every change, actor, reason, results before and after |
+| `versions` | immutable pinned numbers: engine and house-method versions, inputs hash, full inputs and outputs of both results |
+| `scenarios` | what-ifs and price evaluations — named, immutable, values and their source |
+| `narratives` | drafts per version: audience, kind, content, model, prompt version, QA results and acknowledgments, whether edited |
+| `exports` | PDFs and later web pages: version and narratives, file key or slug, expiry |
+| `messages` | the transcript, full content blocks stored verbatim for replay, model, usage |
+| `submissions` | practice submissions: rubric results per criterion and grader, feedback, pass/fail, reviewer |
+| `usage` | per model or Jev call: user, report, provider, tokens, estimated cost |
 
-**Retention:** when an agent leaves, their account is disabled and their reports are kept.
-Admins can reassign them. Export to the departing agent is a later decision.
+**Retention:** a departing agent's account is disabled and their reports kept; admins can reassign
+them.
 
-## 10. Auth
+## 13. Auth
 
-**Netlify Identity**, so auth, data, files and functions all live inside Netlify — no extra vendor.
+**Netlify Identity**, so auth, data, files and functions all live inside Netlify.
 
-- **Casa agents sign in with Google** — Identity's Google provider, configured with Casa's own
-  OAuth client so the consent screen says Casa Blanca rather than Netlify.
-- **Authorised non-Casa people are invited** by an admin and sign in with email and password.
-  Netlify sends the invitation and recovery emails itself, so this covers people with no Google
-  account at all.
-- **The domain rule is enforced twice.** At signup, by Identity's event function — refuse any email
-  that is neither on Casa's domain nor on the allowlist. Netlify's current docs say the signup event
-  fires for external providers as well as email signups, and show domain blocking as a supported
-  use. **CR-1 must prove it** by signing up with a non-Casa Google account and seeing it refused.
-  And on every request, by our functions, whatever Identity decided — defence in depth, and the
-  guarantee that holds even if the signup hook doesn't behave as documented.
-- **Our `users` table is keyed by email, not Identity's user id.** If Netlify ever withdraws
-  Identity — it announced a deprecation and reversed it in February 2026 — moving to another
-  provider is a re-login, not a data migration.
+- **Casa agents sign in with Google** — Identity's Google provider, configured with Casa's own OAuth
+  client so the consent screen says Casa Blanca.
+- **Authorised non-Casa people are invited** and sign in with email and password; Netlify sends the
+  invitation and recovery emails.
+- **The domain rule is enforced twice** — at signup by Identity's event function (Netlify's current
+  docs say the signup event fires for external providers too; **CR-1 must prove it** with a non-Casa
+  Google account), and on every request by our functions, whatever Identity decided.
+- **Users are keyed by email**, so moving off Identity later is a re-login, not a data migration.
+- **Fallback if CR-1 finds Identity unworkable:** Google sign-in handled directly (the MindBinder
+  approach) with our own session cookie.
+- **Deploy previews:** Google won't accept wildcard origins; use production plus one fixed staging
+  branch deploy.
 
-**Fallback if CR-1 finds Identity unworkable:** Google sign-in handled directly — the approach
-Kimani used for MindBinder — with our own session cookie. Invited non-Google users would then
-need an emailed-link sign-in and an email service.
+## 14. Compliance
 
-**Not Supabase:** its main draw here was the database, and Netlify Database reached general
-availability on 2026-04-28.
+- **Not an appraisal.** New York treats a licensee's CMA as a market-value estimate distinct from an
+  appraisal. StreetEasy's own report says it "is not an appraisal, valuation, broker price opinion,
+  and is meant to be a starting point." Ours says the equivalent; **wording approved by Hannah
+  before the pilot.**
+- **StreetEasy attribution** — "Data provided by StreetEasy" — on every export, as their report does.
+  Re-presenting the data in Casa-branded reports is cleared by Hannah (§17).
+- **Fair housing** — the Fair Housing Act (HUD's 2024 guidance applies it to AI-generated content)
+  plus NYC Human Rights Law, which adds lawful source of income, immigration status and more. The
+  writer is constrained to property and market facts; §9.3 screens; the agent reviews before sending.
+  **School zone** is a real price factor but a recognised steering signal: analyst view only, never
+  in client copy unless Hannah approves wording.
+- **Listing photos** linked, not hosted. **Client data** private by default, isolated per owner,
+  never sent to Jev.
 
-**Deploy previews:** Google won't accept wildcard origins, so Google sign-in works only on origins
-registered in the OAuth client. Use production plus one fixed staging branch deploy.
-
-## 11. Compliance
-
-- **Not an appraisal.** New York treats a licensee's CMA as a market-value estimate distinct from
-  an appraisal. The words appraisal and appraised value never appear in client copy; every export
-  carries the disclaimer. **Disclaimer text to be approved by Hannah before the pilot.**
-- **Fair housing.** Federal Fair Housing Act — HUD's 2024 guidance applies it to AI-generated
-  content — plus NYC Human Rights Law, which adds lawful source of income, immigration status and
-  more. The writer is constrained to property and market facts; the lint (§7.3) checks; the agent
-  reviews before sending.
-- **StreetEasy data** in Casa-branded reports: cleared by Hannah (§14).
-- **Listing photos:** link to them; don't host them.
-- **Client data:** reports may name clients. Private by default, per-owner isolation, kept on
-  departure.
-
-## 12. Risks
+## 15. Risks
 
 | Risk | Mitigation |
 |---|---|
-| Netlify function time limits cut off a long model turn | One model call per request (§6.3.4) and streaming; **measured in CR-1** before anything depends on it |
-| StreetEasy changes its export, or standard-tier exports differ | Header-mapped, versioned parser; fixtures per variant; Haiku header mapping as the fallback |
-| The model invents a figure | Engine-only numbers; numeric grounding gate; Opus 5.5's measured reduction in unsupported figures |
-| The assistant tunes parameters toward the target | Hypothesis withheld; bounds; target-seeking shown (§6.4) |
-| Fair housing language in generated copy | Constrained writer, lint, human review |
-| Placeholder house method treated as authoritative | Labelled v0 everywhere it appears; Noble signs off v1 |
-| The build step breaks the deploy for every tool | CI on every PR; deploy previews; the build fails before publish rather than shipping a half-built site |
+| Function time limits cut off a long model turn | One model call per request (§8.3.6), streaming; **measured in CR-1** |
+| StreetEasy changes its export, or standard-tier exports differ | Header-mapped, versioned parser; fixtures per variant; header-mapping fallback |
+| A figure nobody determined gets used | Engine-only numbers, `null` house method in production, test config refused in production, numeric grounding |
+| Target-seeking through settings or the agent's own estimates | The call withheld from the assistant; movement toward the call shown and totalled |
+| "With estimates" used to launder guesses into a client range | Estimates disclosed automatically; the gap between the two results always visible |
+| Jev: new, invite-only, undocumented data handling | Decision-provider interface with Haiku fallback; Casa's own account; no client names sent; calibration checked on Noble's examples |
+| Fair-housing screen false positives annoy agents | Only high-confidence hits block; the rest warn |
+| Training gate adds friction | Practice mode produces a real, sendable comp; grants for experienced agents |
+| The build step breaks every tool's deploy | CI on every PR; deploy previews; builds fail before publishing |
 | New source folders published by `publish = "."` | CR-1 adds them to the forced-404 list and verifies live |
-| Identity's signup hook doesn't fire for Google as documented | Function-level check on every request refuses non-Casa, non-allowlisted users regardless; CR-1 tests the hook |
-| Netlify withdraws Identity again | Users keyed by email; fallback is direct Google sign-in (§10) |
-| Netlify Database needs a credit-based Netlify plan | Check the plan in CR-1. If the site is on a legacy plan: change plans, or Neon directly (an extra account) |
-| Cost grows with adoption | Per-call usage logging, per-user caps, admin view of spend |
-| Agents don't adopt it | Pilot group first; Noble shapes onboarding and hints after the prototype |
+| Netlify Database needs a credit-based plan | Check in CR-1; otherwise change plans or use Neon directly |
+| Identity's signup hook doesn't fire for Google as documented | The per-request check refuses non-Casa, non-allowlisted users regardless |
 
-## 13. Build plan
+## 16. Build plan
 
-Dispatches in dependency order. CR-1 and CR-2 run in parallel.
+Dispatches in dependency order. **CR-R, CR-1 and CR-2 can all start now.**
 
+- **CR-R — Adjustment research.** For every factor in Appendix A: how practitioners actually derive
+  its value (paired sales, regression and hedonic models, appraisal practice, published NYC evidence),
+  what data each method needs, and what published studies report — with sources. Output:
+  `docs/comp-report/research/adjustments.md`. **Evidence for Noble's calibration, not defaults** —
+  nothing from it enters the product without his sign-off.
 - **CR-1 — Foundations.** React + Vite + TypeScript at `tools-src/comp-report/`, built to
-  `tools/comp-report/`, following the wiring proven on `claude/motion-graphic-stories-hlpirk`.
-  Build command composition, CI, the forced-404 additions for every new source folder. Netlify
-  Identity with Google and invites, the signup domain rule (proved with a non-Casa Google account),
-  the per-request check, the allowlist. Netlify Database with migrations and row-level security. A
-  streaming Claude proxy with a deliberately long tool turn, to **measure the time limits**.
-  Settle the esbuild/`@netlify/blobs` rule (parked decision 1), since this tool needs both.
-  **Done when:** a signed-in agent can create a report that persists, and one streamed model turn
-  completes; limits measured and written up.
-- **CR-2 — Engine and parser.** §5 entire, with fixtures. No UI, no infrastructure — can start now.
-  **Done when:** Hannah's export reproduces every figure in §5.7 and the parser survives shuffled,
-  missing and extra columns.
-- **CR-3 — Workspace.** Stages 1–5: brief, import, comp table, tiers, reasons, reviewed marks,
-  gaps, bridge, the live range, lock. Depends on CR-1 and CR-2.
-- **CR-4 — Assistant.** §6.2–6.5: server-owned transcript, tools, bounds, events, undo, progress
-  display, fallbacks, effort policy. Depends on CR-3.
-- **CR-5 — Writer and QA.** §7 and §8.2: the writer, the four gates, the email variants and copy.
-  Can run alongside CR-4.
-- **CR-6 — Client report and PDF.** §8.1 and §8.3. **Waits on Kimani's template design.**
+  `tools/comp-report/`, following the wiring on `claude/motion-graphic-stories-hlpirk`. Build
+  command, CI, forced-404 additions. Netlify Identity with Google and invites; the signup domain
+  rule proved; the per-request check; the allowlist. Netlify Database with migrations and row-level
+  security. A streaming Claude proxy with a deliberately long tool turn, to **measure time limits**.
+  Settle the esbuild/`@netlify/blobs` rule. **Done when** a signed-in agent creates a persisted
+  report and one streamed model turn completes, limits measured and written up.
+- **CR-2 — Engine and parser.** §6 entire: both results, carry and price evaluation, the catalog as
+  definitions, the `null` house method and the refused test config, with fixtures. No UI, no
+  infrastructure. **Done when** §6.8 passes and the parser survives shuffled, missing and extra
+  columns.
+- **CR-3 — Workspace.** Intake, import with on-arrival tagging through the decision provider, the
+  review ⇄ value loop, both results, what-ifs, price evaluation, undo and redo, versions. Depends on
+  CR-1 and CR-2.
+- **CR-4 — Assistant.** §8: server-owned transcript, the tools, statement capture and chips,
+  Jev-backed `assess`, context notes, events, progress display, fallbacks, effort policy.
+- **CR-5 — Writer and QA.** §9 and §10.2. Alongside CR-4.
+- **CR-6 — Client report and PDF.** §10.1 and §10.3. **Waits on Kimani's design.**
 - **CR-7 — Pilot readiness.** Usage logging, per-user caps, admin (users, allowlist, reports,
-  spend), feedback capture, hooks for Noble's onboarding. The Opus 5.5 vs. Sonnet 5 eval on
-  Noble's examples. Then the pilot.
+  spend), feedback capture, the Opus 5.5 vs. Sonnet 5 eval. Then the pilot.
 
-**After v1:** co-ops (§5.3 switches unit-rate off), the client web page (§8.4), offer scenarios,
-additional sources, house method v1 with Noble.
+**After v1:** the training gate (§11); co-ops; house method v1 with Noble; the client web page; full
+offer modelling; more sources.
 
-## 14. Decision log
+## 17. Decision log
 
 | Date | Decision |
 |---|---|
 | 2026-09-23 | For all agents; piloted with a small group first |
 | 2026-09-23 | Condos first; co-ops as the same scaffolding without square footage |
 | 2026-09-23 | Departing agents' reports kept |
-| 2026-09-23 | Buyer and seller comps treated the same in analysis; the communication varies by audience |
+| 2026-09-23 | Buyer and seller comps treated the same in analysis; communication varies by audience |
 | 2026-09-23 | StreetEasy data may be re-presented in Casa-branded reports (Hannah) |
 | 2026-09-23 | Subject captured by StreetEasy URL or by hand |
 | 2026-09-23 | Noble owns the house method after a working prototype, and shapes onboarding |
 | 2026-09-23 | Integrated AI, not bring-your-own-key |
-| 2026-09-24 | React + Vite for this tool, as a scoped exception — other tools may follow later |
-| 2026-09-24 | Auth: Netlify Identity — Google for Casa agents, invites for authorised others; domain rule enforced at signup and on every request (§10) |
+| 2026-09-24 | React + Vite for this tool, as a scoped exception |
+| 2026-09-24 | Auth: Netlify Identity — Google for Casa agents, invites for others; domain rule at signup and on every request |
 | 2026-09-24 | Data: Netlify Database and Netlify Blobs |
-| 2026-09-24 | Models: Opus 5.5 for assistant and writer, Haiku 4.5 for linters, Sonnet 5 evaluated in the pilot |
-| 2026-09-24 | PDF: browser print of the HTML client template first |
-| 2026-09-24 | Client web page: phase 2, designed for from the start |
+| 2026-09-24 | Models: Opus 5.5 for assistant and writer; Sonnet 5 evaluated in the pilot |
+| 2026-09-24 | PDF: browser print of the HTML client template first; client view is an HTML template from day one |
+| 2026-09-24 | Client web page: phase 2 |
+| 2026-09-24 | Your call, stated facts and method settings are captured in form or chat and routed separately |
+| 2026-09-24 | No lock ceremony: drafts pin versions; later edits fork silently |
+| 2026-09-24 | No placeholder numbers in production; undetermined factors are considered, not calculated |
+| 2026-09-24 | Two results: on the facts, and with the agent's estimates |
+| 2026-09-24 | Rudimentary carry and price evaluation in v1 |
+| 2026-09-24 | Decisions go to code, then Jev, then the LLM; Jev behind an interface with a Haiku fallback |
+| 2026-09-24 | Numeric grounding warns and needs acknowledgment; only compliance blocks |
+| 2026-09-24 | Twenty minutes is a north star, not a limit |
 
-## 15. Open items
+## 18. Open items
 
 | Item | From | Blocks |
 |---|---|---|
-| Hannah's StreetEasy PDF, committed to `sources/` | Kimani | CR-6 reference |
-| Standard-tier exports, a co-op export, reports made without AI, Noble's good and bad examples | Noble, an agent — emails drafted, Kimani sending 2026-09-24 | parser v2; house method; the eval |
+| Standard-tier exports, a co-op export, reports made without AI, Noble's good and bad examples | Noble, an agent — emailed 2026-09-24 | parser v2; house method; the eval; the rubric |
 | The client report design | Kimani | CR-6 |
-| Which Netlify plan the site is on (Netlify Database needs a credit-based plan) | Kimani | CR-1 |
-| Enable Netlify Identity on the site; a Google OAuth client for its Google provider | Kimani | CR-1 |
+| Which Netlify plan the site is on | Kimani | CR-1 |
+| Enable Netlify Identity; a Google OAuth client for its Google provider | Kimani | CR-1 |
+| A Jev account and data terms for Casa | Kimani | CR-3 (fallback covers it until then) |
+| Approve the training gate; whether compliance is the only hard block; client wording for "estimates" | Hannah | §11; §9 |
 | Disclaimer wording | Hannah | pilot |
+
+---
+
+## Appendix A — The adjustment catalog
+
+Every factor that can bear on an NYC residential comp. **None has a number.** Each is a definition
+the engine and the assistant can reason with, marked *value not yet determined* until Noble sets it,
+informed by CR-R. "Where the data comes from" is what exists today; an agent can always state it.
+
+### Unit
+
+| # | Factor | What it captures | Where the data comes from | Applies to |
+|---|---|---|---|---|
+| 1 | Interior size | Area differences, including large units that don't trade linearly with smaller-unit $/sqft | Export (may be approximate) | Condo; co-op by rooms |
+| 2 | Bedrooms and bathrooms | Count differences — the primary driver for co-ops | Export | Both |
+| 3 | Layout and efficiency | Split bedrooms, wasted space, room proportions, flex room | Floor plan (listing), agent | Both |
+| 4 | Floor | Higher floors trading higher, relative to the building's height | Export | Both |
+| 5 | Exposure and light | Orientation, corner units, open or blocked light | Listing text, agent | Both |
+| 6 | Views | City, skyline, park, water, landmark; open or obstructed; protected | Export tags, listing, agent | Both |
+| 7 | Outdoor space | Balcony, terrace, private roof, garden; size; private or shared access | Export (presence only), listing, agent | Both |
+| 8 | Condition | Mint, renovated, good, original, needs work | Listing text and photos; the agent judges | Both |
+| 9 | Finishes and systems | Kitchen and bath quality, central air, in-unit laundry, fireplace | Export tags, listing | Both |
+| 10 | Ceiling height and volume | Loft volume, double height | Listing, agent | Both |
+| 11 | Unit type | Penthouse, duplex, garden unit, loft conversion | Unit label, export tags, listing | Both |
+| 12 | Noise and street position | Avenue or side street, elevated train, front or rear | Agent, listing | Both |
+| 13 | Private storage and extras | Deeded storage, private elevator landing | Listing, agent | Both |
+
+### Building
+
+| # | Factor | What it captures | Where the data comes from | Applies to |
+|---|---|---|---|---|
+| 14 | Service level | Full-time doorman, concierge, part-time, virtual, none | Export amenities | Both |
+| 15 | Amenities | Gym, pool, roof deck, playroom and the rest | Export amenities | Both |
+| 16 | Building era and type | Prewar, postwar, new development, conversion, landmark | Year built: StreetEasy PDF or listing (not in the CSV) | Both |
+| 17 | Building size | Boutique against large, by units and stories | Export | Both |
+| 18 | Sponsor and new-development sales | Sponsor pricing, concessions, sponsor-paid transfer taxes | Listing, agent | Both |
+| 19 | Carrying costs | Common charges and taxes, or maintenance, as capitalised into price | Export | Both |
+| 20 | Tax abatements | 421-a, J-51, and when they expire and taxes step up | Listing, agent, city records | Mainly condos |
+| 21 | Building financials | Reserves, assessments, underlying mortgage, litigation | Agent, offering documents | Both; critical for co-ops |
+| 22 | Policies | Pets, sublets, pied-à-terre, guarantors, financing limits, flip tax | Export (partial), listing, agent | Both; financing limits critical for co-ops |
+| 23 | Parking | Deeded space, garage in building, valet, none | Export amenities (can't tell deeded from not) | Both |
+| 24 | Ground lease | Leasehold against fee ownership | Listing, agent | Both; large where present |
+
+### Location
+
+| # | Factor | What it captures | Where the data comes from | Applies to |
+|---|---|---|---|---|
+| 25 | Micro-location | Block, side of the avenue, transit, parks, waterfront — "Canal Street isn't really Tribeca" | Address, agent; geocoding later | Both |
+| 26 | Distance from subject | Physical proximity | Needs coordinates (not in the export) | Both |
+| 27 | School zone | A real price driver — **analyst view only** (§14) | Agent, public data | Both |
+
+### Transaction and market
+
+| # | Factor | What it captures | Where the data comes from | Applies to |
+|---|---|---|---|---|
+| 28 | Recency and market movement | Time since the sale, and how the market moved since | Export dates | Both |
+| 29 | Sale conditions | Estate, distressed, related-party, off-market, bulk, non-arm's-length | Agent, listing; closing-only records flagged | Both |
+| 30 | Concessions and credits | Seller credits, closing-cost credits | Listing, agent | Both |
+| 31 | Combination units | Combined apartments, against the sum of their parts | Agent | Both |
+| 32 | Evidence status | Sold, in contract, active — not an adjustment; separate evidence classes (§6.3) | Export | Both |
+
+### Later property types and modules
+
+| # | Factor | What it captures | Applies to |
+|---|---|---|---|
+| 33 | Air and development rights | Unused buildable area | Townhouses, whole buildings |
+| 34 | Lot size, width and frontage | Land characteristics | Townhouses |
+| 35 | Legal use and certificate of occupancy | Legal unit count and use | Townhouses, multi-family |
+| 36 | Rental income and yield | Achievable rent and gross yield — needs rent comps the export doesn't carry | Investor audience; the offer module |
