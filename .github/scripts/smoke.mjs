@@ -13,6 +13,10 @@
 // it). Point PLAYWRIGHT_MODULE at it if it isn't resolvable from here, e.g.
 //   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs
 // Exits 1 if any page fails to load or the candidate has anything new.
+//
+// Behind a TLS-intercepting proxy, pass its CA to Chromium by key rather than
+// turning certificate checks off:
+//   SMOKE_CHROMIUM_ARGS="--ignore-certificate-errors-spki-list=<sha256 of the CA's SPKI, base64>"
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
@@ -35,22 +39,40 @@ const PAGES = [
 
 const strip = (base, s) => String(s).split(base).join('');
 
+// Two tools (profile pic, in-contract carousel) bounce to the dashboard unless
+// a studio dev email is saved in localStorage — the casual members gate. Seed
+// one, as signing in on the dashboard does, so they render instead of redirect.
+const DEV_EMAIL = 'creative@email.casa-blanca.com';
+
+// Not the site's own requests: Netlify's deploy-preview toolbar, and requests a
+// navigation cancelled (net::ERR_ABORTED) — neither is a page failing.
+const noise = (url, err) => /^https:\/\/app\.netlify\.com\//.test(url) || err === 'net::ERR_ABORTED';
+
 async function run(base) {
   base = base.replace(/\/$/, '');
-  const browser = await chromium.launch();
+  const args = (process.env.SMOKE_CHROMIUM_ARGS || '').split(' ').filter(Boolean);
+  const browser = await chromium.launch({ args });
   const results = {};
   for (const path of PAGES) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-    const r = { status: null, title: '', textLength: 0, pageErrors: [], consoleErrors: [], failedRequests: [] };
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await context.addInitScript((email) => { try { localStorage.setItem('cb_auth', email); } catch {} }, DEV_EMAIL);
+    const page = await context.newPage();
+    const r = { status: null, finalPath: '', title: '', textLength: 0, pageErrors: [], consoleErrors: [], failedRequests: [] };
     page.on('pageerror', (e) => r.pageErrors.push(strip(base, e.message)));
     page.on('console', (m) => { if (m.type() === 'error') r.consoleErrors.push(strip(base, m.text())); });
-    page.on('requestfailed', (q) => r.failedRequests.push(`${strip(base, q.url())} (${q.failure()?.errorText})`));
-    page.on('response', (s) => { if (s.status() >= 400) r.failedRequests.push(`${strip(base, s.url())} (${s.status()})`); });
+    page.on('requestfailed', (q) => {
+      const err = q.failure()?.errorText;
+      if (!noise(q.url(), err)) r.failedRequests.push(`${strip(base, q.url())} (${err})`);
+    });
+    page.on('response', (s) => {
+      if (s.status() >= 400 && !noise(s.url())) r.failedRequests.push(`${strip(base, s.url())} (${s.status()})`);
+    });
     try {
       // 'load', not 'networkidle': some tools poll, and never go idle.
       const resp = await page.goto(base + path, { waitUntil: 'load', timeout: 45000 });
       r.status = resp ? resp.status() : null;
       await page.waitForTimeout(3000); // late scripts: studio chrome, feedback, hydration
+      r.finalPath = strip(base, page.url());
       r.title = await page.title();
       r.textLength = (await page.evaluate(() => document.body?.innerText || '')).trim().length;
     } catch (e) {
@@ -58,7 +80,7 @@ async function run(base) {
     }
     for (const k of ['pageErrors', 'consoleErrors', 'failedRequests']) r[k] = [...new Set(r[k])].sort();
     results[path] = r;
-    await page.close();
+    await context.close();
   }
   await browser.close();
   return results;
@@ -76,7 +98,8 @@ if (!baseB) {
   for (const [path, r] of Object.entries(a)) {
     const ok = loaded(r);
     failed ||= !ok;
-    console.log(`${ok ? 'ok  ' : 'FAIL'} ${r.status} ${path}  "${r.title}"`);
+    const moved = r.finalPath && r.finalPath !== path ? `  → ${r.finalPath}` : '';
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${r.status} ${path}${moved}  "${r.title}"`);
     for (const k of ['pageErrors', 'consoleErrors', 'failedRequests']) for (const x of r[k]) console.log(`       ${k}: ${x}`);
   }
 } else {
@@ -86,6 +109,7 @@ if (!baseB) {
     const news = [];
     if (!loaded(rb)) news.push(`does not load (status ${rb.status}, ${rb.textLength} chars)`);
     if (rb.title !== ra.title) news.push(`title changed: "${ra.title}" → "${rb.title}"`);
+    if (rb.finalPath !== ra.finalPath) news.push(`ends up somewhere else: ${ra.finalPath} → ${rb.finalPath}`);
     for (const k of ['pageErrors', 'consoleErrors', 'failedRequests']) {
       for (const x of rb[k]) if (!ra[k].includes(x)) news.push(`new ${k}: ${x}`);
     }
