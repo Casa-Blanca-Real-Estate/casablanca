@@ -32,7 +32,9 @@
     "src",
     "server",
     "db",
+    "dev",
     "vite.config.ts",
-    "../../netlify/functions/comp-report-*.mts"
+    "../../netlify/functions/comp-report-*.mts",
+    "../../netlify/functions/identity-*.mts"
   ]
 }

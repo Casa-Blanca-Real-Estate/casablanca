@@ -33,3 +33,32 @@ jobs:
         run: |
           test -f tools/comp-report/index.html
           test -f tools/comp-report/build.json
+
+  # The comp report's server tests: the access rule, the Identity check, the
+  # API, the streamed turn, and row-level security against a real PostgreSQL —
+  # 17, as Netlify Database (Neon) runs. The migrations are applied by a
+  # non-superuser owner, as on Netlify.
+  comp-report-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      CR_TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:comp-report
