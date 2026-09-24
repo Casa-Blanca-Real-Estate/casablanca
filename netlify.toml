@@ -105,6 +105,14 @@
   to = "/404.html"
   status = 404
   force = true
+# Source for the built tools — the comp report and its engine, with tests and a
+# real StreetEasy export as a fixture. Only the build output under /tools/ is
+# meant to be served.
+[[redirects]]
+  from = "/tools-src/*"
+  to = "/404.html"
+  status = 404
+  force = true
 
 [[headers]]
   for = "/*"

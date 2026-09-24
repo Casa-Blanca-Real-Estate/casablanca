@@ -1,0 +1,34 @@
+{
+  // The engine's own type check: `npm run typecheck:engine`.
+  //
+  // lib is plain ES with no DOM and `types` is empty, so no browser or Node API
+  // can creep into the engine without this check failing — the engine runs in
+  // the browser and in Netlify functions alike, and must depend on neither.
+  // (The purity test in test/purity.test.ts covers what a type check can't:
+  // Date, Math.random, Math.pow and the rest.)
+  //
+  // Only erasable TypeScript is allowed and relative imports carry their .ts
+  // extension, so Node runs the files directly (type stripping) with no build
+  // step, and Vite and esbuild bundle them unchanged.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "types": [],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts", "**/*.json"],
+  "exclude": ["test"]
+}

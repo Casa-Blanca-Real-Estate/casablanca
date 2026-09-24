@@ -10,6 +10,12 @@
   "scripts": {
     "build": "node agents/build.js",
     "check": "node agents/build.js --check",
-    "test": "node --test agents/build.test.js"
+    "test": "node --test agents/build.test.js",
+    "test:engine": "node --test \"tools-src/comp-report/engine/test/**/*.test.ts\"",
+    "typecheck:engine": "tsc -p tools-src/comp-report/engine && tsc -p tools-src/comp-report/engine/test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "~6.0.3"
   }
 }

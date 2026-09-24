@@ -1,0 +1,270 @@
+{
+  "about": "TEST ONLY. Made-up round numbers that exercise the engine's arithmetic. None of them is a real magnitude, and the engine refuses to load this file outside a test runner.",
+  "id": "casa-blanca-house-method-test-values",
+  "kind": "test",
+  "version": "test-1",
+  "approval": null,
+  "lines": {
+    "interior_size": {
+      "elasticity": 0.5,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "beds_baths.bedrooms": {
+      "per_unit": 100000,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "beds_baths.bathrooms": {
+      "per_unit": 50000,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "layout_efficiency": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "floor": {
+      "per_unit": 0.5,
+      "min_percent": -5,
+      "max_percent": 5
+    },
+    "exposure_light": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "views": {
+      "small": 2,
+      "moderate": 4,
+      "large": 6,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "outdoor_space": {
+      "weight_balcony": 0.15,
+      "weight_terrace": 0.25,
+      "weight_roof_deck": 0.3,
+      "weight_garden": 0.2,
+      "weight_patio": 0.2,
+      "weight_outdoor_space": 0.2,
+      "small": 3,
+      "moderate": 6,
+      "large": 9,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "condition": {
+      "small": 2,
+      "moderate": 5,
+      "large": 10,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "finishes_systems": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "ceiling_height": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "unit_type": {
+      "small": 2,
+      "moderate": 4,
+      "large": 8,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "noise_street_position": {
+      "small": 1,
+      "moderate": 2,
+      "large": 4,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "private_storage": {
+      "small": 10000,
+      "moderate": 25000,
+      "large": 50000,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "service_level": {
+      "small": 1,
+      "moderate": 2,
+      "large": 4,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "amenities.general": {
+      "small": 0.5,
+      "moderate": 1,
+      "large": 2,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "amenities.shared_outdoor": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "building_era": {
+      "small": 1,
+      "moderate": 2,
+      "large": 4,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "building_size": {
+      "small": 0.5,
+      "moderate": 1,
+      "large": 2,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "sponsor_sales": {
+      "small": 1,
+      "moderate": 3,
+      "large": 5,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "carrying_costs": {
+      "multiplier": 100,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "tax_abatements": {
+      "small": 1,
+      "moderate": 3,
+      "large": 5,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "building_financials": {
+      "small": 1,
+      "moderate": 3,
+      "large": 5,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "policies": {
+      "small": 0.5,
+      "moderate": 1,
+      "large": 2,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "parking": {
+      "small": 50000,
+      "moderate": 100000,
+      "large": 200000,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "ground_lease": {
+      "small": 5,
+      "moderate": 10,
+      "large": 20,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "micro_location": {
+      "small": 1,
+      "moderate": 3,
+      "large": 5,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "distance": {
+      "small": 0.5,
+      "moderate": 1,
+      "large": 2,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "school_zone": {
+      "small": 1,
+      "moderate": 2,
+      "large": 4,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "recency_market": {
+      "per_unit": 0.2,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "sale_conditions": {
+      "small": 2,
+      "moderate": 5,
+      "large": 10,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "concessions_credits": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "combination_units": {
+      "small": 2,
+      "moderate": 4,
+      "large": 6,
+      "min_percent": -15,
+      "max_percent": 15
+    }
+  },
+  "interactions": {
+    "outdoor_space~shared_outdoor": {
+      "magnitude": null
+    },
+    "parking~micro_location": {
+      "magnitude": null
+    },
+    "outdoor_space*views": {
+      "magnitude": null
+    },
+    "floor*views": {
+      "magnitude": null
+    },
+    "interior_size~beds_baths": {
+      "magnitude": null
+    },
+    "unit_type~floor,outdoor_space,views": {
+      "magnitude": null
+    },
+    "amenities~carrying_costs": {
+      "magnitude": null
+    },
+    "service_level~building_size": {
+      "magnitude": null
+    },
+    "condition~building_era": {
+      "magnitude": null
+    },
+    "sponsor_sales~concessions_credits": {
+      "magnitude": null
+    }
+  },
+  "decision_thresholds": {
+    "apply_at_or_above": 0.9,
+    "ask_below": 0.6
+  }
+}
