@@ -1,6 +1,6 @@
 # Comp report — switching on sign-in and the database
 
-**Mason (CR-1), 2026-09-24.** What's built, what's waiting on Kimani, and the exact steps. Until
+**Mason (CR-1), 2026-09-25.** What's built, what's waiting on Kimani, and the exact steps. Until
 the steps are done, the tool still deploys and runs, showing what's missing:
 
 - **Identity off:** the page says sign-in isn't switched on yet.
@@ -15,18 +15,16 @@ Netlify → **Project configuration → Access & security → Visitor access**: 
 non-production deploys. Deploy previews are public, numbered by PR and so guessable, and from now
 on they carry sign-in and a database branch. (Already on `docs/decisions.md`.)
 
-### 2. Tell Casanova which Netlify plan the team is on — blocks the database
-Netlify → **Team settings → Billing**.
+### 2. The database — nothing to do
+PR #48's deploy preview settled this. Netlify provisioned a database branch for it and applied the
+migration, and the preview's `/api/comp-report/health` reports
+`"database":{"state":"ready","leastPrivilege":true}`: the schema is in place, and requests run as
+the restricted `comp_report_app` role. Netlify only creates new databases on credit-based plans, so
+this also answers the plan question.
 
-- **Credit-based (Free, Personal or Pro with credits):** nothing to click. This code installs
-  `@netlify/database` and ships `netlify/database/migrations/`, so the next deploy provisions the
-  database and applies the migration. Every deploy preview gets its own database branch, a copy of
-  production data, so a PR never touches production data.
-- **Legacy (Starter, or Pro before credits):** Netlify Database can't be created at all. The GA
-  product is credit-only, and the beta stopped creating databases on 2026-04-13. The options:
-  - switch the team to credit-based (Netlify says that's irreversible);
-  - or use Neon directly. That's a small change: read a `CR_DATABASE_URL` in deployed functions,
-    and apply migrations by hand, since only Netlify Database applies them on deploy.
+The production database gets the migration on the first production deploy after the merge. Every
+deploy preview gets its own database branch, a copy of production data, so a PR never touches
+production data.
 
 ### 3. Turn on Netlify Identity
 Netlify → **Identity → Enable Identity**, then:
@@ -67,7 +65,16 @@ Netlify → **Project configuration → Environment variables**:
 | `CR_ALLOWED_DOMAINS` | Leave unset for `casa-blanca.com` only. **Question for Kimani:** do people sign in with `@email.casa-blanca.com` addresses (the creative inbox)? If so, set `casa-blanca.com,email.casa-blanca.com`. Domains match exactly. |
 | `ANTHROPIC_API_KEY` | Already set; the existing tools use it. |
 
-### 6. Prove the domain rule — the dispatch's test
+### 6. Prove it — the dispatch's tests
+First open https://casa-blanca-creative-studio.netlify.app/api/comp-report/health. It reports the
+setup without a sign-in and shows no user data. Once steps 3–5 are done, expect:
+
+- `identity`: `"state":"enabled"`, `openRegistration: true`, `emailConfirmation: true`, `google: true`;
+- `database`: `"state":"ready"`, `leastPrivilege: true`;
+- `assistant`: `configured: true`.
+
+Then:
+
 1. Open https://casa-blanca-creative-studio.netlify.app/tools/comp-report/ and choose **Sign in with
    Google** with a **non-Casa** Google account (a personal Gmail).
 2. **Expected:** Google completes, then Netlify refuses the sign-up and you don't get in. Netlify →
@@ -77,7 +84,14 @@ Netlify → **Project configuration → Environment variables**:
    fire for Google. The second check — every API request — refused you instead, which is §13's
    fallback. Tell Casanova either way, since §13 asks CR-1 to prove which.
 4. Then sign in with your Casa Google account. You should reach the reports list. Create a report,
-   reload, and it's still there. Open it and send the assistant a message; a reply streams back.
+   reload, and it's still there.
+5. Open it and ask the assistant **"Which report is this?"** It looks the report up with its tool
+   (the reply shows "Looked up: get_report") and answers with the title. Then send a second message,
+   e.g. "What can you do so far?". The second reply is the first live test that the stored
+   conversation is sent back to the model exactly as the model wrote it. Opus 5.5 refuses an edited
+   history.
+6. If the assistant says it hit an error: Netlify → **Logs → Functions → comp-report-turn** shows
+   `comp-report turn: model call failed` with the API's reason. Send that line to Casanova.
 
 ### 7. Staging and deploy previews
 Google sign-in completes only on the production hostname. After Google, Identity sends people back
@@ -122,6 +136,10 @@ accounts.** To be confirmed once Identity is on.
     fails loudly.
   - The verbatim transcript and per-call usage are stored.
   - Time limits: `docs/comp-report/cr1-function-limits.md`.
+- **Setup state:** `GET /api/comp-report/health` needs no sign-in and returns no user data. It
+  reports whether the database is migrated and runs requests as `comp_report_app`, whether
+  Identity is on and how it's configured, and whether the API key is set. It's the one comp report
+  endpoint without the per-request check.
 - **Never `DATABASE_URL`.** In the Claude Code cloud environment it points at another project's
   database. Deployed functions use the platform's `NETLIFY_DB_URL`; local development uses
   `CR_LOCAL_DATABASE_URL`, and the local tools refuse anything that isn't on the machine.

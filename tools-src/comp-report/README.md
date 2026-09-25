@@ -65,6 +65,9 @@ Nothing reads `DATABASE_URL`: in the Claude Code cloud environment it's another 
 - **This folder is never served.** `/tools-src/*` is on the forced-404 list in `netlify.toml`.
 - **`/tools/comp-report/build.json`** says which commit is deployed, from which branch and
   context, built on which Node.
+- **`/api/comp-report/health`** says whether the setup is done: the database migrated and running
+  requests as `comp_report_app`, Identity on and how it's configured, the API key set. It needs no
+  sign-in and returns no user data.
 - **The server code runs straight under Node** (type stripping) for tests, and is bundled by Netlify
   (`nft`) for functions. So imports carry their `.ts` extension, and only erasable TypeScript is
   allowed (no enums or namespaces).
