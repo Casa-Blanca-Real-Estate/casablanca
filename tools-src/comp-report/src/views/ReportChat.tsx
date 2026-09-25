@@ -16,6 +16,8 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
   const [draft, setDraft] = useState('');
   const [live, setLive] = useState<Live | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // What the last turn ended with (declined, stopped, failed), kept until the next message.
+  const [notice, setNotice] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
 
   async function load() {
@@ -40,8 +42,10 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
     if (!text || live) return;
     setDraft('');
     setError(null);
+    setNotice(null);
     setMessages((prev) => [...prev, { seq: -1, role: 'user', text, progress: [], tools: [], toolResultsOnly: false, stopReason: null, inContext: true, createdAt: new Date().toISOString() }]);
     let message: string | undefined = text;
+    let lastNote: string | null = null;
     try {
       for (let round = 0; round < 6; round++) {
         let current: Live = { ...empty };
@@ -57,6 +61,7 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
           else if (ev.type === 'error') current = { ...current, note: ev.code === 'rate_limited' ? 'The assistant is busy — try again in a minute.' : 'The assistant hit an error.' };
           setLive(current);
         }
+        if (current.note) lastNote = current.note;
         message = undefined;
         if (!again) break;
       }
@@ -64,6 +69,7 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
       setError(err instanceof Error ? err.message : 'The assistant could not be reached.');
     } finally {
       setLive(null);
+      setNotice(lastNote);
       await load().catch(() => undefined);
     }
   }
@@ -93,6 +99,7 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
             {live.note && <p className="notice">{live.note}</p>}
           </div>
         )}
+        {notice && <p className="notice">{notice}</p>}
         <div ref={end} />
       </div>
 

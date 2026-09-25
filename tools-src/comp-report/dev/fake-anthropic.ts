@@ -5,8 +5,10 @@
 //   node tools-src/comp-report/dev/fake-anthropic.ts 8791
 //   CR_DEV_ANTHROPIC_BASE_URL=http://127.0.0.1:8791 npm run dev:comp-report
 //
-// With no script queued it answers every request the same way: a progress
-// note, then a reply echoing the agent's last message.
+// With no script queued it answers from the conversation: a progress note and
+// an echo of the agent's last message; a get_report call when the message
+// asks which report this is, and the tool's result once it comes back; and a
+// refusal when the message starts with "refuse".
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -53,10 +55,33 @@ export function sseEvents(script: Script): string[] {
   return out;
 }
 
+let toolCalls = 0;
+
 function echo(body: Block): Script {
   const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;
   const last = [...messages].reverse().find((m) => m.role === 'user');
+  const result = last?.content.find((b) => b.type === 'tool_result');
+  if (result) {
+    return {
+      content: [{ type: 'text', text: `get_report returned ${String(result.content)} (fake Messages API).` }],
+      stopReason: 'end_turn',
+      delayMs: 15,
+    };
+  }
   const said = last?.content.filter((b) => b.type === 'text').map((b) => String(b.text)).join(' ') ?? '';
+  if (/^\s*refuse\b/i.test(said)) {
+    return { content: [], stopReason: 'refusal', stopDetails: { type: 'refusal', category: null, explanation: null }, delayMs: 15 };
+  }
+  if (/which report/i.test(said)) {
+    return {
+      content: [
+        { type: 'thinking', thinking: 'Looking the report up (fake API).', signature: 'fake-signature' },
+        { type: 'tool_use', id: `toolu_fake_${++toolCalls}_${Date.now()}`, name: 'get_report', input: {} },
+      ],
+      stopReason: 'tool_use',
+      delayMs: 15,
+    };
+  }
   return {
     content: [
       { type: 'thinking', thinking: 'Reading the message (fake API).', signature: 'fake-signature' },
