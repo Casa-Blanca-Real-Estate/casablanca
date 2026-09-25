@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, type Me, type Report } from '../api.ts';
+import { Access } from './Access.tsx';
 
 export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }) {
   const [reports, setReports] = useState<Report[] | null>(null);
@@ -71,6 +72,8 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }
           </li>
         ))}
       </ul>
+
+      {me.user.role === 'admin' && <Access me={me} />}
     </>
   );
 }

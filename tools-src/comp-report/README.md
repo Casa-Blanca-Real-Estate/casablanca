@@ -6,7 +6,7 @@ on Kimani: `docs/comp-report/cr1-setup.md`.
 
 | Path | What | Owner |
 |---|---|---|
-| `src/` | The browser app — sign-in, reports, the assistant chat | CR-1 → CR-3 |
+| `src/` | The browser app — sign-in, reports, the assistant chat, admins' access list | CR-1 → CR-3 |
 | `engine/` | The calculation engine and parser — pure TS, runs in the browser and in functions | Abacus (CR-2) |
 | `server/` | Everything the functions run: the access rule, the per-request check, database access, the API handlers, the streamed turn | CR-1 → CR-4 |
 | `db/` | Database tests (row-level security, the API, the turn) and the test harness | CR-1 |

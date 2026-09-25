@@ -19,6 +19,7 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/reports': { module: '/server/api/reports.ts', handler: 'handleReports' },
   '/api/comp-report/messages': { module: '/server/api/messages.ts', handler: 'handleMessages' },
   '/api/comp-report/turn': { module: '/server/api/turn.ts', handler: 'handleTurn' },
+  '/api/comp-report/allowlist': { module: '/server/api/allowlist.ts', handler: 'handleAllowlist' },
 };
 
 async function toRequest(req: IncomingMessage): Promise<Request> {

@@ -105,6 +105,16 @@ concern falls away; this one replaces it. **Test Google sign-in on production, w
 per-request check stands behind it. Test everything else on previews with invited email
 accounts.** To be confirmed once Identity is on.
 
+### 8. Letting in someone from outside Casa — when it comes up
+1. Sign in to the comp report as an admin. Under **Access · admins only**, add their address, pick
+   a role (External for most people outside Casa), and note who they are.
+2. Then Netlify → **Identity → Invite users** → their address. They get an email, choose a
+   password, and land in the comp report.
+
+Grant first, invite second: the sign-up gate refuses anyone who isn't on the list yet. Removing
+someone under Access shuts them out on their next request. The same list gives a Casa address a
+different role, such as Mentor.
+
 ## How it works — for Casanova and the next sessions
 
 - **Two checks** (§13). At sign-up and log-in, the Identity event functions apply the access rule
@@ -114,6 +124,8 @@ accounts.** To be confirmed once Identity is on.
 - **The rule:** `CR_ADMIN_EMAILS` → admin; an unrevoked allowlist row → that row's role; Casa's
   domain → agent; anyone else → refused. Users are keyed by email. `users.role` mirrors the rule on
   every request, so granting or revoking takes effect on the next request, not the next sign-in.
+  Admins manage the allowlist in the app (`/api/comp-report/allowlist`, `src/views/Access.tsx`);
+  row-level security lets only admins read or change it.
   Capability (`practice` / `full`) is scaffolded; everyone is `full` until the training gate exists.
 - **Row-level security:**
   - Every query runs inside `withActor()` (`server/db.ts`), which opens a transaction and calls

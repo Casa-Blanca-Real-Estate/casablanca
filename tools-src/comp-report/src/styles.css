@@ -63,13 +63,15 @@ body {
 .stack { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 .row { display: flex; gap: 10px; align-items: center; }
 .row input { flex: 1; }
+.row.wrap { flex-wrap: wrap; }
+.row.wrap input { min-width: 220px; }
 
 label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cb-mid); }
-input, textarea {
+input, textarea, select {
   font: inherit; font-size: 13px; color: var(--cb-black); text-transform: none; letter-spacing: normal; font-weight: 400;
   background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 10px; padding: 10px 12px;
 }
-input:focus, textarea:focus, button:focus-visible { outline: none; border-color: var(--cb-lavender); box-shadow: 0 0 0 3px rgba(170, 163, 207, .35); }
+input:focus, textarea:focus, select:focus, button:focus-visible { outline: none; border-color: var(--cb-lavender); box-shadow: 0 0 0 3px rgba(170, 163, 207, .35); }
 
 .btn {
   font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
@@ -92,6 +94,13 @@ input:focus, textarea:focus, button:focus-visible { outline: none; border-color:
 }
 .list-item:hover { border-color: var(--cb-lavender); }
 .list-title { font-size: 14px; font-weight: 800; }
+
+.access { margin-top: 36px; }
+.entry {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 12px; padding: 12px 16px;
+}
+.entry p { margin-top: 2px; }
 
 .report-title { font-size: clamp(22px, 3.2vw, 30px); font-weight: 800; letter-spacing: -.02em; margin: 14px 0 18px; }
 .chat { display: flex; flex-direction: column; gap: 10px; margin-bottom: 90px; }

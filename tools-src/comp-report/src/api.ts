@@ -53,6 +53,18 @@ export interface Report {
   updatedAt: string;
 }
 
+export interface AllowlistEntry {
+  email: string;
+  role: Role;
+  note: string | null;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+  revokedAt: string | null;
+  revokedBy: string | null;
+}
+
 export interface ShownMessage {
   seq: number;
   role: 'user' | 'assistant';
