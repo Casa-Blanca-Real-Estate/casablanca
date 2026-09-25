@@ -73,7 +73,7 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | unnamed | Done — merged #47 |
 | 04 | [Comp report — adjustment research (CR-R)](docs/dispatch/04-comp-report-research.md) | Surveyor | Ready |
 | 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | Ready |
-| 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | Ready |
+| 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | In review — PR #50 open |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and
