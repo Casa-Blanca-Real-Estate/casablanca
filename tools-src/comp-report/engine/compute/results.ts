@@ -95,7 +95,7 @@ interface Entry {
   value: number;
   /** The subject value it implies — whole dollars — or null without the subject's area. */
   implied: number | null;
-  /** How sure the value is: its price, its area, any agent estimate in its adjustments. */
+  /** How sure the value is: its price, its area, and what its applied adjustments rest on. */
   confidence: Confidence;
   /** How sure the implied value is: the above, and the subject's area. */
   implied_confidence: Confidence;
@@ -103,6 +103,15 @@ interface Entry {
 
 type Family = 'unit_rate' | 'adjusted_price';
 
+/** How sure a comp's applied adjustments are — the weakest of what each applied line rests on. */
+export function adjustmentConfidence(lines: readonly RawLine[], family: Family, excluded: ReadonlySet<string> = new Set()): Confidence {
+  const r = resolveLines(lines, excluded);
+  const applied = lines.filter((l) => l.dollars !== null && !excluded.has(l.line) && r.applied.get(l.line)?.applied &&
+    (family === 'adjusted_price' || l.applies_to_unit_rate));
+  return weakest(...applied.map((l) => l.confidence));
+}
+
+/** Primary sold comps' adjusted values in one family. One adjusted to zero or below can't indicate a price, so it's left out. */
 function familyEntries(
   states: readonly CompState[], family: Family, subjectArea: Sourced<number> | null, excluded: ReadonlySet<string>,
 ): Entry[] {
@@ -110,11 +119,11 @@ function familyEntries(
   for (const s of states) {
     if (!s.included || s.evidence_class !== 'sold' || !s.price) continue;
     const r = resolveLines(s.lines, excluded);
-    const usedAgent = s.lines.some((l) => l.source === 'agent' && !excluded.has(l.line) && r.applied.get(l.line)?.applied);
-    const adjConf: Confidence = usedAgent ? 'guesstimate' : 'exact';
+    const adjConf = adjustmentConfidence(s.lines, family, excluded);
     if (family === 'unit_rate') {
       if (s.unit_rate === null || !s.area) continue;
       const value = (s.price.value + r.forUnitRate) / s.area.value;
+      if (value <= 0) continue;
       const confidence = weakest(s.price.confidence, s.area.confidence, adjConf);
       entries.push({
         id: s.id, value,
@@ -124,6 +133,7 @@ function familyEntries(
       });
     } else {
       const value = s.price.value + r.forPrice;
+      if (value <= 0) continue;
       const confidence = weakest(s.price.confidence, adjConf);
       entries.push({ id: s.id, value, implied: value, confidence, implied_confidence: confidence });
     }
@@ -224,6 +234,15 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
     return { status: off ? 'off' : 'on', reason: off ? 'co-ops have no reliable square footage (§6.3)' : null, median: make('median'), mean: make('mean'), anchor: make('anchor') };
   };
   const indicators = { unit_rate: buildFamily('unit_rate'), adjusted_price: buildFamily('adjusted_price') };
+  const belowZero = states.filter((s) => s.included && s.evidence_class === 'sold' && s.price &&
+    s.price.value + resolveLines(s.lines).forPrice <= 0);
+  if (belowZero.length > 0) {
+    warnings.push({
+      code: 'adjusted_value_not_positive',
+      message: `the adjustments take ${belowZero.map((s) => s.id).join(', ')} to zero or below — check their values; ${belowZero.length === 1 ? 'it is' : 'they are'} left out of the indicators`,
+      comp_ids: belowZero.map((s) => s.id), results: [kind],
+    });
+  }
 
   // The lead and the base.
   const defaultLead: LeadIndicator = unitRateOn ? 'unit_rate.median' : 'adjusted_price.median';
@@ -259,7 +278,7 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
       : leadEntries.length === 0 ? 'no primary sold comp can give this indicator'
         : withImplied.length === 0 ? "no implied values without the subject's interior area"
           : soldIncludedCount === 1 ? 'a range needs at least two primary sold comps — one comp is a point, and a range is never a point'
-            : withImplied.length === 1 ? `only one of the ${soldIncludedCount} primary sold comps gives this indicator — the others lack ${leadFamily === 'unit_rate' ? 'an area or ' : ''}a price — and a range is never a point`
+            : withImplied.length === 1 ? `only one of the ${soldIncludedCount} primary sold comps gives this indicator (the others lack ${leadFamily === 'unit_rate' ? 'an area or ' : ''}a price, or adjust to zero or below) — and a range is never a point`
               : lo!.implied === hi!.implied ? 'the primary sold comps all imply the same value — a range is never a point'
                 : null;
   let bracket: RangeOut | null = null;
@@ -422,7 +441,7 @@ function buildBridge(
     if (hasValue && base) {
       const without = leadValue(new Set([id]));
       if (without !== null) {
-        effect = figure(base.value - without.value, 'usd', status === 'agent_estimate' ? 'guesstimate' : base.confidence,
+        effect = figure(base.value - without.value, 'usd', weakest(base.confidence, ...items.map((i) => i.raw.confidence)),
           `the base with this line, less the base without it`, asOf);
       }
     }
@@ -444,16 +463,19 @@ function buildBridge(
 
   // Interactions: complement lines, and double-counting warnings.
   const complements = new Map<string, string[]>();
-  const risks = new Map<string, { comps: Set<string>; sources: Set<string> }>();
+  const risks = new Map<string, { comps: Set<string>; sources: Set<string>; names: Set<string> }>();
   for (const s of sold) {
     for (const f of interactionFindings(s.lines)) {
       if (f.def.v1_behaviour === 'undetermined_interaction_line') {
         complements.set(f.def.id, [...(complements.get(f.def.id) ?? []), s.id]);
       } else if (f.lines) {
         const key = f.def.id;
-        const r = risks.get(key) ?? { comps: new Set<string>(), sources: new Set<string>() };
+        const r = risks.get(key) ?? { comps: new Set<string>(), sources: new Set<string>(), names: new Set<string>() };
         r.comps.add(s.id);
-        for (const l of f.lines) r.sources.add(l.source === 'agent' ? "the agent's estimate" : 'the house method');
+        for (const l of f.lines) {
+          r.sources.add(l.source === 'agent' ? "the agent's estimate" : 'the house method');
+          r.names.add(l.name.toLowerCase());
+        }
         risks.set(key, r);
       }
     }
@@ -471,10 +493,11 @@ function buildBridge(
     }
     const risk = risks.get(def.id);
     if (risk) {
-      const names = def.members.map((m) => FACTOR_BY_ID.get(m.factor)!.name.toLowerCase());
+      const names = [...risk.names];
+      const listed = names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
       warnings.push({
         code: 'double_counting_risk',
-        message: `${names.join(' and ')} both carry values (${[...risk.sources].join(' and ')}) — ${def.relationship.replace('_', ' ')}: ${def.why}${def.condition ? ` (if ${def.condition})` : ''}`,
+        message: `${listed} ${names.length === 2 ? 'both' : 'all'} carry values (${[...risk.sources].join(' and ')}) — ${def.relationship.replace('_', ' ')}: ${def.why}${def.condition ? ` (if ${def.condition})` : ''}`,
         comp_ids: [...risk.comps],
         results: [kind],
       });

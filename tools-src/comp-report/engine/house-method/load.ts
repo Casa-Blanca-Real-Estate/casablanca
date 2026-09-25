@@ -175,7 +175,7 @@ export function loadHouseMethod(raw: unknown): HouseMethod {
   }
   if (issues.length) throw new HouseMethodError(`house method "${id ?? '?'}" is invalid`, issues);
 
-  return {
+  const houseMethod: HouseMethod = deepFreeze({
     id: id!,
     kind: kind as 'production' | 'test',
     version: version!,
@@ -185,7 +185,20 @@ export function loadHouseMethod(raw: unknown): HouseMethod {
     interactions,
     decision_thresholds: thresholds,
     all_null: !anyValue,
-  };
+  });
+  LOADED.add(houseMethod);
+  return houseMethod;
+}
+
+/** House methods this module validated. compute() takes no other — a hand-built one could claim anything. */
+const LOADED = new WeakSet<object>();
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object') {
+    for (const v of Object.values(value)) deepFreeze(v);
+    Object.freeze(value);
+  }
+  return value;
 }
 
 let productionCache: HouseMethod | null = null;
@@ -196,7 +209,14 @@ export function productionHouseMethod(): HouseMethod {
   return productionCache;
 }
 
-/** Called by compute(): a test house method can't be used outside a test runner, however it arrived. */
+/**
+ * Called by compute(): only a house method this module loaded — frozen, so its
+ * values, hash and all_null flag can't drift apart — and a test one only under
+ * a test runner, however it arrived.
+ */
 export function assertUsable(houseMethod: HouseMethod): void {
+  if (!LOADED.has(houseMethod)) {
+    throw new HouseMethodError('compute() takes a house method from loadHouseMethod() or productionHouseMethod(), not one built by hand');
+  }
   if (houseMethod.kind === 'test' && !isTestRuntime()) throw new TestConfigRefusedError(houseMethod.id);
 }

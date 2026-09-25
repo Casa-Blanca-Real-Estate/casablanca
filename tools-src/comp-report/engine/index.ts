@@ -26,6 +26,9 @@ export {
   loadHouseMethod, productionHouseMethod, HouseMethodError, TestConfigRefusedError, type HouseMethod, type LineMagnitudes,
 } from './house-method/load.ts';
 export { isTestRuntime } from './house-method/runtime.ts';
+/** For building a subject's facts from listing tags exactly as the parser builds a comp's. */
+export { deriveFromAmenities, deriveFromFeatures, normalizeTag, parkingKind, viewKind } from './parser/derive.ts';
+export { FACT_CHECKS } from './facts-schema.ts';
 
 /**
  * The engine's comp inputs for every comp in a parsed export, each keyed by its

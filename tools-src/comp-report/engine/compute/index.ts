@@ -7,6 +7,7 @@
 // evaluations, the monthly cost estimate and the deal terms, with every gap,
 // warning and pending confirmation called out rather than assumed.
 
+import { FACTOR_BY_ID } from '../catalog/factors.ts';
 import { assertUsable, productionHouseMethod, type HouseMethod } from '../house-method/load.ts';
 import { sameBuilding, sameUnit } from '../parser/property-key.ts';
 import { canonicalJson } from '../util/canonical-json.ts';
@@ -19,8 +20,8 @@ import { adjustmentLines, resolveLines } from './adjust.ts';
 import { compareComp, monthlyCarry } from './compare.ts';
 import { resolveFacts, weakest, type ResolvedFacts } from './facts.ts';
 import { dealTerms, evaluatePrices, monthlyCosts } from './money.ts';
-import { buildResult, figure, type CompState } from './results.ts';
-import { validateInput } from './validate.ts';
+import { adjustmentConfidence, buildResult, figure, type CompState } from './results.ts';
+import { EngineInputError, validateInput } from './validate.ts';
 import type {
   AdjustmentOut, CompOut, CompResultOut, Divergence, EngineOutput, EstimateUse, Gap, PendingItem, Result, ResultKind, Warning,
 } from './output.ts';
@@ -63,13 +64,27 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
   const agentAdjustments = input.agent_adjustments ?? [];
   // Comp order carries no meaning, so it's canonical: by id.
   const comps = [...input.comps].sort((a, b) => compareStrings(a.id, b.id));
-  const inputsHash = sha256Tag(canonicalJson({
-    engine_version: ENGINE_VERSION, house_method: houseMethod.hash, mode, input: { ...input, comps },
-  }));
+  let inputsHash: string;
+  try {
+    inputsHash = sha256Tag(canonicalJson({ engine_version: ENGINE_VERSION, house_method: houseMethod.hash, mode, input: { ...input, comps } }));
+  } catch (error) {
+    throw new EngineInputError([`the input holds something JSON can't — ${(error as Error).message.replace('canonicalJson: ', '')}`]);
+  }
 
   const warnings: Warning[] = [];
   const gaps: Gap[] = [];
   const pending: PendingItem[] = [];
+  const leadFamily = (method.lead?.indicator.split('.')[0] ?? (reportType === 'condo' ? 'unit_rate' : 'adjusted_price')) as 'unit_rate' | 'adjusted_price';
+  for (const a of agentAdjustments) {
+    const factor = FACTOR_BY_ID.get(a.factor);
+    if (factor && !factor.client_visible) {
+      warnings.push({
+        code: 'analyst_only_factor',
+        message: `the agent's value for ${factor.name.toLowerCase()} (${a.id}) is recorded but never applied: it's analyst view only (§14)`,
+        comp_ids: a.comp_ids ?? [], results: [...KINDS],
+      });
+    }
+  }
   const windowStart: IsoDate | null = method.recency
     ? ('months' in method.recency ? addMonths(asOf, -method.recency.months) : method.recency.since)
     : null;
@@ -124,8 +139,11 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
           subject.facts as Partial<PropertyFacts>, facts, { kind, houseMethod, agentAdjustments })
         : [];
       if (included) {
+        const applied = resolveLines(lines).applied;
         for (const l of lines) {
           if (l.source !== 'agent' || l.dollars === null) continue;
+          // Disclose only what moves this result's lead: applied (not superseded), in the lead's family.
+          if (!applied.get(l.line)?.applied || (leadFamily === 'unit_rate' && !l.applies_to_unit_rate)) continue;
           estimates.push({ kind: 'agent_adjustment', id: l.agent_adjustment_id!, target: c.id, what: l.line, note: `${l.name}: ${l.dollars >= 0 ? '+' : '−'}$${Math.abs(l.dollars)} on ${label(c)} (the agent's estimate)` });
           const bounds = houseMethod.lines[l.line];
           const pct = (l.dollars / price!.value) * 100;
@@ -175,7 +193,8 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
         applies_to_unit_rate: l.applies_to_unit_rate, source: l.source, agent_adjustment_id: l.agent_adjustment_id,
         why_not_calculated: l.why_not, basis: l.basis,
       }));
-      const adjConf = s.lines.some((l) => l.source === 'agent' && resolution.applied.get(l.line)?.applied) ? 'guesstimate' : 'exact';
+      const priceConf = adjustmentConfidence(s.lines, 'adjusted_price');
+      const rateConf = adjustmentConfidence(s.lines, 'unit_rate');
       const subjectArea = subjectFacts[kind].area_sqft as Sourced<number> | undefined;
       const adjustedRate = reportType === 'condo' && s.evidence_class === 'sold' && s.price && s.area ? (s.price.value + resolution.forUnitRate) / s.area.value : null;
       perResult[kind] = {
@@ -189,11 +208,11 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
         comparisons: s.comparisons,
         adjustments,
         adjusted_price: s.evidence_class === 'sold' && s.price
-          ? figure(s.price.value + resolution.forPrice, 'usd', weakest(s.price.confidence, adjConf), 'sale price plus applied adjustments', asOf) : null,
+          ? figure(s.price.value + resolution.forPrice, 'usd', weakest(s.price.confidence, priceConf), 'sale price plus applied adjustments', asOf) : null,
         adjusted_price_per_sqft: adjustedRate === null ? null
-          : figure(adjustedRate, 'usd_per_sqft', weakest(s.unit_rate_confidence, adjConf), 'sale price plus applied adjustments (interior size aside) ÷ interior area', asOf),
+          : figure(adjustedRate, 'usd_per_sqft', weakest(s.price!.confidence, s.area!.confidence, rateConf), 'sale price plus applied adjustments (interior size aside) ÷ interior area', asOf),
         implied_value: adjustedRate !== null && subjectArea
-          ? figure(roundHalfAway(adjustedRate * subjectArea.value), 'usd', weakest(s.unit_rate_confidence, adjConf, subjectArea.confidence), `adjusted $/sqft × subject's ${subjectArea.value} sqft`, asOf) : null,
+          ? figure(roundHalfAway(adjustedRate * subjectArea.value), 'usd', weakest(s.price!.confidence, s.area!.confidence, rateConf, subjectArea.confidence), `adjusted $/sqft × subject's ${subjectArea.value} sqft`, asOf) : null,
         monthly_carry: carry ? figure(carry.value, 'usd_per_month', carry.confidence, carry.basis, asOf) : null,
         carry_per_sqft: carry && s.area && reportType === 'condo' ? figure(carry.value / s.area.value, 'usd_per_sqft_per_month', weakest(carry.confidence, s.area.confidence), `${carry.basis} ÷ interior area`, asOf) : null,
         ask_vs_sold: s.evidence_class !== 'sold' && s.unit_rate !== null && band
@@ -335,8 +354,9 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
   for (const [field, need] of [...subjectNeeds.entries()].sort(([a], [b]) => compareStrings(a, b))) {
     gapFor('subject_fact_missing', `${need.label.charAt(0).toUpperCase()}${need.label.slice(1)} would let the engine compare it with the comps.`, 'subject', field, [...need.kinds]);
   }
-  if (!monthlyCarry(subjectFacts.with_estimates, reportType)) {
-    gapFor('subject_carry_missing', `The subject's ${reportType === 'coop' ? 'maintenance' : 'common charges and taxes'} aren't known, so its carry can't be compared.`, 'subject', reportType === 'coop' ? 'maintenance_monthly' : 'common_charges_monthly', [...KINDS]);
+  const noCarry = KINDS.filter((k) => !monthlyCarry(subjectFacts[k], reportType));
+  if (noCarry.length > 0) {
+    gapFor('subject_carry_missing', `The subject's ${reportType === 'coop' ? 'maintenance' : 'common charges and taxes'} ${noCarry.length === 2 ? "aren't known" : 'are only an estimate'}, so its carry can't be compared${noCarry.length === 2 ? '' : ' on the facts'}.`, 'subject', reportType === 'coop' ? 'maintenance_monthly' : 'common_charges_monthly', noCarry);
   }
 
   // ── Divergence ──

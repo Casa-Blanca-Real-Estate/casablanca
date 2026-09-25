@@ -52,7 +52,10 @@ export interface ComparisonOut {
   status: 'compared' | 'unknown' | 'pending_confirmation';
   direction: Direction | null;
   degree: Degree | null;
-  /** Signed subject-minus-comp difference for numeric factors (floors, bedrooms, sqft, months, $ of carry). */
+  /**
+   * The difference for numeric factors, signed so positive means the comp is worse: subject minus comp
+   * for area, rooms and floors; comp minus subject for monthly carry; for recency, the comp's age in months.
+   */
   units: number | null;
   unit_label: string | null;
   source: 'engine' | 'jev' | 'fallback' | 'agent' | null;

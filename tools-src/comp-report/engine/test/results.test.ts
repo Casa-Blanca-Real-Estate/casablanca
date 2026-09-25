@@ -312,6 +312,21 @@ test("each missing subject fact is a gap that names the field to ask for", () =>
   assert.equal(new Set(fields).size, fields.length);
 });
 
+test('input the engine can’t trust is refused cleanly, never a crash', () => {
+  const issues = (i: EngineInput) => { try { compute(i); } catch (e) { return e instanceof EngineInputError ? e.issues.join('\n') : `not an EngineInputError: ${e}`; } return ''; };
+  assert.match(issues(input({ financing: { price: 'base', down_payment: { percent: 20 }, annual_rate_percent: NaN, term_years: 30 } })), /annual_rate_percent/);
+  assert.match(issues(input({ method: { narrowing: { reason: 'tighter', as_of: ANALYSIS_DATE } } })), /needs a low, a high or both/);
+  const odd = comps().map((c, i) => (i === 0 ? { ...c, record: { ...c.record, engagement: { page_views: NaN, saves: 1, shares: 1 } } } : c));
+  assert.match(issues(input({ comps: odd })), /JSON can't/);
+});
+
+test("a carry that's only an estimate is a gap for \"on the facts\" alone", () => {
+  const out = compute(input({ subject: { identity: SUBJECT_IDENTITY, facts: subjectFacts({ common_charges_monthly: agentFact(3_600, 'guesstimate'), taxes_monthly: agentFact(3_300) }) } }));
+  const gap = out.gaps.find((g) => g.code === 'subject_carry_missing')!;
+  assert.deepEqual(gap.results, ['on_facts']);
+  assert.match(gap.message, /only an estimate/);
+});
+
 test('the parsed export goes straight in', () => {
   const parsed = hannah();
   const out = compute({ as_of: ANALYSIS_DATE, property_type: 'condo', subject: { identity: SUBJECT_IDENTITY, facts: {} }, comps: comps({}, parsed) });

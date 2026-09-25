@@ -65,6 +65,19 @@ export function deriveFromFeatures(features: readonly string[]): FeatureFacts {
 const SHARED_OUTDOOR = /\bshared outdoor space\b|\broof ?(deck|top|terrace)\b|\bgarden\b|\bcourtyard\b|\bterrace\b|\boutdoor space\b|\bsun ?deck\b/;
 const PARKING = /\bparking\b|\bgarage\b/;
 
+/** A parking tag's kind — "Valet parking" → valet — or null if it isn't about parking. */
+export function parkingKind(tag: string): string | null {
+  const t = normalizeTag(tag);
+  if (!PARKING.test(t)) return null;
+  return /\bvalet\b/.test(t) ? 'valet' : /\bdeeded\b/.test(t) ? 'deeded' : /\bgarage\b/.test(t) ? 'garage' : 'parking';
+}
+
+/** "City view", "city views", "City" → "city". */
+export function viewKind(tag: string): string {
+  const t = normalizeTag(tag);
+  return VIEW.exec(t)?.[1] ?? t;
+}
+
 export interface AmenityFacts {
   service: ServiceFacts;
   parking: string[];
@@ -97,13 +110,8 @@ export function deriveFromAmenities(amenities: readonly string[]): AmenityFacts 
       continue;
     }
     if (/\bvirtual doorman\b|\bintercom\b/.test(tag) && /virtual/.test(tag)) { setDoorman('virtual'); continue; }
-    if (PARKING.test(tag)) {
-      if (/\bvalet\b/.test(tag)) parking.add('valet');
-      else if (/\bdeeded\b/.test(tag)) parking.add('deeded');
-      else if (/\bgarage\b/.test(tag)) parking.add('garage');
-      else parking.add('parking');
-      continue;
-    }
+    const kind = parkingKind(tag);
+    if (kind) { parking.add(kind); continue; }
     if (SHARED_OUTDOOR.test(tag)) { outdoorShared = true; continue; }
     rest.add(tag);
   }

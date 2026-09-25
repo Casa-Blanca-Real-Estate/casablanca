@@ -134,3 +134,11 @@ test('the loader checks the file against the catalog', () => {
   (falling.lines.recency_market as { per_unit: number }).per_unit = -0.3;
   assert.equal(loadHouseMethod(falling).lines['recency_market']!.values['per_unit'], -0.3);
 });
+
+test('compute takes only house methods the loader produced, and they are frozen', () => {
+  const hm = productionHouseMethod();
+  assert.throws(() => { (hm.lines['floor']!.values as Record<string, number | null>)['per_unit'] = 5; }, TypeError);
+  assert.throws(() => { (hm as { all_null: boolean }).all_null = false; }, TypeError);
+  const handBuilt = structuredClone(hm);
+  assert.throws(() => compute(input(), { houseMethod: handBuilt }), /not one built by hand/);
+});

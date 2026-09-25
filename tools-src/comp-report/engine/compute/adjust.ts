@@ -17,7 +17,8 @@ import { findLine, lineId, OUTDOOR_WEIGHT_KEYS, type MagnitudeShape } from '../c
 import { INTERACTIONS, interactionPairs, memberCovers, type InteractionDefinition } from '../catalog/interactions.ts';
 import type { HouseMethod } from '../house-method/load.ts';
 import { roundHalfAway } from '../util/numbers.ts';
-import type { AgentAdjustment, AgentValue, OutdoorKind, PropertyFacts } from '../types.ts';
+import type { AgentAdjustment, AgentValue, Confidence, OutdoorKind, PropertyFacts } from '../types.ts';
+import { weakest } from './facts.ts';
 import type { AdjustmentOut, ComparisonOut, ResultKind } from './output.ts';
 
 type Facts = Partial<PropertyFacts>;
@@ -44,9 +45,12 @@ export interface RawLine {
   why_not: string | null;
   applies_to_unit_rate: boolean;
   basis: string;
+  /** As sure as what it rests on: the comparison's inputs, and an agent's value if it's theirs. */
+  confidence: Confidence;
 }
 
 export const NOT_DETERMINED = 'value not yet determined';
+export const ANALYST_ONLY = 'analyst view only (§14): a recognised steering signal, so it moves neither result';
 
 function sign(direction: ComparisonOut['direction']): 1 | -1 | null {
   return direction === 'comp_inferior' ? 1 : direction === 'comp_superior' ? -1 : null;
@@ -57,6 +61,12 @@ function numericSign(c: ComparisonOut): number {
   const s = sign(c.direction);
   if (s !== null) return s;
   return c.units === null ? 0 : c.units > 0 ? 1 : c.units < 0 ? -1 : 0;
+}
+
+/** A difference computed from the facts, turned the way a judgment says when there is one. */
+function directed(raw: number, c: ComparisonOut): number {
+  const s = sign(c.direction);
+  return s === null ? raw : s * Math.abs(raw);
 }
 
 /** Private outdoor area counted at its weight; 0 when it has none; null when that can't be known. */
@@ -105,14 +115,14 @@ function fromHouseMethod(
       const e = values['elasticity'];
       if (e === null || e === undefined) return { dollars: null, why: NOT_DETERMINED, basis: '' };
       if (subjectArea === null || compArea === null) return { dollars: null, why: 'needs both interior areas', basis: '' };
-      return { dollars: (subjectArea - compArea) * (price / compArea) * e, why: null, basis: `${subjectArea - compArea} sqft at ${e} × the comp's $/sqft` };
+      return { dollars: directed((subjectArea - compArea) * (price / compArea) * e, c), why: null, basis: `${subjectArea - compArea} sqft at ${e} × the comp's $/sqft` };
     }
     case 'effective_area': {
       const weight = (k: OutdoorKind) => values[`weight_${k}`];
       const es = effectiveOutdoor(subject, weight);
       const ec = effectiveOutdoor(comp, weight);
       if (es !== null && ec !== null && compArea !== null) {
-        return { dollars: (es - ec) * (price / compArea), why: null, basis: `effective outdoor area ${round2(es)} against ${round2(ec)} sqft at the comp's $/sqft` };
+        return { dollars: directed((es - ec) * (price / compArea), c), why: null, basis: `effective outdoor area ${round2(es)} against ${round2(ec)} sqft at the comp's $/sqft` };
       }
       const byDegree = fromHouseMethod({ shape: 'by_degree', unit: 'percent' }, values, c, price, compArea, subjectArea, subject, comp);
       if (byDegree.dollars === null && !byDegree.why?.startsWith(NOT_DETERMINED)) {
@@ -124,7 +134,7 @@ function fromHouseMethod(
       const m = values['multiplier'];
       if (m === null || m === undefined) return { dollars: null, why: NOT_DETERMINED, basis: '' };
       if (c.units === null) return { dollars: null, why: 'the carry difference is unknown', basis: '' };
-      return { dollars: c.units * m, why: null, basis: `$${c.units}/month × ${m}` };
+      return { dollars: directed(c.units * m, c), why: null, basis: `$${c.units}/month × ${m}` };
     }
     case 'none':
       return { dollars: null, why: 'not an adjustment', basis: '' };
@@ -188,13 +198,30 @@ export function adjustmentLines(
     const id = lineId(c.factor, c.facet);
     const hm = ctx.houseMethod.lines[id];
     const agent = ctx.kind === 'with_estimates' ? agentValueFor(ctx.agentAdjustments, c.factor, c.facet, compId) : null;
+    const houseValue = (): Computed => (hm ? fromHouseMethod(shape, hm.values, c, price, compArea, subjectArea, subject, comp) : { dollars: null, why: NOT_DETERMINED, basis: '' });
     let computed: Computed;
     let source: RawLine['source'] = null;
-    if (agent) {
+    let agentId: string | null = null;
+    let note = '';
+    if (!found.factor.client_visible) {
+      // School zone is analyst view only (§14): it never moves a result that can reach a client.
+      computed = { dollars: null, why: ANALYST_ONLY, basis: '' };
+    } else if (agent) {
       computed = fromAgent(shape, agent.value, c, c.factor, price, compArea, subjectArea, subject, comp);
-      source = computed.dollars === null ? null : 'agent';
+      agentId = agent.id;
+      if (computed.dollars !== null) source = 'agent';
+      else {
+        // "With estimates" is the facts plus the estimates — never less: fall back to the house method.
+        const fallback = houseValue();
+        if (fallback.dollars !== null) {
+          note = `the agent's value (${agent.id}) couldn't apply here — ${computed.why} — so the house method's is used`;
+          computed = fallback;
+          source = 'house_method';
+          agentId = null;
+        }
+      }
     } else {
-      computed = hm ? fromHouseMethod(shape, hm.values, c, price, compArea, subjectArea, subject, comp) : { dollars: null, why: NOT_DETERMINED, basis: '' };
+      computed = houseValue();
       source = computed.dollars === null ? null : 'house_method';
     }
     const dollars = computed.dollars === null ? null : roundHalfAway(computed.dollars);
@@ -203,10 +230,11 @@ export function adjustmentLines(
       status: dollars === null ? 'considered_not_calculated' : source === 'agent' ? 'agent_estimate' : 'calculated',
       dollars,
       source,
-      agent_adjustment_id: agent?.id ?? null,
+      agent_adjustment_id: agentId,
       why_not: dollars === null ? computed.why : null,
       applies_to_unit_rate: c.factor !== 'interior_size',
-      basis: [c.basis, computed.basis].filter(Boolean).join('; '),
+      basis: [c.basis, computed.basis, note].filter(Boolean).join('; '),
+      confidence: weakest(c.confidence, source === 'agent' ? 'guesstimate' : 'exact'),
     });
   }
   return lines;

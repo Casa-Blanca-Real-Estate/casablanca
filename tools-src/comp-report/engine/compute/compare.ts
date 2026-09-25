@@ -15,6 +15,7 @@
 import { FACTORS, lineId, type FactorDefinition, type FactorLine } from '../catalog/factors.ts';
 import { DAYS_PER_MONTH, daysBetween } from '../util/dates.ts';
 import type { Confidence, Direction, EvidenceClass, FactField, FactorAssessment, IsoDate, PropertyFacts, ReportPropertyType, ServiceFacts, Sourced } from '../types.ts';
+import { normalizeTag, parkingKind, viewKind } from '../parser/derive.ts';
 import { usableIn, weakest, type FactContext } from './facts.ts';
 import type { ComparisonOut, EstimateUse, MissingInput, PendingItem } from './output.ts';
 
@@ -114,13 +115,18 @@ function numeric(
   };
 }
 
+/** Tags compare without regard to case or spacing — the export's and a listing's spellings differ. */
+const tags = (xs: readonly string[], norm: (t: string) => string = normalizeTag): string[] => [...new Set(xs.map(norm))].sort();
+
 function setCompare(s: Sourced<string[]> | undefined, c: Sourced<string[]> | undefined, field: FactField, what: string, orderless = false): Derived {
   const missing = needBoth(s, c, field, what);
   if (missing.length) return unknown(missing);
-  const direction = orderless ? (directionFromSets(s!.value, c!.value) === 'similar' ? 'similar' : 'differs') : directionFromSets(s!.value, c!.value);
+  const sv = tags(s!.value);
+  const cv = tags(c!.value);
+  const direction = orderless ? (directionFromSets(sv, cv) === 'similar' ? 'similar' : 'differs') : directionFromSets(sv, cv);
   return {
     status: 'compared', direction, units: null, unit_label: null, confidence: weakest(s!.confidence, c!.confidence),
-    basis: `subject: ${list(s!.value)}; comp: ${list(c!.value)}`, missing: [],
+    basis: `subject: ${list(sv)}; comp: ${list(cv)}`, missing: [],
   };
 }
 
@@ -153,8 +159,8 @@ function deriveLine(
     case 'views': {
       const missing = needBoth(s.views, c.views, 'views', 'views');
       if (missing.length) return unknown(missing);
-      const sv = s.views!.value as string[];
-      const cv = c.views!.value as string[];
+      const sv = tags(s.views!.value as string[], viewKind);
+      const cv = tags(c.views!.value as string[], viewKind);
       // Having a view against none listed is a direction; two different sets of views need a judgment.
       const direction: Direction = sv.length === 0 && cv.length === 0 ? 'similar'
         : sv.length > 0 && cv.length === 0 ? 'comp_inferior'
@@ -187,8 +193,8 @@ function deriveLine(
       const missing = needBoth(s.unit_type, c.unit_type, 'unit_type', 'unit type');
       // A unit with no type tags is a standard unit — but only where tags were available to say so.
       if (missing.length) return unknown(missing);
-      const st = s.unit_type!.value as string[];
-      const cvt = c.unit_type!.value as string[];
+      const st = tags(s.unit_type!.value as string[]);
+      const cvt = tags(c.unit_type!.value as string[]);
       let direction = directionFromSets(st, cvt);
       if (direction !== 'similar') {
         const sp = st.includes('penthouse');
@@ -246,8 +252,8 @@ function deriveLine(
     case 'parking': {
       const missing = needBoth(s.parking, c.parking, 'parking', 'parking');
       if (missing.length) return unknown(missing);
-      const sp = s.parking!.value as string[];
-      const cp = c.parking!.value as string[];
+      const sp = tags(s.parking!.value as string[], (t) => parkingKind(t) ?? normalizeTag(t));
+      const cp = tags(c.parking!.value as string[], (t) => parkingKind(t) ?? normalizeTag(t));
       const direction: Direction = sp.length > 0 && cp.length === 0 ? 'comp_inferior'
         : sp.length === 0 && cp.length > 0 ? 'comp_superior'
           : directionFromSets(sp, cp) === 'similar' ? 'similar' : 'differs';

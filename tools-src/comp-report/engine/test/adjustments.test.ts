@@ -280,3 +280,128 @@ test("each bridge line's effect is the base with it less the base without it", (
   assert.equal(out.results.on_facts.bridge.start!.value, 4_000_000);
   assert.equal(out.results.on_facts.bridge.end!.value, 4_140_000);
 });
+
+// ── Regressions from the independent review ─────────────────────────────────
+
+test("when the agent's value can't apply, the house method's stands — \"with estimates\" is never less than the facts", () => {
+  const out = run({
+    subject: subject({ outdoor_private: agent(true), outdoor_kinds: agent(['terrace']) }), // no size
+    comps: [comp('A', 4_000_000, 2_000)],
+    assessments: [{ id: 'j', comp_id: 'A', factor: 'outdoor_space', direction: 'comp_inferior', degree: 'moderate', source: 'agent', confidence: 'exact', as_of: AS_OF }],
+    agent_adjustments: [{ id: 'w', factor: 'outdoor_space', value: { weights: { terrace: 0.3 } }, as_of: AS_OF }], // needs sizes
+  });
+  const facts = line(out, 'A', 'outdoor_space', 'on_facts')!;
+  const estimates = line(out, 'A', 'outdoor_space', 'with_estimates')!;
+  assert.equal(facts.dollars, 240_000); // moderate: 6% of $4,000,000
+  assert.equal(estimates.dollars, 240_000);
+  assert.equal(estimates.source, 'house_method');
+  assert.match(estimates.basis, /agent's value \(w\) couldn't apply here/);
+  assert.deepEqual(out.results.with_estimates.estimates_used, []);
+  assert.equal(out.divergence.same, true);
+});
+
+test("a judgment's direction turns every kind of adjustment, not just some", () => {
+  const out = run({
+    subject: subject({ outdoor_private: agent(true), outdoor_kinds: agent(['terrace']), outdoor_area_sqft: agent(200) }),
+    comps: [comp('A', 4_000_000, 2_000, {
+      outdoor_private: ex(true), outdoor_kinds: ex(['terrace']), outdoor_area_sqft: ex(300), // bigger — but it faces an air shaft
+      common_charges_monthly: ex(3_500), taxes_monthly: ex(2_500), // $1,000 a month more…
+    })],
+    assessments: [
+      { id: 'o', comp_id: 'A', factor: 'outdoor_space', direction: 'comp_inferior', degree: 'moderate', source: 'agent', confidence: 'exact', as_of: AS_OF, note: 'faces an air shaft' },
+      { id: 'c', comp_id: 'A', factor: 'carrying_costs', direction: 'comp_superior', source: 'agent', confidence: 'exact', as_of: AS_OF, note: 'the charges include heat and hot water' },
+    ],
+  });
+  assert.equal(line(out, 'A', 'outdoor_space')!.dollars, 50_000); // 25 effective sqft at $2,000, turned the judgment's way
+  assert.equal(line(out, 'A', 'carrying_costs')!.dollars, -100_000);
+});
+
+test('an estimate behind a house-method adjustment labels what it moves', () => {
+  const out = run({
+    subject: subject({ floor: agent(30, 'guesstimate') }),
+    comps: [comp('A', 4_000_000, 2_000, { floor: ex(10) }), comp('B', 4_000_000, 2_000, { floor: ex(12) })],
+  });
+  assert.equal(line(out, 'A', 'floor', 'on_facts'), undefined); // no subject floor on the facts
+  const l = line(out, 'A', 'floor', 'with_estimates')!;
+  assert.equal(l.source, 'house_method');
+  assert.equal(out.results.with_estimates.base!.confidence, 'guesstimate');
+  assert.equal(out.comps.find((c) => c.id === 'A')!.per_result.with_estimates.adjusted_price!.confidence, 'guesstimate');
+  assert.equal(out.results.on_facts.base!.confidence, 'exact');
+});
+
+test('a comp adjusted to zero or below is left out of the indicators, with a warning', () => {
+  const judge = (factor: string): FactorAssessment => ({ id: `judged-${factor}`, comp_id: 'A', factor, direction: 'comp_superior', degree: 'large', source: 'agent', confidence: 'exact', as_of: AS_OF });
+  const out = run({
+    comps: [comp('A', 4_000_000, 2_000), comp('B', 4_000_000, 2_000), comp('C', 4_200_000, 2_000)],
+    assessments: ['condition', 'layout_efficiency', 'micro_location'].map(judge),
+    agent_adjustments: ['condition', 'layout_efficiency', 'micro_location'].map((factor, i) => ({ id: factor, factor, value: { percent: [60, 50, 40][i]! }, comp_ids: ['A'], as_of: AS_OF })),
+    method: { lead: { indicator: 'adjusted_price.median' } },
+  });
+  const r = out.results.with_estimates;
+  assert.equal(out.comps.find((c) => c.id === 'A')!.per_result.with_estimates.adjusted_price!.value, -2_000_000);
+  assert.deepEqual([...r.indicators.adjusted_price.median.comp_ids].sort(), ['B', 'C']);
+  assert.equal(r.range!.low.value, 4_000_000);
+  assert.ok(out.warnings.some((w) => w.code === 'adjusted_value_not_positive' && w.comp_ids.includes('A')));
+});
+
+test('school zone is analyst view only: it moves neither result, whoever gives it a value', () => {
+  const out = run({
+    comps: [comp('A', 4_000_000, 2_000)],
+    assessments: [{ id: 's', comp_id: 'A', factor: 'school_zone', direction: 'comp_inferior', degree: 'large', source: 'agent', confidence: 'exact', as_of: AS_OF }],
+    agent_adjustments: [{ id: 'sz', factor: 'school_zone', value: { percent: 2 }, as_of: AS_OF }],
+  });
+  for (const kind of ['on_facts', 'with_estimates'] as const) {
+    const l = line(out, 'A', 'school_zone', kind)!;
+    assert.equal(l.dollars, null);
+    assert.match(l.why_not_calculated!, /analyst view only/);
+    assert.equal(out.results[kind].bridge.lines.find((b) => b.id === 'school_zone')!.client_visible, false);
+  }
+  assert.equal(out.results.with_estimates.base!.value, 4_000_000);
+  assert.deepEqual(out.results.with_estimates.estimates_used, []);
+  assert.ok(out.warnings.some((w) => w.code === 'analyst_only_factor'));
+});
+
+test("only estimates that move the lead are disclosed", () => {
+  const superseded = run({
+    subject: subject({ outdoor_private: agent(true), outdoor_kinds: agent(['terrace']), outdoor_shared: agent(true) }),
+    comps: [comp('A', 4_000_000, 2_000), comp('B', 4_100_000, 2_000)],
+    agent_adjustments: [
+      { id: 'terrace', factor: 'outdoor_space', value: { percent: 5 }, as_of: AS_OF },
+      { id: 'roof', factor: 'amenities', facet: 'shared_outdoor', value: { percent: 2 }, as_of: AS_OF },
+    ],
+  });
+  const ids = superseded.results.with_estimates.estimates_used.map((e) => e.id);
+  assert.ok(ids.includes('terrace'));
+  assert.ok(!ids.includes('roof')); // superseded by the larger substitute
+  const size = run({
+    comps: [comp('A', 3_600_000, 1_800), comp('B', 4_000_000, 2_000)],
+    agent_adjustments: [{ id: 'size', factor: 'interior_size', value: { elasticity: 0.4 }, as_of: AS_OF }],
+  });
+  // The lead is $/sqft, which interior size doesn't touch.
+  assert.deepEqual(size.results.with_estimates.estimates_used, []);
+  assert.equal(size.divergence.same, true);
+});
+
+test('the overlap warning names the factors that carry values, not the whole row', () => {
+  const out = run({
+    subject: subject({ unit_type: agent(['penthouse']), floor: agent(30) }),
+    comps: [comp('A', 4_000_000, 2_000, { floor: ex(20) })],
+    agent_adjustments: [
+      { id: 'ph', factor: 'unit_type', value: { percent: 4 }, as_of: AS_OF },
+      { id: 'fl', factor: 'floor', value: { percent_per_unit: 0.3 }, as_of: AS_OF },
+    ],
+  });
+  const w = out.warnings.find((x) => x.code === 'double_counting_risk' && x.results.includes('with_estimates') && /penthouse premium/.test(x.message))!;
+  assert.match(w.message, /^unit type and floor both carry values/);
+});
+
+test('tags compare whatever their case or wording', () => {
+  const out = run({
+    subject: subject({ finishes: agent(['Central air']), policies: agent(['Pets allowed']), views: agent(['Park view']), parking: agent(['Garage parking']) }),
+    comps: [comp('A', 4_000_000, 2_000, { parking: ex(['garage']) })],
+  });
+  const cmp = out.comps[0]!.per_result.on_facts.comparisons;
+  for (const lineId of ['finishes_systems', 'policies', 'views', 'parking']) {
+    assert.equal(cmp.find((c) => c.line === lineId)!.direction, 'similar', lineId);
+  }
+});

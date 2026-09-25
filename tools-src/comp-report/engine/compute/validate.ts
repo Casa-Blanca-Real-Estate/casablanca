@@ -182,6 +182,7 @@ export function validateInput(input: EngineInput): void {
         if (n.low !== undefined && !posInt(n.low)) issues.push('method.narrowing.low must be whole dollars');
         if (n.high !== undefined && !posInt(n.high)) issues.push('method.narrowing.high must be whole dollars');
         if (n.low !== undefined && n.high !== undefined && n.low >= n.high) issues.push('method.narrowing.low must be below high');
+        if (n.low === undefined && n.high === undefined) issues.push('method.narrowing needs a low, a high or both');
         if (typeof n.reason !== 'string' || n.reason.trim() === '') issues.push('method.narrowing needs a reason');
         if (!isIsoDate(n.as_of)) issues.push('method.narrowing.as_of must be a YYYY-MM-DD date');
       }
@@ -205,7 +206,7 @@ export function validateInput(input: EngineInput): void {
       issues.push(`${where}.down_payment must be { percent: 0–100 } or { dollars }`);
     }
     const rate = f['annual_rate_percent'];
-    if (typeof rate !== 'number' || rate < 0 || rate > 100) issues.push(`${where}.annual_rate_percent must be 0–100 (6.25 means 6.25%)`);
+    if (typeof rate !== 'number' || !Number.isFinite(rate) || rate < 0 || rate > 100) issues.push(`${where}.annual_rate_percent must be 0–100 (6.25 means 6.25%)`);
     const term = f['term_years'];
     if (!posInt(term) || (term as number) > 50) issues.push(`${where}.term_years must be a whole number of years, 1–50`);
     for (const k of ['insurance_monthly', 'other_ownership_costs_monthly']) {
@@ -241,6 +242,10 @@ export function validateInput(input: EngineInput): void {
       }
       const rent = d['interim_rent'];
       if (rent !== undefined && !(isObj(rent) && nonNegInt(rent['monthly']))) issues.push('deal_terms.interim_rent.monthly must be whole dollars');
+      const credit = isObj(rent) ? rent['credit_percent'] : undefined;
+      if (credit !== undefined && !(typeof credit === 'number' && Number.isFinite(credit) && credit >= 0 && credit <= 100)) {
+        issues.push('deal_terms.interim_rent.credit_percent must be 0–100');
+      }
     }
   }
 

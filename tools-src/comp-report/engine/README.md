@@ -23,7 +23,8 @@ one in Node produce the same output hash.
   "$2.2M–$6.0M range" (the cheapest home to the dearest, every status). A test rebuilds both from
   the raw export and proves the engine never outputs either, in any configuration.
 - **A range, never a point.** The range runs from the lowest to the highest value implied by the
-  agent's *primary sold* comps. One comp can't make a range; the engine says so instead.
+  agent's *primary sold* comps. One comp can't make a range, and nor can comps that all imply the
+  same value; the engine says so instead.
 - **No invented numbers.** The adjustment catalog has all 36 factors, and **every magnitude is null**
   until Noble sets it. A factor that applies but has no value shows as *considered — value not yet
   determined* and moves nothing. A file of test values exists only to check the arithmetic, and the
@@ -38,10 +39,13 @@ one in Node produce the same output hash.
   as its weakest input, and how it was worked out.
 - **Every result is pinned**: the engine version, the house-method version and its hash, a hash of
   the inputs and a hash of the output. A stored version can be recomputed and checked.
+- **School zone never moves a number.** It's a recognised steering signal, so it's analyst view only
+  (§14): the engine compares it and shows it to the analyst, but applies no value for it — the house
+  method's or the agent's.
 
 What it does not do: judge comparability, suggest tiers, read listing text (that's Jev and the
-assistant); co-ops beyond switching $/sqft off; rent credits, deposits over time, closing timelines
-(full offer modelling comes later); any rent or yield figure — the export carries no rent data, so
+assistant); co-ops beyond switching $/sqft off everywhere; rent credits, deposits over time,
+closing timelines (full offer modelling comes later); any rent or yield figure — the export carries no rent data, so
 the engine cannot produce one.
 
 ### What Hannah's export gives, through the engine
@@ -119,6 +123,10 @@ out.results.on_facts.base;       // { value: 4225352, unit: 'usd', confidence: '
 - **Values:** `"$4,650,000"` → 4650000; `"2,201 ft²"` → 2201; a leading `~` (`"~1,840 ft²"`) marks
   the value **approximate**; `"8/27/2026"` → `2026-08-27`; XLSX numbers and date serials read directly
   (including 1904-dated workbooks). A figure written like `"$4.65M"` is read but marked approximate.
+  **The parser never emits a value `compute()` would refuse** — both check facts against the same
+  `FACT_CHECKS`. A $0 sale price (usually a non-market transfer) or $0 ask is read as no price
+  (`zero_price`); anything else out of bounds, such as a building of 0 units, is read as missing
+  (`unreadable_value`). Each is warned; none stops the report.
 - **The export's `$/Sqft` column is never used.** StreetEasy switches it from sale price to asking
   price by status and truncates it. It's kept on each comp (`ignored_export_price_per_sqft`) for
   audit; the engine recomputes $/sqft itself, with its basis.
@@ -130,8 +138,12 @@ out.results.on_facts.base;       // { value: 4225352, unit: 'usd', confidence: '
   concierge); parking (garage, valet — deeded or not can't be told); unit type (loft, duplex,
   triplex, penthouse); and the remaining finishes and amenities. A blank tag column tells nothing, so
   nothing is derived (unknown). A column with tags but none of a kind reads as "none listed", with a
-  note, and the agent can correct it. A penthouse suggested only by a unit label ("#PHA") is
-  *inferred* and waits for the agent to confirm.
+  note, and the agent can correct it. A penthouse suggested only by a unit label ("#PHA") goes in the
+  record's `suggestions` as *inferred*: it waits for the agent to confirm, and the Home Features'
+  exact unit type stands meanwhile. `deriveFromFeatures` and `deriveFromAmenities` are exported, so
+  the app can build a subject's facts from listing tags exactly as the parser builds a comp's.
+  Tags compare without regard to case or spacing, and "City views", "city view" and "City" are one
+  view.
 - **Encoding:** UTF-8, or Windows-1252 when Excel has re-saved the file (warned).
 - **Stable property key** — design §12 — so a property's records accumulate across imports:
   `pk1|<state>|<city>|<street>|<unit>`, e.g. `pk1|ny|new york|200 chambers st|10A`. Streets are
@@ -150,12 +162,13 @@ ids) · `status` (`raw`, `evidence_class`) · `facts` (every value sourced — b
 (page views, saves, shares — context only, never a valuation input; null for closings) ·
 `building_name` · `neighborhood` · `agent_commentary` · `tags` · `ignored_export_price_per_sqft` ·
 `flags` (`closing_record`, `approx_area`) · `origin` (parser version, row, as-of date) ·
-`extra_columns`.
+`extra_columns` · `suggestions` (inferred values for the agent to confirm, each `{ field, value }`;
+a stated fact or the record's own value always wins over one).
 
 **Parse warnings** (`code`, `message`, `row?`, `column?`): `missing_column`, `unknown_column`,
-`duplicate_column`, `renamed_column`, `unreadable_value`, `value_adjusted`, `closing_record`,
-`approx_area`, `unrecognised_status`, `missing_address`, `duplicate_property`, `ragged_row`,
-`encoding`, `file_note`, `no_rows`.
+`duplicate_column`, `renamed_column`, `unreadable_value`, `value_adjusted`, `zero_price`,
+`closing_record`, `approx_area`, `unrecognised_status`, `missing_address`, `duplicate_property`,
+`ragged_row`, `encoding`, `file_note`, `no_rows`.
 
 ---
 
@@ -193,8 +206,9 @@ A `hypothetical` value is used only in `what_if` mode, where the whole output is
     for condos), labelled as the default, pending Noble.
   - `recency: { months } | { since }` — only sold comps whose sale date falls in the window count.
     Applies to both results; in-contract and active asks are current evidence and stay in.
-  - `narrowing: { low?, high?, reason, as_of }` — the agent narrowing the range. It carries a number,
-    so it's the agent's estimate: "with estimates" only, and it must sit inside the comps' bracket.
+  - `narrowing: { low?, high?, reason, as_of }` — the agent narrowing the range: a low, a high or
+    both. It carries a number, so it's the agent's estimate: "with estimates" only, and it must sit
+    inside the comps' bracket.
 - **`stated_facts`** — `{ id, target: 'subject' | { comp_id }, field, value }`: a fact the agent
   gives ("the terrace is 400 sq ft"). It beats the export. The latest statement wins (by `as_of`;
   on the same date, the later one in the list). If it contradicts the export, the agent's value is
@@ -205,8 +219,10 @@ A `hypothetical` value is used only in `what_if` mode, where the whole output is
   `moderate` or `large`. From Jev, its fallback or the agent. It carries no number. Jev's are
   `inferred` until the agent confirms.
 - **`agent_adjustments`** — the agent's value for a factor ("add 5% for the terrace"):
-  `{ id, factor, facet?, value, comp_ids?, reason?, as_of }`. Lands in "with estimates" only. `value`
-  is one of:
+  `{ id, factor, facet?, value, comp_ids?, reason?, as_of }`. Lands in "with estimates" only. **A
+  value is a magnitude; the comparison supplies the direction**, so a negative one is refused — to
+  say which side is better, record a judgment (an assessment). The one exception is the market's
+  monthly movement (`recency_market`), which can fall. `value` is one of:
   - `{ percent }` or `{ dollars }` — per comp that differs, signed by the comparison: a comp without
     the terrace moves up, one with a better terrace moves down, one where it can't be told which is
     better doesn't move (and says why). Percent is written as percent: `5` means 5%.
@@ -215,6 +231,11 @@ A `hypothetical` value is used only in `what_if` mode, where the whole output is
   - `{ elasticity }` (interior size), `{ multiplier }` (carrying costs), `{ weights }` (outdoor space
     by kind) — the factor's own shape.
   - `comp_ids` limits it to named comps.
+
+  Where the agent's value can't apply to a comp (outdoor weights where the outdoor sizes aren't
+  known, say) and the house method's can, the house method's is used and the line says so: "with
+  estimates" is the facts plus the estimates, never less. A value for school zone is recorded, never
+  applied, and raises `analyst_only_factor`.
 - **`prices`** — prices the agent names: `{ id, label, kind, price }`, `kind` one of `list`,
   `offer`, `target`, `call`, `what_if`, `other`. **Evaluated against the results; never an input
   to them** — a test proves adding a target or the agent's call changes no result.
@@ -223,7 +244,7 @@ A `hypothetical` value is used only in `what_if` mode, where the whole output is
   `term_years`, `interest_only?`, `insurance_monthly?`, `other_ownership_costs_monthly?`.
 - **`deal_terms`** — the intake module (§6.7): `template` (`buyer_traditional`,
   `buyer_rent_to_own`, `seller_pricing`), `price?`, `deposit?`, `financing?`, `target_closing?`,
-  `interim_rent?`, `seller_target?`, `timing?`, `flexibility?`.
+  `interim_rent?` (`monthly`, `credit_percent?` 0–100), `seller_target?`, `timing?`, `flexibility?`.
 
 ---
 
@@ -262,12 +283,15 @@ field, with its provenance.
   - `included`, `not_included_because` — whether it counts toward this result's statistics, and if
     not, why (tier, status, like for like, recency window).
   - `price` (sale price for sold, ask otherwise), `area_sqft`, `price_per_sqft`,
-    `no_unit_rate_because` ("no interior area — it can't give a $/sqft" for 100 Barclay #11F).
+    `no_unit_rate_because` ("no interior area — it can't give a $/sqft" for 100 Barclay #11F; for
+    every comp in a co-op report, that co-ops don't use $/sqft).
   - `comparisons` — factor by factor: `line`, `factor`, `facet`, `name`, `status` (`compared`,
-    `unknown`, `pending_confirmation`), `direction`, `degree`, `units` (the signed difference: floors,
-    bedrooms, sqft, months, $ of monthly carry), `unit_label`, `source` (`engine`, `jev`, `fallback`,
-    `agent`), `confidence`, `basis` (in words), `missing` (each `{ side, field, label }` — exactly
-    what to ask for).
+    `unknown`, `pending_confirmation`), `direction`, `degree`, `units` (the difference, signed so
+    positive means the comp is worse: subject minus comp for sqft, bedrooms, bathrooms and floors;
+    comp minus subject for $ of monthly carry; the comp's age in months for recency), `unit_label`,
+    `source` (`engine`, `jev`, `fallback`, `agent`), `confidence`, `basis` (in words), `missing`
+    (each `{ side, field, label }` — exactly what to ask for). Tags compare without regard to case or
+    spacing. A judgment's direction wins over the arithmetic's sign for every shape.
   - `adjustments` (sold comps) — each line: `status` (`calculated`, `agent_estimate`,
     `considered_not_calculated`), `dollars` (signed: + moves the comp up toward the subject),
     `percent_of_price`, `applied` (false when a substitute took the larger), `superseded_by`,
@@ -275,7 +299,10 @@ field, with its provenance.
     `why_not_calculated`, `basis`, plus `direction`, `degree`.
   - `adjusted_price` — sale price plus applied adjustments. `adjusted_price_per_sqft` — the same,
     interior size aside, over the comp's area. `implied_value` — that $/sqft × the subject's area.
-  - `monthly_carry`, `carry_per_sqft`.
+    Each is as sure as what its applied adjustments rest on — the comparison's inputs, and a
+    guesstimate for an agent's value. A comp adjusted to zero or below is left out of the indicators
+    (`adjusted_value_not_positive`).
+  - `monthly_carry`, `carry_per_sqft` (condos only).
   - `ask_vs_sold` (in contract and active) — `position` against the sold band (`below`, `within`,
     `above`) and `versus_sold_median_percent`.
 
@@ -283,8 +310,10 @@ field, with its provenance.
 
 - `kind`, `label` ("On the facts", "With estimates").
 - `evidence.sold`, `.in_contract`, `.active` — each: `basis`, `counts` (`total`, `primary`,
-  `secondary`, `excluded`, `included`, `with_unit_rate`), `price_per_sqft` and `price` statistics over
-  its included comps. **One class per statistic, always.**
+  `secondary`, `excluded`, `included`, `with_unit_rate`), `price_per_sqft` (null for co-ops) and
+  `price` statistics over its included comps. **One class per statistic, always.** In "with
+  estimates", a class whose membership an estimate changed (an estimated sale date moving a comp out
+  of the recency window, say) has its figures marked `guesstimate`.
 - `indicators.unit_rate` and `indicators.adjusted_price` (§6.3) — each family has `status` (`off` for
   co-ops), `reason`, and three indicators — `median`, `mean`, `anchor` — each with `id`, `label`,
   `status`, `reason`, `per_sqft` (unit-rate family), `implied_value`, `n`, `comp_ids`. Unit-rate
@@ -296,28 +325,36 @@ field, with its provenance.
 - `bracket` — `low`, `high`, `comp_ids`: the lowest and highest implied values among primary sold
   comps, in the lead's family (§6.5).
 - `range` — the bracket, or the agent's narrowing of it ("with estimates" only): adds `narrowed`,
-  `narrowing_reason`. `range_unavailable_because` when there isn't one.
+  `narrowing_reason`. `range_unavailable_because` when there isn't one — fewer than two primary sold
+  comps give the lead indicator, or they all imply the same value (a range is never a point).
 - `bridge` — from the unadjusted lead value to the base: `family`, `start`, `end`, `note`, and
   `lines`, one per factor that differs for any primary sold comp, in catalog order, plus interaction
   lines. Each line: `kind` (`factor` / `interaction`), `id`, `name`, `factor`, `facet`, `status`,
   `label` ("value not yet determined", "agent's estimate", "house method"), `client_visible` (false
   for school zone — analyst view only, §14), `comps` (direction, degree, units, dollars, applied,
-  status, reason per comp), `effect_on_base` (the base with the line less the base without it) and,
-  for interactions, `interaction` (relationship, why, members). With a median, effects needn't add
-  up to the total.
+  status, reason per comp), `effect_on_base` (the base with the line less the base without it, as
+  sure as the lines it rests on) and, for interactions, `interaction` (relationship, why, members).
+  With a median, effects needn't add up to the total.
 - `sale_to_ask` — statistic over included sold comps. `days_on_market` — per class; closings
   excluded. `asks_vs_sold` — `sold_band` (low, median, high sold $/sqft) and, for in contract and
-  active, the class median ask $/sqft and how far it sits from the sold median.
+  active, the class median ask $/sqft and how far it sits from the sold median — all null for
+  co-ops.
 - `carry` — `subject`, `subject_per_sqft`, `comp_median`, `comp_median_per_sqft`, `comp_ids`,
   `subject_vs_median_percent`. Carry isn't price evidence, so the median runs across all statuses.
+  The per-sqft figures are null for co-ops.
 - `estimates_used` — ("with estimates") every agent estimate this result used — stated
   guesstimates, agent adjustment values, rough judgments, the narrowing — each `{ kind, id, target,
-  what, note }`. This is what client copy must disclose when it uses this result (§9.5).
+  what, note }`. This is what client copy must disclose when it uses this result (§9.5). It lists an
+  estimate that took a comp out of this result (its type, its sale date) as well as one that moved a
+  figure, and an agent's adjustment value only where it's applied (not superseded by a substitute)
+  and counts toward the lead's family — an interior-size value, which a unit-rate lead sets aside,
+  isn't listed.
 
 ### `divergence`
 
-`same` (true when "with estimates" rests on no estimate) and the difference between the two results'
-`base`, `range_low` and `range_high`.
+`same` (true when the agent's estimates move neither the base nor the range) and the difference
+between the two results' `base`, `range_low` and `range_high`. An estimate that's disclosed but moves
+nothing leaves `same` true.
 
 ### `prices[]`
 
@@ -345,12 +382,14 @@ modelling.
 - **`gaps`** — inputs the calculation needs and doesn't have: `{ code, message, target, field,
   results }`. Codes: `subject_area_missing`, `subject_area_estimate_only`, `no_primary_sold_comps`,
   `base_unavailable`, `range_unavailable`, `comp_area_missing`, `comp_price_missing`,
-  `comp_floor_missing`, `subject_fact_missing` (with the field to ask for), `subject_carry_missing`.
+  `comp_floor_missing`, `subject_fact_missing` (with the field to ask for), `subject_carry_missing`
+  (per result: an estimated carry fills "with estimates" and leaves the gap "on the facts").
 - **`warnings`** — `{ code, message, comp_ids, results }`: `closing_record`, `approx_area`,
   `same_building_as_subject`, `same_unit_as_subject`, `property_type_mismatch`,
   `unrecognised_status`, `anchor_not_sold`, `anchor_not_primary`, `contradiction`,
-  `hypothetical_ignored`, `double_counting_risk`, `outside_house_bounds`, `narrowing_not_applied`,
-  `narrowing_outside_bracket`, `base_outside_range`.
+  `hypothetical_ignored`, `double_counting_risk` (naming the factors that carry values),
+  `outside_house_bounds`, `narrowing_not_applied`, `narrowing_outside_bracket`, `base_outside_range`,
+  `adjusted_value_not_positive`, `analyst_only_factor`.
 - **`pending_confirmation`** — inferred facts and unconfirmed judgments waiting for the agent:
   `{ kind, id, target, what, value, source, note }`.
 
@@ -407,15 +446,20 @@ decision; changing one is a small code change and a new house-method version.
 1. **Compare.** Where the facts allow, the engine compares the comp with the subject itself: more
    area, bedrooms or floors, or a feature the other lacks, reads as better. Where the facts don't
    settle it — two different sets of views, a loft against a duplex — the comparison is "differs"
-   and needs a judgment. A judgment (assessment) overrides the engine's direction and adds a degree.
-   Missing data on either side makes the comparison unknown, and says what's missing.
+   and needs a judgment. A judgment (assessment) overrides the engine's direction and adds a degree;
+   where a line's arithmetic has its own sign (interior size, outdoor area, carry), the judgment's
+   direction still decides which way the comp moves. Missing data on either side makes the
+   comparison unknown, and says what's missing.
 2. **Find a magnitude.** "On the facts": the house method's value, if determined. "With
-   estimates": the agent's value for that factor if they gave one, else the house method's.
+   estimates": the agent's value for that factor if they gave one and it can apply to this comp,
+   else the house method's. School zone takes neither — analyst view only.
 3. **Apply it**, or don't: a line with no value, no direction, or no degree where it needs one is
    **considered, not calculated** — it appears in the bridge, the assistant can discuss it, and it
    moves nothing. Adjustments move a comp toward the subject; percentages are of the comp's own price
-   and don't compound; each line is whole dollars.
-4. **Resolve interactions** (below), then sum what's applied.
+   and don't compound; each line is whole dollars, and as sure as what it rests on — the comparison's
+   inputs, and a guesstimate when the value is the agent's.
+4. **Resolve interactions** (below), then sum what's applied. A comp adjusted to zero or below can't
+   indicate a price: it's left out of the indicators, with a warning to check the values.
 
 An agent value outside the house limits (`min_percent`/`max_percent` of the comp's price, once Noble
 sets them) raises `outside_house_bounds`, quoting the agent's reason or asking for one.
@@ -454,6 +498,9 @@ production every value is null.**
 - **A production file with any value needs Noble's sign-off** — `approval: { by, at, note? }` — or
   it won't load. Nothing enters the product without it.
 - Its `hash` is recorded in every output, so two files that share a version number can't pass as one.
+- **A loaded house method is frozen, and `compute` takes no other.** It accepts only what
+  `loadHouseMethod` or `productionHouseMethod` returned, so its values, `hash` and `all_null` can't
+  drift apart; one built or edited by hand is refused with a `HouseMethodError`.
 - **`test/fixtures/house-method.test-only.json`** holds made-up round numbers to exercise the
   arithmetic. It's marked `kind: "test"`, and **the engine refuses to load it outside a test runner**:
   `loadHouseMethod` throws `TestConfigRefusedError`, and so does `compute` if a test house method
@@ -520,6 +567,15 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
 7. **Carry's comp median runs across all statuses** — it isn't price evidence.
 8. **The magnitude shapes** (percent per degree, per floor, dollars per bedroom, size elasticity,
    outdoor weighting, capitalised carry) are a first structure, to be revisited with CR-R's findings.
+9. **School zone is compared and shown to the analyst, never applied** — not the house method's
+   value, not the agent's. §14 keeps it out of client copy as a recognised steering signal, and a
+   value in the base or the range would reach clients through every figure. Hannah approving wording
+   (§14's exception) would cover the copy, not the number; applying it would be a small change.
+10. **The agent's adjustment values are magnitudes.** The comparison supplies the sign, so a
+    negative value is refused rather than silently flipping a comp the wrong way; the agent says
+    which side is better with a judgment. The market's monthly movement is the one signed value.
+11. **When the agent's value can't apply to a comp and the house method's can, the house method's
+    is used**, noted on the line — "with estimates" is the facts plus the estimates, never less.
 
 ---
 
@@ -530,6 +586,7 @@ engine/
   index.ts              the public API
   types.ts              inputs and the shared vocabulary (§6.1)
   version.ts            engine and parser versions
+  facts-schema.ts       what each fact field must hold — shared by the parser and compute()
   parser/               the StreetEasy export parser (§6.2)
     index.ts, columns.ts, values.ts, derive.ts, property-key.ts, csv.ts
     xlsx/               zip.ts, inflate.ts, xml.ts, workbook.ts — XLSX with no dependencies
@@ -538,7 +595,7 @@ engine/
     interactions.ts     Appendix A.5 — the interaction map
   house-method/
     production.json     every value null
-    load.ts             validation, sign-off, the test-config refusal
+    load.ts             validation, sign-off, freezing, the test-config refusal
     runtime.ts          test-runner detection — the engine's one environment read
   compute/
     index.ts            compute(): both results, assembled
@@ -550,6 +607,6 @@ engine/
     money.ts            carry, price evaluation, monthly cost, deal terms
     output.ts           the output's types
   util/                 dates without Date, canonical JSON, SHA-256, UTF-8, arithmetic
-  test/                 107 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
+  test/                 122 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
                         and the test-only house method
 ```
