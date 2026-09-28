@@ -1,0 +1,40 @@
+{
+  // One config for the comp report: the browser app (src/), the server code the
+  // Netlify functions import (server/, db/), and the function entry points
+  // themselves. Type-checking only — Vite and Netlify's bundler do the emitting.
+  //
+  // engine/ belongs to Abacus (Dispatch 06) and is not listed here; it is
+  // checked wherever src/ or server/ import it.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client"],
+
+    "noEmit": true,
+    // Server code and its tests run straight under Node's type stripping
+    // (`node --test`), so imports carry their .ts extension and only
+    // erasable syntax is allowed — no enums, namespaces or parameter properties.
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src",
+    "server",
+    "db",
+    "dev",
+    "vite.config.ts",
+    "../../netlify/functions/comp-report-*.mts",
+    "../../netlify/functions/identity-*.mts"
+  ]
+}

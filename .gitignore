@@ -1,2 +1,7 @@
 node_modules/
 .netlify/
+
+# The comp report's Vite build output (source: tools-src/comp-report/).
+# Netlify builds it on every deploy. The hand-written tools in tools/ are not
+# generated and stay committed as normal source.
+tools/comp-report/
