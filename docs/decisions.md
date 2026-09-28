@@ -8,7 +8,10 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-09-24 by Casanova.
+Last updated 2026-09-28 by Casanova.
+
+**What actually blocks the next build:** CR-3 (the workspace) needs **D-1, D-10 and D-12**. CR-4
+needs D-4 and CR-5 needs D-2, but those start later. Everything else can wait.
 
 ## Index
 
@@ -28,27 +31,47 @@ Last updated 2026-09-24 by Casanova.
 | D-12 | Reusing the MindBinder Jev integration | Soon | Quick | CR-3 |
 | D-13 | Disclaimer wording | Later | Quick (Hannah) | the pilot |
 | D-14 | When to research interaction magnitudes | Later | Quick | CR-R2 |
-| D-15 | The esbuild / `@netlify/blobs` rule | Later | Quick | after CR-1's findings |
 | D-16 | Unmerged branches | Later | Quick | — |
+| D-17 | Two questions for counsel | Later | Quick (counsel) | the pilot; factor 18 |
+| D-18 | The order adjustments apply in, and whether they compound | Later | Quick (Noble) | the first house-method values |
 
 ## Your actions
 
 - [ ] **Now — protect Netlify's non-production deploys.** Old deploy previews
   (`deploy-preview-N--casa-blanca-creative-studio.netlify.app`, numbered by PR, so guessable) still
-  serve the internal docs from before the 404 fix. Site configuration → access and security →
-  password-protect or restrict non-production deploys.
-- [ ] **Now — name and start the three new sessions**, pasting in Dispatches 04, 05 and 06. Proposed
-  names are in `docs/dispatch/README.md`; rename freely.
-- [ ] **Soon, blocks CR-1 — tell Casanova which Netlify plan the site is on.** Netlify Database needs a
-  credit-based plan.
-- [ ] **Soon, blocks CR-1 — enable Netlify Identity** on the site.
-- [ ] **Soon, blocks CR-1 — create a Google OAuth client** for Identity's Google provider, so the
-  sign-in screen says Casa Blanca. Its client ID and secret go into Identity's settings.
+  serve the internal docs from before the 404 fix, and new previews now carry sign-in and a database
+  branch. Site configuration → access and security → password-protect or restrict non-production
+  deploys.
+- [x] ~~Name and start the three new sessions.~~ Surveyor, Mason and Abacus — all three delivered and
+  merged (#49, #48, #50) on 2026-09-28.
+- [x] ~~Tell Casanova which Netlify plan the site is on.~~ Credit-based: CR-1's preview was given a
+  database, which Netlify only does on credit-based plans.
+- [ ] **Now, blocks CR-1's last step — enable Netlify Identity**, following
+  `docs/comp-report/cr1-setup.md`: open registration, **email confirmation on**, Google on. Then
+  `/api/comp-report/health` should show `emailConfirmation: true`.
+- [ ] **Now, blocks CR-1's last step — create a Google OAuth client** for Identity's Google provider,
+  so the sign-in screen says Casa Blanca. Its client ID and secret go into Identity's settings.
+- [ ] **Now — set `CR_ADMIN_EMAILS`** (your address, and anyone else who should run the allowlist) in
+  Netlify's environment variables. And tell Casanova: **does anyone sign in with an
+  `@email.casa-blanca.com` address?** If so, `CR_ALLOWED_DOMAINS` gets set too.
+- [ ] **Then — run step 6 of `cr1-setup.md`:** the health page, a personal Gmail refused, a Casa account
+  creating a report that survives a reload, then a turn that uses a tool and a second message. About
+  15 minutes; Mason's session can walk you through it.
+- [ ] **Soon — give Casa sessions their own cloud environment**, or take `DATABASE_URL` out of this
+  one. The Claude Code environment Casa's sessions run in holds MindBinder's database address. Nothing
+  in this repo reads it (CR-1 made sure), but every Casa session, including the research ones that
+  read the open web, carries it.
 - [ ] **Soon — get Casa its own Jev account.** Early access is invite-only; your access is through
   MindBinder. The tool falls back to Claude Haiku until then.
 - [ ] **Later — build the house glossary with Noble and the mentors.** Official definitions for
   mortgage payment, interest-only payment, monthly carry, ownership carrying cost and the rest, so the
-  tool and every agent use each term one way. CR-R will produce a draft to start from.
+  tool and every agent use each term one way. **The draft is ready:**
+  `docs/comp-report/research/glossary-draft.md` — 152 entries, every one marked DRAFT, with 12
+  questions for Noble at the top. The three that matter most: "carry" is used three ways; whether
+  "mortgage payment" includes escrowed taxes (if it does, the tool counts taxes twice); and whether
+  sale-to-ask divides by the first or the last asking price.
+- [ ] **Later — send Noble the adjustment evidence** (`docs/comp-report/research/adjustments.md`,
+  all 36 factors, sourced) along with D-18. It's what he sets the house method's first values from.
 - [ ] **Later — propose the training gate to Hannah** (D-11 has the detail).
 - [ ] **Parked — agent sites:** Sam Valk's bio and neighborhoods (the build warns without them); confirm
   `casa-blanca-creative-studio.netlify.app` is the production origin.
@@ -201,7 +224,8 @@ closings are public either way.
   listing content stays with the report that imported it.
 
 **Recommendation: ask Hannah; C is the safe middle** if the agreement is unclear. The schema supports all
-three.
+three: CR-1 built it so a property's identity (building, unit) is shared, so imports dedupe, while what
+each import observed stays private to the agent who imported it.
 
 **Answer →** _type here_
 
@@ -280,24 +304,53 @@ first.
 
 ## Repo and deploy
 
-### D-15 · The esbuild / `@netlify/blobs` rule
-`Later — after CR-1's findings` · `Quick`
-
-`CLAUDE.md` says functions using `@netlify/blobs` must not be bundled with esbuild, but `netlify.toml`
-bundles everything with esbuild, and three daily-use functions import blobs and apparently work. CR-1 is
-investigating. When its findings land, this becomes: correct the rule, or fix the three functions.
-
-**Answer →** _wait for CR-1's findings_
-
 ### D-16 · Unmerged branches
 `Later` · `Quick`
 
-Ten remote branches are already merged into `claude/main` and can be deleted. Three aren't merged and have
+Thirteen remote branches are merged into `claude/main`. Nine are finished work and can be deleted;
+four belong to live sessions (Casanova, Surveyor, Mason, Abacus) and stay. Three aren't merged and have
 no PR: `claude/qr-code-generator-nva8xf` (a QR code generator, July), `claude/motion-graphic-stories-hlpirk`
-(the React spike CR-1 builds on — keep it), and `samplepics` (an upload branch, August).
+(the React spike — CR-1 has now absorbed it), and `samplepics` (an upload branch, August).
 
-- **A — Delete the ten merged; keep the React spike; you decide on the QR generator and `samplepics`.**
+- **A — Delete the nine finished and the React spike; you decide on the QR generator and `samplepics`.**
 - **B — Leave everything.**
+
+**Answer →** _type here_
+
+## Comp report — for outside sign-off
+
+### D-17 · Two questions for counsel
+`Later — (1) before the pilot, (2) before factor 18 gets a value` · `Quick — forward to counsel or a closing attorney`
+
+CR-R (Surveyor) found two legal questions research can't settle. Both are in
+`docs/comp-report/research/adjustments.md`, with sources.
+
+1. **Is a CMA an "appraisal" under New York law?** Executive Law §160-a defines appraisal broadly. The
+   Department of State's appraiser FAQ and the §160-jjjj(3) carve-out come close to excluding a
+   comparative market analysis by a licensed agent, but no DOS page says so outright. D-13's disclaimer
+   wording depends on the answer.
+2. **Sponsor sales: does transfer tax the buyer pays count toward the taxable consideration?** A NYC law
+   firm says it raises it; the TP-584 instructions say it's excluded. Factor 18 (sponsor sale) does
+   this arithmetic, so the tool needs the right answer before it computes it.
+
+**Answer →** _type here — who it went to, or their answer_
+
+### D-18 · The order adjustments apply in, and whether they compound
+`Later — before the first house-method values` · `Quick — Noble`
+
+Today the engine takes every adjustment off the comp's own sale price and adds them up, so order never
+matters. Appraisal practice works in two stages: **transaction** adjustments first (market movement since
+the sale, financing, conditions of sale), each applied to the price the one before produced; then
+**property** adjustments (size, floor, view, condition and the rest) added together on that result. The
+difference is small per comp, but it runs through every number once values exist.
+
+- **A — Keep it flat:** everything off the sale price, added. Simplest to explain.
+- **B — Appraisal practice:** transaction adjustments first, in sequence; property adjustments added on
+  the result.
+
+**Recommendation: B, if Noble agrees.** It's what an appraiser or a reviewing broker expects, and the
+property adjustments stay additive (§6.5). It's a small engine change, and nothing moves until values
+exist.
 
 **Answer →** _type here_
 
@@ -305,4 +358,10 @@ no PR: `claude/qr-code-generator-nva8xf` (a QR code generator, July), `claude/mo
 
 ## Resolved
 
-_Nothing yet — answered decisions move here with the date and where they were applied._
+### D-15 · The esbuild / `@netlify/blobs` rule — resolved 2026-09-28
+The rule was wrong. Netlify bundles every v2 function with `nft` whatever `node_bundler` says, and that
+ships `@netlify/blobs` fine. The one setting that did take effect, `node_bundler = "none"` on
+`agent-store`, was written to obey the rule and shipped no `node_modules` at all, so the agent CMS
+backend returned 502 in production. Evidence: `docs/comp-report/cr1-esbuild-blobs.md` (Mason, CR-1).
+**Applied** in `bd30b53`: the override is gone, and `CLAUDE.md` and `casa-blanca.md` carry the corrected
+rule. A repo rule, so Casanova's call; nothing needed from Kimani.
