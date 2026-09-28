@@ -29,10 +29,13 @@ file points you there by section when you need it.
 - Image proxying genuinely needs the server (canvas taint) — cannot go client-side.
 - Fork the working reference template rather than clean-room rewriting. Patch surgically,
   validate each step. No big-bang rewrites.
-- **`publish = "."` serves the entire repo root to the public web.** Anything internal-only must
-  be on the forced-404 list in `netlify.toml` — `docs/`, `netlify/`, `agents/data/` and the build
-  and config files already are. A new top-level folder of notes, data or source is public until
-  you add it there. Check with `curl` against the live site after deploy.
+- **`publish = "."` serves the entire repo root to the public web.** Internal-only paths are refused
+  in two places — keep both in step: the edge function `netlify/edge-functions/block-internal.js`
+  (the real guard: it lowercases and decodes the path, because Netlify serves files
+  case-insensitively and `/DOCS/x` slips past case-sensitive rules), and the forced-404 list in
+  `netlify.toml` (a second layer). `docs/`, `netlify/`, `.github/`, `agents/data/`, `tools-src/`,
+  every `.md` file, specs, tests and root config files are covered. A new internal folder is public
+  until you add it to both. After deploy, `curl` the live site — including an UPPERCASE variant.
 - **The comp report tool is a scoped exception to two rules:** it's React + Vite + TypeScript
   (source in `tools-src/comp-report/`, built to `tools/comp-report/`), and it has accounts
   (Netlify Identity) and retained data (Netlify Database). See `docs/comp-report/01-design.md`.
