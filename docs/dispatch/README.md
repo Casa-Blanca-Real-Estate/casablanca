@@ -40,7 +40,7 @@ or renames them.
 | Name | Role | Dispatches | Status |
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
-| **Surveyor** *(proposed)* | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Ready to start |
+| **Surveyor** *(proposed)* | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | In review — PR #49 open |
 | **Mason** *(proposed)* | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1) | Ready to start |
 | **Abacus** *(proposed)* | The comp report's calculation engine and parser | 06 (CR-2) | Ready to start |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
@@ -54,6 +54,6 @@ or renames them.
 | 01 | [Profile Pic Generator — cutout quality + torso outpainting](01-profile-pic-cutout-and-outpaint.md) | unnamed | Parked |
 | 02 | [Agent sites, Slice 0 — data model + build hardening](02-agent-sites-foundations.md) | unnamed | Done |
 | 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | unnamed | Done |
-| 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | Ready |
+| 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | In review |
 | 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | Ready |
 | 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Ready |
