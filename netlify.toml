@@ -15,15 +15,10 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# CLAUDE.md: "No esbuild bundling for functions that use @netlify/blobs —
-# node_modules ships in the zip." The global setting above contradicts that for
-# site/sessions/agents, which all import @netlify/blobs and have apparently been
-# deploying fine; resolving that either way is a live risk to three daily-use
-# tools, so it is flagged in docs/agent-cms/storage-decision.md for Casanova
-# rather than changed here. This override obeys the written constraint for the
-# new function without touching how anything else deploys.
-[functions."agent-store"]
-  node_bundler = "none"
+# node_bundler doesn't reach v2 functions: Netlify bundles those with nft, which
+# ships the node_modules each one imports. Never override a function to
+# node_bundler = "none" — it ships no node_modules at all (that override is what
+# took agent-store down with a 502; D-15, docs/comp-report/cr1-esbuild-blobs.md).
 
 [[redirects]]
   from = "/agents"

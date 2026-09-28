@@ -25,7 +25,10 @@ file points you there by section when you need it.
 - Object Sans (Regular 400 / Heavy 800) is the brand font — embedded, never linked externally.
 - Internal users are agents: zero-install, browser-based, no accounts.
 - `netlify.toml` must explicitly declare the functions directory.
-- No esbuild bundling for functions that use `@netlify/blobs`.
+- **Functions are v2** (`export default async (req, context) => Response`). Netlify bundles them
+  with `nft`, which ships the `node_modules` each imports; `node_bundler` doesn't apply to them.
+  **Never set `node_bundler = "none"` on a function** — it ships no `node_modules` at all.
+  `@netlify/blobs` needs no setup in a v2 function. Don't write v1 (`exports.handler`) functions.
 - Image proxying genuinely needs the server (canvas taint) — cannot go client-side.
 - Fork the working reference template rather than clean-room rewriting. Patch surgically,
   validate each step. No big-bang rewrites.
@@ -74,9 +77,9 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 01 | [Profile Pic Generator — cutout quality + torso outpainting](docs/dispatch/01-profile-pic-cutout-and-outpaint.md) | unnamed | **Parked.** Stack #41–#45 open; #41 has changes requested |
 | 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | unnamed | Done — merged #46 |
 | 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | unnamed | Done — merged #47 |
-| 04 | [Comp report — adjustment research (CR-R)](docs/dispatch/04-comp-report-research.md) | Surveyor | Ready |
-| 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | In progress — #48; waiting on Kimani (Identity, OAuth client) |
-| 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | In review — PR #50 open |
+| 04 | [Comp report — adjustment research (CR-R)](docs/dispatch/04-comp-report-research.md) | Surveyor | Done — merged #49 |
+| 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | Merged #48; step 6 waits on Kimani (Identity, OAuth client); CR-1.1 open |
+| 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | Merged #50; CR-2.1 open |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and

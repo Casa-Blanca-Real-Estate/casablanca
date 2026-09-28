@@ -44,7 +44,10 @@ Repeated from `/CLAUDE.md` because they're the ones that get violated:
 - Internal users are agents: zero-install, browser-based, **no accounts**. The bar for a tool is
   "does it work offline when the file is double-clicked."
 - `netlify.toml` must explicitly declare the functions directory.
-- **No esbuild bundling for functions that use `@netlify/blobs`.** `node_modules` ships in the zip.
+- **Functions are v2** (`export default async (req, context) => Response`), bundled by Netlify with
+  `nft`, which ships the `node_modules` each imports. **Never set `node_bundler = "none"`** — it
+  ships none, and it's what broke `agent-store` (D-15). The old "no esbuild with `@netlify/blobs`"
+  rule was wrong; see `docs/comp-report/cr1-esbuild-blobs.md`.
 - Image proxying genuinely needs the server (canvas taint) — cannot go client-side.
 - **Fork the working reference template; never clean-room rewrite.** Patch surgically, validate
   each step. Spec-PDF brackets like `[Subhead]` are field labels, not literal characters.

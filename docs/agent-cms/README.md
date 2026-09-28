@@ -15,8 +15,9 @@ agent's page doesn't mean hand-editing JSON.
 
 - **[`storage-decision.md`](storage-decision.md)** — Netlify Blobs vs. git as the source of truth,
   with the tradeoffs on history, review-before-publish, auth surface and rollback. Built on Blobs
-  behind a four-function seam; Casanova and Kimani pick. Also carries the unresolved
-  esbuild / `@netlify/blobs` contradiction between `CLAUDE.md` and the committed `netlify.toml`.
+  behind a four-function seam; Casanova and Kimani pick. Also carries the esbuild /
+  `@netlify/blobs` contradiction — **resolved 2026-09-28 (D-15):** the rule was wrong and the
+  `agent-store` override it produced was removed; see `../comp-report/cr1-esbuild-blobs.md`.
 - **[`security-model.md`](security-model.md)** — what the shared-secret write gate covers and
   what it does not, plus a pre-existing finding: `claude.mjs` is an unauthenticated open proxy to
   the Anthropic API.

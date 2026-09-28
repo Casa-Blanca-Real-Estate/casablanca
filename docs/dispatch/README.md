@@ -34,15 +34,15 @@ done. It carries the rules above by reference, and restates rules 3–5 so no ki
 ## Session roster
 
 Kimani names sessions. A persistent session keeps its name across dispatches, so context and
-accountability travel with it. Names marked *proposed* are Casanova's suggestions until Kimani confirms
-or renames them.
+accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kimani on 2026-09-28
+(he may rename one or two later).
 
 | Name | Role | Dispatches | Status |
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
-| **Surveyor** *(proposed)* | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | In review — PR #49 open |
-| **Mason** *(proposed)* | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1) | Active — #48 (phases 1–4); waiting on Kimani for Identity and the OAuth client |
-| **Abacus** *(proposed)* | The comp report's calculation engine and parser | 06 (CR-2) | In review — PR #50 open |
+| **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
+| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1) | Phases 1–4 merged #48. Open: the step-6 production sign-in proof (waits on Kimani: Identity, OAuth client) and follow-ups CR-1.1 |
+| **Abacus** | The comp report's calculation engine and parser | 06 (CR-2) | Merged #50. Open: follow-ups CR-2.1 |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
 | *unnamed* (`claude/laughing-newton-f96x9t`) | Agent CMS | 03 | Done — merged #47 |
@@ -54,6 +54,6 @@ or renames them.
 | 01 | [Profile Pic Generator — cutout quality + torso outpainting](01-profile-pic-cutout-and-outpaint.md) | unnamed | Parked |
 | 02 | [Agent sites, Slice 0 — data model + build hardening](02-agent-sites-foundations.md) | unnamed | Done |
 | 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | unnamed | Done |
-| 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | In review |
-| 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | In progress — #48; waiting on Kimani (Identity, OAuth client) |
-| 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | In review — #50 |
+| 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | Done — merged #49 |
+| 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | Merged #48; step 6 waits on Kimani (Identity, OAuth client); CR-1.1 open |
+| 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Merged #50; CR-2.1 open |

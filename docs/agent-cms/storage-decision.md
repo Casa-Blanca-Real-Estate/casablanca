@@ -182,6 +182,12 @@ The build reads `live`, never `draft`, and only for `status === "live"`. So:
 
 ## The constraint that applies either way
 
+> **Resolved 2026-09-28 (D-15) — this section is history.** The constraint was wrong: Netlify
+> bundles v2 functions with `nft` whatever `node_bundler` says, and the `node_bundler = "none"`
+> override below shipped no `node_modules`, so `agent-store` returned 502 in production. The
+> override is gone and `CLAUDE.md` carries the corrected rule. Evidence:
+> `../comp-report/cr1-esbuild-blobs.md` (Mason, CR-1).
+
 **`@netlify/blobs` must not be bundled with esbuild** (`CLAUDE.md`, `casa-blanca.md` §2) —
 `node_modules` ships in the zip instead.
 
