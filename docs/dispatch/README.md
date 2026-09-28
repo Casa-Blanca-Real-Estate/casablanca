@@ -42,7 +42,7 @@ or renames them.
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
 | **Surveyor** *(proposed)* | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | In review — PR #49 open |
 | **Mason** *(proposed)* | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1) | Active — #48 (phases 1–4); waiting on Kimani for Identity and the OAuth client |
-| **Abacus** *(proposed)* | The comp report's calculation engine and parser | 06 (CR-2) | Ready to start |
+| **Abacus** *(proposed)* | The comp report's calculation engine and parser | 06 (CR-2) | In review — PR #50 open |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
 | *unnamed* (`claude/laughing-newton-f96x9t`) | Agent CMS | 03 | Done — merged #47 |
@@ -56,4 +56,4 @@ or renames them.
 | 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | unnamed | Done |
 | 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | In review |
 | 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | In progress — #48; waiting on Kimani (Identity, OAuth client) |
-| 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Ready |
+| 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | In review — #50 |

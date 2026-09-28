@@ -1,0 +1,30 @@
+# The comp report's calculation engine: every number in every report comes
+# from it, so its tests and type checks run on every change to it.
+# tools-src/comp-report/engine/README.md describes what the tests prove.
+name: comp report engine
+
+on:
+  pull_request:
+    paths:
+      - 'tools-src/comp-report/engine/**'
+      - 'package.json'
+      - '.github/workflows/comp-report-engine.yml'
+  push:
+    branches: [claude/main]
+    paths:
+      - 'tools-src/comp-report/engine/**'
+      - 'package.json'
+      - '.github/workflows/comp-report-engine.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 22.18+ runs TypeScript directly; the tests need no build step.
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck:engine
+      - run: npm run test:engine

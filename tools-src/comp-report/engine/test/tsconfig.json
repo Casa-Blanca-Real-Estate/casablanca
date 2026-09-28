@@ -1,0 +1,10 @@
+{
+  // Type check for the tests, which run under Node and may use Node's APIs.
+  // The engine itself is checked without them — see ../tsconfig.json.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../**/*.ts", "../**/*.json"],
+  "exclude": []
+}

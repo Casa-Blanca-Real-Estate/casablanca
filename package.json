@@ -20,7 +20,9 @@
     "check": "node agents/build.js --check",
     "test": "node --test agents/build.test.js",
     "test:comp-report": "node --test --test-concurrency=1 \"tools-src/comp-report/server/**/*.test.ts\" \"tools-src/comp-report/db/**/*.test.ts\"",
-    "db:local": "node tools-src/comp-report/dev/migrate-local.ts"
+    "db:local": "node tools-src/comp-report/dev/migrate-local.ts",
+    "test:engine": "node --test \"tools-src/comp-report/engine/test/**/*.test.ts\"",
+    "typecheck:engine": "tsc -p tools-src/comp-report/engine && tsc -p tools-src/comp-report/engine/test"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",

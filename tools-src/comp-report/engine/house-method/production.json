@@ -1,0 +1,270 @@
+{
+  "about": "The Casa Blanca house method: every magnitude, weight, bound and threshold the engine uses. Every value is null — to be determined. Noble sets them, informed by the CR-R research; until he does, an applicable factor is \"considered, not calculated\" and moves no number. A production file with any value needs approval.by and approval.at. See ../README.md.",
+  "id": "casa-blanca-house-method",
+  "kind": "production",
+  "version": "0.1.0",
+  "approval": null,
+  "lines": {
+    "interior_size": {
+      "elasticity": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "beds_baths.bedrooms": {
+      "per_unit": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "beds_baths.bathrooms": {
+      "per_unit": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "layout_efficiency": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "floor": {
+      "per_unit": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "exposure_light": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "views": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "outdoor_space": {
+      "weight_balcony": null,
+      "weight_terrace": null,
+      "weight_roof_deck": null,
+      "weight_garden": null,
+      "weight_patio": null,
+      "weight_outdoor_space": null,
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "condition": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "finishes_systems": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "ceiling_height": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "unit_type": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "noise_street_position": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "private_storage": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "service_level": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "amenities.general": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "amenities.shared_outdoor": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "building_era": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "building_size": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "sponsor_sales": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "carrying_costs": {
+      "multiplier": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "tax_abatements": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "building_financials": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "policies": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "parking": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "ground_lease": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "micro_location": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "distance": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "school_zone": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "recency_market": {
+      "per_unit": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "sale_conditions": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "concessions_credits": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    },
+    "combination_units": {
+      "small": null,
+      "moderate": null,
+      "large": null,
+      "min_percent": null,
+      "max_percent": null
+    }
+  },
+  "interactions": {
+    "outdoor_space~shared_outdoor": {
+      "magnitude": null
+    },
+    "parking~micro_location": {
+      "magnitude": null
+    },
+    "outdoor_space*views": {
+      "magnitude": null
+    },
+    "floor*views": {
+      "magnitude": null
+    },
+    "interior_size~beds_baths": {
+      "magnitude": null
+    },
+    "unit_type~floor,outdoor_space,views": {
+      "magnitude": null
+    },
+    "amenities~carrying_costs": {
+      "magnitude": null
+    },
+    "service_level~building_size": {
+      "magnitude": null
+    },
+    "condition~building_era": {
+      "magnitude": null
+    },
+    "sponsor_sales~concessions_credits": {
+      "magnitude": null
+    }
+  },
+  "decision_thresholds": {
+    "apply_at_or_above": null,
+    "ask_below": null
+  }
+}
