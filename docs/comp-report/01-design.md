@@ -1,6 +1,6 @@
 # Comp report tool — master design
 
-**v0.3 · 2026-09-24 · owner: Casanova.** The guiding document for every comp report dispatch.
+**v0.4 · 2026-09-28 · owner: Casanova.** The guiding document for every comp report dispatch.
 Dispatches cite sections of this file; when a build finding contradicts it, the dispatch says so
 in its PR and Casanova updates this file — the doc follows reality, not the other way round.
 
@@ -10,6 +10,13 @@ items are dated in §17.
 
 ### Version history
 
+- **v0.4** — after CR-R, CR-1 and CR-2 merged. A turn runs in a background function, because CR-1
+  measured a 60 s cap on every response (§8.3 rule 6, §15). Google sign-in is tested on production
+  (§13). CR-2's interpretations are settled (§6.2–§6.6, §7.1): "none listed" is approximate; recency
+  windows cover in-contract comps too; opposite-pulling substitutes net out; agent values are
+  magnitudes. Terms are fixed: input confidence vs judgment confidence, evidence status,
+  sale-to-last-ask. CR-R's corrections are in Appendix A: tax exemptions, floor against neighbouring
+  buildings, finishes, distance as a selection rule, new factors 37–39 and five new A.5 pairs.
 - **v0.3** — five kinds of agent input, an assumptions panel and two-keyed capture (§2);
   progressive, skippable intake and the call-before-reveal order (§3); interactions between
   factors (§6.6, Appendix A.5); deal terms at intake (§6.7); the house glossary (§6.9); coaching
@@ -166,13 +173,15 @@ alone (§16, CR-2).
 
 - **Money** in integer dollars; **area** in integer square feet; floats only for ratios. Display
   rounding (three significant figures for prices) is presentation, never applied inside the
-  engine.
+  engine. **$/sqft displays truncated to whole dollars**, as StreetEasy shows it; rounding would put
+  the figures $1 off what agents see there (CR-2).
 - **Every input is sourced:**
   `{ value, source, as_of, confidence, note? }` where
   `source` is `se_export` · `se_pdf` · `listing` · `agent` · `hypothetical` · `engine`, and
-  `confidence` is `exact` · `approx` (marked approximate at its source, e.g. `~1,840 ft²`) ·
-  `inferred` (derived from listing text or a Jev judgment — needs the agent's confirmation) ·
-  `guesstimate` (the agent's estimate).
+  `confidence` — the **input confidence** — is `exact` · `approx` (marked approximate at its
+  source, e.g. `~1,840 ft²`) · `inferred` (derived from listing text or a Jev judgment — needs the
+  agent's confirmation) · `guesstimate` (the agent's estimate). Not to be confused with a Jev
+  judgment's **judgment confidence** (§7.1), a calibrated probability.
 
 ### 6.2 Inputs — what StreetEasy gives us
 
@@ -186,7 +195,11 @@ alone (§16, CR-2).
   contract, active), recording the basis. StreetEasy switches basis by status and truncates.
 - A `/closing/` URL is a public-record closing without listing data. Flag it.
 - Split features, amenities and policies on `;` into tags; derive service level, outdoor presence
-  (**presence only — no size in the export**), parking and views from them.
+  (**presence only — no size in the export**), parking and views from them. A tag column that has
+  tags but none of a kind reads as **none listed**, with input confidence `approx`: the listing
+  agent types these tags, so a missing terrace tag is weak evidence. A blank column is unknown.
+- **`Status Date`** is the closing date for sold records, the contract date for in-contract ones and
+  the listing date for active ones.
 - The subject is never in the export. XLSX is the same schema.
 - **Expected second variant:** standard-tier StreetEasy exports (requested 2026-09-24).
 
@@ -202,8 +215,8 @@ $1,906/ft², matches this engine's exactly. This is what agents send clients tod
 
 ### 6.3 Indicators
 
-Evidence classes — **sold**, **in contract** (ask basis), **active** (ask basis) — never mix
-inside one statistic.
+Evidence statuses — **sold**, **in contract** (ask basis), **active** (ask basis) — never mix
+inside one statistic. (One term: **evidence status**. The engine's field is `evidence_class`.)
 
 - **Unit-rate indicators** ($/sqft) — need area on both subject and comp: median, mean, and the
   **anchor** (the single most comparable sold comp — the agent marks it; Jev suggests one).
@@ -214,8 +227,9 @@ inside one statistic.
 Condos compute both. Co-ops switch unit-rate off — which is why co-ops are the same scaffolding
 without square footage, not a second engine.
 
-**Also computed:** sale-to-last-ask per sold comp and summarised; days on market; where active and
-in-contract asks sit against the sold band.
+**Also computed:** **sale-to-last-ask** per sold comp and summarised (sale price ÷ last asking price
+− 1 — the last ask, pending Noble's glossary answer); days on market, leaving out public-record
+closings, whose 0 isn't a real zero; where active and in-contract asks sit against the sold band.
 
 ### 6.4 Two results
 
@@ -223,6 +237,12 @@ in-contract asks sit against the sold band.
   determined values only.
 - **With estimates** — the same, plus the agent's `guesstimate` inputs and any adjustments the
   agent has stated a value for.
+
+**What counts as an estimate:** a setting that carries a *value* — an adjustment value, the agent
+narrowing the range — lands in *with estimates* only. Method settings — tiers, the lead indicator,
+the anchor, a recency window — change both results. Where the agent's value can't apply to a comp
+and the house method's can, the house method's is used and the line says so: *with estimates* is the
+facts plus the estimates, never less.
 
 Both are always shown, side by side. **Where they diverge is itself information:** a wide gap
 means the range rests on guesses. The agent chooses which result the client copy uses; if it's
@@ -239,6 +259,11 @@ listing and the agent doesn't know it, it's left out of both results and the out
 - **Range** = lowest to highest implied value among the agent's **primary sold** comps. This is
   bracketing on a curated like-for-like set — not StreetEasy's lowest-to-highest of everything.
   The agent can narrow it, with a reason.
+- **Recency window** (optional, a method setting): sold comps count only if they closed inside it,
+  in-contract comps only if they went into contract inside it. Active listings are exempt: an ask
+  is current evidence. **v1 limitation:** practice measures a sale's recency from its contract date,
+  but the export gives sold records only their closing date, so v1 overstates how fresh a sale is
+  by the contract-to-close lag. Listing history could supply contract dates later.
 - **The model is additive.** The base case is a featureless unit; each factor in Appendix A
   switches on when a property has it and the data exists. A Brooklyn one-bedroom and a Tribeca
   penthouse run the same engine — the penthouse just has more factors active.
@@ -252,7 +277,12 @@ it captures, what data it needs, where the data can come from. **None has a numb
   appears in the bridge as a line marked *value not yet determined*, the assistant can discuss it,
   and it moves no number.
 - **The agent may state a value** for any factor ("I'd add 5% for the terrace"). It's recorded as
-  theirs, labelled the agent's estimate, and lands only in *with estimates*.
+  theirs, labelled the agent's estimate, and lands only in *with estimates*. **A value is a
+  magnitude; the comparison supplies the direction** — a comp without the terrace moves up, one with
+  a better terrace moves down. The one signed value is the market's monthly movement.
+- **Order and compounding** are undecided: today every adjustment comes off the comp's own sale
+  price and they add. Appraisal practice applies transaction adjustments first, in sequence, then
+  property adjustments on the result (D-18, for Noble).
 - **Magnitudes, weights and bounds all live in one versioned house-method file.** In production
   every value in it is `null` — to be determined — until Noble sets it, informed by the research in
   CR-R (§16). Every version records which house method produced it.
@@ -266,10 +296,11 @@ substitute or overlapping pair is the classic comp error — double counting. So
 an **interaction map** (Appendix A.5): which factors interact and how — substitute, complement,
 overlap, conditional. **The structure can be defined before any magnitude is**, which is what makes
 it useful now: the engine applies a substitute group as the larger of its adjustments rather than
-the sum, and in v1 the assistant **warns about double counting** whenever the agent states values
-for overlapping factors. Interaction magnitudes are determined later, with the rest (CR-R2, §16).
+the sum when they pull the same way, and nets them when they pull opposite ways; and it **warns
+about double counting** whenever both sides of an overlapping pair carry a value, from the house
+method or the agent. Interaction magnitudes are determined later, with the rest (CR-R2, §16).
 
-*Pending: D-14 (when to research interaction magnitudes).*
+*Pending: D-14 (when to research interaction magnitudes), D-18 (adjustment order and compounding).*
 
 ### 6.7 Carrying cost and price evaluation — rudimentary, in v1
 
@@ -277,7 +308,7 @@ for overlapping factors. Interaction magnitudes are determined later, with the r
   co-ops; carry per square foot where area is known; the subject against the comp median.
 - **Price evaluation** for any price the agent names — a list price, an offer, the client's
   target, a what-if: its $/sqft, where it falls in each result's range, its distance from each
-  indicator, and what the comps' typical sale-to-ask implies about negotiating room.
+  indicator, and what the comps' typical sale-to-last-ask implies about negotiating room.
 - **Monthly cost estimate**, optional: the agent enters rate, down payment and term; the engine
   returns principal and interest plus carry. Labelled an estimate. Definitions follow the audit's
   §9 — housing cash outflow, ownership carrying cost, principal (not an expense) — so the terms
@@ -296,7 +327,8 @@ Hand-verified fixtures. Hannah's export must reproduce: all five sold comps — 
 (StreetEasy's PDF agrees), median **$2,112**; sold comps on floor 10+ — mean **$2,279**;
 in-contract and active $/sqft on **ask** basis (1,625 · 2,387 · 2,400; 2,763 · 3,091); `~1,840`
 flagged approximate; 79 Laight #1A flagged as a closing; 100 Barclay #11F contributing no
-unit-rate indication; 101 Leonard #5B with no floor; sale-to-ask −3.0%, +12.3%, −4.0%, −4.2%.
+unit-rate indication; 101 Leonard #5B with no floor; sale-to-last-ask −3.0%, +12.3%, −4.0%, −4.2%.
+The $/sqft figures are truncations, as StreetEasy displays them.
 **Also:** a test that rebuilds StreetEasy's blended $4,535,000 and $2.2M–$6.0M from the raw rows,
 and asserts the engine never returns either as a result.
 
@@ -321,7 +353,7 @@ neighbours each mean one thing.
 
 | Tier | Decides | Examples |
 |---|---|---|
-| **Code** | Anything a rule can decide — free, exact, auditable | evidence classes, statistics, the range, recency filtering, the parser, numeric grounding, carry and price evaluation |
+| **Code** | Anything a rule can decide — free, exact, auditable | evidence statuses, statistics, the range, recency filtering, the parser, numeric grounding, carry and price evaluation |
 | **Jev** | Typed judgments over text and data, with calibrated confidence | comparability score (for sorting), tier suggestion, view / outdoor / condition / service class from listing text, sale-condition flags, whether a comp differs from the subject on a factor and in which direction, the kind and basis of each agent statement (§2), request intent (§8.3), client decision style (§8.6), glossary usage (§6.9), fair-housing screening, practice-report rubric scoring (§11) |
 | **LLM** | Conversation and writing | the assistant, capturing the agent's statements with their values, gap questions, audience and method, the writer, feedback prose |
 
@@ -335,12 +367,13 @@ structured state; no images yet.
 
 **It cannot output a dollar figure — which enforces §4.2 by construction.** For an adjustment, Jev
 decides *whether* the comp differs from the subject and *which kind and degree* ("view: comp
-better, large difference, confidence 0.91"); the house method turns that class into a number once
+better, large difference, judgment confidence 0.91"); the house method turns that class into a number once
 one is determined. Until then the bridge shows the judgment with *value not yet determined*.
 
-**Confidence drives how a judgment lands:**
+**Judgment confidence drives how a judgment lands.** Until the agent confirms it, a judgment is
+`inferred` and moves no number (§6.1):
 
-- **High** → applied immediately, visible and undoable
+- **High** → applied immediately: the app records it as confirmed, visibly and undoably
 - **Middling** → shown as a suggestion with its reason
 - **Low** → asked of the agent
 
@@ -414,9 +447,14 @@ recommendation for the agent (§8.3).
 5. **Append-only.** Undo is a new event, never a rewrite. Opus 5.5 rejects edited conversation
    history, so the transcript and event log are append-only by construction.
 6. **The server owns the transcript and state.** The browser sends only the agent's new message.
-   Each request runs any pending tool calls through the engine server-side, then makes **one**
-   model call and streams it; the browser re-requests to continue. One model call per request keeps
-   within function time limits (§15) and keeps state authoritative.
+   The turn runs in a **background function**: it runs any pending tool calls through the engine,
+   makes the model calls, streaming each, and appends every event to the transcript as it goes. The
+   browser reads progress over short, reconnecting requests and renders it as it arrives. **Why:**
+   CR-1 measured Netlify's limits — 30 s without a byte gets a 504, and every response, streaming
+   and edge functions included, is cut at 60 s (`cr1-function-limits.md`). A long Opus turn can
+   exceed that. **One turn at a time per report** — a second gets a 409. CR-1's single-request
+   proxy (one model call, stopped at 50 s, partial reply kept out of context) is the interim; CR-4
+   builds this.
 7. **Stay portable across Opus 5.5 and Sonnet 5** until the eval decides: engine-state updates go
    in as user-turn content, not mid-conversation system messages (Sonnet 5 lacks them).
 8. **The broker recommendation is the agent's.** The tool asks for it — *what would you recommend,
@@ -627,7 +665,7 @@ depends on the subject and the client, so tiers and reasons belong to the report
 | `reports` | owner, title, property type, mode (`practice` / `full`), brief, the call and target (withheld from the assistant), status, working state |
 | `subjects` | the subject's sourced fields, linked to its property record |
 | `imports` | uploaded file (Blobs key), format, parser version, warnings |
-| `report_comps` | a property in a report: its evidence class at import, current tier, anchor flag, reviewed-at |
+| `report_comps` | a property in a report: its evidence status at import, current tier, anchor flag, reviewed-at |
 | `reasons` | **append-only reason history** per report comp — tier, reason, reason type (`property` / `client` / `method`), actor, time. The latest is the current reason and first-class in the UI; earlier ones are kept and viewable |
 | `statements` | every agent input from §2 — kind, field, value, basis, source message, both readers' classifications, confirmed-at |
 | `judgments` | every Jev or fallback decision — target, question, answer, probabilities, confidence, how it landed |
@@ -666,13 +704,23 @@ records across agents waits on D-9**; the schema supports it from day one either
 - **Users are keyed by email**, so moving off Identity later is a re-login, not a data migration.
 - **Fallback if CR-1 finds Identity unworkable:** Google sign-in handled directly (the MindBinder
   approach) with our own session cookie.
-- **Deploy previews:** Google won't accept wildcard origins; use production plus one fixed staging
-  branch deploy.
+- **Testing sign-in:** Google sign-in is tested **on production**. Google redirects to Netlify's
+  callback, and after Google, Identity returns only to the production hostname, so a staging branch
+  deploy can't test it (CR-1). That's safe because the per-request check stands behind it.
+  Everything else is tested on deploy previews with invited email-and-password accounts, and
+  previews are password-protected.
+- **Email confirmation is required.** With Identity's autoconfirm on, a password sign-up under a
+  Casa address the person doesn't own would pass both checks, so the server refuses password
+  sessions while autoconfirm is on (CR-1.1). Google verifies its own addresses.
+- **Admin comes from `CR_ADMIN_EMAILS` only.** Allowlist grants give agent or mentor access, never
+  admin (CR-1.1).
 
 ## 14. Compliance
 
-- **Not an appraisal.** New York treats a licensee's CMA as a market-value estimate distinct from an
-  appraisal. StreetEasy's own report says it "is not an appraisal, valuation, broker price opinion,
+- **Not an appraisal.** New York's appraiser law comes close to excluding a licensee's CMA —
+  Executive Law §160-a defines appraisal broadly, the §160-jjjj(3) carve-out and the Department of
+  State's FAQ come close — but no DOS page says so outright; counsel to confirm (D-17, from CR-R).
+  StreetEasy's own report says it "is not an appraisal, valuation, broker price opinion,
   and is meant to be a starting point." Ours says the equivalent; **wording approved by Hannah
   before the pilot.**
 - **StreetEasy attribution** — "Data provided by StreetEasy" — on every export, as their report does.
@@ -692,13 +740,13 @@ records across agents waits on D-9**; the schema supports it from day one either
 - **Client profiles** hold no protected characteristics (§8.6). **Voice samples** are stored with
   client details stripped (§8.7).
 
-*Pending: D-9 (the property pool), D-13 (disclaimer wording).*
+*Pending: D-9 (the property pool), D-13 (disclaimer wording), D-17 (counsel: CMA vs appraisal).*
 
 ## 15. Risks
 
 | Risk | Mitigation |
 |---|---|
-| Function time limits cut off a long model turn | One model call per request (§8.3, rule 6), streaming; **measured in CR-1** |
+| Function time limits cut off a long model turn | **Measured in CR-1:** 30 s of silence → 504; every response cut at 60 s. Turns run in a background function; the browser reads progress (§8.3, rule 6) |
 | StreetEasy changes its export, or standard-tier exports differ | Header-mapped, versioned parser; fixtures per variant; header-mapping fallback |
 | A figure nobody determined gets used | Engine-only numbers, `null` house method in production, test config refused in production, numeric grounding |
 | Target-seeking through settings or the agent's own estimates | The call withheld from the assistant; movement toward the call shown and totalled |
@@ -718,8 +766,11 @@ records across agents waits on D-9**; the schema supports it from day one either
 
 ## 16. Build plan
 
-Dispatches in dependency order. **CR-R, CR-1 and CR-2 start now**, each in its own session — see
-`docs/dispatch/README.md` for the protocol and the roster.
+Dispatches in dependency order; `docs/dispatch/README.md` has the protocol and the roster. **CR-R,
+CR-1 and CR-2 are merged** (#49, #48, #50 — 2026-09-28). CR-1's sign-in proof waits on Identity
+being switched on. Follow-ups: **CR-1.1** (autoconfirm refused, admin only from the environment,
+refused-sign-up log cut to the domain, then the proof) and **CR-2.1** (v0.4's engine changes and
+Appendix A's new definitions). **CR-3 is next**, once D-1, D-10 and D-12 are answered.
 
 - **CR-R — Adjustment research** (Dispatch 04). For every factor in Appendix A: how practitioners
   derive its value, what data each method needs, what published evidence reports — sourced. Plus a
@@ -736,7 +787,7 @@ Dispatches in dependency order. **CR-R, CR-1 and CR-2 start now**, each in its o
 - **CR-3 — Workspace.** Progressive intake with deal-terms modules; import with on-arrival tagging
   through the decision provider; first-pass review with the range hidden; the reveal; the loop; the
   assumptions panel; both results; what-ifs; price evaluation; undo and redo; versions.
-- **CR-4 — Assistant.** §8: the tools, two-keyed capture, trust-but-verify, Path to target, coaching
+- **CR-4 — Assistant.** §8: turns in a background function (§8.3 rule 6), the tools, two-keyed capture, trust-but-verify, Path to target, coaching
   level, intent disambiguation, the glossary check, context notes, events, progress display, fallbacks,
   effort policy.
 - **CR-5 — Writer and QA.** §9, §10.2, client profile (§8.6) and agent voice (§8.7).
@@ -787,6 +838,15 @@ pool's cross-agent suggestions (D-9); the client web page; full offer modelling;
 | 2026-09-24 | Practice mode uses the tool's own fields; scaffolded in v1 |
 | 2026-09-24 | Admins and mentors grant or deny access from the admin side |
 | 2026-09-24 | Dispatched sessions open PRs and never merge; Casanova or Kimani merges |
+| 2026-09-28 | Turns run in a background function; the browser reads progress (CR-1's measured limits) |
+| 2026-09-28 | Google sign-in tested on production; everything else on password-protected previews |
+| 2026-09-28 | Functions are v2, bundled by Netlify with `nft`; never `node_bundler = "none"` (D-15) |
+| 2026-09-28 | Terms: input confidence and judgment confidence; evidence status; sale-to-last-ask |
+| 2026-09-28 | "None listed" tags are approximate; recency windows cover sold and in-contract comps, never active |
+| 2026-09-28 | Agent adjustment values are magnitudes; opposite-pulling substitutes net out |
+| 2026-09-28 | $/sqft displays truncated, as StreetEasy shows it |
+| 2026-09-28 | School zone never moves a number, from the house method or the agent |
+| 2026-09-28 | Distance (26) selects and weights comps; it is not an adjustment |
 
 ## 18. Open items
 
@@ -797,8 +857,9 @@ context, urgency, size, and a field to answer in.
 
 Every factor that can bear on an NYC residential comp. **None has a number.** Each is a definition
 the engine and the assistant can reason with, marked *value not yet determined* until Noble sets it,
-informed by CR-R. "Where the data comes from" is what exists today; an agent can always state it.
-Factors also affect one another — A.5 maps how.
+informed by CR-R (`research/adjustments.md` has the evidence for each). "Where the data comes from"
+is what exists today; an agent can always state it. Factors also affect one another — A.5 maps how.
+**Numbers are identifiers:** new factors are appended (37–39), never renumbered.
 
 ### Unit
 
@@ -807,12 +868,12 @@ Factors also affect one another — A.5 maps how.
 | 1 | Interior size | Area differences, including large units that don't trade linearly with smaller-unit $/sqft | Export (may be approximate) | Condo; co-op by rooms |
 | 2 | Bedrooms and bathrooms | Count differences — the primary driver for co-ops | Export | Both |
 | 3 | Layout and efficiency | Split bedrooms, wasted space, room proportions, flex room | Floor plan (listing), agent | Both |
-| 4 | Floor | Higher floors trading higher, relative to the building's height | Export | Both |
+| 4 | Floor | Height in the building and against neighbouring buildings. The effect isn't steady with height, and height relative to the surroundings matters more than height within the building | Export; neighbouring heights from the agent | Both |
 | 5 | Exposure and light | Orientation, corner units, open or blocked light | Listing text, agent | Both |
 | 6 | Views | City, skyline, park, water, landmark; open or obstructed; protected | Export tags, listing, agent | Both |
 | 7 | Outdoor space | Balcony, terrace, private roof, garden; size; private or shared access | Export (presence only), listing, agent | Both |
 | 8 | Condition | Mint, renovated, good, original, needs work | Listing text and photos; the agent judges | Both |
-| 9 | Finishes and systems | Kitchen and bath quality, central air, in-unit laundry, fireplace | Export tags, listing | Both |
+| 9 | Finishes and systems | Kitchen and bath quality, central air, dishwasher, en-suite bathrooms, fireplace; laundry as installed, permitted or prohibited (co-ops need all three) | Export tags, listing | Both |
 | 10 | Ceiling height and volume | Loft volume, double height | Listing, agent | Both |
 | 11 | Unit type | Penthouse, duplex, garden unit, loft conversion | Unit label, export tags, listing | Both |
 | 12 | Noise and street position | Avenue or side street, elevated train, front or rear | Agent, listing | Both |
@@ -826,9 +887,9 @@ Factors also affect one another — A.5 maps how.
 | 15 | Amenities | Gym, pool, roof deck, playroom and the rest | Export amenities | Both |
 | 16 | Building era and type | Prewar, postwar, new development, conversion, landmark | Year built: StreetEasy PDF or listing (not in the CSV) | Both |
 | 17 | Building size | Boutique against large, by units and stories | Export | Both |
-| 18 | Sponsor and new-development sales | Sponsor pricing, concessions, sponsor-paid transfer taxes | Listing, agent | Both |
+| 18 | Sponsor and new-development sales | Sponsor pricing, concessions, sponsor-paid transfer taxes (whether a buyer-paid tax counts toward the taxable price: D-17) | Listing, agent | Both |
 | 19 | Carrying costs | Common charges and taxes, or maintenance, as capitalised into price | Export | Both |
-| 20 | Tax abatements | 421-a, J-51, and when they expire and taxes step up | Listing, agent, city records | Mainly condos |
+| 20 | Tax exemptions and abatements | 421-a and its successors 421-a(16) and 485-x (exemptions); J-51 (condos and co-ops); Battery Park City's payments in lieu of taxes; when each steps up or expires | Listing, agent, city records | Both |
 | 21 | Building financials | Reserves, assessments, underlying mortgage, litigation | Agent, offering documents | Both; critical for co-ops |
 | 22 | Policies | Pets, sublets, pied-à-terre, guarantors, financing limits, flip tax | Export (partial), listing, agent | Both; financing limits critical for co-ops |
 | 23 | Parking | Deeded space, garage in building, valet, none | Export amenities (can't tell deeded from not) | Both |
@@ -839,18 +900,21 @@ Factors also affect one another — A.5 maps how.
 | # | Factor | What it captures | Where the data comes from | Applies to |
 |---|---|---|---|---|
 | 25 | Micro-location | Block, side of the avenue, transit, parks, waterfront — "Canal Street isn't really Tribeca" | Address, agent; geocoding later | Both |
-| 26 | Distance from subject | Physical proximity | Needs coordinates (not in the export) | Both |
+| 26 | Distance from subject | **A selection rule, not an adjustment:** nearer comps are preferred and weighted, not adjusted (CR-R found no evidence for it as an adjustment) | Needs coordinates (not in the export) | Both |
 | 27 | School zone | A real price driver — **analyst view only** (§14) | Agent, public data | Both |
 
 ### Transaction and market
 
 | # | Factor | What it captures | Where the data comes from | Applies to |
 |---|---|---|---|---|
-| 28 | Recency and market movement | Time since the sale, and how the market moved since | Export dates | Both |
+| 28 | Recency and market movement | Time since the sale, and how the market moved since. Practice measures from the contract date; v1 has only closing dates for sold comps (§6.5) | Export dates | Both |
 | 29 | Sale conditions | Estate, distressed, related-party, off-market, bulk, non-arm's-length | Agent, listing; closing-only records flagged | Both |
 | 30 | Concessions and credits | Seller credits, closing-cost credits | Listing, agent | Both |
 | 31 | Combination units | Combined apartments, against the sum of their parts | Agent | Both |
-| 32 | Evidence status | Sold, in contract, active — not an adjustment; separate evidence classes (§6.3) | Export | Both |
+| 32 | Evidence status | Sold, in contract, active — not an adjustment; kept apart in every statistic (§6.3) | Export | Both |
+| 37 | Financing terms | Cash against mortgaged purchases; seller or sponsor financing. Mortgaged buyers pay about 11% more than cash buyers nationally, and Manhattan was 64.7% cash in Q4 2025 (CR-R) | Agent, listing | Both |
+| 38 | Tenant in place | A sale subject to an existing lease | Listing, agent | Both |
+| 39 | Non-realty items | Furniture and other personal property included in the price | Listing, agent | Both |
 
 ### Later property types and modules
 
@@ -878,7 +942,13 @@ extended by CR-R's findings and quantified in CR-R2.
 | Service level (14) ↔ building size (17) | Correlated | Large buildings more often carry full service |
 | Condition (8) ↔ building era (16) | Correlated | Prewar units vary more in condition |
 | Sponsor sales (18) ↔ concessions (30) | Overlap | Sponsor pricing and credits are often the same discount |
+| Tax exemptions (20) ↔ carrying costs (19) | Overlap | An exemption is lower taxes, already in the carry |
+| Building financials (21), ground lease (24) ↔ carrying costs (19) | Overlap | Both already sit inside maintenance or common charges |
+| Outdoor space (7) ↔ interior size (1) | Overlap | When outdoor area is converted into square footage, adjusting size as well counts it twice |
+| Parking (23), private storage (13) ↔ amenities (15) | Overlap | The export lists garage and storage as building amenities |
+| Finishes (9) ↔ condition (8) | Overlap | A renovation shows up in both |
 
-**v1 behaviour:** substitutes are applied as the larger adjustment, never the sum; overlapping pairs
-trigger a double-counting warning when the agent states values for both; complements are shown as an
-interaction line whose value is not yet determined.
+**v1 behaviour:** substitutes pulling the same way are applied as the larger adjustment, never the
+sum; pulling opposite ways, they net out. Overlapping pairs trigger a double-counting warning whenever
+both sides carry a value, from the house method or the agent. Complements are shown as an interaction
+line whose value is not yet determined.
