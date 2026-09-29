@@ -41,7 +41,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
 | **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
-| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b) | 05: merged #48, #52; step-6 proof and CR-1.1 item 3 open. 07: done, merged #53. 09: ready. Dev notebook (from Kimani, not a dispatch): PR #54 open |
+| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b) | 05: merged #48, #52; step-6 proof and CR-1.1 item 3 open. 07: done, merged #53. 09: ready. Dev notebook (from Kimani, not a dispatch), with the team Feedback list closed to the public: PR #54 open |
 | **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: ready |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
