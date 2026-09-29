@@ -3,6 +3,7 @@
    Injects the "‹ Studio" home button + a "signed in" chip, and reserves header space. */
 (function () {
   var FB_SRC = (document.currentScript && document.currentScript.src || '').replace(/studio-header\.js.*$/, 'feedback.js') || 'feedback.js';
+  var DN_SRC = (document.currentScript && document.currentScript.src || '').replace(/studio-header\.js.*$/, 'dev-notebook.js') || 'dev-notebook.js';
   var ALLOWED = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
   function email() { return (localStorage.getItem('cb_auth') || '').trim().toLowerCase(); }
   function authed() { return ALLOWED.indexOf(email()) !== -1; }
@@ -50,6 +51,17 @@
       who.onclick = function () { if (confirm('Sign out of Dev on this device?')) { localStorage.removeItem('cb_auth'); location.reload(); } };
       dock.appendChild(who);
     }
+
+    // The dev notebook's capture box (docs/dev-notebook/README.md): only in a browser
+    // signed in to the notebook, so nobody else downloads it.
+    try {
+      var dn = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null');
+      if (dn && dn.token && Date.parse(dn.expiresAt) > Date.now() && !document.querySelector('script[data-cb-dev-notebook]')) {
+        var dns = document.createElement('script');
+        dns.src = DN_SRC; dns.defer = true; dns.setAttribute('data-cb-dev-notebook', '1');
+        document.head.appendChild(dns);
+      }
+    } catch (e) { /* storage blocked: no notebook */ }
 
     if (!document.querySelector('script[data-cb-feedback]')) {
       var fb = document.createElement('script');

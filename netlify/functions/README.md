@@ -74,6 +74,17 @@ Stored in Blobs store `cb-site` under key `config`. The home page hydrates the n
 card and the "What's new" changelog from this on load and falls back to the inline JSON
 blocks in `index.html` if the backend is unreachable. Signed-in devs edit both in-platform.
 
+**Team Feedback button** (every studio page, `assets/feedback.js`)
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/.netlify/functions/feedback` | `{name?, email?, message, tool?}` → `{ok:true}`. Open to anyone, CORS `*` (the tray posts cross-origin from GitHub Pages). Message up to 4,000 characters; the other fields are clipped to 200 |
+| `GET`  | `/api/dev/notebook/feedback` | **Signed-in developers only**, on the dev notebook page: every submission, newest first. A notebook key can't read it |
+
+The function itself answers nothing but `POST` (and its preflight): until 2026-09-29 a `GET` on it
+returned the whole list, names and emails included, to anyone. Code in `tools-src/feedback/`. Stored
+in Blobs store `cb-feedback`, one key per submission (`items/<time>-<random>`), so two sent at
+once can't overwrite each other; the old single `list` key is still read, no longer written.
+
 ## Propagation note (important)
 
 Live edits (brand assets, workshop, changelog) are written to Netlify Blobs by the
