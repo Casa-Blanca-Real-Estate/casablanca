@@ -30,9 +30,17 @@ test('production: every magnitude, weight, bound and threshold is null', () => {
   }
   assert.deepEqual(Object.keys(hm.interactions).sort(), INTERACTIONS.map((i) => i.id).sort());
   assert.deepEqual(hm.decision_thresholds, { apply_at_or_above: null, ask_below: null });
-  // Belt and braces: not one number anywhere in the file.
-  const numbers = JSON.stringify(production).match(/:\s*-?\d/g);
-  assert.equal(numbers, null);
+  // Belt and braces: not one number anywhere in the file's valuations. The only numbers are the
+  // comparability checks' thresholds — configuration, the mentors' rules pending Noble.
+  const { check_thresholds: checks, ...valuations } = production as Record<string, unknown>;
+  assert.equal(JSON.stringify(valuations).match(/:\s*-?\d/g), null);
+  assert.deepEqual(hm.check_thresholds, {
+    sale_age_months: { noted: 3, old: 6, market_moved: 12, basis: "Kara's rule, pending Noble" },
+    size_percent: { value: 25, basis: "Kara's rule, pending Noble" },
+    floor_band_floors: { value: 3, basis: "Frankie's band (floors 2–8 around a 5th-floor home), pending Noble" },
+    distance_miles: { noted: 0.25, far: 0.5, basis: "Kara's rule, pending Noble" },
+  });
+  assert.ok(checks);
 });
 
 test('compute uses production by default, and records it', () => {

@@ -6,10 +6,11 @@
 import { FACT_CHECKS, isObj } from '../facts-schema.ts';
 import { isIsoDate, type IsoDate } from '../util/dates.ts';
 import { PARSER_VERSION } from '../version.ts';
-import { LISTING_STATUSES, type CompRecord, type EvidenceClass, type FactField, type ListingStatus, type PropertyFacts, type Sourced } from '../types.ts';
+import { LISTING_STATUSES, type CompRecord, type FactField, type ListingStatus, type PropertyFacts, type Sourced } from '../types.ts';
 import { ParseError, type ParseWarning } from './errors.ts';
-import { readListingArea, readListingCount, readListingDate, readListingFloor, readListingHalfCount, readMonthly } from './listing.ts';
+import { DIDNT_SELL, readListingArea, readListingCount, readListingDate, readListingFloor, readListingHalfCount, readMonthly } from './listing.ts';
 import { identify } from './property-key.ts';
+import { unitLabelSuggestions } from './tag-facts.ts';
 import { isBlank, readMoney, readPropertyType, type Read } from './values.ts';
 
 /** A value as typed, or marked as the agent's estimate. */
@@ -40,12 +41,6 @@ export interface ManualReadOptions {
   /** The date the agent entered it — every value's as-of date. */
   as_of: IsoDate;
 }
-
-const EVIDENCE: Record<ListingStatus, EvidenceClass | null> = {
-  sold: 'sold', in_contract: 'in_contract', active: 'active',
-  // "Didn't sell" isn't an evidence status yet (§6.3; CR-2.2 phase 2), so it enters no statistic.
-  off_market: null,
-};
 
 /** A typed-in comp as a comp record, the same shape the export and links make. */
 export function compRecordFromManual(fields: ManualCompFields, options: ManualReadOptions): { record: CompRecord; warnings: ParseWarning[] } {
@@ -114,12 +109,13 @@ export function compRecordFromManual(fields: ManualCompFields, options: ManualRe
     });
   }
   if (status === 'off_market') {
-    warnings.push({ code: 'off_market', message: 'off the market without selling: kept as a "didn\'t sell" comp, which enters no statistic yet' });
+    warnings.push({ code: 'off_market', message: `off the market without selling: ${DIDNT_SELL}` });
   }
 
+  const suggestions = unitLabelSuggestions(identity.unit.raw, facts, 'agent', asOf);
   const record: CompRecord = {
     identity,
-    status: { raw: status, evidence_class: EVIDENCE[status], listing_status: status },
+    status: { raw: status, evidence_class: status, listing_status: status },
     facts,
     engagement: null,
     building_name: null,
@@ -130,5 +126,6 @@ export function compRecordFromManual(fields: ManualCompFields, options: ManualRe
     flags: { closing_record: identity.streeteasy?.kind === 'closing', approx_area: facts.area_sqft?.confidence === 'approx' },
     origin: { parser_version: PARSER_VERSION, row: 1, as_of: asOf, via: 'manual' },
   };
+  if (suggestions.length > 0) record.suggestions = suggestions;
   return { record, warnings };
 }

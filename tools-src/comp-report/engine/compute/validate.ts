@@ -7,7 +7,7 @@ import { findLine, FACTOR_BY_ID, type MagnitudeShape } from '../catalog/factors.
 import { FACT_CHECKS, isObj, nonNegInt, posInt } from '../facts-schema.ts';
 import { isIsoDate } from '../util/dates.ts';
 import {
-  CONFIDENCES, SOURCES, type AgentValue, type EngineInput, type FactField, type Sourced,
+  CONFIDENCES, EVIDENCE_CLASSES, SOURCES, type AgentValue, type EngineInput, type FactField, type Sourced,
 } from '../types.ts';
 
 export { FACT_CHECKS } from '../facts-schema.ts';
@@ -104,8 +104,8 @@ export function validateInput(input: EngineInput): void {
       if (!isObj(c.record)) { issues.push(`${where}.record is required`); return; }
       checkIdentity(`${where}.record.identity`, c.record.identity, issues);
       if (!isObj(c.record.status)) issues.push(`${where}.record.status is required`);
-      else if (c.record.status.evidence_class !== null && !['sold', 'in_contract', 'active'].includes(c.record.status.evidence_class)) {
-        issues.push(`${where}.record.status.evidence_class must be sold, in_contract, active or null`);
+      else if (c.record.status.evidence_class !== null && !(EVIDENCE_CLASSES as readonly string[]).includes(c.record.status.evidence_class)) {
+        issues.push(`${where}.record.status.evidence_class must be ${EVIDENCE_CLASSES.join(', ')} or null`);
       }
       checkFacts(`${where}.record.facts`, c.record.facts, issues);
       (c.record.suggestions ?? []).forEach((x, j) => {

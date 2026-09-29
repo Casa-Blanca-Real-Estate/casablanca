@@ -51,7 +51,7 @@ export function isoDay(date: string | null | undefined): string {
   return `${month} ${d}, ${y}`;
 }
 
-export const EVIDENCE_LABEL = { sold: 'Sold', in_contract: 'In contract', active: 'Active' } as const;
+export const EVIDENCE_LABEL = { sold: 'Sold', in_contract: 'In contract', active: 'Active', off_market: 'Didn’t sell' } as const;
 export const TIER_LABEL = { primary: 'Primary', secondary: 'Secondary', excluded: 'Excluded' } as const;
 
 /** The subject facts the walkthrough collects, in words. */

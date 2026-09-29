@@ -23,6 +23,7 @@ import type {
 } from '../types.ts';
 import { normalizeTag, parkingKind, viewKind } from '../parser/derive.ts';
 import { usableIn, weakest, type FactContext } from './facts.ts';
+import { describeMarketDate, marketDate } from './market-date.ts';
 import type { ComparisonOut, EstimateUse, MissingInput, PendingItem } from './output.ts';
 
 type Facts = Partial<PropertyFacts>;
@@ -30,6 +31,17 @@ type Facts = Partial<PropertyFacts>;
 export interface CompareContext extends FactContext {
   reportType: ReportPropertyType;
   asOf: IsoDate;
+  /** What each basis calls the two sides: "subject" and "comp", or two comps' names when a pair is compared (§6.6). */
+  names?: { subject: string; comp: string };
+}
+
+/** The two sides' names, as the basis text uses them. */
+interface Sides { s: string; c: string }
+const DEFAULT_SIDES: Sides = { s: 'subject', c: 'comp' };
+
+/** "the subject's", "the comp's", or a named property's. */
+function poss(name: string): string {
+  return name === 'subject' || name === 'comp' ? `the ${name}'s` : `${name}'s`;
 }
 
 /** A property's monthly carrying cost: common charges + taxes (condo), maintenance (co-op). */
@@ -115,18 +127,18 @@ function unknown(missing: MissingInput[], basis = ''): Derived {
   return { status: 'unknown', direction: null, units: null, unit_label: null, confidence: null, basis: basis || `needs ${missing.map((m) => m.label).join(' and ')}`, missing };
 }
 
-function needBoth<T>(s: Sourced<T> | undefined, c: Sourced<T> | undefined, field: FactField, what: string): MissingInput[] {
+function needBoth<T>(s: Sourced<T> | undefined, c: Sourced<T> | undefined, field: FactField, what: string, sides: Sides): MissingInput[] {
   const missing: MissingInput[] = [];
-  if (!s) missing.push({ side: 'subject', field, label: `the subject's ${what}` });
-  if (!c) missing.push({ side: 'comp', field, label: `the comp's ${what}` });
+  if (!s) missing.push({ side: 'subject', field, label: `${poss(sides.s)} ${what}` });
+  if (!c) missing.push({ side: 'comp', field, label: `${poss(sides.c)} ${what}` });
   return missing;
 }
 
 function numeric(
   s: Sourced<number> | undefined, c: Sourced<number> | undefined, field: FactField, what: string, unitLabel: string,
-  describe: (s: number, c: number) => string,
+  describe: (s: number, c: number) => string, sides: Sides,
 ): Derived {
-  const missing = needBoth(s, c, field, what);
+  const missing = needBoth(s, c, field, what, sides);
   if (missing.length) return unknown(missing);
   const units = s!.value - c!.value;
   return {
@@ -138,21 +150,21 @@ function numeric(
 /** Tags compare without regard to case or spacing — the export's and a listing's spellings differ. */
 const tags = (xs: readonly string[], norm: (t: string) => string = normalizeTag): string[] => [...new Set(xs.map(norm))].sort();
 
-function setCompare(s: Sourced<string[]> | undefined, c: Sourced<string[]> | undefined, field: FactField, what: string, orderless = false): Derived {
-  const missing = needBoth(s, c, field, what);
+function setCompare(s: Sourced<string[]> | undefined, c: Sourced<string[]> | undefined, field: FactField, what: string, sides: Sides, orderless = false): Derived {
+  const missing = needBoth(s, c, field, what, sides);
   if (missing.length) return unknown(missing);
   const sv = tags(s!.value);
   const cv = tags(c!.value);
   const direction = orderless ? (directionFromSets(sv, cv) === 'similar' ? 'similar' : 'differs') : directionFromSets(sv, cv);
   return {
     status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s!, c!, direction),
-    basis: `subject: ${list(sv)}; comp: ${list(cv)}`, missing: [],
+    basis: `${sides.s}: ${list(sv)}; ${sides.c}: ${list(cv)}`, missing: [],
   };
 }
 
 /** Has it or not. `article` reads "has a dishwasher"; a tag that isn't there reads "lists no dishwasher". */
-function presence(s: Sourced<boolean> | undefined, c: Sourced<boolean> | undefined, field: FactField, what: string, article = ''): Derived {
-  const missing = needBoth(s, c, field, what);
+function presence(s: Sourced<boolean> | undefined, c: Sourced<boolean> | undefined, field: FactField, what: string, sides: Sides, article = ''): Derived {
+  const missing = needBoth(s, c, field, what, sides);
   if (missing.length) return unknown(missing);
   const units = (s!.value ? 1 : 0) - (c!.value ? 1 : 0);
   const direction = directionFromUnits(units);
@@ -160,7 +172,7 @@ function presence(s: Sourced<boolean> | undefined, c: Sourced<boolean> | undefin
   return {
     status: 'compared', direction, units: null, unit_label: null,
     confidence: directedConfidence(s!, c!, direction),
-    basis: `subject ${says(s!)}; comp ${says(c!)}`, missing: [],
+    basis: `${sides.s} ${says(s!)}; ${sides.c} ${says(c!)}`, missing: [],
   };
 }
 
@@ -176,12 +188,12 @@ const LAUNDRY_WORDS: Record<LaundryState, string> = {
  * installed, and against permitted or prohibited it can't be ranked until the
  * agent says which.
  */
-function laundryCompare(s: Sourced<LaundryState> | undefined, c: Sourced<LaundryState> | undefined): Derived {
-  const missing = needBoth(s, c, 'laundry', 'in-unit laundry');
+function laundryCompare(s: Sourced<LaundryState> | undefined, c: Sourced<LaundryState> | undefined, sides: Sides): Derived {
+  const missing = needBoth(s, c, 'laundry', 'in-unit laundry', sides);
   if (missing.length) return unknown(missing);
   const sv = s!.value;
   const cv = c!.value;
-  const basis = `subject: ${LAUNDRY_WORDS[sv]}; comp: ${LAUNDRY_WORDS[cv]}`;
+  const basis = `${sides.s}: ${LAUNDRY_WORDS[sv]}; ${sides.c}: ${LAUNDRY_WORDS[cv]}`;
   let direction: Direction;
   if (sv === cv) direction = 'similar';
   else if (sv !== 'none_listed' && cv !== 'none_listed') direction = directionFromUnits(LAUNDRY_RANK[sv] - LAUNDRY_RANK[cv]);
@@ -189,7 +201,7 @@ function laundryCompare(s: Sourced<LaundryState> | undefined, c: Sourced<Laundry
   else if (cv === 'installed') direction = 'comp_superior';
   else {
     const side = sv === 'none_listed' ? 'subject' : 'comp';
-    return unknown([{ side, field: 'laundry', label: `whether the ${side}'s building permits a washer/dryer` }], basis);
+    return unknown([{ side, field: 'laundry', label: `whether ${poss(side === 'subject' ? sides.s : sides.c)} building permits a washer/dryer` }], basis);
   }
   return { status: 'compared', direction, units: null, unit_label: null, confidence: weakest(s!.confidence, c!.confidence), basis, missing: [] };
 }
@@ -197,20 +209,22 @@ function laundryCompare(s: Sourced<LaundryState> | undefined, c: Sourced<Laundry
 function deriveLine(
   factor: FactorDefinition, line: FactorLine, s: Facts, c: Facts, evidenceClass: EvidenceClass | null, ctx: CompareContext,
 ): Derived | null {
+  const sides: Sides = ctx.names ? { s: ctx.names.subject, c: ctx.names.comp } : DEFAULT_SIDES;
+  const { s: S, c: C } = sides;
   switch (lineId(factor.id, line.facet)) {
     case 'interior_size':
-      return numeric(s.area_sqft, c.area_sqft, 'area_sqft', 'interior area', 'sqft', (a, b) => `subject ${a} sqft, comp ${b} sqft`);
+      return numeric(s.area_sqft, c.area_sqft, 'area_sqft', 'interior area', 'sqft', (a, b) => `${S} ${a} sqft, ${C} ${b} sqft`, sides);
     case 'beds_baths.bedrooms':
-      return numeric(s.beds, c.beds, 'beds', 'bedrooms', 'bedrooms', (a, b) => `subject ${a} bedrooms, comp ${b}`);
+      return numeric(s.beds, c.beds, 'beds', 'bedrooms', 'bedrooms', (a, b) => `${S} ${a} bedrooms, ${C} ${b}`, sides);
     case 'beds_baths.bathrooms':
-      return numeric(s.baths, c.baths, 'baths', 'bathrooms', 'bathrooms', (a, b) => `subject ${a} bathrooms, comp ${b}`);
+      return numeric(s.baths, c.baths, 'baths', 'bathrooms', 'bathrooms', (a, b) => `${S} ${a} bathrooms, ${C} ${b}`, sides);
     case 'floor':
       return numeric(s.floor, c.floor, 'floor', 'floor', 'floors', (a, b) => {
         const of = (f: number, st: Sourced<number> | undefined) => (st ? `${f} of ${st.value} stories` : `${f}`);
-        return `subject floor ${of(a, s.building_stories)}, comp floor ${of(b, c.building_stories)}`;
-      });
+        return `${S} floor ${of(a, s.building_stories)}, ${C} floor ${of(b, c.building_stories)}`;
+      }, sides);
     case 'views': {
-      const missing = needBoth(s.views, c.views, 'views', 'views');
+      const missing = needBoth(s.views, c.views, 'views', 'views', sides);
       if (missing.length) return unknown(missing);
       const sv = tags(s.views!.value as string[], viewKind);
       const cv = tags(c.views!.value as string[], viewKind);
@@ -219,10 +233,10 @@ function deriveLine(
         : sv.length > 0 && cv.length === 0 ? 'comp_inferior'
           : sv.length === 0 && cv.length > 0 ? 'comp_superior'
             : directionFromSets(sv, cv) === 'similar' ? 'similar' : 'differs';
-      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.views!, c.views!, direction), basis: `subject: ${list(sv)}; comp: ${list(cv)}`, missing: [] };
+      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.views!, c.views!, direction), basis: `${S}: ${list(sv)}; ${C}: ${list(cv)}`, missing: [] };
     }
     case 'outdoor_space': {
-      const base = presence(s.outdoor_private, c.outdoor_private, 'outdoor_private', 'private outdoor space');
+      const base = presence(s.outdoor_private, c.outdoor_private, 'outdoor_private', 'private outdoor space', sides);
       if (base.status !== 'compared' || !(s.outdoor_private!.value && c.outdoor_private!.value)) return base;
       // Both have outdoor space: sizes settle it only when both are known and the kinds match.
       const sa = s.outdoor_area_sqft;
@@ -235,22 +249,22 @@ function deriveLine(
         return {
           status: 'compared', direction: directionFromUnits(units), units, unit_label: 'outdoor sqft',
           confidence: weakest(base.confidence, sa.confidence, ca.confidence),
-          basis: `both have ${list(sk)}: subject ${sa.value} sqft, comp ${ca.value} sqft`, missing: [],
+          basis: `both have ${list(sk)}: ${S} ${sa.value} sqft, ${C} ${ca.value} sqft`, missing: [],
         };
       }
-      return { ...base, direction: 'differs', basis: `both have private outdoor space (subject: ${list(sk)}; comp: ${list(ck)}) — size or a judgment settles which is better` };
+      return { ...base, direction: 'differs', basis: `both have private outdoor space (${S}: ${list(sk)}; ${C}: ${list(ck)}) — size or a judgment settles which is better` };
     }
     // Kitchen and bath quality and en-suite bathrooms take a judgment: no case here.
     case 'finishes_systems.central_air':
-      return presence(s.central_air, c.central_air, 'central_air', 'central air');
+      return presence(s.central_air, c.central_air, 'central_air', 'central air', sides);
     case 'finishes_systems.dishwasher':
-      return presence(s.dishwasher, c.dishwasher, 'dishwasher', 'dishwasher', 'a ');
+      return presence(s.dishwasher, c.dishwasher, 'dishwasher', 'dishwasher', sides, 'a ');
     case 'finishes_systems.fireplace':
-      return presence(s.fireplace, c.fireplace, 'fireplace', 'fireplace', 'a ');
+      return presence(s.fireplace, c.fireplace, 'fireplace', 'fireplace', sides, 'a ');
     case 'finishes_systems.laundry':
-      return laundryCompare(s.laundry, c.laundry);
+      return laundryCompare(s.laundry, c.laundry, sides);
     case 'unit_type': {
-      const missing = needBoth(s.unit_type, c.unit_type, 'unit_type', 'unit type');
+      const missing = needBoth(s.unit_type, c.unit_type, 'unit_type', 'unit type', sides);
       // A unit with no type tags is a standard unit — but only where tags were available to say so.
       if (missing.length) return unknown(missing);
       const st = tags(s.unit_type!.value as string[]);
@@ -261,24 +275,24 @@ function deriveLine(
         const cp = cvt.includes('penthouse');
         direction = sp && !cp ? 'comp_inferior' : cp && !sp ? 'comp_superior' : 'differs';
       }
-      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.unit_type!, c.unit_type!, direction), basis: `subject: ${st.join(', ') || 'standard'}; comp: ${cvt.join(', ') || 'standard'}`, missing: [] };
+      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.unit_type!, c.unit_type!, direction), basis: `${S}: ${st.join(', ') || 'standard'}; ${C}: ${cvt.join(', ') || 'standard'}`, missing: [] };
     }
     case 'service_level': {
-      const missing = needBoth(s.service, c.service, 'service', 'service level');
+      const missing = needBoth(s.service, c.service, 'service', 'service level', sides);
       if (missing.length) return unknown(missing);
       const sv = s.service!.value;
       const cv = c.service!.value;
-      return { status: 'compared', direction: serviceDirection(sv, cv), units: null, unit_label: null, confidence: weakest(s.service!.confidence, c.service!.confidence), basis: `subject: ${describeService(sv)}; comp: ${describeService(cv)}`, missing: [] };
+      return { status: 'compared', direction: serviceDirection(sv, cv), units: null, unit_label: null, confidence: weakest(s.service!.confidence, c.service!.confidence), basis: `${S}: ${describeService(sv)}; ${C}: ${describeService(cv)}`, missing: [] };
     }
     case 'amenities.general':
-      return setCompare(s.amenities, c.amenities, 'amenities', 'amenities');
+      return setCompare(s.amenities, c.amenities, 'amenities', 'amenities', sides);
     case 'amenities.shared_outdoor':
-      return presence(s.outdoor_shared, c.outdoor_shared, 'outdoor_shared', 'shared outdoor space');
+      return presence(s.outdoor_shared, c.outdoor_shared, 'outdoor_shared', 'shared outdoor space', sides);
     case 'building_era': {
-      const missing = needBoth(s.year_built, c.year_built, 'year_built', 'year built');
+      const missing = needBoth(s.year_built, c.year_built, 'year_built', 'year built', sides);
       if (missing.length) return unknown(missing);
       const d = s.year_built!.value - c.year_built!.value;
-      return { status: 'compared', direction: d === 0 ? 'similar' : 'differs', units: d, unit_label: 'years', confidence: weakest(s.year_built!.confidence, c.year_built!.confidence), basis: `subject built ${s.year_built!.value}, comp ${c.year_built!.value}`, missing: [] };
+      return { status: 'compared', direction: d === 0 ? 'similar' : 'differs', units: d, unit_label: 'years', confidence: weakest(s.year_built!.confidence, c.year_built!.confidence), basis: `${S} built ${s.year_built!.value}, ${C} ${c.year_built!.value}`, missing: [] };
     }
     case 'building_size': {
       const pairs: [Sourced<number> | undefined, Sourced<number> | undefined, string][] = [
@@ -290,7 +304,7 @@ function deriveLine(
       return {
         status: 'compared', direction: differs ? 'differs' : 'similar', units: null, unit_label: null,
         confidence: weakest(...known.flatMap(([a, b]) => [a!.confidence, b!.confidence])),
-        basis: known.map(([a, b, what]) => `${what}: subject ${a!.value}, comp ${b!.value}`).join('; '), missing: [],
+        basis: known.map(([a, b, what]) => `${what}: ${S} ${a!.value}, ${C} ${b!.value}`).join('; '), missing: [],
       };
     }
     case 'carrying_costs': {
@@ -299,33 +313,34 @@ function deriveLine(
       const what = ctx.reportType === 'coop' ? 'maintenance' : 'common charges and taxes';
       const field = ctx.reportType === 'coop' ? 'maintenance_monthly' : 'common_charges_monthly';
       const missing: MissingInput[] = [
-        ...(sc ? [] : [{ side: 'subject' as const, field, label: `the subject's ${what}` }]),
-        ...(cc ? [] : [{ side: 'comp' as const, field, label: `the comp's ${what}` }]),
+        ...(sc ? [] : [{ side: 'subject' as const, field, label: `${poss(S)} ${what}` }]),
+        ...(cc ? [] : [{ side: 'comp' as const, field, label: `${poss(C)} ${what}` }]),
       ];
       if (missing.length) return unknown(missing);
       // Higher carry is the worse side: units are comp minus subject, so a pricier comp adjusts up.
       const units = cc!.value - sc!.value;
-      return { status: 'compared', direction: directionFromUnits(units), units, unit_label: 'usd_per_month', confidence: weakest(sc!.confidence, cc!.confidence), basis: `monthly carry: subject $${sc!.value}, comp $${cc!.value}`, missing: [] };
+      return { status: 'compared', direction: directionFromUnits(units), units, unit_label: 'usd_per_month', confidence: weakest(sc!.confidence, cc!.confidence), basis: `monthly carry: ${S} $${sc!.value}, ${C} $${cc!.value}`, missing: [] };
     }
     case 'policies':
-      return setCompare(s.policies, c.policies, 'policies', 'policies', true);
+      return setCompare(s.policies, c.policies, 'policies', 'policies', sides, true);
     case 'parking': {
-      const missing = needBoth(s.parking, c.parking, 'parking', 'parking');
+      const missing = needBoth(s.parking, c.parking, 'parking', 'parking', sides);
       if (missing.length) return unknown(missing);
       const sp = tags(s.parking!.value as string[], (t) => parkingKind(t) ?? normalizeTag(t));
       const cp = tags(c.parking!.value as string[], (t) => parkingKind(t) ?? normalizeTag(t));
       const direction: Direction = sp.length > 0 && cp.length === 0 ? 'comp_inferior'
         : sp.length === 0 && cp.length > 0 ? 'comp_superior'
           : directionFromSets(sp, cp) === 'similar' ? 'similar' : 'differs';
-      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.parking!, c.parking!, direction), basis: `subject: ${list(sp)}; comp: ${list(cp)} (deeded or not can't be told)`, missing: [] };
+      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.parking!, c.parking!, direction), basis: `${S}: ${list(sp)}; ${C}: ${list(cp)} (deeded or not can't be told)`, missing: [] };
     }
     case 'recency_market': {
+      // From the contract date where a listing's history gives one — when the price was agreed — else closing (§6.5).
       if (evidenceClass !== 'sold') return null;
-      const d = c.status_date;
-      if (!d) return unknown([{ side: 'comp', field: 'status_date', label: "the comp's sale date" }]);
-      const days = Math.max(0, daysBetween(d.value as string, ctx.asOf));
+      const d = marketDate(c, 'sold');
+      if (!d) return unknown([{ side: 'comp', field: 'status_date', label: `${poss(C)} sale date` }]);
+      const days = Math.max(0, daysBetween(d.date, ctx.asOf));
       const months = days / DAYS_PER_MONTH;
-      return { status: 'compared', direction: days === 0 ? 'similar' : 'differs', units: months, unit_label: 'months', confidence: d.confidence, basis: `sold ${d.value}, ${days} days before ${ctx.asOf}`, missing: [] };
+      return { status: 'compared', direction: days === 0 ? 'similar' : 'differs', units: months, unit_label: 'months', confidence: d.confidence, basis: `${describeMarketDate(d)}, ${days} days before ${ctx.asOf}`, missing: [] };
     }
     default:
       return null;

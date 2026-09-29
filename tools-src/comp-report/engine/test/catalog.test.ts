@@ -51,7 +51,7 @@ test("v0.4's definitions: floor against its neighbours, the finishes split, tax 
   assert.equal(tax.name, 'Tax exemptions and abatements');
   assert.equal(tax.applies_to, 'Both');
   for (const programme of ['421-a', '421-a(16)', '485-x', 'J-51', 'Battery Park City']) assert.ok(tax.captures.includes(programme), programme);
-  assert.match(FACTOR_BY_ID.get('recency_market')!.captures, /contract date; v1 has only closing dates/);
+  assert.match(FACTOR_BY_ID.get('recency_market')!.captures, /contract date where a listing's history gives one, else from closing/);
 });
 
 test('every adjustment has a magnitude shape; distance, evidence status and the later modules have none', () => {

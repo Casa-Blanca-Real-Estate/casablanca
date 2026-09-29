@@ -3,8 +3,9 @@
 
 import type {
   CompRecord, Confidence, DealTerms, Degree, Direction, Dollars, EvidenceClass, FactField, IsoDate,
-  LeadIndicator, NamedPrice, PriceBasis, PropertyIdentity, ReportPropertyType, Sourced, SquareFeet, Tier,
+  LeadIndicator, NamedPrice, PriceBasis, PropertyIdentity, ReportPropertyType, Source, Sourced, SquareFeet, Tier,
 } from '../types.ts';
+import type { MarketDateBasis } from './market-date.ts';
 
 export type ResultKind = 'on_facts' | 'with_estimates';
 
@@ -108,8 +109,197 @@ export interface CompResultOut {
   implied_value: Figure | null;
   monthly_carry: Figure | null;
   carry_per_sqft: Figure | null;
-  /** In contract and active: where the ask sits against the sold band. */
+  /**
+   * In contract, active and didn't sell: where the ask sits against the sold band. For didn't
+   * sell it's a ceiling signal — an ask the market didn't meet (§6.3).
+   */
   ask_vs_sold: { position: 'below' | 'within' | 'above'; versus_sold_median_percent: Figure } | null;
+}
+
+// ─── Comparability checks (§6.10) ────────────────────────────────────────────
+
+export type CheckCode =
+  | 'same_building' | 'first_floor' | 'private_outdoor_one_side' | 'new_development_vs_resale'
+  | 'property_type_differs' | 'income_restricted' | 'sponsor_unit' | 'sale_age' | 'size_far_off'
+  | 'floor_far_off' | 'distance';
+
+/** A fact a check read: which side, which field, its value, and where it came from. */
+export interface CheckEvidence {
+  side: 'subject' | 'comp';
+  /** A fact field, or "building" for the building part of the property key. */
+  field: string;
+  /** Null when that side doesn't say. */
+  value: unknown;
+  source: Source | null;
+  confidence: Confidence | null;
+  note: string | null;
+}
+
+/**
+ * One of the mentors' rules, run on a comp (§6.10). A flag with a suggested
+ * tier and the facts behind it. It never changes the tier: the agent decides.
+ */
+export interface CompCheck {
+  code: CheckCode;
+  /** flagged — the rule applies; unknown — it can't be told yet, and the message says what it needs. */
+  status: 'flagged' | 'unknown';
+  /** A few words for the row, and a seed for the notes' quick-pick chips: "First floor", "37% bigger". */
+  label: string;
+  /** The rule and what it saw. */
+  message: string;
+  /** The tier the rule suggests — Primary, Secondary or Excluded (D-20) — or null when it only notes something. */
+  suggested_tier: Tier | null;
+  /** The suggestion in words: "Excluded, unless nothing else". */
+  suggestion: string | null;
+  evidence: CheckEvidence[];
+  /**
+   * As sure as the facts it rests on: `inferred` when one awaits the agent's confirmation (a floor
+   * from the unit label), and `approx` at best when it rests on one side not saying.
+   */
+  confidence: Confidence | null;
+  /** The house-method threshold it applied, and whose rule that is ("Kara's rule, pending Noble"). */
+  threshold: { name: string; value: number; unit: 'months' | 'percent' | 'floors' | 'miles'; basis: string } | null;
+  /** What it measured against the threshold: the percentage, the floors, the months, the miles. */
+  measured: { value: number; unit: 'months' | 'percent' | 'floors' | 'miles' } | null;
+}
+
+// ─── Pairs: the differences between comps (§6.6) ─────────────────────────────
+
+/** One factor line on which two comps differ, from the higher-priced comp's side. */
+export interface PairDifference {
+  line: string;
+  factor: string;
+  facet: string | null;
+  name: string;
+  /** higher_better — the higher-priced comp has more or better of it; lower_better — the other; differs — which is better takes a judgment. */
+  direction: 'higher_better' | 'lower_better' | 'differs';
+  /** For numeric lines, the higher comp's value less the lower's: floors, sq ft, bedrooms, dollars a month, years, months. */
+  difference: number | null;
+  unit_label: string | null;
+  confidence: Confidence | null;
+  basis: string;
+}
+
+/** Two included comps of one status, side by side. Evidence only: nothing here moves a number. */
+export interface PairOut {
+  evidence_class: EvidenceClass;
+  basis: PriceBasis;
+  /** The comp priced higher: by $/sqft where both have one, else by price. */
+  higher: string;
+  lower: string;
+  ordered_by: 'price_per_sqft' | 'price';
+  /** The higher comp's price less the lower's — negative when the dearer-per-foot comp is the cheaper home. */
+  price_gap: Figure;
+  price_per_sqft_gap: Figure | null;
+  same_building: boolean;
+  /** Whole calendar months between their market dates (§6.5); null without both. */
+  months_apart: number | null;
+  differences: PairDifference[];
+  /** Lines compared and found alike. */
+  alike: string[];
+  /** Lines one side lacks the data for, and what's missing. */
+  unknown: { line: string; name: string; missing: string[] }[];
+  /** Only one factor differs, or only the members of one A.5 overlap group. */
+  clean: boolean;
+  /** What a clean pair isolates: a factor, or an overlap group. */
+  isolates: { kind: 'factor' | 'overlap_group'; key: string; name: string } | null;
+  /** Why it isn't clean, when it isn't. */
+  not_clean_because: string | null;
+}
+
+export interface GapSummary {
+  n: number;
+  median: Figure;
+  min: Figure;
+  max: Figure;
+}
+
+/**
+ * What clean pairs say a factor adds here, per status: the gap from the side
+ * with more or better of it — "Outdoor space: about $150/sq ft, from 1 clean
+ * pair". For time, the later sale less the earlier: the market's movement.
+ * Evidence, never applied as a value.
+ */
+export interface CleanPairEvidence {
+  evidence_class: EvidenceClass;
+  kind: 'factor' | 'overlap_group';
+  key: string;
+  name: string;
+  /** Clean pairs isolating it. */
+  n: number;
+  pairs: { higher: string; lower: string }[];
+  /** The better side's $/sqft less the other's (for time, the later's less the earlier's), over the pairs where that's known. */
+  per_sqft_gap: GapSummary | null;
+  /** The same, in price. */
+  price_gap: GapSummary | null;
+  /** Pairs where which side is better takes a judgment, so no gap is signed. */
+  undirected: number;
+  summary: string;
+}
+
+export interface PairsOut {
+  pairs: PairOut[];
+  clean_pair_evidence: CleanPairEvidence[];
+  /** Factor lines only a judgment compares — condition, layout, light …: pairs can't compare them. */
+  not_compared: string[];
+  note: string;
+}
+
+// ─── The price table (§6.5) ──────────────────────────────────────────────────
+
+export interface PriceTableRow {
+  per_sqft: Figure;
+  /** The home's interior size × the step. */
+  price: Figure;
+  /** comp — a primary sold comp's own rate; step — a round step; range_end — an end of the agent's narrowed range. */
+  kind: 'comp' | 'step' | 'range_end';
+  comp_ids: string[];
+}
+
+export interface PriceTable {
+  rows: PriceTableRow[];
+  /** The round step, in $/sqft. */
+  increment: number;
+  /** The $/sqft span the table covers. */
+  low: Figure;
+  high: Figure;
+  subject_area: Sourced<SquareFeet>;
+  basis: string;
+}
+
+// ─── The headline's facts (§10.2) ────────────────────────────────────────────
+
+/** One number a headline may cite, with its provenance. */
+export interface HeadlineFact {
+  /** Stable, for QA to cite: "range.low", "sold.count", "anchor.per_sqft". */
+  id: string;
+  label: string;
+  value: number;
+  unit: FigureUnit | 'count';
+  /** engine for what it computed; the input's own source otherwise — the home's size, the agent's number. */
+  source: Source;
+  as_of: IsoDate;
+  confidence: Confidence;
+  derivation: string;
+  comp_ids: string[];
+}
+
+export type AgentNumberPosition = 'below' | 'overlaps_low' | 'within' | 'overlaps_high' | 'above' | 'spans';
+
+/**
+ * The only figures a headline may cite (§10.2), for one result. QA's numeric
+ * grounding (CR-5) matches a headline's numbers against `facts` — and the
+ * agent's own numbers against `agent_number` — and nothing else.
+ */
+export interface HeadlineFacts {
+  kind: ResultKind;
+  facts: HeadlineFact[];
+  /** Where the agent's number sits against the range (§8.4). Their numbers, kept apart: the assistant doesn't see them. */
+  agent_number: { position: AgentNumberPosition | null; facts: HeadlineFact[] } | null;
+  /** The home and the comps the facts rest on, by name — so a "#517" or a "200 Chambers" in a headline isn't taken for a figure. */
+  names: { id: string; address: string | null; unit: string | null }[];
+  /** What a headline can't say yet, and why. */
+  missing: string[];
 }
 
 export interface CompOut {
@@ -133,7 +323,7 @@ export interface CompOut {
     property_type_mismatch: boolean;
     unrecognised_status: boolean;
     outside_recency_window: boolean;
-    /** Came off the market unsold — "didn't sell", which enters no statistic yet (§6.3). */
+    /** Didn't sell: it came off the market unsold, so its last ask is ask-basis evidence and a ceiling signal (§6.3). */
     off_market: boolean;
     /** Read from a StreetEasy page and not yet confirmed by the agent: it counts in neither result. */
     unconfirmed: boolean;
@@ -141,6 +331,13 @@ export interface CompOut {
   status_date: IsoDate | null;
   /** Days from the status date to the analysis date. */
   age_days: number | null;
+  /**
+   * The date its price speaks for, and which date that is (§6.5): a sale's contract date where
+   * a listing's history gives one, else its closing date; a didn't-sell comp's last day on the market.
+   */
+  market_date: { date: IsoDate; basis: MarketDateBasis; age_days: number } | null;
+  /** The mentors' comparability checks (§6.10). They never change the tier: the agent decides. */
+  checks: CompCheck[];
   days_on_market: number | null;
   /** Sold comps with a last ask: (sale ÷ last ask − 1) × 100. */
   sale_to_ask_percent: Figure | null;
@@ -259,9 +456,16 @@ export interface Result {
   days_on_market: Record<EvidenceClass, StatSummary | null>;
   asks_vs_sold: {
     sold_band: { low: Figure; median: Figure; high: Figure } | null;
-    class_medians: Record<'in_contract' | 'active', { median: Figure; versus_sold_median_percent: Figure } | null>;
+    class_medians: Record<'in_contract' | 'active' | 'off_market', { median: Figure; versus_sold_median_percent: Figure } | null>;
+    /** The lowest ask that didn't sell, against the sold band: a ceiling signal (§6.3). */
+    ceiling: { lowest: Figure; comp_id: string; position: 'below' | 'within' | 'above'; versus_sold_median_percent: Figure } | null;
   };
   carry: CarrySummary;
+  /** The home's price at $/sqft steps across the range (§6.5). */
+  price_table: PriceTable | null;
+  price_table_unavailable_because: string | null;
+  /** How the included comps differ from each other, within each status (§6.6). Moves no number. */
+  pairs: PairsOut;
   /** What in this result rests on the agent's estimates. Empty for "on the facts". */
   estimates_used: EstimateUse[];
 }
@@ -369,6 +573,8 @@ export interface EngineOutput {
   };
   comps: CompOut[];
   results: Record<ResultKind, Result>;
+  /** The only figures a headline may cite, per result (§10.2). */
+  headline_facts: Record<ResultKind, HeadlineFacts>;
   divergence: Divergence;
   prices: PriceEvaluation[];
   monthly_cost: Record<ResultKind, MonthlyCost | null> | null;

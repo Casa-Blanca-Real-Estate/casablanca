@@ -163,3 +163,19 @@ export function deriveFromAmenities(amenities: readonly string[]): AmenityFacts 
 export function unitLabelSuggestsPenthouse(unit: string | null): boolean {
   return unit !== null && /^PH/i.test(unit.replace(/^#/, '').trim());
 }
+
+/**
+ * The floor a unit label reads as, where it reads cleanly: "10A" → 10,
+ * "10-B" → 10, "1004" → 10, "504" → 5. Null for anything else — "G", "R1",
+ * "PHA", a bare letter or a bare one- or two-digit number, which could be a
+ * floor or a door. A guess, so the caller records it as inferred.
+ */
+export function floorFromUnitLabel(unit: string | null): number | null {
+  if (unit === null) return null;
+  const label = unit.trim().replace(/^#\s*/, '').replace(/^(apt|apartment|unit)\.?\s*#?\s*/i, '').toUpperCase();
+  const lettered = /^([1-9]\d?)[-\s]?[A-Z]{1,2}$/.exec(label);
+  if (lettered) return Number(lettered[1]);
+  const numbered = /^([1-9]\d?)\d{2}$/.exec(label);
+  if (numbered) return Number(numbered[1]);
+  return null;
+}

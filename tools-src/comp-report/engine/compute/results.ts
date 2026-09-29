@@ -1,19 +1,25 @@
 // One result — "on the facts" or "with estimates" (§6.4): the evidence by
 // class, the indicators and the subject values they imply (§6.3), the lead
-// and base, the range (§6.5), the bridge, and the market signals.
+// and base, the range and the price table (§6.5), the bridge, the market
+// signals, and the pairs (§6.6).
 //
-// Sold, in-contract and active comps never share a statistic. Only primary
-// sold comps make the base and the range; in-contract and active asks are
-// context, shown against the sold band.
+// Sold, in-contract, active and didn't-sell comps never share a statistic.
+// Only primary sold comps make the base and the range; asks are context, shown
+// against the sold band — and an ask that didn't sell is a ceiling signal.
 
 import { FACTOR_BY_ID } from '../catalog/factors.ts';
 import { INTERACTIONS } from '../catalog/interactions.ts';
+import type { CheckThresholds } from '../house-method/load.ts';
 import { maxOf, mean, median, minOf, roundHalfAway } from '../util/numbers.ts';
-import type {
-  CompInput, Confidence, EvidenceClass, IsoDate, LeadIndicator, MethodSettings, PropertyFacts,
-  ReportPropertyType, Sourced,
+import {
+  EVIDENCE_CLASSES, type CompInput, type Confidence, type EvidenceClass, type IsoDate, type LeadIndicator, type MethodSettings,
+  type PropertyFacts, type ReportPropertyType, type Sourced,
 } from '../types.ts';
 import { interactionFindings, NOT_DETERMINED, resolveLines, type RawLine } from './adjust.ts';
+import { figure } from './figure.ts';
+import { propertyLabel } from './labels.ts';
+import { buildPairs } from './pairs.ts';
+import { priceTable } from './price-table.ts';
 import { monthlyCarry } from './compare.ts';
 import { weakest } from './facts.ts';
 import type {
@@ -39,14 +45,20 @@ export interface CompState {
 
 export interface ResultContext {
   kind: ResultKind;
+  mode: 'report' | 'what_if';
   asOf: IsoDate;
   reportType: ReportPropertyType;
+  /** The house method's check thresholds — the pairs read "old for a comp" from them. */
+  thresholds: CheckThresholds;
   method: MethodSettings;
   subjectFacts: Partial<PropertyFacts>;
   estimates: EstimateUse[];
   /** Evidence classes whose membership the agent's estimates changed ("with estimates" only). */
   estimateAffected?: ReadonlySet<EvidenceClass>;
 }
+
+/** How each evidence status reads in a derivation. */
+const STATUS_WORDS: Record<EvidenceClass, string> = { sold: 'sold', in_contract: 'in contract', active: 'active', off_market: "didn't sell" };
 
 export const LABELS: Record<LeadIndicator, string> = {
   'unit_rate.median': 'Median $/sqft of the primary sold comps',
@@ -57,9 +69,7 @@ export const LABELS: Record<LeadIndicator, string> = {
   'adjusted_price.anchor': "The anchor comp's adjusted price",
 };
 
-export function figure(value: number, unit: FigureUnit, confidence: Confidence, derivation: string, asOf: IsoDate): Figure {
-  return { value, unit, source: 'engine', as_of: asOf, confidence, derivation };
-}
+export { figure };
 
 /**
  * Median, mean, lowest and highest. `floor` weakens every figure's confidence —
@@ -173,7 +183,7 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
 
   // Evidence classes, never mixed.
   const evidence = {} as Record<EvidenceClass, ClassSummary>;
-  for (const cls of ['sold', 'in_contract', 'active'] as const) {
+  for (const cls of EVIDENCE_CLASSES) {
     const inClass = states.filter((s) => s.evidence_class === cls);
     const included = inClass.filter((s) => s.included);
     const basis = cls === 'sold' ? 'sale' : 'ask';
@@ -334,24 +344,51 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
     'percent', 'sale-to-last-ask', asOf, false, soldFloor,
   );
   const days_on_market = {} as Record<EvidenceClass, StatSummary | null>;
-  for (const cls of ['sold', 'in_contract', 'active'] as const) {
+  for (const cls of EVIDENCE_CLASSES) {
     days_on_market[cls] = statSummary(
       states.filter((s) => s.included && s.evidence_class === cls && s.facts.days_on_market)
         .map((s) => ({ id: s.id, value: s.facts.days_on_market!.value, confidence: s.facts.days_on_market!.confidence })),
-      'days', `days on market (${cls.replace('_', ' ')})`, asOf, false, floorFor(cls),
+      'days', `days on market (${STATUS_WORDS[cls]})`, asOf, false, floorFor(cls),
     );
   }
   const soldRates = evidence.sold.price_per_sqft;
   const sold_band = soldRates ? { low: soldRates.min, median: soldRates.median, high: soldRates.max } : null;
-  const classMedian = (cls: 'in_contract' | 'active') => {
+  const classMedian = (cls: 'in_contract' | 'active' | 'off_market') => {
     const rates = evidence[cls].price_per_sqft;
     if (!rates || !sold_band) return null;
     const pct = (rates.median.value / sold_band.median.value - 1) * 100;
     return {
       median: rates.median,
-      versus_sold_median_percent: figure(pct, 'percent', weakest(rates.median.confidence, sold_band.median.confidence), `${cls.replace('_', ' ')} median ask $/sqft against the sold median $/sqft`, asOf),
+      versus_sold_median_percent: figure(pct, 'percent', weakest(rates.median.confidence, sold_band.median.confidence), `${STATUS_WORDS[cls]} median ask $/sqft against the sold median $/sqft`, asOf),
     };
   };
+  // Didn't sell: the lowest ask the market didn't meet, against the sold band — a ceiling signal (§6.3).
+  const unsold = states.filter((s) => s.included && s.evidence_class === 'off_market' && s.unit_rate !== null);
+  const lowestUnsold = unsold.length > 0 ? unsold.reduce((a, b) => (b.unit_rate! < a.unit_rate! ? b : a)) : null;
+  const ceiling = lowestUnsold && sold_band
+    ? (() => {
+      const conf = weakest(floorFor('off_market'), lowestUnsold.unit_rate_confidence);
+      const rate = lowestUnsold.unit_rate!;
+      return {
+        lowest: figure(rate, 'usd_per_sqft', conf, `the lowest ask that didn't sell, $/sqft: ${propertyLabel(lowestUnsold.input.record.identity, lowestUnsold.id)}`, asOf),
+        comp_id: lowestUnsold.id,
+        position: rate < sold_band.low.value ? 'below' as const : rate > sold_band.high.value ? 'above' as const : 'within' as const,
+        versus_sold_median_percent: figure((rate / sold_band.median.value - 1) * 100, 'percent', weakest(conf, sold_band.median.confidence), "the lowest ask that didn't sell, $/sqft, against the sold median $/sqft", asOf),
+      };
+    })()
+    : null;
+
+  // The price table, across the range; and how the included comps differ from each other.
+  const unitEntries = unitRateOn ? familyEntries(states, 'unit_rate', subjectArea, none) : [];
+  const stateById = new Map(states.map((s) => [s.id, s]));
+  const table = priceTable({
+    reportType: ctx.reportType, subjectArea, leadFamily, range, asOf,
+    entries: unitEntries.map((e) => {
+      const st = stateById.get(e.id)!;
+      return { id: e.id, label: propertyLabel(st.input.record.identity, e.id), value: e.value, own: e.value === st.unit_rate, confidence: e.confidence };
+    }),
+  });
+  const pairs = buildPairs(states, { kind, mode: ctx.mode, asOf, reportType: ctx.reportType, thresholds: ctx.thresholds });
 
   return {
     kind,
@@ -366,8 +403,15 @@ export function buildResult(states: readonly CompState[], ctx: ResultContext, wa
     bridge,
     sale_to_ask: saleToAsk,
     days_on_market,
-    asks_vs_sold: { sold_band, class_medians: { in_contract: classMedian('in_contract'), active: classMedian('active') } },
+    asks_vs_sold: {
+      sold_band,
+      class_medians: { in_contract: classMedian('in_contract'), active: classMedian('active'), off_market: classMedian('off_market') },
+      ceiling,
+    },
     carry: carrySummary(states, ctx),
+    price_table: table.table,
+    price_table_unavailable_because: table.unavailable_because,
+    pairs,
     estimates_used: kind === 'with_estimates' ? dedupeEstimates(ctx.estimates) : [],
   };
 }

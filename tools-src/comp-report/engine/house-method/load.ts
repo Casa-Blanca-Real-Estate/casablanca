@@ -9,6 +9,10 @@
 //   test house method reach it some other way.
 // - Interaction magnitudes aren't implemented until CR-R2, so a non-null one
 //   is refused rather than silently ignored.
+// - The comparability checks' thresholds (§6.10) are configuration, not
+//   valuation magnitudes: a check suggests a tier and never moves a number. So
+//   they carry the mentors' defaults, need no sign-off, and don't count against
+//   `all_null`.
 
 import { FACTOR_BY_ID, FACTORS, magnitudeKeys, type MagnitudeShape } from '../catalog/factors.ts';
 import { INTERACTIONS } from '../catalog/interactions.ts';
@@ -37,8 +41,26 @@ export interface HouseMethod {
   interactions: Record<string, { magnitude: null }>;
   /** Jev confidence thresholds (§7.1) — for the app; the engine doesn't use them. */
   decision_thresholds: { apply_at_or_above: number | null; ask_below: number | null };
+  /** When a comparability check flags a comp (§6.10). Configuration: no sign-off needed. */
+  check_thresholds: CheckThresholds;
   /** True when no value at all has been determined. */
   all_null: boolean;
+}
+
+/**
+ * The comparability checks' thresholds (§6.10), each with whose rule it is.
+ * Configuration, not valuation magnitudes: they decide when a flag shows, and a
+ * flag never moves a number or a tier.
+ */
+export interface CheckThresholds {
+  /** A sale's age in calendar months: noted past `noted`, "old for a comp" past `old`, "the market has moved" past `market_moved`. */
+  sale_age_months: { noted: number; old: number; market_moved: number; basis: string };
+  /** Size far off: more than this many percent bigger or smaller than the home. */
+  size_percent: { value: number; basis: string };
+  /** Floor far off: more than this many floors above or below the home's — its floor band. */
+  floor_band_floors: { value: number; basis: string };
+  /** Distance: noted past `noted` miles, "far for Manhattan" past `far`. */
+  distance_miles: { noted: number; far: number; basis: string };
 }
 
 export class HouseMethodError extends Error {
@@ -178,6 +200,8 @@ export function loadHouseMethod(raw: unknown): HouseMethod {
     }
   }
 
+  const checkThresholds = readCheckThresholds(raw['check_thresholds'], issues);
+
   if (kind === 'production' && anyValue && !approval) {
     issues.push("a production house method with any value needs Noble's sign-off: approval.by and approval.at");
   }
@@ -192,10 +216,50 @@ export function loadHouseMethod(raw: unknown): HouseMethod {
     lines,
     interactions,
     decision_thresholds: thresholds,
+    check_thresholds: checkThresholds!,
     all_null: !anyValue,
   });
   LOADED.add(houseMethod);
   return houseMethod;
+}
+
+function readCheckThresholds(raw: unknown, issues: string[]): CheckThresholds | null {
+  const where = 'check_thresholds';
+  if (!isObject(raw)) { issues.push(`${where} must be an object`); return null; }
+  const before = issues.length;
+  const known: Record<string, string[]> = {
+    sale_age_months: ['noted', 'old', 'market_moved'], size_percent: ['value'], floor_band_floors: ['value'], distance_miles: ['noted', 'far'],
+  };
+  for (const key of Object.keys(raw)) if (key !== 'about' && !(key in known)) issues.push(`${where}.${key} is not a check threshold`);
+  const out: Record<string, Record<string, number | string>> = {};
+  for (const [key, slots] of Object.entries(known)) {
+    const entry = raw[key];
+    if (!isObject(entry)) { issues.push(`${where}.${key} is missing`); continue; }
+    for (const k of Object.keys(entry)) if (k !== 'basis' && !slots.includes(k)) issues.push(`${where}.${key}.${k} is not one of its settings`);
+    const values: Record<string, number | string> = {};
+    for (const slot of slots) {
+      const v = entry[slot];
+      const whole = key === 'sale_age_months' || key === 'floor_band_floors';
+      if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0 || (whole && !Number.isInteger(v))) {
+        issues.push(`${where}.${key}.${slot} must be a ${whole ? 'whole number' : 'number'} above zero`);
+      } else values[slot] = v;
+    }
+    if (typeof entry['basis'] !== 'string' || entry['basis'].trim() === '') issues.push(`${where}.${key}.basis must say whose rule it is`);
+    else values['basis'] = entry['basis'];
+    out[key] = values;
+  }
+  const age = out['sale_age_months'];
+  if (age && typeof age['noted'] === 'number' && typeof age['old'] === 'number' && typeof age['market_moved'] === 'number' &&
+    !(age['noted'] < age['old'] && age['old'] < age['market_moved'])) {
+    issues.push(`${where}.sale_age_months: noted < old < market_moved`);
+  }
+  const size = out['size_percent'];
+  if (size && typeof size['value'] === 'number' && size['value'] > 100) issues.push(`${where}.size_percent.value is a percentage, at most 100`);
+  const miles = out['distance_miles'];
+  if (miles && typeof miles['noted'] === 'number' && typeof miles['far'] === 'number' && !(miles['noted'] < miles['far'])) {
+    issues.push(`${where}.distance_miles: noted < far`);
+  }
+  return issues.length > before ? null : out as unknown as CheckThresholds;
 }
 
 /** House methods this module validated. compute() takes no other — a hand-built one could claim anything. */

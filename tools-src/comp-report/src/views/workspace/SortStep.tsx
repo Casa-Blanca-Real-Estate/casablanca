@@ -18,7 +18,7 @@ const REASON_TYPES: { value: ReasonType; label: string }[] = [
   { value: 'client', label: 'About the client' },
   { value: 'method', label: 'About the method' },
 ];
-const ORDER = { sold: 0, in_contract: 1, active: 2 } as const;
+const ORDER = { sold: 0, in_contract: 1, active: 2, off_market: 3 } as const;
 
 export function SortStep({ ws }: StepProps) {
   const outById = useMemo(() => new Map<string, CompOut>((ws.output?.comps ?? []).map((c) => [c.id, c])), [ws.output]);
@@ -26,7 +26,7 @@ export function SortStep({ ws }: StepProps) {
   const comps = useMemo(() => [...ws.comps].sort((a, b) => {
     const ea = a.record.status.evidence_class;
     const eb = b.record.status.evidence_class;
-    return (ea ? ORDER[ea] : 3) - (eb ? ORDER[eb] : 3);
+    return (ea ? ORDER[ea] : 4) - (eb ? ORDER[eb] : 4);
   }), [ws.comps]);
 
   if (!ws.comps.length) {

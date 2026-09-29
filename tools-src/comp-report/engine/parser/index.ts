@@ -24,7 +24,7 @@ import { cp1252Decode, utf8DecodeStrict } from '../util/utf8.ts';
 import type { CompRecord, Confidence, PropertyFacts, Sourced } from '../types.ts';
 import { readCsv } from './csv.ts';
 import { COLUMNS, mapColumns, type ColumnMapping } from './columns.ts';
-import { EXPORT_TAG_NAMES, penthouseSuggestion, tagFacts } from './tag-facts.ts';
+import { EXPORT_TAG_NAMES, tagFacts, unitLabelSuggestions } from './tag-facts.ts';
 import { identify } from './property-key.ts';
 import {
   cellText, isBlank, readArea, readCount, readDate, readFloor, readHalfCount, readMoney,
@@ -276,17 +276,9 @@ function buildComp(
   for (const t of tagFacts(tags, EXPORT_TAG_NAMES)) {
     (facts as Record<string, Sourced<unknown>>)[t.field] = tagged(t.value, t.listed, t.note);
   }
-  // A penthouse guessed from the unit label is a suggestion for the agent to
-  // confirm; the fact from the Home Features stands meanwhile.
-  const suggestions: CompRecord['suggestions'] = [];
-  const unitRaw = identity.unit.raw;
-  const penthouse = penthouseSuggestion(unitRaw, facts.unit_type?.value);
-  if (penthouse) {
-    suggestions.push({
-      field: 'unit_type',
-      value: { value: penthouse, source: 'se_export', as_of: asOf, confidence: 'inferred', note: `the unit label ${unitRaw} suggests a penthouse — confirm` },
-    });
-  }
+  // A penthouse or a floor guessed from the unit label is a suggestion for the
+  // agent to confirm; the export's own facts stand meanwhile.
+  const suggestions = unitLabelSuggestions(identity.unit.raw, facts, 'se_export', asOf);
 
   if (closing) {
     warnings.push({
