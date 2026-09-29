@@ -102,7 +102,7 @@ calculation, but comparing it against the data is the teaching moment. The quest
 
 **Recommendation: C.** Design `01-design.md` §3.1.
 
-**Answer →** _type here_
+**Answer →** Agreed, C.
 
 ### D-2 · Compliance as the only hard block in QA
 `Soon — CR-5` · `Quick`
@@ -118,7 +118,7 @@ legal exposure for Casa, not judgment calls, and the fixes are quick rewrites.
 
 **Recommendation: A.**
 
-**Answer →** _type here_
+**Answer →** Sure A, for now.
 
 ### D-3 · How agent estimates are worded for clients
 `Later — CR-5, CR-6` · `Quick`
@@ -132,7 +132,7 @@ When client copy uses those numbers, it discloses them. What should the client r
 
 **Recommendation: A** — honest and professional; "guesstimate" reads casual to a client.
 
-**Answer →** _type here_
+**Answer →** Agreed, A.
 
 ### D-4 · When the assistant first sees a target price
 `Soon — CR-4` · `Quick`
@@ -147,7 +147,7 @@ to the target — designed as *Path to target* (§8.5).
 
 **Recommendation: A.**
 
-**Answer →** _type here_
+**Answer →** Yes A.
 
 ### D-5 · How much the tool coaches versus drafts
 `Later — CR-4` · `Think`
@@ -166,7 +166,7 @@ part is how Socratic the rest of the experience is.
 **Recommendation: A.** Hannah herself asks ChatGPT to "convince him $11.5M is a good price" — making her
 answer a quiz first would be friction, not teaching.
 
-**Answer →** _type here_
+**Answer →** A. We'll loosen it over time by the count of the user's comps in the tool.
 
 ### D-6 · When to ask the agent what kind of argument they want
 `Later — CR-4` · `Quick`
@@ -180,7 +180,7 @@ argument. Your idea: offer a choice.
 
 **Recommendation: A.**
 
-**Answer →** _type here_
+**Answer →** Yep, A.
 
 ### D-7 · The client profile's dimensions
 `Later — CR-5` · `Think`
@@ -196,7 +196,7 @@ measured on a stated scale.
 
 **Recommendation: B now, A when MindBinder's framework is stable.**
 
-**Answer →** _type here_
+**Answer →** Agreed, B now, A later.
 
 ### D-8 · Voice samples: attestation and visibility
 `Later — CR-5` · `Quick`
@@ -209,7 +209,7 @@ Agents upload their own writing so the writer can match their voice. Two questio
 
 **Recommendation: 1 — attestation is enough. 2 — agent only**, with admins able to delete.
 
-**Answer →** _type here_
+**Answer →** Attestation is good, and mentors/admins should be able to see an agent's samples and style profile.
 
 ### D-9 · Keeping property records across agents
 `Later — before the property pool is built` · `Quick, for Hannah`
@@ -230,7 +230,7 @@ closings are public either way.
 three: CR-1 built it so a property's identity (building, unit) is shared, so imports dedupe, while what
 each import observed stays private to the agent who imported it.
 
-**Answer →** _type here_
+**Answer →** A.
 
 ### D-10 · Which deal-terms modules intake offers in v1
 `Soon — CR-3` · `Think`
@@ -249,7 +249,7 @@ later. Which templates should v1 offer?
 **Recommendation: B** — v1 can't compute a rent-to-own properly yet, and a form that implies it can will
 mislead.
 
-**Answer →** _type here_
+**Answer →** B.
 
 ### D-11 · The training gate's rules
 `Later — practice mode` · `Think — Hannah and Noble`
@@ -264,7 +264,7 @@ tool with the help off. Graded by code, Jev and the LLM, with Noble making the p
 
 **Recommendation:** 2 — either; 3 — both; 4 — yes. 1 is Noble's call.
 
-**Answer →** _type here_
+**Answer →** 1. We'll gate it to their first 5 actual deals. Once they close their 5th and graduate out of mentorship, they'll unlock the tool in full. 2. Either. 3. Both. 4. Yes, see 1.
 
 ### D-12 · Reusing the MindBinder Jev integration
 `Soon — CR-3` · `Quick`
@@ -275,7 +275,7 @@ pattern rather than start cold. That means adding the MindBinder repo to this se
 - **A — Yes**, add it (name the repo).
 - **B — No**, build fresh.
 
-**Answer →** _type here_
+**Answer →** Pending. I might just have a package prepped for you instead of adding the repo. If anything, just will need an MD file of what you're looking for and I'll have a Claude Code track in the MindBinder repo gather everything you'll need into a handoff.
 
 ### D-13 · Disclaimer wording
 `Later — before the pilot` · `Quick, for Hannah`
@@ -288,7 +288,7 @@ comparative market analysis is an estimate of market value prepared by a license
 informational purposes. It is not an appraisal. Data provided by StreetEasy and other sources, which may
 be incomplete or subject to change."*
 
-**Answer →** _type here — approve, edit, or send to Hannah_
+**Answer →** Approved.
 
 ### D-14 · When to research interaction magnitudes
 `Later — CR-R2` · `Quick`
@@ -303,7 +303,7 @@ counting. The *magnitudes* need research (CR-R2).
 **Recommendation: A** — interaction magnitudes are adjustments to adjustments; they need the base values
 first.
 
-**Answer →** _type here_
+**Answer →** Might not be necessary anymore, Noble pointed out that a property's value pretty much accounts for all of its amenities in the listing price, or that of past sales or similarly featured sales in the building. We might not need to calculate and/or adjust that stuff ourselves at all per unit. Lmk your thoughts.
 
 ## Repo and deploy
 
@@ -318,7 +318,7 @@ no PR: `claude/qr-code-generator-nva8xf` (a QR code generator, July), `claude/mo
 - **A — Delete the nine finished and the React spike; you decide on the QR generator and `samplepics`.**
 - **B — Leave everything.**
 
-**Answer →** _type here_
+**Answer →** Delete what's definitely done and needs no further work. The ones that still need work, leave them and/or open and merge PRs for them depending on their progress. If it's ready for use, open and merge. If it still needs work, report how much more and I'll decide whether to park it or not. Likely will be parked for the time being, Comp tool takes priority.
 
 ## Comp report — for outside sign-off
 
@@ -359,7 +359,7 @@ difference is small per comp, but it runs through every number once values exist
 property adjustments stay additive (§6.5). It's a small engine change, and nothing moves until values
 exist.
 
-**Answer →** _type here_
+**Answer →** Perhaps let's reorient, how does the engine take adjustments off the comps own sale price and add them up if we don't yet know the value of an adjustment? I guess, walk me through how an adjustment would be determined based on comps. Flat is likely not the right move because we need to be able to see the difference between comps of how much two similar listings differ in price and what features of them might have caused that difference. My current understanding of this stuff tells me it's important to know that for buyers just as much as sellers, and since our agents are 95% focused on buyer side stuff, we need to make sure the reasons and engine around estimating feature adjustments are actually sound and necessary. Appraisals are sales-focused, and that's not so important at the current moment.
 
 ### D-19 · Recording each report's outcome
 `Later — outcome capture, after v1` · `Quick`
@@ -380,7 +380,7 @@ are hard to get responses from, so a step that depends on them coming back will 
 still asks for the accepted offer, which only the agent knows. A hard requirement (A) would mostly
 produce skipped or guessed entries. Design §12.
 
-**Answer →** _type here_
+**Answer →** Yes B.
 
 ---
 
