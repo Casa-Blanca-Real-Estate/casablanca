@@ -74,9 +74,9 @@
         '<button type="button" class="cb-fb-close" aria-label="Close">&times;</button>' +
         '<p class="cb-fb-h">Share feedback</p>' +
         '<p class="cb-fb-help">Suggestions, bugs, ideas — all welcome.</p>' +
-        '<input type="text" class="cb-fb-name" placeholder="Name (optional)">' +
-        '<input type="email" class="cb-fb-email" placeholder="Email (optional)">' +
-        '<textarea class="cb-fb-msg" rows="4" placeholder="What’s on your mind?"></textarea>' +
+        '<input type="text" class="cb-fb-name" placeholder="Name (optional)" maxlength="200">' +
+        '<input type="email" class="cb-fb-email" placeholder="Email (optional)" maxlength="200">' +
+        '<textarea class="cb-fb-msg" rows="4" placeholder="What’s on your mind?" maxlength="4000"></textarea>' +
         '<button type="button" class="cb-fb-send">Send feedback</button>' +
         '<div class="cb-fb-status"></div>';
       document.body.appendChild(tray);

@@ -24,6 +24,7 @@
     "notebook": "node tools-src/dev-notebook/cli.ts",
     "dev:notebook": "node tools-src/dev-notebook/dev/serve.ts",
     "test:dev-notebook": "node --test --test-concurrency=1 \"tools-src/dev-notebook/**/*.test.ts\"",
+    "test:feedback": "node --test \"tools-src/feedback/**/*.test.ts\"",
     "test:engine": "node --test \"tools-src/comp-report/engine/test/**/*.test.ts\"",
     "typecheck:engine": "tsc -p tools-src/comp-report/engine && tsc -p tools-src/comp-report/engine/test"
   },

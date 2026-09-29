@@ -71,6 +71,11 @@
   .key{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
   .token{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
   .help li{margin:0 0 6px}
+  .fbwrap>summary{cursor:pointer;font-size:12px;font-weight:800;letter-spacing:.04em;padding:4px 0}
+  .fb{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .fbitem{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+  .fbitem .meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;color:var(--muted);margin:0 0 4px}
+  .fbitem .text{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#ebe9e3;border-radius:5px;padding:1px 5px}
 </style>
 </head>
@@ -120,6 +125,14 @@
       <ul class="list" id="list" aria-label="Notes"></ul>
       <article class="detail card" id="detail" hidden></article>
     </div>
+
+    <h2>Team feedback</h2>
+    <p class="muted">What people send with the <b>Feedback</b> button on every studio page. It carries names and emails, so it's read
+      only here, signed in: not with a key, and no longer at the button's own address.</p>
+    <details class="fbwrap" id="fbWrap">
+      <summary>Show team feedback</summary>
+      <div class="fb" id="fbList"></div>
+    </details>
 
     <h2>Keys for Claude Code sessions</h2>
     <p class="muted">A session reads the notebook with a key: it can read notes, pick one up, leave a note on it and mark it resolved against its PR.
@@ -423,8 +436,27 @@
       .then(function () { $('copyKey').textContent = 'Copied'; });
   };
 
+  // ── Team feedback: fetched when opened, not on every visit ───────────────
+  function loadFeedback() {
+    var wrap = $('fbList'); wrap.textContent = '';
+    wrap.appendChild(h('p', { class: 'muted small', text: 'Loading…' }));
+    return api('GET', '/feedback').then(function (data) {
+      wrap.textContent = '';
+      if (!data.feedback.length) wrap.appendChild(h('p', { class: 'muted small', text: 'Nothing yet.' }));
+      data.feedback.forEach(function (f) {
+        wrap.appendChild(h('article', { class: 'fbitem' },
+          h('div', { class: 'meta' },
+            h('span', { text: new Date(f.ts).toLocaleString() }),
+            f.tool ? h('span', { class: 'tagpill', text: f.tool }) : null,
+            h('span', { text: [f.name, f.email].filter(Boolean).join(' · ') || 'No name given' })),
+          h('p', { class: 'text', text: f.message })));
+      });
+    }).catch(function (e) { wrap.textContent = ''; wrap.appendChild(h('p', { class: 'muted small', text: e.message })); });
+  }
+  $('fbWrap').addEventListener('toggle', function () { if ($('fbWrap').open) loadFeedback(); });
+
   $('status').onchange = function () { state.status = $('status').value; loadList(); };
-  $('refresh').onclick = function () { loadList(); if (state.selected) openNote(state.selected); };
+  $('refresh').onclick = function () { loadList(); if (state.selected) openNote(state.selected); if ($('fbWrap').open) loadFeedback(); };
   $('write').onclick = function () { if (window.CBDevNotebook) window.CBDevNotebook.open(); else loadWidget(); };
 
   function showApp() {

@@ -14,6 +14,7 @@
 // Same-origin and token-authenticated: no cookies are read, so there's
 // nothing to forge cross-site, and no CORS headers.
 import { bearerToken, IdentityUnavailable, type IdentityVerifier } from '../../comp-report/server/identity.ts';
+import type { FeedbackItem } from '../../feedback/feedback.ts';
 import { describeOpen, devEmails, PARAMS, STATUSES, TAGS } from '../vocab.ts';
 import { FRESH_SIGN_IN_MS, MAX_SHOT_BYTES, NotebookError, type NotebookStore } from './store.ts';
 
@@ -27,6 +28,8 @@ export interface NotebookDeps {
   commit: () => Promise<string | null>;
   deployId: string | null;
   now: () => number;
+  /** The team Feedback button's submissions (tools-src/feedback), newest first. */
+  feedback: () => Promise<FeedbackItem[]>;
 }
 
 type Principal =
@@ -185,6 +188,11 @@ export const ROUTES: Route[] = [
         headers: { ...NO_STORE, 'Content-Type': shot.type, 'Content-Disposition': 'inline', 'X-Content-Type-Options': 'nosniff' },
       });
     },
+  },
+  {
+    // The team Feedback button's submissions carry names and emails: the developers read them, a key can't.
+    method: 'GET', path: /^\/feedback$/, who: ['session'],
+    run: async ({ deps }) => json({ feedback: await deps.feedback() }),
   },
   {
     method: 'GET', path: /^\/keys$/, who: ['session'],

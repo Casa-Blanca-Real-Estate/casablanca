@@ -59,7 +59,8 @@ on production.
 | Storage | `tools-src/dev-notebook/server/store.ts` — the only code that touches the Blobs store `dev-notebook` |
 | Vocabulary | `tools-src/dev-notebook/vocab.ts` — tags, statuses, surfaces, the URL params it records |
 | CLI | `tools-src/dev-notebook/cli.ts` (`npm run notebook`) |
-| Local server | `tools-src/dev-notebook/dev/serve.ts` (`npm run dev:notebook`) — the site, the API, local Blobs, a stub sign-in |
+| Local server | `tools-src/dev-notebook/dev/serve.ts` (`npm run dev:notebook`) — the site, the API, local Blobs, a stub sign-in, and the team Feedback function |
+| Team feedback | `tools-src/feedback/feedback.ts` — the Feedback button's function; the page reads it through `GET /api/dev/notebook/feedback` |
 
 **Who gets in.** Sign-in exchanges a Google sign-in (the site's Netlify Identity, verified with
 Identity itself, fail-closed) for a notebook session, if the address is one of the notebook's —
@@ -98,16 +99,25 @@ context is 4 KB.
 **Statuses.** `open` → `read` → `resolved` (needs the PR) or `answered` / `deferred` / `wontfix` /
 `duplicate` (each needs a note). Anything can be reopened.
 
+**Team feedback.** The page also shows what people send with the **Feedback** button on every studio
+page (open *Team feedback*). That's a different thing from notes: anyone can send it, and it carries
+names and emails, so only a notebook session reads it. A key can't, and the Feedback function no
+longer answers a read at all. It is not triaged here; nothing marks it off. Details in
+`netlify/functions/README.md`.
+
 ## Tests
 
-`npm run test:dev-notebook`, run in CI's site build:
+`npm run test:dev-notebook` and `npm run test:feedback`, both run in CI's site build:
 
 - the API on Blobs' own local server: the gate on every route, who may sign in, what a key can't do,
-  the resolve rule, concurrent writers, screenshots, and session expiry;
+  the resolve rule, concurrent writers, screenshots, session expiry, and team feedback being
+  session-only;
 - the CLI over HTTP;
 - the vocabulary, including a check that the widget's copy of it hasn't drifted;
 - the structural rules: the CLI can't delete, every route is under `/api/dev/notebook`, only the
-  store touches the store, the comp report never reads notes, and the box loads only when signed in.
+  store touches the store, the comp report never reads notes, and the box loads only when signed in;
+- the Feedback function (`test:feedback`): posting stays open, no method reads the list back, ten
+  sent at once all land, the old list is still read, and a failure doesn't echo its error.
 
 ## Where this differs from the handoff
 

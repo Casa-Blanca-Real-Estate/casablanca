@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { getStore } from '@netlify/blobs';
 import { BlobsServer } from '@netlify/blobs/server';
 import type { IdentityVerifier } from '../../comp-report/server/identity.ts';
+import { FEEDBACK_STORE, handleFeedback, readFeedback, type FeedbackBlobs } from '../../feedback/feedback.ts';
 import { BASE, handleNotebook, type NotebookDeps } from '../server/api.ts';
 import { notebookStore, type BlobStore } from '../server/store.ts';
 
@@ -72,14 +73,25 @@ export async function startNotebookServer(opts: { port?: number; env?: Record<st
   const { port: blobsPort } = await blobs.start();
   const store = notebookStore(getStore({ name: 'dev-notebook', edgeURL: `http://localhost:${blobsPort}`, token: 'local', siteID: 'local' }) as unknown as BlobStore);
   const commit = localCommit();
+  const feedbackStore = getStore({ name: FEEDBACK_STORE, edgeURL: `http://localhost:${blobsPort}`, token: 'local', siteID: 'local' }) as unknown as FeedbackBlobs;
 
   const server: Server = createServer((req, res) => {
     void (async () => {
       const origin = `http://${req.headers.host}`;
       const url = new URL(req.url ?? '/', origin);
       if (url.pathname.startsWith(BASE)) {
-        const deps: NotebookDeps = { store, verifier: devIdentity, env: opts.env ?? {}, commit: async () => commit, deployId: 'local', now: () => Date.now() };
+        const deps: NotebookDeps = {
+          store, verifier: devIdentity, env: opts.env ?? {}, commit: async () => commit, deployId: 'local', now: () => Date.now(),
+          feedback: () => readFeedback(feedbackStore),
+        };
         const response = await handleNotebook(await toRequest(req, origin), deps);
+        res.writeHead(response.status, Object.fromEntries(response.headers));
+        res.end(Buffer.from(await response.arrayBuffer()));
+        return;
+      }
+      // The team Feedback button's function, as deployed (netlify/functions/feedback.mts).
+      if (url.pathname === '/.netlify/functions/feedback') {
+        const response = await handleFeedback(await toRequest(req, origin), feedbackStore);
         res.writeHead(response.status, Object.fromEntries(response.headers));
         res.end(Buffer.from(await response.arrayBuffer()));
         return;
@@ -121,6 +133,7 @@ export async function startNotebookServer(opts: { port?: number; env?: Record<st
   return {
     url,
     store,
+    feedbackStore,
     async close() {
       await new Promise<void>((r) => server.close(() => r()));
       await blobs.stop();

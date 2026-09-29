@@ -1,7 +1,8 @@
 // The dev notebook's API end to end: the real Blobs client against Blobs' own
 // local server, and a stub Identity. Checks the gate on every route, who may
 // sign in, what a Claude Code session's key can and can't do, the
-// resolve-needs-a-PR rule, the append-only history, and screenshots.
+// resolve-needs-a-PR rule, the append-only history, screenshots, and the team
+// Feedback list the notebook page reads.
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -11,6 +12,7 @@ import { after, before, describe, test } from 'node:test';
 import { getStore } from '@netlify/blobs';
 import { BlobsServer } from '@netlify/blobs/server';
 import type { IdentityUser } from '../../comp-report/server/identity.ts';
+import { FEEDBACK_STORE, handleFeedback, readFeedback, type FeedbackBlobs } from '../../feedback/feedback.ts';
 import { BASE, handleNotebook, ROUTES, type NotebookDeps } from './api.ts';
 import { notebookStore, SESSION_DAYS, type BlobStore } from './store.ts';
 
@@ -28,6 +30,7 @@ describe('the dev notebook API', () => {
   let server: BlobsServer;
   let dir: string;
   let deps: NotebookDeps;
+  let feedback: FeedbackBlobs;
   let now = Date.parse('2026-09-30T12:00:00Z');
   let autoconfirm = false;
   let session = '';
@@ -38,6 +41,7 @@ describe('the dev notebook API', () => {
     server = new BlobsServer({ directory: dir, token: 'local' });
     const { port } = await server.start();
     const blobs = getStore({ name: 'dev-notebook', edgeURL: `http://localhost:${port}`, token: 'local', siteID: 'local-site' });
+    feedback = getStore({ name: FEEDBACK_STORE, edgeURL: `http://localhost:${port}`, token: 'local', siteID: 'local-site' }) as unknown as FeedbackBlobs;
     deps = {
       store: notebookStore(blobs as unknown as BlobStore, { now: () => now, random: (n) => randomBytes(n) }),
       verifier: {
@@ -48,6 +52,7 @@ describe('the dev notebook API', () => {
       commit: async () => 'abc1234def56',
       deployId: 'deploy-1',
       now: () => now,
+      feedback: () => readFeedback(feedback),
     };
   });
   after(async () => {
@@ -158,6 +163,21 @@ describe('the dev notebook API', () => {
     assert.equal((await call('POST', '/keys', key, { label: 'another' })).body.error, 'not_with_a_key');
     assert.equal((await call('GET', '/keys', key)).body.error, 'not_with_a_key');
     assert.equal((await call('POST', `/notes/${id}/shots`, key, undefined, PNG)).body.error, 'not_with_a_key');
+  });
+
+  test('the team Feedback list is read here, by a signed-in developer — never with a key', async () => {
+    const post = (message: string) => handleFeedback(new Request('https://studio.test/.netlify/functions/feedback', {
+      method: 'POST', body: JSON.stringify({ name: 'Ana', email: 'ana@casa-blanca.com', message, tool: 'Comp Report' }),
+    }), feedback, { now: () => now, random: (n) => randomBytes(n) });
+    assert.equal((await post('The sort step is slow.')).status, 200);
+    now += 1000;
+    assert.equal((await post('Love the reveal.')).status, 200);
+
+    assert.equal((await call('GET', '/feedback', key)).body.error, 'not_with_a_key', 'names and emails stay off the keys');
+    const read = await call('GET', '/feedback', session);
+    assert.equal(read.status, 200);
+    assert.deepEqual(read.body.feedback.map((f: { message: string }) => f.message), ['Love the reveal.', 'The sort step is slow.']);
+    assert.deepEqual(read.body.feedback[0], { name: 'Ana', email: 'ana@casa-blanca.com', message: 'Love the reveal.', tool: 'Comp Report', ts: new Date(now).toISOString() });
   });
 
   test('resolved needs its PR; closing any other way needs a why', async () => {

@@ -3,6 +3,7 @@
 // sign-in that no deployed function can reach.
 import { getStore } from '@netlify/blobs';
 import { identityUrlFor, netlifyIdentityVerifier, type IdentityVerifier } from '../../comp-report/server/identity.ts';
+import { FEEDBACK_STORE, readFeedback, type FeedbackBlobs } from '../../feedback/feedback.ts';
 import type { NotebookDeps } from './api.ts';
 import { notebookStore, STORE_NAME, type BlobStore } from './store.ts';
 
@@ -47,5 +48,6 @@ export function productionDeps(req: Request, context?: { deploy?: { id?: string 
     commit: () => buildCommit(req),
     deployId: context?.deploy?.id ?? null,
     now: () => Date.now(),
+    feedback: () => readFeedback(getStore({ name: FEEDBACK_STORE, consistency: 'strong' }) as unknown as FeedbackBlobs),
   };
 }
