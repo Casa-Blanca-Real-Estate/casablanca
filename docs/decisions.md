@@ -8,7 +8,7 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-09-28 by Casanova.
+Last updated 2026-09-29 by Casanova.
 
 **What actually blocks the next build:** nothing blocks CR-3a (Dispatch 07, the walkthrough
 scaffold): it shows the recommended defaults, labelled. CR-3 proper (the designed workspace) needs
@@ -35,7 +35,8 @@ wait.
 | D-14 | When to research interaction magnitudes | Later | Quick | CR-R2 |
 | D-16 | Unmerged branches | Later | Quick | — |
 | D-17 | Two questions for counsel | Later | Quick (counsel) | the pilot; factor 18 |
-| D-18 | The order adjustments apply in, and whether they compound | Later | Quick (Noble) | the first house-method values |
+| D-18 | The order adjustments apply in, and whether they compound | Parked | Quick (Noble) | only if adjustments get values |
+| D-19 | Recording each report's outcome | Later | Quick | outcome capture (after v1) |
 
 ## Your actions
 
@@ -338,7 +339,11 @@ CR-R (Surveyor) found two legal questions research can't settle. Both are in
 **Answer →** _type here — who it went to, or their answer_
 
 ### D-18 · The order adjustments apply in, and whether they compound
-`Later — before the first house-method values` · `Quick — Noble`
+`Parked — only matters if adjustments get values` · `Quick — Noble`
+
+**Parked 2026-09-29.** Noble thinks the adjustments may not need values at all: a comp's price
+already carries what its features are worth. The engine already works that way (every value null).
+If values are ever added, this comes back.
 
 Today the engine takes every adjustment off the comp's own sale price and adds them up, so order never
 matters. Appraisal practice works in two stages: **transaction** adjustments first (market movement since
@@ -353,6 +358,27 @@ difference is small per comp, but it runs through every number once values exist
 **Recommendation: B, if Noble agrees.** It's what an appraiser or a reviewing broker expects, and the
 property adjustments stay additive (§6.5). It's a small engine change, and nothing moves until values
 exist.
+
+**Answer →** _type here_
+
+### D-19 · Recording each report's outcome
+`Later — outcome capture, after v1` · `Quick`
+
+Noble wants every report's outcome attached to it: when the subject goes into contract or sells,
+whether through Casa or not, the final accepted offer and the sale price. That's how Casa learns
+whether its ranges hold, and what Noble calibrates against. He called it a requirement. But agents
+are hard to get responses from, so a step that depends on them coming back will have gaps.
+
+- **A — Required.** The agent records the outcome before a report can be closed or archived, with
+  reminders until they do.
+- **B — Automatic first, the agent second.** The tool matches the subject's sale itself, from public
+  records and from any later export that includes it, by property key. It asks the agent only for
+  what the records can't show (the accepted offer, the terms). The ask is one tap and never blocks.
+- **C — Automatic only.** Public-record sale prices, no agent input.
+
+**Recommendation: B.** It gets the sale price for every report without depending on the agent. It
+still asks for the accepted offer, which only the agent knows. A hard requirement (A) would mostly
+produce skipped or guessed entries. Design §12.
 
 **Answer →** _type here_
 

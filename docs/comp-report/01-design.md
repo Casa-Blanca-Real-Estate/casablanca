@@ -283,6 +283,13 @@ it captures, what data it needs, where the data can come from. **None has a numb
 - **Order and compounding** are undecided: today every adjustment comes off the comp's own sale
   price and they add. Appraisal practice applies transaction adjustments first, in sequence, then
   property adjustments on the result (D-18, for Noble).
+- **Noble's view (2026-09-29): the adjustments may never need values.** A comp's price already
+  carries what its features are worth, so well-chosen comps may be enough. The engine already works
+  that way: with every value null, the results are the comps' own $/sqft and prices, and each
+  applicable factor is shown as a comparison (comp better, worse or similar) that moves no number.
+  So the catalog works as a checklist for choosing and tiering comps, and for arguing where the
+  subject sits in the range. **Values stay null until a gap shows up in use**; D-18 matters only if
+  they don't.
 - **Magnitudes, weights and bounds all live in one versioned house-method file.** In production
   every value in it is `null` — to be determined — until Noble sets it, informed by the research in
   CR-R (§16). Every version records which house method produced it.
@@ -651,6 +658,13 @@ Netlify Database (Postgres). Every table is scoped by owner through row-level se
 sets the user and role on the connection — as well as by scoping in every query. **Every row records
 when it was created and by whom or what** (§4.9).
 
+**Outcomes close the loop** (Noble, 2026-09-29; D-19). When the subject goes into contract or
+sells, whether through Casa or not, the final accepted offer and the sale price are attached to the
+report that priced it. That record is how Casa learns whether its ranges hold, and it's what Noble
+calibrates the method and grades practice reports against (§11). Where a public record or a later
+export carries the sale, it's matched automatically through the property key, so it doesn't depend
+on the agent coming back.
+
 **Property records are separate from report judgments.** A property's facts — address, unit, size,
 prices, dates, features — are the same whichever report brings it in, so they're recorded once and
 accumulate across every import, with provenance and as-of dates. How relevant a property is, and why,
@@ -801,7 +815,8 @@ and D-12 are answered.
   and first values have settled.
 
 **After v1:** the training gate's practice mode (§11); co-ops; house method v1 with Noble; the property
-pool's cross-agent suggestions (D-9); the client web page; full offer modelling; more sources.
+pool's cross-agent suggestions (D-9); outcome capture (§12, D-19); the client web page; full offer
+modelling; more sources.
 
 ## 17. Decision log
 
