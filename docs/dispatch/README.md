@@ -43,7 +43,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
 | **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b) | 05: merged #48, #52; step-6 proof and CR-1.1 item 3 open. 07: done, merged #53. 09: ready. Dev notebook (from Kimani, not a dispatch) and the Feedback list closed: merged #54 |
 | **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: phase 1 merged #55; phase 2 next |
-| **Arbiter** *(proposed; Kimani names it)* | The comp report's decision provider: Jev, with a Haiku fallback | 10 (CR-D) | 10: ready |
+| **Arbiter** *(proposed; Kimani names it)* | The comp report's decision provider: Jev, with a Haiku fallback | 10 (CR-D) | 10: phase 1 in review (PR to `claude/main`); phase 2 waits on Casa's Gateway key |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
 | *unnamed* (`claude/laughing-newton-f96x9t`) | Agent CMS | 03 | Done — merged #47 |
@@ -61,4 +61,4 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 07 | [Comp report — the walkthrough scaffold (CR-3a)](07-comp-report-walkthrough-scaffold.md) | Mason | Done — merged #53 |
 | 08 | [Comp report — the engine for a buyer's argument (CR-2.2)](08-comp-report-buyers-argument-engine.md) | Abacus | Phase 1 merged #55; phase 2 next |
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](09-comp-report-first-class-start.md) | Mason | Ready |
-| 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Ready (phase 1); phase 2 waits on Casa's Gateway key |
+| 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Phase 1 in review; phase 2 waits on Casa's Gateway key |
