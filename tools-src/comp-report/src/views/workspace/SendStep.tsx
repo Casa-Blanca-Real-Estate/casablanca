@@ -1,6 +1,7 @@
-// Step 6, send it (§3 steps 5–6, stubbed): a placeholder client email from a
-// fixed template, the one QA check that's a regex today, and the client report's
-// placeholder. The writer and the rest of QA come in CR-5, the PDF in CR-6.
+// Send it (§3, stubbed): a placeholder client email from a fixed template, the
+// one QA check that's a regex today, and the client report's placeholder. The
+// writer and the rest of QA come in CR-5, the PDF in CR-6. The client's name
+// comes from the new-comp modal (D-22); the client note is written here.
 import { useRef, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
 import { appraisalFindings, placeholderEmail } from '../../../workspace/email.ts';
@@ -20,7 +21,7 @@ export function SendStep({ ws }: StepProps) {
     return (
       <div className="send">
         <p className="muted">The draft quotes the range, so it waits for your call.</p>
-        <button type="button" className="btn" onClick={() => ws.go('reveal')}>Go to step 4</button>
+        <button type="button" className="btn" onClick={() => ws.go('reveal')}>Go to the call</button>
         <ClientReport />
       </div>
     );
@@ -36,7 +37,7 @@ export function SendStep({ ws }: StepProps) {
     result,
     comps: ws.comps,
     agentName: send.signOff?.value ?? ws.agentName,
-    clientName: send.clientName?.value,
+    clientName: ws.brief.clientName?.value ?? send.clientName?.value,
     sample: ws.report.sampleData,
   });
   const basedOn = fingerprint(`${template.subject}\n${template.body}`);
@@ -81,14 +82,34 @@ export function SendStep({ ws }: StepProps) {
               ))}
             </select>
           </Field>
-          <Field label="To" sample={send.clientName?.sample}>
+          <Field label="To" sample={(ws.brief.clientName ?? send.clientName)?.sample}>
             <TextInput
               label="Client name"
-              value={send.clientName}
-              onChange={(v) => ws.setSend({ ...send, clientName: v })}
+              value={ws.brief.clientName ?? send.clientName}
+              onChange={(v) => {
+                const brief = { ...ws.brief };
+                if (v) brief.clientName = v;
+                else delete brief.clientName;
+                ws.setBrief(brief);
+              }}
               today={ws.today}
               disabled={off}
               placeholder="Client name"
+            />
+          </Field>
+          <Field label="A short client note" sample={ws.brief.clientNote?.sample} wide hint="What matters to them. The writer (CR-5) uses it; the email doesn’t quote it.">
+            <TextInput
+              label="Client note"
+              multiline
+              value={ws.brief.clientNote}
+              onChange={(v) => {
+                const brief = { ...ws.brief };
+                if (v) brief.clientNote = v;
+                else delete brief.clientNote;
+                ws.setBrief(brief);
+              }}
+              today={ws.today}
+              disabled={off}
             />
           </Field>
           <Field label="Signed" sample={send.signOff?.sample}>

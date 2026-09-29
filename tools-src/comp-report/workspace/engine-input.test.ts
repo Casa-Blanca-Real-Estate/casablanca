@@ -21,6 +21,7 @@ function sampleJudgments(): CompJudgment[] {
     anchor: Boolean(t.anchor),
     reviewedAt: '2026-09-29T10:00:00.000Z',
     reasons: [{ tier: t.tier, reason: t.reason, reasonType: t.reasonType, actor: 'agent', at: '2026-09-29T10:00:00.000Z', by: 'kimani@casa-blanca.com', sample: true }],
+    source: { kind: 'export' as const, importId: 'imp-1' },
   }));
 }
 

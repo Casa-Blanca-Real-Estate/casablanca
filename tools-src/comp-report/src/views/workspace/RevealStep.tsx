@@ -1,4 +1,4 @@
-// Step 4, the call, then the reveal (§3 step 4, §3.1). The agent gives their
+// The call, then the reveal (§3, §3.1). The agent gives their
 // own low–high view before the range shows (D-1 recommendation C), or skips it.
 // Then both results side by side (§6.4): base and range, the bridge, evidence by
 // status (never mixed, §4.3), sale-to-last-ask, carry and the gaps, with the call
@@ -11,6 +11,7 @@ import type { Entry } from '../../../workspace/state.ts';
 import { DecisionTag, NumberInput, SampleTag, StubTag } from './bits.tsx';
 import { compAddress } from './comps.tsx';
 import type { StepProps, Workspace } from './model.ts';
+import { TargetAndTerms } from './Terms.tsx';
 
 const KINDS: ResultKind[] = ['on_facts', 'with_estimates'];
 const CLASSES = ['sold', 'in_contract', 'active'] as const;
@@ -46,8 +47,13 @@ export function RevealStep({ ws }: StepProps) {
   return (
     <div className="reveal">
       <CallForm ws={ws} />
-      {ws.revealed ? <Reveal ws={ws} /> : (
-        <p className="muted">The range stays hidden until you give your call or skip it. Sorting the comps first (step 3) gives you something to base it on.</p>
+      {ws.revealed ? (
+        <>
+          <Reveal ws={ws} />
+          <TargetAndTerms ws={ws} />
+        </>
+      ) : (
+        <p className="muted">The range stays hidden until you give your call or skip it. Sorting the comps first gives you something to base it on.</p>
       )}
     </div>
   );
@@ -307,7 +313,7 @@ function Gaps({ ws, output }: { ws: Workspace; output: EngineOutput }) {
             <li key={i}>
               {g.message} <span className="muted small">({which(g.results)})</span>
               {g.target === 'subject' && !ws.readOnly && (
-                <> <button type="button" className="link small" onClick={() => ws.go('home')}>Fill it in (step 1)</button></>
+                <> <button type="button" className="link small" onClick={() => ws.openStart('details')}>Fill it in (the home’s details)</button></>
               )}
               {g.target && g.target !== 'subject' && byId.get(g.target) && <span className="muted small"> — {compAddress(byId.get(g.target)!)}</span>}
             </li>

@@ -1,6 +1,6 @@
 // Calls to the comp report's functions. Same origin; the session token rides
 // in the Authorization header on every request.
-import type { WorkspaceData } from '../server/api/workspace.ts';
+import type { LinkReadView, WorkspaceData } from '../server/api/workspace.ts';
 import type { Brief, CallState, DealTermsState, Intake, ReasonType, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
 import { session } from './session.ts';
 
@@ -118,7 +118,7 @@ export async function* streamTurn(reportId: string, message?: string): AsyncGene
 
 // ─── The walkthrough (CR-3a) ────────────────────────────────────────────────
 
-export type { WorkspaceData, WorkspaceImport } from '../server/api/workspace.ts';
+export type { LinkReadView, WorkspaceData, WorkspaceImport } from '../server/api/workspace.ts';
 
 export interface SampleWalkthrough {
   intake: Intake;
@@ -130,6 +130,7 @@ export interface SampleWalkthrough {
 }
 
 export interface WorkspacePatch {
+  title?: string;
   brief?: Brief;
   call?: CallState | null;
   target?: TargetState | null;
@@ -150,4 +151,45 @@ export const workspaceApi = {
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, ...change } }),
   sortSample: (reportId: string) => api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, sample: true } }),
   sample: () => api<SampleWalkthrough>('/api/comp-report/sample'),
+  /** A comp read from its StreetEasy page, confirmed in one tap (§6.2). */
+  confirm: (reportId: string, reportCompId: string) =>
+    api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, confirmed: true } }),
+  /** A comp typed in: address, status, price, size, floor, date. */
+  addManual: (reportId: string, manual: Record<string, unknown>) =>
+    api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, manual } }),
+};
+
+// ─── StreetEasy links, read in the background (CR-3b) ────────────────────────
+
+export interface LinksState {
+  reads: LinkReadView[];
+  comps: WorkspaceData['comps'];
+}
+
+export interface LinksAdded extends LinksState {
+  queued: string[];
+  already: string[];
+  refused: { url: string; reason: string }[];
+  limit: { perDay: number; left: number };
+}
+
+export const linksApi = {
+  load: (reportId: string) => api<LinksState>(`/api/comp-report/links?report=${reportId}`),
+  add: (reportId: string, urls: string[], purpose: 'comp' | 'subject' = 'comp') =>
+    api<LinksAdded>('/api/comp-report/links', { method: 'POST', body: { reportId, urls, purpose } }),
+  dismiss: (reportId: string, readId: string) =>
+    api<LinksState>('/api/comp-report/links', { method: 'PATCH', body: { reportId, readId, dismissed: true } }),
+  confirmHome: (reportId: string, readId: string) =>
+    api<LinksState>('/api/comp-report/links', { method: 'PATCH', body: { reportId, readId, confirmed: true } }),
+  /**
+   * Starts one read in the background function. Netlify answers 202 at once;
+   * the row fills in as the read finishes, and polling picks it up.
+   */
+  start: async (reportId: string, readId: string): Promise<void> => {
+    await fetch('/.netlify/functions/comp-report-links-background', {
+      method: 'POST',
+      headers: await headers(),
+      body: JSON.stringify({ reportId, readId }),
+    }).catch(() => undefined); // a start that didn't reach it is started again by the poll
+  },
 };

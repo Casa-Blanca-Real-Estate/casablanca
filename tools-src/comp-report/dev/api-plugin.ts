@@ -9,6 +9,8 @@
 //   CR_ADMIN_EMAILS, CR_ALLOWED_DOMAINS   as in production
 //   ANTHROPIC_API_KEY           for real assistant turns
 //   CR_DEV_ANTHROPIC_BASE_URL   point turns at a fake Messages API instead
+//   FIRECRAWL_API_KEY           to read real StreetEasy links (costs credit)
+//   CR_DEV_FIRECRAWL_BASE_URL   read them from the fake instead (dev/fake-firecrawl.ts)
 //
 // Nothing under dev/ is imported by a deployed function.
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -24,6 +26,12 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/imports': { module: '/server/api/imports.ts', handler: 'handleImports' },
   '/api/comp-report/comps': { module: '/server/api/comps.ts', handler: 'handleComps' },
   '/api/comp-report/sample': { module: '/server/api/sample.ts', handler: 'handleSample' },
+  '/api/comp-report/links': { module: '/server/api/links.ts', handler: 'handleLinks' },
+};
+
+/** Background functions: Netlify answers 202 at once and runs them on; so does this. */
+const BACKGROUND: Record<string, { module: string; handler: string }> = {
+  '/.netlify/functions/comp-report-links-background': { module: '/server/api/links.ts', handler: 'runLinkRead' },
 };
 
 async function toRequest(req: IncomingMessage): Promise<Request> {
@@ -56,11 +64,15 @@ async function deps(server: ViteDevServer) {
   const { accessConfig } = await load('/server/access.ts');
   const { databasePool } = await load('/server/db.ts');
   const { devVerifier } = await load('/dev/stub-identity.ts');
+  const { firecrawlReader } = await load('/server/links.ts');
   const { default: Anthropic } = await import('@comp-report/anthropic-sdk');
+  const fake = process.env.CR_DEV_FIRECRAWL_BASE_URL;
   return {
     verifier: devVerifier,
     access: accessConfig(process.env),
     pool: databasePool(process.env),
+    env: process.env,
+    reader: firecrawlReader(fake ? { apiKey: 'dev-fake', baseUrl: fake, backoffMs: [500] } : { apiKey: process.env.FIRECRAWL_API_KEY }),
     anthropic: () =>
       new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY ?? 'dev-no-key',
@@ -79,6 +91,18 @@ export function devApi(): Plugin {
         throw new Error('dev API: NETLIFY_DB_URL is set — refusing to run the dev server against a Netlify database');
       }
       server.middlewares.use(async (req, res, next) => {
+        const background = BACKGROUND[(req.url ?? '').split('?')[0] ?? ''];
+        if (background) {
+          const request = await toRequest(req);
+          res.statusCode = 202;
+          res.end();
+          void (async () => {
+            const mod = await server.ssrLoadModule(background.module);
+            const response: Response = await mod[background.handler](request, await deps(server));
+            if (!response.ok) console.error('dev background function:', response.status, await response.text());
+          })().catch((error) => console.error('dev background function error', error));
+          return;
+        }
         const route = ROUTES[(req.url ?? '').split('?')[0] ?? ''];
         if (!route) return next();
         try {

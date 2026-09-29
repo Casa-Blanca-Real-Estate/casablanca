@@ -3,15 +3,14 @@
 // (Dispatch 07). Open the first time a step is seen, collapsible after.
 import { useEffect, useState, type ReactNode } from 'react';
 
-export type StepId = 'home' | 'export' | 'sort' | 'reveal' | 'work' | 'send';
+export type StepId = 'sort' | 'reveal' | 'work' | 'send';
 
+/** The workspace's steps. The home and adding comps are the new-comp modal now (Dispatch 09). */
 export const STEPS: { id: StepId; n: number; title: string; short: string }[] = [
-  { id: 'home', n: 1, title: 'The home', short: 'Home' },
-  { id: 'export', n: 2, title: 'The export', short: 'Export' },
-  { id: 'sort', n: 3, title: 'Sort the comps', short: 'Sort' },
-  { id: 'reveal', n: 4, title: 'The call, then the reveal', short: 'Call & reveal' },
-  { id: 'work', n: 5, title: 'Work it through', short: 'Work it through' },
-  { id: 'send', n: 6, title: 'Send it', short: 'Send' },
+  { id: 'sort', n: 1, title: 'Sort the comps', short: 'Sort' },
+  { id: 'reveal', n: 2, title: 'The call, then the reveal', short: 'Call & reveal' },
+  { id: 'work', n: 3, title: 'Work it through', short: 'Work it through' },
+  { id: 'send', n: 4, title: 'Send it', short: 'Send' },
 ];
 
 interface Note {
@@ -23,49 +22,19 @@ interface Note {
 }
 
 const NOTES: Record<StepId, Note> = {
-  home: {
-    forWhat: 'The subject property, the brief, a target and deal terms: intake. Only the subject is needed to start, and every part can be filled now, later or never.',
-    implements: '§3 step 1, §2 (the kinds of input), §6.1 (input confidence), §6.7 (deal terms), §8.4 (the target)',
-    real: [
-      'The facts feed the engine as you type. After the reveal, the range moves with them.',
-      '“This is my estimate” on the size makes it an estimate: it counts in “with estimates” only, and “on the facts” says the size is missing.',
-      'The target never enters a number, and the assistant never sees it or your call.',
-    ],
-    stubbed: [
-      'Prefilling the subject from a StreetEasy URL (the existing Firecrawl import) comes with CR-3.',
-      'Co-ops: the property type is recorded as condo; co-ops come later.',
-      'The client profile (§8.6) and the full assumptions panel (§2) come with CR-3 and CR-4.',
-    ],
-    decisions: [
-      <>D-4: when the assistant first sees the target. Recommendation A is used here: never while it helps with the neutral valuation.</>,
-      <>D-10: which deal-terms templates v1 offers. Recommendation B is used here: buyer (traditional purchase) and seller (pricing).</>,
-    ],
-  },
-  export: {
-    forWhat: 'The comps the agent found on StreetEasy, from its comp export.',
-    implements: '§3 step 2, §6.2 (what StreetEasy gives us), §12 (property records)',
-    real: [
-      'The engine’s parser (CR-2) reads the CSV or XLSX here in the browser, and again on the server before anything is stored.',
-      'Its warnings show as it gives them: approximate sizes, public-record closings, missing fields.',
-      'Each property is recorded once by its stable key, and what this export said about it is kept as an observation (§12).',
-    ],
-    stubbed: [
-      'Tagging each comp on arrival through Jev (§7) waits on D-12.',
-      'The file is kept in the database for now; §12 puts it in Netlify Blobs.',
-    ],
-    decisions: [<>D-12: reusing the MindBinder Jev integration.</>],
-  },
   sort: {
-    forWhat: 'The first pass: each comp primary, secondary or excluded, with a reason. Open the listing, and mark the comp reviewed.',
+    forWhat: 'The first pass: each comp primary, secondary or excluded, with a reason. Open the listing, and mark the comp reviewed. Add comps from the bar at the top: StreetEasy links, the export, or typed in.',
     implements: '§3 step 3, §4.6 (judgment is structural), §6.3 (the anchor), §12 (reason history)',
     real: [
       'Reasons are append-only: every tier change records a new one, and the latest is the current reason.',
       'An unsorted comp counts toward nothing. The tool never sorts a comp for you.',
       'The anchor is the single most comparable sold comp, and must be primary.',
       'The range stays hidden in this step, so sorting can’t chase the number.',
+      'A comp read from its StreetEasy page counts in neither result until you confirm it.',
     ],
     stubbed: [
       'Jev’s tier suggestions (§7) wait on D-12.',
+      'The rows as 02-screens.md draws them (one notes field, the checks as flags) come with phase 2.',
       'Undo, redo and versions come with CR-3.',
     ],
     decisions: [<>D-1: the order. The range stays hidden until your call (recommendation C).</>],
@@ -87,7 +56,7 @@ const NOTES: Record<StepId, Note> = {
     ],
   },
   work: {
-    forWhat: 'Talk it through with the assistant. It’s reachable from every step, from the Assistant button.',
+    forWhat: 'Talk it through with the assistant. It’s reachable from every step, from the Assistant button; phase 2 makes it a drawer only.',
     implements: '§8 (the assistant), §8.3 rule 6 (the server owns the transcript)',
     real: [
       'CR-1’s turn endpoint: one streamed Opus 5.5 call per request, the transcript stored.',

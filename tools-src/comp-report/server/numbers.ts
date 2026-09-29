@@ -11,11 +11,10 @@ import type { WorkspaceState } from '../workspace/state.ts';
 import { numbersSummary } from '../workspace/summary.ts';
 import type { Queryable } from './db.ts';
 import { loadJudgments } from './api/workspace.ts';
+import { newYorkToday } from './links.ts';
 
 /** Today in New York, the analysis date — the engine has no clock. */
-export function newYorkToday(now = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
-}
+export { newYorkToday };
 
 export async function numbersFor(tx: Queryable, reportId: string, asOf = newYorkToday()) {
   const report = (await tx.query<{ state: WorkspaceState | null; revealed: boolean }>(

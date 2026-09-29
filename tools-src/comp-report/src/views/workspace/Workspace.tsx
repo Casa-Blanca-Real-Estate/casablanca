@@ -1,30 +1,34 @@
-// The walkthrough (CR-3a, Dispatch 07): every step of §3, rough and annotated.
+// The workspace (CR-3a, Dispatch 07; the start reworked in CR-3b, Dispatch 09).
 // It loads the report, keeps what the agent enters and saves it as they go,
-// reads the stored exports with the engine's parser and recomputes both
-// results in the browser whenever a fact, a tier or the call changes.
+// reads every comp from its source with the engine's parser — the stored
+// exports, what each StreetEasy page said, what was typed — and recomputes
+// both results in the browser whenever a fact, a tier or the call changes.
 //
-// Free movement: the step rail goes anywhere, every step can be skipped. The
-// assistant is a drawer reachable from every step, and inline in step 5.
+// The start is the new-comp modal (the home, its details, add comps), over the
+// workspace; then the steps: Sort, the call and the reveal, working it through,
+// and Send. Free movement: the rail goes anywhere, every step can be skipped.
+// The assistant is a drawer reachable from every step.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, workspaceApi, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
-import { engineInput, namedPrices, workspaceComps, type ParsedImport } from '../../../workspace/engine-input.ts';
+import { ApiError, workspaceApi, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { engineInput, namedPrices, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
+import { homeFromListing } from '../../../workspace/subject.ts';
 import {
   isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
 import { Chat } from '../Chat.tsx';
+import { StartFlow, type StartScreen } from '../newcomp/NewComp.tsx';
 import { About, STEPS, type StepId } from './About.tsx';
 import { SampleTag, StubTag } from './bits.tsx';
-import { ExportStep } from './ExportStep.tsx';
-import { HomeStep } from './HomeStep.tsx';
-import { fromBase64, hasAny, localToday, type Workspace as WorkspaceModel } from './model.ts';
+import { fromBase64, localToday, type Workspace as WorkspaceModel } from './model.ts';
+import { useLinkReads } from './reads.ts';
 import { LiveNumbers, RevealStep } from './RevealStep.tsx';
 import { SendStep } from './SendStep.tsx';
 import { SortStep } from './SortStep.tsx';
 
-type Field = 'brief' | 'call' | 'target' | 'state' | 'sampleData';
+type Field = 'title' | 'brief' | 'call' | 'target' | 'state' | 'sampleData';
 
 type SaveStatus =
   | { kind: 'idle' }
@@ -90,8 +94,6 @@ function useAutosave(reportId: string) {
 
 /** What each step's "Fill with sample" fills — 100 Barclay #17L throughout. */
 const SAMPLE_FILLS: Record<StepId, string> = {
-  home: 'The subject, the brief, a target and seller deal terms for 100 Barclay #17L.',
-  export: 'Hannah’s StreetEasy export for 100 Barclay #17L.',
   sort: 'A first-pass sort of the sample export’s comps, with reasons (imports the export first if it isn’t here).',
   reveal: 'Hannah’s own call from the briefing: $3.4M to $4.2M.',
   work: 'A question to start with, in the composer. Nothing is sent.',
@@ -100,8 +102,19 @@ const SAMPLE_FILLS: Record<StepId, string> = {
 
 function stepFromUrl(): StepId {
   const s = new URLSearchParams(location.search).get('step');
-  return STEPS.some((x) => x.id === s) ? (s as StepId) : 'home';
+  return STEPS.some((x) => x.id === s) ? (s as StepId) : 'sort';
 }
+
+/** The new-comp modal's screen, from ?start= (and CR-3a's ?step=home and ?step=export, which it replaces). */
+function startFromUrl(): StartScreen | null {
+  const q = new URLSearchParams(location.search);
+  const start = q.get('start');
+  if (start === 'home' || start === 'details' || start === 'comps') return start;
+  const step = q.get('step');
+  return step === 'home' ? 'details' : step === 'export' ? 'comps' : null;
+}
+
+const NO_READS: LinkReadView[] = [];
 
 function SaveLine({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
   if (status.kind === 'error') {
@@ -124,6 +137,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const [target, setTargetState] = useState<TargetState | null>(null);
   const [state, setStateState] = useState<WorkspaceState>({});
   const [step, setStep] = useState<StepId>(stepFromUrl);
+  const [start, setStart] = useState<StartScreen | null>(startFromUrl);
   const [chatOpen, setChatOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -152,7 +166,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   }, [reportId]);
 
   useEffect(() => {
-    const onPop = () => setStep(stepFromUrl());
+    const onPop = () => {
+      setStep(stepFromUrl());
+      setStart(startFromUrl());
+    };
     addEventListener('popstate', onPop);
     return () => removeEventListener('popstate', onPop);
   }, []);
@@ -161,11 +178,24 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     const params = new URLSearchParams(location.search);
     params.set('report', reportId);
     params.set('step', next);
+    params.delete('start');
     history.pushState(null, '', `?${params}`);
     setStep(next);
+    setStart(null);
     if (next === 'work') setChatOpen(false);
     scrollTo({ top: 0 });
   }, [reportId]);
+
+  // The new-comp modal, over the workspace. Its screen is in the URL, so a reload lands back on it.
+  const openStart = useCallback((screen: StartScreen) => {
+    const params = new URLSearchParams(location.search);
+    params.set('report', reportId);
+    params.set('start', screen);
+    if (params.get('step') === 'home' || params.get('step') === 'export') params.delete('step');
+    history.replaceState(null, '', `?${params}`);
+    setStart(screen);
+  }, [reportId]);
+  const closeStart = useCallback(() => go('sort'), [go]);
 
   // Each stored export, read with the engine's parser, once per import.
   const parseCache = useRef(new Map<string, ParsedImport | { error: string }>());
@@ -195,7 +225,9 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const intake = useMemo<Intake>(() => state.intake ?? {}, [state.intake]);
   const dealTerms = state.dealTerms ?? null;
   const send = useMemo<SendState>(() => state.send ?? {}, [state.send]);
-  const comps = useMemo(() => workspaceComps(parsed, data?.comps ?? []), [parsed, data?.comps]);
+  // Reading a link's or a typed-in comp is pure: each is read once per page.
+  const recordCache = useRef<RecordCache>(new Map());
+  const comps = useMemo(() => workspaceComps(parsed, data?.comps ?? [], recordCache.current), [parsed, data?.comps]);
   const prices = useMemo(() => namedPrices(call, target), [call, target]);
 
   // The engine, in the browser: instant, and the same code the functions run (§5).
@@ -209,6 +241,12 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   }, [today, intake, dealTerms, comps, prices]);
 
   const readOnly = Boolean(data && data.report.ownerEmail.toLowerCase() !== me.user.email.toLowerCase());
+
+  // StreetEasy links being read: start each, and poll until every row has filled in.
+  const applyLinks = useCallback((next: LinksState) => {
+    setData((prev) => (prev ? { ...prev, reads: next.reads, comps: next.comps } : prev));
+  }, []);
+  useLinkReads(reportId, data?.reads ?? NO_READS, applyLinks, readOnly);
 
   // What the dev notebook records with a note written here: the report, by name as well as id.
   const reportTitle = data?.report.title;
@@ -236,6 +274,27 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   // The latest state for the setters below, so each keeps the other parts as they are.
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // The home's page, once read, fills the details the agent hasn't filled: once per read.
+  const homeRead = (data?.reads ?? NO_READS).filter((r) => r.purpose === 'subject').at(-1);
+  const reportTitleNow = data?.report.title;
+  useEffect(() => {
+    if (!homeRead || homeRead.status !== 'done' || !homeRead.extract || readOnly) return;
+    if (stateRef.current.subjectRead === homeRead.id) return;
+    let filled;
+    try {
+      filled = homeFromListing(homeRead.extract, { asOf: homeRead.asOf ?? today, url: homeRead.url }, stateRef.current.intake ?? {});
+    } catch {
+      return; // a page the parser refuses fills nothing; the details screen says the read is done
+    }
+    setState({ ...stateRef.current, intake: filled.intake, subjectRead: homeRead.id });
+    // A report started from a link without an address gets the page's address as its title.
+    if (filled.title && reportTitleNow?.startsWith('A StreetEasy listing')) {
+      const title = filled.title;
+      setData((d) => (d ? { ...d, report: { ...d.report, title } } : d));
+      save.queue('title', title);
+    }
+  }, [homeRead?.id, homeRead?.status, readOnly]);
 
   const ws: WorkspaceModel | null = data && {
     reportId,
@@ -269,7 +328,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     parsed,
     unreadable,
     comps,
-    applyServer: (d) => setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps } : d)),
+    applyServer: (d) => setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads } : d)),
+    reads: data.reads,
+    applyLinks,
+    openStart,
     output,
     engineError,
     revealed: isRevealed(call),
@@ -298,7 +360,6 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     const home = own(intake) || own(brief) || own(target) || own(dealTerms);
     const reveal = Boolean(call && !call.sample);
     const sendOwn = own(send);
-    if (which === 'home') return home;
     if (which === 'reveal') return reveal;
     if (which === 'send') return sendOwn;
     return which === 'all' && (home || reveal || sendOwn);
@@ -310,10 +371,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       if (ownValues(which) && !confirm('Replace what you’ve entered here with the sample (100 Barclay #17L)?')) return;
       const all = which === 'all';
       await ws.run(all ? 'Filling the whole report with sample data…' : 'Filling with sample…', async () => {
-        const needsWalkthrough = all || which === 'home' || which === 'reveal' || which === 'send';
+        const needsWalkthrough = all || which === 'reveal' || which === 'send';
         const sample = needsWalkthrough ? await workspaceApi.sample() : null;
         let nextState = stateRef.current;
-        if (sample && (all || which === 'home')) {
+        if (sample && all) {
           nextState = { ...nextState, intake: sample.intake, dealTerms: sample.dealTerms };
           setBriefState(sample.brief);
           save.queue('brief', sample.brief);
@@ -322,7 +383,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         }
         if (sample && (all || which === 'send')) nextState = { ...nextState, send: { ...nextState.send, ...sample.send } };
         if (nextState !== stateRef.current) setState(nextState);
-        if (all || which === 'export' || which === 'sort') {
+        if (all || which === 'sort') {
           // The sample sorts the sample export's comps, so the export comes first.
           let latest: WorkspaceData | null = null;
           if (!hasSampleImport) latest = await workspaceApi.importSample(reportId);
@@ -360,8 +421,6 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   if (!ws || !data) return <p className="muted">Loading the report…</p>;
 
   const has: Record<StepId, boolean> = {
-    home: hasAny(intake) || hasAny(brief) || Boolean(target) || Boolean(dealTerms),
-    export: data.imports.length > 0,
     sort: comps.some((c) => c.judgment?.tier),
     reveal: Boolean(call),
     work: messageCount > 0,
@@ -380,6 +439,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         </div>
         <div className="ws-tools">
           {!readOnly && <SaveLine status={save.status} onRetry={() => void save.flush()} />}
+          <button type="button" className="btn small-btn" onClick={() => openStart('details')}>The home</button>
           {canSample && (
             <button type="button" className="btn small-btn" disabled={Boolean(busy)} onClick={() => void ws.fillSample('all')}>
               Fill the whole report with sample data
@@ -426,8 +486,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
             <button
               type="button"
               className="btn small-btn"
-              disabled={Boolean(busy) || (step === 'export' && hasSampleImport)}
-              title={step === 'export' && hasSampleImport ? 'The sample export is already in this report.' : SAMPLE_FILLS[step]}
+              disabled={Boolean(busy)}
+              title={SAMPLE_FILLS[step]}
               onClick={() => void ws.fillSample(step)}
             >
               Fill with sample
@@ -436,14 +496,12 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         </div>
         <About key={step} step={step} />
         <ErrorBoundary resetKey={step} onBack={onBack}>
-          {step === 'home' && <HomeStep ws={ws} />}
-          {step === 'export' && <ExportStep ws={ws} />}
           {step === 'sort' && <SortStep ws={ws} />}
           {step === 'reveal' && <RevealStep ws={ws} />}
           {step === 'work' && (
             <div className="work">
               {ws.revealed ? <LiveNumbers ws={ws} /> : (
-                <p className="muted small">The numbers show here after your call (step 4). The assistant can already read the comps and their tiers.</p>
+                <p className="muted small">The numbers show here after your call (step 2). The assistant can already read the comps and their tiers.</p>
               )}
               <p className="muted small">
                 <StubTag>CR-4</StubTag> The assistant’s full tool set — tiering, what-ifs, the path to target — comes with CR-4.
@@ -464,6 +522,12 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
           )}
         </div>
       </section>
+
+      {start && (
+        <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
+          <StartFlow ws={ws} screen={start} onScreen={openStart} onDone={closeStart} />
+        </ErrorBoundary>
+      )}
 
       {chatOpen && step !== 'work' && (
         <aside className="drawer" aria-label="The assistant">

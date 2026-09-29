@@ -38,8 +38,9 @@ export function App() {
     setState({ status: 'signed-out' });
   }, []);
 
-  const open = useCallback((id: string | null) => {
-    history.pushState(null, '', id ? `?report=${id}` : location.pathname);
+  // A new comp opens straight into its modal's next screen (?start=details).
+  const open = useCallback((id: string | null, start?: 'details') => {
+    history.pushState(null, '', id ? `?report=${id}${start ? `&start=${start}` : ''}` : location.pathname);
     setReportId(id);
   }, []);
 

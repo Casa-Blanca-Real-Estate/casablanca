@@ -26,22 +26,30 @@ export function entry<T>(value: T, today: string, estimate?: boolean): Entry<T> 
   return { value, asOf: today, ...(estimate ? { estimate: true } : {}) };
 }
 
+/** A value read from the home's StreetEasy page: marked until the agent changes it. */
+export function ListingTag({ show }: { show: boolean | undefined }) {
+  return show ? <span className="field-hint from-listing" title="Read from the home’s StreetEasy page. Change it and it’s yours.">From StreetEasy</span> : null;
+}
+
 interface FieldProps {
   label: string;
   hint?: string;
   sample?: boolean | undefined;
   estimate?: boolean | undefined;
+  /** Filled from the home's StreetEasy page. */
+  from?: boolean | undefined;
   children: ReactNode;
   wide?: boolean;
 }
 
-export function Field({ label, hint, sample, estimate, children, wide }: FieldProps) {
+export function Field({ label, hint, sample, estimate, from, children, wide }: FieldProps) {
   return (
     <div className={`field${wide ? ' wide' : ''}`}>
       <span className="field-label">
         {label} <SampleTag show={sample} /> <EstimateTag show={estimate} />
       </span>
       {children}
+      <ListingTag show={from} />
       {hint && <span className="field-hint">{hint}</span>}
     </div>
   );

@@ -2,11 +2,12 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { EngineOutput } from '../../../engine/index.ts';
-import type { WorkspaceData } from '../../api.ts';
+import type { LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
 import type { ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
 } from '../../../workspace/state.ts';
+import type { StartScreen } from '../newcomp/NewComp.tsx';
 import type { StepId } from './About.tsx';
 
 export interface Workspace {
@@ -40,6 +41,12 @@ export interface Workspace {
   comps: WorkspaceComp[];
   /** After an import, a tier or a mark: the server returns the whole workspace. */
   applyServer: (data: WorkspaceData) => void;
+  /** StreetEasy links read in the background: the home's and the comps' (Dispatch 09). */
+  reads: LinkReadView[];
+  /** After a link is added, cleared or confirmed, and on each poll while reads are in flight. */
+  applyLinks: (next: LinksState) => void;
+  /** Opens the new-comp modal on one of its screens: the home, its details, or adding comps. */
+  openStart: (screen: StartScreen) => void;
 
   output: EngineOutput | null;
   engineError: string | null;

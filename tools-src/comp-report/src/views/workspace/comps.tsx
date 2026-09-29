@@ -1,9 +1,13 @@
-// A comp as the walkthrough shows it, in the export table (step 2) and the
-// first-pass review (step 3): the export's record, with the engine's own $/sqft
-// (§6.2: the export's is never used) and the flags a reviewer needs.
-import type { CompOut } from '../../../engine/index.ts';
+// A comp as the walkthrough shows it, in the add-comps list and in Sort: its
+// record, with the engine's own $/sqft (§6.2: the export's is never used), where
+// it came from, and the flags a reviewer needs.
+import type { CompOut, ListingStatus } from '../../../engine/index.ts';
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
-import { EVIDENCE_LABEL, isoDay, psf, sqft, usd } from '../../../workspace/format.ts';
+import { isoDay, psf, sqft, usd } from '../../../workspace/format.ts';
+
+/** The four groups the lists show, in order (`02-screens.md`, Add comps). */
+export const STATUS_ORDER: ListingStatus[] = ['sold', 'in_contract', 'active', 'off_market'];
+export const STATUS_LABEL: Record<ListingStatus, string> = { sold: 'Sold', in_contract: 'In contract', active: 'Active', off_market: 'Didn’t sell' };
 
 export function compAddress(c: WorkspaceComp): string {
   const street = c.record.identity.address.street ?? 'No address';
@@ -12,26 +16,45 @@ export function compAddress(c: WorkspaceComp): string {
 }
 
 export function listingUrl(c: WorkspaceComp): string | null {
-  const url = c.record.identity.streeteasy?.url;
+  const url = c.record.listing?.url ?? c.record.identity.streeteasy?.url;
   return url && /^https:\/\/(www\.)?streeteasy\.com\//.test(url) ? url : null;
+}
+
+/** Sold, in contract, active, or didn't sell: the page's or the export's status. */
+export function compStatus(c: WorkspaceComp): ListingStatus | null {
+  return c.record.status.listing_status ?? c.record.status.evidence_class ?? c.judgment?.evidenceClass ?? null;
 }
 
 /** The price its $/sqft divides: the sale for sold, the ask otherwise. */
 export function compPrice(c: WorkspaceComp): { value: number | null; label: string } {
   const f = c.record.facts;
-  if (c.record.status.evidence_class === 'sold') return { value: f.sale_price?.value ?? null, label: 'sold' };
-  return { value: f.list_price?.value ?? null, label: c.record.status.evidence_class === 'in_contract' ? 'last ask' : 'ask' };
+  const status = compStatus(c);
+  if (status === 'sold') return { value: f.sale_price?.value ?? null, label: 'sold' };
+  return { value: f.list_price?.value ?? null, label: status === 'active' ? 'ask' : 'last ask' };
+}
+
+/**
+ * $/sq ft for the row. The engine's own once a comp counts; for a row still
+ * waiting for the agent's confirm, the same arithmetic on what the page said
+ * (price ÷ size, truncated as StreetEasy shows it), so the row reads in full.
+ */
+export function rowPsf(c: WorkspaceComp, out: CompOut | undefined): number | null {
+  const engine = out?.per_result.on_facts.price_per_sqft?.value ?? out?.per_result.with_estimates.price_per_sqft?.value ?? null;
+  if (engine !== null) return engine;
+  const price = compPrice(c).value;
+  const area = c.record.facts.area_sqft?.value;
+  return price && area ? Math.trunc(price / area) : null;
 }
 
 export function Flags({ c, out }: { c: WorkspaceComp; out: CompOut | undefined }) {
   const f = c.record.facts;
   const flags: string[] = [];
+  if (out?.flags.same_building_as_subject) flags.push('Same building as the home');
+  if (out?.flags.same_unit_as_subject) flags.push('The home itself');
   if (c.record.flags.closing_record) flags.push('Public-record closing');
   if (c.record.flags.approx_area) flags.push('Approximate size');
   if (!f.area_sqft) flags.push('No size');
   if (!f.floor) flags.push('No floor');
-  if (out?.flags.same_building_as_subject) flags.push('Same building as the subject');
-  if (out?.flags.same_unit_as_subject) flags.push('The subject itself');
   if (c.unsortable) flags.push('Can’t be sorted');
   if (!flags.length) return null;
   return (
@@ -41,23 +64,27 @@ export function Flags({ c, out }: { c: WorkspaceComp; out: CompOut | undefined }
   );
 }
 
+/** Price, size, $/sq ft, floor, date, days on market: a missing detail is a dash, never a guess. */
 export function CompFacts({ c, out }: { c: WorkspaceComp; out: CompOut | undefined }) {
   const f = c.record.facts;
   const price = compPrice(c);
-  const rate = out?.per_result.on_facts.price_per_sqft?.value ?? null;
+  const rate = rowPsf(c, out);
   const parts = [
-    `${usd(price.value)} ${price.label}`,
-    sqft(f.area_sqft?.value, c.record.flags.approx_area || f.area_sqft?.confidence === 'approx'),
-    rate !== null ? `${psf(rate)}/sq ft` : null,
+    price.value !== null ? `${usd(price.value)} ${price.label}` : `— ${price.label}`,
+    f.area_sqft ? sqft(f.area_sqft.value, c.record.flags.approx_area || f.area_sqft.confidence === 'approx') : '— sq ft',
+    rate !== null ? `${psf(rate)}/sq ft` : '— /sq ft',
     f.beds ? `${f.beds.value} bd` : null,
     f.baths ? `${f.baths.value} ba` : null,
-    f.floor ? `floor ${f.floor.value}` : null,
+    f.floor ? `floor ${f.floor.value}` : 'floor —',
     f.status_date ? isoDay(f.status_date.value) : null,
+    f.days_on_market ? `${f.days_on_market.value} days on market` : null,
   ].filter(Boolean);
   return <span className="comp-facts">{parts.join(' · ')}</span>;
 }
 
 export function evidenceLabel(c: WorkspaceComp): string {
-  const e = c.record.status.evidence_class;
-  return e ? EVIDENCE_LABEL[e] : `Unknown (“${c.record.status.raw ?? ''}”)`;
+  const s = compStatus(c);
+  return s ? STATUS_LABEL[s] : `Unknown (“${c.record.status.raw ?? ''}”)`;
 }
+
+export const ORIGIN_LABEL = { export: 'Export', listing: 'Link', manual: 'Typed in' } as const;
