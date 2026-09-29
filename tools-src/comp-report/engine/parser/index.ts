@@ -219,6 +219,10 @@ function buildComp(
       : { value: r.value, source: 'se_export', as_of: asOf, confidence };
   };
   const exact = <T>(value: T, note: string): Sourced<T> => ({ value, source: 'se_export', as_of: asOf, confidence: 'exact', note });
+  // A tag that's there is exact. "None listed" — tags, but none of this kind — is weak
+  // evidence, because the listing agent types the tags: approximate (§6.2).
+  const tagged = <T>(value: T, listed: boolean, note: string): Sourced<T> =>
+    ({ value, source: 'se_export', as_of: asOf, confidence: listed ? 'exact' : 'approx', note });
 
   const identity = identify({
     address: text('address'), unit: text('unit'), url: text('listing_url'), building_address: text('building_address'),
@@ -289,11 +293,22 @@ function buildComp(
   };
   if (tags.features.length > 0) {
     const f = deriveFromFeatures(tags.features);
-    facts.views = exact(f.views, f.views.length ? 'from the Home Features view tags' : 'no view listed among the Home Features');
-    facts.outdoor_private = exact(f.outdoor_kinds.length > 0, f.outdoor_kinds.length ? `Home Features list ${f.outdoor_kinds.join(', ')}` : 'no private outdoor space listed among the Home Features');
-    facts.outdoor_kinds = exact(f.outdoor_kinds, 'from the Home Features; the export carries no outdoor size');
-    facts.finishes = exact(f.finishes, 'Home Features other than views, outdoor space and unit type');
-    facts.unit_type = exact(f.unit_type, f.unit_type.length ? 'from the Home Features' : 'no penthouse, duplex, triplex or loft listed among the Home Features');
+    const none = (what: string) => `no ${what} listed among the Home Features`;
+    facts.views = tagged(f.views, f.views.length > 0, f.views.length ? 'from the Home Features view tags' : none('view'));
+    const outdoor = f.outdoor_kinds.length > 0;
+    facts.outdoor_private = tagged(outdoor, outdoor, outdoor ? `Home Features list ${f.outdoor_kinds.join(', ')}` : none('private outdoor space'));
+    facts.outdoor_kinds = tagged(f.outdoor_kinds, outdoor, outdoor ? 'from the Home Features; the export carries no outdoor size' : none('private outdoor space'));
+    facts.unit_type = tagged(f.unit_type, f.unit_type.length > 0, f.unit_type.length ? 'from the Home Features' : none('penthouse, duplex, triplex or loft'));
+    facts.central_air = tagged(f.central_air, f.central_air, f.central_air ? 'from the Home Features' : none('central air'));
+    facts.dishwasher = tagged(f.dishwasher, f.dishwasher, f.dishwasher ? 'from the Home Features' : none('dishwasher'));
+    facts.fireplace = tagged(f.fireplace, f.fireplace, f.fireplace ? 'from the Home Features' : none('fireplace'));
+    facts.laundry = tagged(f.laundry, f.laundry !== 'none_listed',
+      f.laundry === 'installed' ? 'a washer/dryer among the Home Features'
+        : f.laundry === 'permitted' ? 'the Home Features say a washer/dryer is allowed'
+          : `${none('washer/dryer')}; whether one is permitted isn't known`);
+    facts.finishes = tagged(f.finishes, f.finishes.length > 0, f.finishes.length
+      ? 'Home Features other than views, outdoor space, unit type and the systems above'
+      : 'no other finishes listed among the Home Features');
   }
   // A penthouse guessed from the unit label is a suggestion for the agent to
   // confirm; the exact fact from the Home Features stands meanwhile.
@@ -308,10 +323,15 @@ function buildComp(
   }
   if (tags.amenities.length > 0) {
     const a = deriveFromAmenities(tags.amenities);
-    facts.service = exact(a.service, 'from the Building Amenities');
-    facts.parking = exact(a.parking, a.parking.length ? 'from the Building Amenities; deeded or not can\'t be told' : 'no parking listed among the Building Amenities');
-    facts.outdoor_shared = exact(a.outdoor_shared, a.outdoor_shared ? 'shared outdoor space listed among the Building Amenities' : 'no shared outdoor space listed among the Building Amenities');
-    facts.amenities = exact(a.amenities, 'Building Amenities other than door service, parking and shared outdoor space');
+    // Door service and concierge are both read from the tags: a part not listed is "none listed".
+    const serviceListed = a.service.doorman !== 'none_listed' && a.service.concierge;
+    facts.service = tagged(a.service, serviceListed, serviceListed ? 'from the Building Amenities'
+      : `from the Building Amenities; ${[a.service.doorman === 'none_listed' ? 'no doorman' : '', a.service.concierge ? '' : 'no concierge'].filter(Boolean).join(' and ')} listed`);
+    facts.parking = tagged(a.parking, a.parking.length > 0, a.parking.length ? 'from the Building Amenities; deeded or not can\'t be told' : 'no parking listed among the Building Amenities');
+    facts.outdoor_shared = tagged(a.outdoor_shared, a.outdoor_shared, a.outdoor_shared ? 'shared outdoor space listed among the Building Amenities' : 'no shared outdoor space listed among the Building Amenities');
+    facts.amenities = tagged(a.amenities, a.amenities.length > 0, a.amenities.length
+      ? 'Building Amenities other than door service, parking and shared outdoor space'
+      : 'no other amenities listed among the Building Amenities');
   }
   if (tags.policies.length > 0) {
     facts.policies = exact(tags.policies.map((p) => p.toLowerCase()).sort(), 'from the Building Policies');

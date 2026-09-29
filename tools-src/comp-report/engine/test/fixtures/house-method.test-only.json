@@ -2,7 +2,7 @@
   "about": "TEST ONLY. Made-up round numbers that exercise the engine's arithmetic. None of them is a real magnitude, and the engine refuses to load this file outside a test runner.",
   "id": "casa-blanca-house-method-test-values",
   "kind": "test",
-  "version": "test-1",
+  "version": "test-2",
   "approval": null,
   "lines": {
     "interior_size": {
@@ -31,6 +31,13 @@
       "per_unit": 0.5,
       "min_percent": -5,
       "max_percent": 5
+    },
+    "floor.neighbours": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
     },
     "exposure_light": {
       "small": 1,
@@ -66,7 +73,42 @@
       "min_percent": -15,
       "max_percent": 15
     },
-    "finishes_systems": {
+    "finishes_systems.quality": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "finishes_systems.central_air": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "finishes_systems.dishwasher": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "finishes_systems.en_suite": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "finishes_systems.fireplace": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "finishes_systems.laundry": {
       "small": 1,
       "moderate": 2,
       "large": 3,
@@ -190,13 +232,6 @@
       "min_percent": -15,
       "max_percent": 15
     },
-    "distance": {
-      "small": 0.5,
-      "moderate": 1,
-      "large": 2,
-      "min_percent": -15,
-      "max_percent": 15
-    },
     "school_zone": {
       "small": 1,
       "moderate": 2,
@@ -227,6 +262,27 @@
       "small": 2,
       "moderate": 4,
       "large": 6,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "financing_terms": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "tenant_in_place": {
+      "small": 1,
+      "moderate": 2,
+      "large": 3,
+      "min_percent": -15,
+      "max_percent": 15
+    },
+    "non_realty_items": {
+      "small": 25000,
+      "moderate": 50000,
+      "large": 100000,
       "min_percent": -15,
       "max_percent": 15
     }
@@ -260,6 +316,21 @@
       "magnitude": null
     },
     "sponsor_sales~concessions_credits": {
+      "magnitude": null
+    },
+    "tax_abatements~carrying_costs": {
+      "magnitude": null
+    },
+    "carrying_costs~building_financials,ground_lease": {
+      "magnitude": null
+    },
+    "outdoor_space~interior_size": {
+      "magnitude": null
+    },
+    "amenities~parking,private_storage": {
+      "magnitude": null
+    },
+    "finishes_systems~condition": {
       "magnitude": null
     }
   },

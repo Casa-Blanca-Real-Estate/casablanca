@@ -26,7 +26,8 @@ function comp(id: string, price: number, area: number, facts: Partial<PropertyFa
       status_date: ex('2026-09-24'), floor: ex(20), beds: ex(3), baths: ex(2),
       views: ex(['park']), outdoor_private: ex(false), outdoor_kinds: ex([]), outdoor_shared: ex(false),
       service: ex({ doorman: 'full_time', concierge: true }), parking: ex([]), amenities: ex(['gym']),
-      finishes: ex(['central air']), policies: ex(['pets allowed']), unit_type: ex([]),
+      central_air: ex(true), dishwasher: ex(true), fireplace: ex(false), laundry: ex('installed'),
+      finishes: ex(['hardwood floors']), policies: ex(['pets allowed']), unit_type: ex([]),
       common_charges_monthly: ex(3000), taxes_monthly: ex(2000), building_units: ex(100), building_stories: ex(30),
       ...facts,
     },
@@ -44,7 +45,8 @@ function subject(facts: Partial<PropertyFacts> = {}): EngineInput['subject'] {
       area_sqft: agent(2000), floor: agent(20), beds: agent(3), baths: agent(2),
       views: agent(['park']), outdoor_private: agent(false), outdoor_kinds: agent([]), outdoor_shared: agent(false),
       service: agent({ doorman: 'full_time', concierge: true }), parking: agent([]), amenities: agent(['gym']),
-      finishes: agent(['central air']), policies: agent(['pets allowed']), unit_type: agent([]),
+      central_air: agent(true), dishwasher: agent(true), fireplace: agent(false), laundry: agent('installed'),
+      finishes: agent(['hardwood floors']), policies: agent(['pets allowed']), unit_type: agent([]),
       common_charges_monthly: agent(3000), taxes_monthly: agent(2000), building_units: agent(100), building_stories: agent(30),
       ...facts,
     },
@@ -397,11 +399,129 @@ test('the overlap warning names the factors that carry values, not the whole row
 
 test('tags compare whatever their case or wording', () => {
   const out = run({
-    subject: subject({ finishes: agent(['Central air']), policies: agent(['Pets allowed']), views: agent(['Park view']), parking: agent(['Garage parking']) }),
+    subject: subject({ amenities: agent(['Gym']), policies: agent(['Pets allowed']), views: agent(['Park view']), parking: agent(['Garage parking']) }),
     comps: [comp('A', 4_000_000, 2_000, { parking: ex(['garage']) })],
   });
   const cmp = out.comps[0]!.per_result.on_facts.comparisons;
-  for (const lineId of ['finishes_systems', 'policies', 'views', 'parking']) {
+  for (const lineId of ['amenities.general', 'policies', 'views', 'parking']) {
     assert.equal(cmp.find((c) => c.line === lineId)!.direction, 'similar', lineId);
+  }
+});
+
+// ─── CR-2.1: design v0.4 ─────────────────────────────────────────────────────
+
+/** A tag the export didn't list: "none listed", approximate (§6.2). */
+const unlisted = <T>(value: T): Sourced<T> => ({ value, source: 'se_export', as_of: '2026-09-23', confidence: 'approx' });
+const judged = (id: string, comp_id: string, factor: string, direction: FactorAssessment['direction'], degree: FactorAssessment['degree'], facet?: string): FactorAssessment =>
+  ({ id, comp_id, factor, ...(facet ? { facet } : {}), direction, degree, source: 'agent', confidence: 'exact', as_of: AS_OF });
+const comparison = (out: EngineOutput, compId: string, lineId: string, kind: ResultKind = 'on_facts') =>
+  out.comps.find((c) => c.id === compId)!.per_result[kind].comparisons.find((c) => c.line === lineId);
+
+test('"none listed" still lets a value apply, and what it feeds is approximate', () => {
+  const comps = [comp('A', 4_000_000, 2_000, { outdoor_private: unlisted(false), outdoor_kinds: unlisted([]) })];
+  const withTerrace = subject({ outdoor_private: agent(true), outdoor_kinds: agent(['terrace']) });
+  // The agent's +5% for the terrace applies to a comp whose tags list none.
+  const agentValue = run({ subject: withTerrace, comps, agent_adjustments: [{ id: 't', factor: 'outdoor_space', value: { percent: 5 }, as_of: AS_OF }] });
+  assert.equal(line(agentValue, 'A', 'outdoor_space', 'with_estimates')!.dollars, 200_000);
+  // Through a confirmed judgment, the house method's value applies on the facts — and the judgment
+  // builds on the "none listed", so everything it feeds carries approx.
+  const out = run({ subject: withTerrace, comps, assessments: [judged('j', 'A', 'outdoor_space', 'comp_inferior', 'moderate')] });
+  assert.equal(comparison(out, 'A', 'outdoor_space')!.confidence, 'approx');
+  assert.equal(line(out, 'A', 'outdoor_space')!.dollars, 240_000); // moderate: 6% (test values)
+  assert.equal(out.comps[0]!.per_result.on_facts.adjusted_price!.confidence, 'approx');
+  assert.equal(out.results.on_facts.base!.confidence, 'approx');
+  // A judgment that overrides the facts stands alone: the agent knows the comp has the better terrace.
+  const overridden = run({ subject: withTerrace, comps, assessments: [judged('j', 'A', 'outdoor_space', 'comp_superior', 'small')] });
+  assert.equal(comparison(overridden, 'A', 'outdoor_space')!.confidence, 'exact');
+});
+
+test("a difference that rests on a tag one side doesn't list is approximate", () => {
+  const out = run({
+    subject: subject({ amenities: agent(['gym', 'pool']) }),
+    comps: [comp('A', 4_000_000, 2_000), comp('B', 4_000_000, 2_000, { amenities: ex(['gym', 'pool', 'spa']) })],
+  });
+  // A "lacks" the pool only because its building's tags don't list one.
+  assert.deepEqual([comparison(out, 'A', 'amenities.general')!.direction, comparison(out, 'A', 'amenities.general')!.confidence], ['comp_inferior', 'approx']);
+  // B has more than the subject, whose amenities the agent stated: exact.
+  assert.deepEqual([comparison(out, 'B', 'amenities.general')!.direction, comparison(out, 'B', 'amenities.general')!.confidence], ['comp_superior', 'exact']);
+});
+
+test("factor 9's systems compare as yes or no, and laundry by its three states", () => {
+  const out = run({
+    subject: subject({ central_air: agent(true), dishwasher: agent(true), fireplace: agent(true), laundry: agent('permitted') }),
+    comps: [
+      comp('A', 4_000_000, 2_000, { central_air: ex(true), dishwasher: unlisted(false), fireplace: ex(true), laundry: ex('installed') }),
+      comp('B', 4_000_000, 2_000, { laundry: ex('prohibited') }),
+      comp('C', 4_000_000, 2_000, { laundry: unlisted('none_listed') }),
+    ],
+  });
+  const pick = (id: string, lineId: string) => {
+    const c = comparison(out, id, lineId)!;
+    return [c.status, c.direction, c.confidence];
+  };
+  assert.deepEqual(pick('A', 'finishes_systems.central_air'), ['compared', 'similar', 'exact']);
+  assert.deepEqual(pick('A', 'finishes_systems.dishwasher'), ['compared', 'comp_inferior', 'approx']);
+  assert.equal(comparison(out, 'A', 'finishes_systems.dishwasher')!.basis, 'subject has a dishwasher; comp lists no dishwasher');
+  assert.deepEqual(pick('A', 'finishes_systems.laundry'), ['compared', 'comp_superior', 'exact']); // installed beats permitted
+  assert.deepEqual(pick('B', 'finishes_systems.laundry'), ['compared', 'comp_inferior', 'exact']); // prohibited loses to permitted
+  // None listed against permitted can't be ranked until the agent says whether the comp's building allows one.
+  assert.deepEqual(pick('C', 'finishes_systems.laundry'), ['unknown', null, null]);
+  assert.deepEqual(comparison(out, 'C', 'finishes_systems.laundry')!.missing, [
+    { side: 'comp', field: 'laundry', label: "whether the comp's building permits a washer/dryer" },
+  ]);
+  // Against installed, though, none listed loses.
+  const installed = run({ subject: subject({ laundry: agent('installed') }), comps: [comp('C', 4_000_000, 2_000, { laundry: unlisted('none_listed') })] });
+  assert.deepEqual([comparison(installed, 'C', 'finishes_systems.laundry')!.direction, comparison(installed, 'C', 'finishes_systems.laundry')!.confidence], ['comp_inferior', 'approx']);
+  // Quality and en-suite bathrooms take a judgment: no comparison until there is one, then the house method's value.
+  assert.equal(comparison(out, 'A', 'finishes_systems.quality'), undefined);
+  const graded = run({ comps: [comp('A', 4_000_000, 2_000)], assessments: [judged('q', 'A', 'finishes_systems', 'comp_superior', 'large', 'quality'), judged('e', 'A', 'finishes_systems', 'comp_inferior', 'small', 'en_suite')] });
+  assert.equal(line(graded, 'A', 'finishes_systems.quality')!.dollars, -120_000); // large: 3%
+  assert.equal(line(graded, 'A', 'finishes_systems.en_suite')!.dollars, 40_000); // small: 1%
+});
+
+test('distance is a selection rule, finishes names its line, and floor has a second line', () => {
+  const comps = [comp('A', 4_000_000, 2_000, { floor: ex(10) })];
+  assert.throws(() => run({ comps, assessments: [judged('d', 'A', 'distance', 'comp_inferior', 'small')] }),
+    /distance is a selection rule, not an adjustment/);
+  assert.throws(() => run({ comps, agent_adjustments: [{ id: 'd', factor: 'distance', value: { percent: 1 }, as_of: AS_OF }] }),
+    /distance is a selection rule, not an adjustment/);
+  assert.throws(() => run({ comps, agent_adjustments: [{ id: 'f', factor: 'finishes_systems', value: { percent: 2 }, as_of: AS_OF }] }),
+    /finishes_systems has several lines — name one: quality, central_air, dishwasher, en_suite, fireplace, laundry/);
+  // "floor" still names the per-floor line; the height against neighbouring buildings is its own, by judgment.
+  const out = run({ comps, assessments: [judged('n', 'A', 'floor', 'comp_inferior', 'large', 'neighbours')] });
+  assert.equal(line(out, 'A', 'floor')!.dollars, 200_000); // 10 floors × 0.5%
+  assert.equal(line(out, 'A', 'floor.neighbours')!.dollars, 120_000); // large: 3%
+  assert.equal(comparison(out, 'A', 'floor.neighbours')!.name, 'Height against neighbouring buildings');
+});
+
+test("v0.4's new overlaps warn when both sides carry values", () => {
+  const out = run({
+    comps: [comp('A', 4_000_000, 2_000, { dishwasher: ex(false), common_charges_monthly: ex(3500) })],
+    assessments: [
+      judged('dw', 'A', 'finishes_systems', 'comp_inferior', 'small', 'dishwasher'),
+      judged('c', 'A', 'condition', 'comp_inferior', 'moderate'),
+      judged('tx', 'A', 'tax_abatements', 'comp_superior', 'small'),
+    ],
+  });
+  const overlaps = out.warnings.filter((w) => w.code === 'double_counting_risk' && w.results.includes('on_facts')).map((w) => w.message);
+  assert.ok(overlaps.some((m) => /^dishwasher and condition both carry values \(the house method\) — overlap: A renovation shows up in both$/.test(m)), overlaps.join('\n'));
+  assert.ok(overlaps.some((m) => /^tax exemptions and abatements and carrying costs both carry values .* An exemption is lower taxes, already in the carry$/.test(m)), overlaps.join('\n'));
+});
+
+test('factors 37–39 are adjustments by judgment, all null in production', () => {
+  const comps = [comp('A', 4_000_000, 2_000)];
+  const assessments = [
+    judged('f', 'A', 'financing_terms', 'comp_inferior', 'small'),
+    judged('t', 'A', 'tenant_in_place', 'comp_inferior', 'moderate'),
+    judged('n', 'A', 'non_realty_items', 'comp_superior', 'small'),
+  ];
+  const out = run({ comps, assessments });
+  assert.equal(line(out, 'A', 'financing_terms')!.dollars, 40_000); // small: 1%
+  assert.equal(line(out, 'A', 'tenant_in_place')!.dollars, 80_000); // moderate: 2%
+  assert.equal(line(out, 'A', 'non_realty_items')!.dollars, -25_000); // the furniture in its price: small, $25,000
+  const production = run({ comps, assessments }, productionHouseMethod());
+  for (const id of ['financing_terms', 'tenant_in_place', 'non_realty_items']) {
+    const l = line(production, 'A', id)!;
+    assert.deepEqual([l.status, l.dollars], ['considered_not_calculated', null], id);
   }
 });

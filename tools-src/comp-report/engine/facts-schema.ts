@@ -3,7 +3,7 @@
 // refuses one). Money is whole dollars; areas whole square feet.
 
 import { isIsoDate } from './util/dates.ts';
-import type { FactField } from './types.ts';
+import { LAUNDRY_STATES, type FactField } from './types.ts';
 
 export type Check = (v: unknown) => boolean;
 
@@ -44,6 +44,10 @@ export const FACT_CHECKS: Record<FactField, { check: Check; expects: string }> =
     expects: '{ doorman, concierge }',
   },
   unit_type: { check: listOf('penthouse', 'duplex', 'triplex', 'loft'), expects: 'unit type tags' },
+  central_air: { check: bool, expects: 'true or false' },
+  dishwasher: { check: bool, expects: 'true or false' },
+  fireplace: { check: bool, expects: 'true or false' },
+  laundry: { check: oneOf(...LAUNDRY_STATES), expects: 'installed, permitted, prohibited or none_listed' },
   finishes: { check: strings, expects: 'a list of tags' },
   amenities: { check: strings, expects: 'a list of tags' },
   policies: { check: strings, expects: 'a list of tags' },

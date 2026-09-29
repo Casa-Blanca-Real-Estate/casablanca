@@ -61,6 +61,22 @@ function agentValueNumbers(value: AgentValue): number[] {
   return Object.values(value) as number[];
 }
 
+/** Why a judgment or a value can't target this factor line — or null when it can. */
+function notAdjustable(factor: string, facet: string | undefined): string | null {
+  const found = findLine(factor, facet);
+  if (found?.factor.role === 'adjustment') return null;
+  const def = FACTOR_BY_ID.get(factor);
+  const name = `${factor}${facet ? `.${facet}` : ''}`;
+  if (def?.role === 'selection_rule') {
+    return `${name} is a selection rule, not an adjustment: it decides which comps to use and how much they count — tier the comp instead`;
+  }
+  if (def && def.role === 'adjustment') {
+    const lines = def.lines.map((l) => l.facet ?? '(no facet)').join(', ');
+    return facet ? `${factor} has no line "${facet}" — its lines: ${lines}` : `${name} has several lines — name one: ${lines}`;
+  }
+  return `${name} is not an adjustable factor line`;
+}
+
 export function validateInput(input: EngineInput): void {
   const issues: string[] = [];
   if (!isObj(input)) throw new EngineInputError(['input must be an object']);
@@ -128,8 +144,8 @@ export function validateInput(input: EngineInput): void {
     uniqueId(where, a?.id);
     if (!isObj(a)) return;
     compRef(where, a.comp_id);
-    const found = findLine(a.factor, a.facet);
-    if (!found || found.factor.role !== 'adjustment') issues.push(`${where}: ${a.factor}${a.facet ? '.' + a.facet : ''} is not an adjustable factor line`);
+    const why = notAdjustable(a.factor, a.facet);
+    if (why) issues.push(`${where}: ${why}`);
     if (!['comp_superior', 'comp_inferior', 'similar', 'differs'].includes(a.direction)) issues.push(`${where}.direction is invalid`);
     if (a.degree !== undefined && !['small', 'moderate', 'large'].includes(a.degree)) issues.push(`${where}.degree must be small, moderate or large`);
     if (!['jev', 'fallback', 'agent'].includes(a.source)) issues.push(`${where}.source must be jev, fallback or agent`);
@@ -145,9 +161,9 @@ export function validateInput(input: EngineInput): void {
     uniqueId(where, a?.id);
     if (!isObj(a)) return;
     const found = findLine(a.factor, a.facet);
-    if (!found || found.factor.role !== 'adjustment') {
-      issues.push(`${where}: ${a.factor}${a.facet ? '.' + a.facet : ''} is not an adjustable factor line` +
-        (FACTOR_BY_ID.get(a.factor)?.lines.length! > 1 && !a.facet ? ' — name a facet' : ''));
+    const why = notAdjustable(a.factor, a.facet);
+    if (why || !found) {
+      issues.push(`${where}: ${why ?? 'not an adjustable factor line'}`);
     } else if (!isObj(a.value) || Object.keys(a.value).length !== 1 || !agentValueAllowed(a.value, found.line.magnitude)) {
       issues.push(`${where}.value doesn't fit ${a.factor}'s ${found.line.magnitude.shape} shape`);
     } else {

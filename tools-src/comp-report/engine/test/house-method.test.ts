@@ -111,6 +111,14 @@ test('the loader checks the file against the catalog', () => {
   extra.lines['charm'] = { small: null };
   assert.throws(() => loadHouseMethod(extra), /lines.charm is not a factor/);
 
+  // A file written for the v0.3 catalog: distance was an adjustment, and finishes one line.
+  const stale = clone(production) as Record<string, unknown> & { lines: Record<string, unknown> };
+  stale.lines['distance'] = { small: null, moderate: null, large: null, min_percent: null, max_percent: null };
+  stale.lines['finishes_systems'] = { small: null, moderate: null, large: null, min_percent: null, max_percent: null };
+  assert.throws(() => loadHouseMethod(stale), (e: Error) =>
+    /lines\.distance: distance from subject is a selection rule, not an adjustment/.test(e.message) &&
+    /lines\.finishes_systems is not a line of finishes_systems — its lines: finishes_systems\.quality, finishes_systems\.central_air/.test(e.message));
+
   const wrongShape = clone(production) as Record<string, unknown> & { lines: Record<string, Record<string, unknown>> };
   wrongShape.lines['floor']!['small'] = null;
   assert.throws(() => loadHouseMethod(wrongShape), /not a slot/);

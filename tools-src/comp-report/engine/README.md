@@ -10,7 +10,7 @@ moves the instant a comp is toggled) and in Netlify functions (so every stored v
 authoritatively), and both get the same answer — checked: an esbuild bundle in headless Chromium and
 one in Node produce the same output hash.
 
-**Version 0.1.0.** Nothing here has been piloted yet.
+**Version 0.2.0** — design v0.4, after CR-2.1. Nothing here has been piloted yet.
 
 ---
 
@@ -25,7 +25,7 @@ one in Node produce the same output hash.
 - **A range, never a point.** The range runs from the lowest to the highest value implied by the
   agent's *primary sold* comps. One comp can't make a range, and nor can comps that all imply the
   same value; the engine says so instead.
-- **No invented numbers.** The adjustment catalog has all 36 factors, and **every magnitude is null**
+- **No invented numbers.** The adjustment catalog has all 39 factors, and **every magnitude is null**
   until Noble sets it. A factor that applies but has no value shows as *considered — value not yet
   determined* and moves nothing. A file of test values exists only to check the arithmetic, and the
   engine refuses to load it anywhere but a test run.
@@ -42,11 +42,14 @@ one in Node produce the same output hash.
 - **School zone never moves a number.** It's a recognised steering signal, so it's analyst view only
   (§14): the engine compares it and shows it to the analyst, but applies no value for it — the house
   method's or the agent's.
+- **A missing tag counts, but only as approximate.** A comp whose listing tags name no terrace reads
+  as having none, so an agent's terrace value can apply to it. But a listing agent types those tags
+  and may leave one out, so the comparison and everything it feeds are marked `approx`.
 
 What it does not do: judge comparability, suggest tiers, read listing text (that's Jev and the
 assistant); co-ops beyond switching $/sqft off everywhere; rent credits, deposits over time,
-closing timelines (full offer modelling comes later); any rent or yield figure — the export carries no rent data, so
-the engine cannot produce one.
+closing timelines (full offer modelling comes later); any rent or yield figure — the export carries
+no rent data, so the engine cannot produce one.
 
 ### What Hannah's export gives, through the engine
 
@@ -57,7 +60,7 @@ the engine cannot produce one.
 | In contract $/sqft (ask basis): 101 Leonard · 25 N Moore · 108 Leonard | $1,625.34 · $2,387.15 · $2,400.70 | 1,625 · 2,387 · 2,400 |
 | Active $/sqft (ask basis): 77 Reade · 111 Murray | $2,763.95 · $3,091.80 | 2,763 · 3,091 |
 | Sale-to-last-ask: 200 Chambers · 181 Hudson · 5 Franklin · 66 Leonard | −3.0% · +12.3% · −4.0% · −4.2% | "100% — selling at asking" |
-| Sale-to-ask, median / mean | −3.5% / +0.3% | — |
+| Sale-to-last-ask, median / mean | −3.5% / +0.3% | — |
 | Sold days on market, mean | 114 (four listings) | 91 (counts the closing's 0 as a real zero) |
 | "Average sale price" | never computed | $4,535,000 (sales and asks mixed) |
 | "Estimated range" | lowest–highest implied value among primary sold comps | $2.2M–$6.0M (every status) |
@@ -136,9 +139,15 @@ out.results.on_facts.base;       // { value: 4225352, unit: 'usd', confidence: '
   views; private outdoor space (**presence and kind only — the export has no size**); shared outdoor
   space; service level (doorman full-time, part-time, virtual, hours not stated, none listed; and
   concierge); parking (garage, valet — deeded or not can't be told); unit type (loft, duplex,
-  triplex, penthouse); and the remaining finishes and amenities. A blank tag column tells nothing, so
-  nothing is derived (unknown). A column with tags but none of a kind reads as "none listed", with a
-  note, and the agent can correct it. A penthouse suggested only by a unit label ("#PHA") goes in the
+  triplex, penthouse); factor 9's systems — central air, dishwasher, a working fireplace (gas
+  counts; decorative doesn't) and in-unit laundry (`installed` for a washer/dryer tag, `permitted`
+  for "washer/dryer allowed"; laundry in the building is an amenity); and the
+  remaining finishes and amenities. A blank tag column tells nothing, so nothing is derived
+  (unknown). **A column with tags but none of a kind is "none listed"** — an empty list, `false`, or
+  `none_listed` — **with confidence `approx`**, because a listing agent types the tags and may leave
+  one out (§6.2). A tag that is there is `exact`. Service is `exact` only when both a doorman and a
+  concierge are listed. The note says which, and the agent can correct it. A penthouse suggested
+  only by a unit label ("#PHA") goes in the
   record's `suggestions` as *inferred*: it waits for the agent to confirm, and the Home Features'
   exact unit type stands meanwhile. `deriveFromFeatures` and `deriveFromAmenities` are exported, so
   the app can build a subject's facts from listing tags exactly as the parser builds a comp's.
@@ -204,8 +213,13 @@ A `hypothetical` value is used only in `what_if` mode, where the whole output is
 - **`method`** —
   - `lead: { indicator, reason? }` — which indicator makes the base. Default: the median (unit rate
     for condos), labelled as the default, pending Noble.
-  - `recency: { months } | { since }` — only sold comps whose sale date falls in the window count.
-    Applies to both results; in-contract and active asks are current evidence and stay in.
+  - `recency: { months } | { since }` — sold comps count only if they closed inside the window,
+    in-contract comps only if they went into contract inside it (`Status Date` is each). Active
+    listings are exempt: an ask is current evidence. A method setting, so it applies to both
+    results; a comp with no date to test is left out and says so. **v1 limitation:** practice
+    measures a sale's recency from its contract date, but the export gives sold comps only their
+    closing date, so v1 reads a sale as fresher than it was by the contract-to-close lag (§6.5).
+    Listing history could supply contract dates later.
   - `narrowing: { low?, high?, reason, as_of }` — the agent narrowing the range: a low, a high or
     both. It carries a number, so it's the agent's estimate: "with estimates" only, and it must sit
     inside the comps' bracket.
@@ -216,8 +230,11 @@ A `hypothetical` value is used only in `what_if` mode, where the whole output is
 - **`assessments`** — a judgment that a comp differs from the subject on a factor:
   `{ id, comp_id, factor, facet?, direction, degree?, source, confidence, probability?, as_of, note? }`.
   `direction` is `comp_superior`, `comp_inferior`, `similar` or `differs`; `degree` is `small`,
-  `moderate` or `large`. From Jev, its fallback or the agent. It carries no number. Jev's are
-  `inferred` until the agent confirms.
+  `moderate` or `large`. From Jev, its fallback or the agent. It carries no number. `confidence` is
+  the input confidence (Jev's are `inferred` until the agent confirms); `probability` is Jev's
+  judgment confidence (§7.1), a calibrated probability. A judgment that agrees with the engine's
+  comparison, or settles a "differs" it left open, rests on the same facts, so it's as sure as they
+  are. One that overrides them stands alone. A factor with several lines needs its `facet`.
 - **`agent_adjustments`** — the agent's value for a factor ("add 5% for the terrace"):
   `{ id, factor, facet?, value, comp_ids?, reason?, as_of }`. Lands in "with estimates" only. **A
   value is a magnitude; the comparison supplies the direction**, so a negative one is refused — to
@@ -272,8 +289,9 @@ field, with its provenance.
 
 ### `comps[]` — every comp, including excluded ones
 
-- `id`, `identity`, `building_name`, `evidence_class`, `status_raw`, `basis` (`sale` for sold, `ask`
-  otherwise), `tier`, `tier_reason`, `anchor`.
+- `id`, `identity`, `building_name`, `evidence_class` (the evidence status: `sold`, `in_contract`,
+  `active`), `status_raw`, `basis` (`sale` for sold, `ask` otherwise), `tier`, `tier_reason`,
+  `anchor`.
 - `flags`: `closing_record`, `approx_area`, `area_missing`, `price_missing`, `floor_missing`,
   `same_building_as_subject`, `same_unit_as_subject`, `property_type_mismatch`,
   `unrecognised_status`, `outside_recency_window`.
@@ -335,7 +353,7 @@ field, with its provenance.
   status, reason per comp), `effect_on_base` (the base with the line less the base without it, as
   sure as the lines it rests on) and, for interactions, `interaction` (relationship, why, members).
   With a median, effects needn't add up to the total.
-- `sale_to_ask` — statistic over included sold comps. `days_on_market` — per class; closings
+- `sale_to_ask` — sale-to-last-ask, a statistic over included sold comps. `days_on_market` — per class; closings
   excluded. `asks_vs_sold` — `sold_band` (low, median, high sold $/sqft) and, for in contract and
   active, the class median ask $/sqft and how far it sits from the sold median — all null for
   co-ops.
@@ -360,7 +378,7 @@ nothing leaves `same` true.
 
 Each named price with, per result: `per_sqft`; `vs_range` (`position`, `through_percent`, `to_low`,
 `to_high`); `vs_base` (`difference`, `percent`); `vs_indicators` (every available indicator);
-`negotiating_room` — the comps' median, lowest and highest sale-to-ask and the sale that the median
+`negotiating_room` — the comps' median, lowest and highest sale-to-last-ask and the sale that the median
 implies if this were the asking price.
 
 ### `monthly_cost` — an estimate, per result
@@ -397,22 +415,24 @@ modelling.
 
 ## Adjustments and the house method
 
-### The catalog — Appendix A, all 36 factors
+### The catalog — Appendix A (v0.4), all 39 factors
 
 `FACTORS` holds each as a definition: number, name, what it captures, where its data comes from,
-what it applies to, who compares it, and the shape of its magnitude. None has a number.
+what it applies to, who compares it, and the shape of its magnitude. None has a number. Numbers and
+ids are identifiers: 37–39 were appended (they sit after 32, with their group, as in Appendix A),
+and a renamed factor keeps its id (20 is still `tax_abatements`).
 
 | # | Factor | Compared by | Magnitude shape |
 |---|---|---|---|
 | 1 | Interior size | engine (areas) | share of the comp's $/sqft — adjusted prices only |
 | 2 | Bedrooms, bathrooms | engine (counts) | dollars per bedroom; per bathroom |
 | 3 | Layout and efficiency | judgment | % per degree |
-| 4 | Floor | engine (floors) | % per floor |
+| 4 | Floor: in the building (`floor`); against neighbouring buildings (`floor.neighbours`) | engine (floors); judgment (neighbouring heights aren't in the export) | % per floor; % per degree |
 | 5 | Exposure and light | judgment | % per degree |
 | 6 | Views | engine (tags) + judgment | % per degree |
 | 7 | Outdoor space | engine (presence; size when stated) + judgment | outdoor area × weight per kind at the comp's $/sqft; % per degree without sizes |
 | 8 | Condition | judgment | % per degree |
-| 9 | Finishes and systems | engine (tags) + judgment | % per degree |
+| 9 | Finishes and systems: kitchen and bath quality; central air; dishwasher; en-suite bathrooms; fireplace; in-unit laundry (installed, permitted, prohibited) | judgment for quality and en-suite; engine (tags) + judgment for the rest | % per degree, six lines |
 | 10 | Ceiling height and volume | judgment | % per degree |
 | 11 | Unit type | engine (tags, unit label) + judgment | % per degree |
 | 12 | Noise and street position | judgment | % per degree |
@@ -423,19 +443,22 @@ what it applies to, who compares it, and the shape of its magnitude. None has a 
 | 17 | Building size | engine (units, stories) + judgment | % per degree |
 | 18 | Sponsor and new-development sales | judgment | % per degree |
 | 19 | Carrying costs | engine (monthly carry) | monthly difference × a multiplier |
-| 20 | Tax abatements | judgment | % per degree |
+| 20 | Tax exemptions and abatements — 421-a, 421-a(16), 485-x, J-51, Battery Park City's payments in lieu of taxes | judgment | % per degree |
 | 21 | Building financials | judgment | % per degree |
 | 22 | Policies | engine (tags) + judgment | % per degree |
 | 23 | Parking | engine (tags) + judgment | dollars per degree |
 | 24 | Ground lease | judgment | % per degree |
 | 25 | Micro-location | judgment | % per degree |
-| 26 | Distance from subject | judgment | % per degree |
+| 26 | Distance from subject | — **a selection rule**: it decides which comps to use, never moves a price | — |
 | 27 | School zone | judgment — analyst view only | % per degree |
-| 28 | Recency and market movement | engine (sale date) | % per month — the market's movement, signed |
+| 28 | Recency and market movement | engine (sale date — the closing date in v1) | % per month — the market's movement, signed |
 | 29 | Sale conditions | judgment | % per degree |
 | 30 | Concessions and credits | judgment | % per degree |
 | 31 | Combination units | judgment | % per degree |
-| 32 | Evidence status | — not an adjustment: separate evidence classes | — |
+| 32 | Evidence status | — not an adjustment: kept apart in every statistic | — |
+| 37 | Financing terms — cash against mortgaged; seller or sponsor financing | judgment | % per degree |
+| 38 | Tenant in place | judgment | % per degree |
+| 39 | Non-realty items — furniture and the like in the price | judgment | dollars per degree |
 | 33–36 | Air rights, lot, legal use, rental income | — later property types and modules | — |
 
 The shapes are a starting structure for CR-R's findings and Noble's calibration, not a method
@@ -478,8 +501,16 @@ sets them) raises `outside_house_bounds`, quoting the agent's reason or asking f
 | Service level ↔ building size | correlated | double-counting warning |
 | Condition ↔ building era | correlated | double-counting warning |
 | Sponsor sales ↔ concessions | overlap | double-counting warning |
+| Tax exemptions ↔ carrying costs | overlap | double-counting warning |
+| Carrying costs ↔ building financials, ground lease | overlap | double-counting warning |
+| Outdoor space ↔ interior size | overlap | double-counting warning |
+| Amenities ↔ parking, private storage | overlap | double-counting warning |
+| Finishes and systems ↔ condition | overlap | double-counting warning |
 
-Warnings fire when both sides carry values for the same comp, whoever supplied them. Substitutes
+The last five came with design v0.4, from CR-R's evidence. A factor on either side covers all its
+lines ("floor" covers `floor.neighbours`; finishes covers all six), except where the table names
+one: the amenities row is the general amenities line, not shared outdoor space. Warnings fire when
+both sides carry values for the same comp, whoever supplied them. Substitutes
 pulling the same way take the larger; pulling opposite ways (a terrace the comp lacks, a roof deck
 it has) they net, which is no double count. Interaction magnitudes are CR-R2: the house method holds
 a null slot for each, and the loader refuses a non-null one rather than ignore it.
@@ -487,14 +518,16 @@ a null slot for each, and the loader refuses a non-null one rather than ignore i
 ### The house method file
 
 `house-method/production.json` — one versioned file for every magnitude, weight, bound and
-threshold: a `lines` entry per factor line (`"floor"`, `"beds_baths.bedrooms"`,
-`"amenities.shared_outdoor"` …) with its shape's slots plus `min_percent` / `max_percent`;
+threshold: a `lines` entry per factor line (`"floor"`, `"floor.neighbours"`, `"beds_baths.bedrooms"`,
+`"finishes_systems.laundry"` …) with its shape's slots plus `min_percent` / `max_percent`;
 `interactions`; and `decision_thresholds` for Jev (§7.1 — the app's, not the engine's). **In
 production every value is null.**
 
 - `loadHouseMethod(json)` validates it against the catalog — every line present, only its shape's
   slots, magnitudes non-negative (the direction of a difference supplies the sign; only the market's
-  monthly movement may be negative), `small ≤ moderate ≤ large`, outdoor weights between 0 and 1.
+  monthly movement may be negative), `small ≤ moderate ≤ large`, outdoor weights between 0 and 1. A
+  file written for an older catalog is refused line by line, saying what moved: `distance` is a
+  selection rule now, and `finishes_systems` has six lines.
 - **A production file with any value needs Noble's sign-off** — `approval: { by, at, note? }` — or
   it won't load. Nothing enters the product without it.
 - Its `hash` is recorded in every output, so two files that share a version number can't pass as one.
@@ -532,8 +565,8 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
 
 ## Versioning and determinism
 
-- `ENGINE_VERSION` (0.1.0) — bump when any output could change for the same input.
-  `PARSER_VERSION` (0.1.0) — bump when any parsed record could change; every import records it.
+- `ENGINE_VERSION` (0.2.0) — bump when any output could change for the same input.
+  `PARSER_VERSION` (0.2.0) — bump when any parsed record could change; every import records it.
   `PROPERTY_KEY_VERSION` (`pk1`) — bump when key rules change. The house method has its own
   `version`, and its `hash`.
 - **Deterministic**: comps are processed in id order; statistics sum in that order; object keys
@@ -547,35 +580,68 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
 
 ---
 
-## Decisions made in this build — for Casanova to confirm or change
+## Decisions
 
-1. **"A setting that carries a number is the agent's estimate" (§2)** is read as a setting that
-   carries a *value*: adjustment values and the range narrowing go to "with estimates" only; tiers,
-   the lead indicator, the anchor and a recency window change both results. A recency window's
-   "six months" is a comp filter, not an estimate of value.
-2. **Substitutes pulling opposite ways net** rather than take the larger (A.5's rule covers the
-   same-direction case; applying it to opposite pulls would overstate the difference).
-3. **Double-counting warnings fire whenever both sides carry values**, house method or agent — a
-   superset of "both agent-stated".
+### Settled in design v0.4
+
+Casanova's review of CR-2 settled these; the design now says each (§6.2–§6.6, §7.1):
+
+1. **A setting that carries a *value* is the agent's estimate.** Adjustment values and the range
+   narrowing go to "with estimates" only; tiers, the lead indicator, the anchor and a recency window
+   change both results.
+2. **Substitutes pulling opposite ways net out**; pulling the same way, the larger applies.
+3. **Double-counting warnings fire whenever both sides carry values**, house method or agent.
 4. **Jev judgments are `inferred` until confirmed**, so they move no number before the agent
-   confirms (§6.1, §6.4). §7.1's "high confidence → applied immediately" is then the app marking the
-   judgment confirmed, visibly and undoably.
-5. **"None listed" is exact, with a note.** A listing whose Home Features name no terrace reads as no
-   terrace (exact, per StreetEasy's own data), so the agent's "+5% for the terrace" can apply to it.
-   A blank tag column is unknown instead.
-6. **Recency windows apply to sold comps only**; asks are current evidence.
+   confirms; §7.1's "applied immediately" is the app recording the confirmation, visibly and undoably.
+5. **"None listed" is approximate**, not exact (changed in v0.4). A missing tag still lets a value
+   apply; what it feeds carries `approx`. A blank column is unknown.
+6. **Recency windows cover sold and in-contract comps**, by closing and contract date; active
+   listings are exempt (changed in v0.4).
 7. **Carry's comp median runs across all statuses** — it isn't price evidence.
-8. **The magnitude shapes** (percent per degree, per floor, dollars per bedroom, size elasticity,
-   outdoor weighting, capitalised carry) are a first structure, to be revisited with CR-R's findings.
-9. **School zone is compared and shown to the analyst, never applied** — not the house method's
-   value, not the agent's. §14 keeps it out of client copy as a recognised steering signal, and a
-   value in the base or the range would reach clients through every figure. Hannah approving wording
-   (§14's exception) would cover the copy, not the number; applying it would be a small change.
-10. **The agent's adjustment values are magnitudes.** The comparison supplies the sign, so a
-    negative value is refused rather than silently flipping a comp the wrong way; the agent says
-    which side is better with a judgment. The market's monthly movement is the one signed value.
-11. **When the agent's value can't apply to a comp and the house method's can, the house method's
-    is used**, noted on the line — "with estimates" is the facts plus the estimates, never less.
+8. **The magnitude shapes** are a first structure, to be revisited with Noble.
+9. **$/sqft displays truncated**, as StreetEasy shows it.
+10. **School zone never moves a number**, from the house method or the agent.
+11. **The agent's adjustment values are magnitudes**; the market's monthly movement is the one
+    signed value.
+12. **When the agent's value can't apply to a comp and the house method's can, the house method's
+    is used**, noted on the line.
+
+Still open: the order adjustments apply in, and whether they compound (D-18, Noble's). Until he
+answers, every percentage is of the comp's own sale price and the lines add.
+
+### New in CR-2.1 — for Casanova to confirm or change
+
+1. **"None listed" covers every conclusion that rests on a missing tag.** v0.4 makes a fact that
+   names no tag of a kind `approx`. The same holds when two tag lists are compared and the
+   difference rests on one side not listing something: a building whose tags list a gym but no
+   pool, against a subject with both, is `approx` too.
+   - A judgment that agrees with the engine's comparison, or settles a "differs" it left open, is
+     only as sure as the facts under it. Without that, confirming a judgment would turn a "none
+     listed" back into `exact`.
+   - A judgment that overrides the facts stands alone.
+2. **Service is `exact` only when both a doorman and a concierge are listed.** Otherwise part of it
+   rests on a missing tag.
+3. **The finishes split is six lines.**
+   - Quality and en-suite bathrooms are judged: the export tags neither.
+   - Central air, dishwasher, fireplace and laundry are compared by the engine from the tags.
+   - The other Home Features (hardwood floors …) stay on the record as context for the quality
+     judgment. They're no longer compared as a set.
+4. **Laundry "none listed" means not installed, permitted or not unknown.**
+   - It loses to installed.
+   - Against permitted or prohibited it's unknown, asking whether the building permits one.
+   - Two "none listed" read as similar (`approx`).
+5. **Ids don't change.** The per-floor line is still `floor`, so existing inputs are unchanged. The
+   new line is `floor.neighbours`, by judgment, because the export has no neighbouring heights.
+   Factor 20 keeps the id `tax_abatements` under its new name.
+6. **Factors 37–39 are judgments.**
+   - Financing terms and tenant in place are a % per degree.
+   - Non-realty items are dollars per degree, because the furniture's value is a sum, like private
+     storage.
+   - They sit after 32 in catalog order, so the bridge lists them with the other transaction factors.
+7. **Two of the new pairs are hubs.** Each one-to-many row pairs the shared factor with each of the
+   others: carrying costs with building financials and with ground lease; amenities with parking and
+   with private storage. The amenities side is its general line, because shared outdoor space has its
+   own row.
 
 ---
 
@@ -591,7 +657,7 @@ engine/
     index.ts, columns.ts, values.ts, derive.ts, property-key.ts, csv.ts
     xlsx/               zip.ts, inflate.ts, xml.ts, workbook.ts — XLSX with no dependencies
   catalog/
-    factors.ts          Appendix A — the 36 factors
+    factors.ts          Appendix A — the 39 factors
     interactions.ts     Appendix A.5 — the interaction map
   house-method/
     production.json     every value null
@@ -607,6 +673,6 @@ engine/
     money.ts            carry, price evaluation, monthly cost, deal terms
     output.ts           the output's types
   util/                 dates without Date, canonical JSON, SHA-256, UTF-8, arithmetic
-  test/                 122 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
+  test/                 131 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
                         and the test-only house method
 ```

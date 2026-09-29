@@ -1,13 +1,15 @@
 // Facts derived from the export's tag columns (§6.2): views, private and
 // shared outdoor space (presence only — the export has no outdoor size),
-// service level, parking, unit type, finishes and amenities.
+// service level, parking, unit type, the finishes and systems of factor 9,
+// and amenities.
 //
 // A tag column that's blank tells us nothing, so nothing is derived from it
 // (unknown). A column with tags but none of a kind — no view listed, no
-// parking listed — is recorded as "none listed": an empty list or `false`,
-// noted as such, which the agent can correct.
+// parking listed — is "none listed": an empty list, `false` or `none_listed`.
+// The parser records it as approximate, because a listing agent types these
+// tags and may leave one out, and the agent can correct it.
 
-import type { OutdoorKind, ServiceFacts, UnitTypeTag } from '../types.ts';
+import type { LaundryState, OutdoorKind, ServiceFacts, UnitTypeTag } from '../types.ts';
 
 export function normalizeTag(tag: string): string {
   return tag.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -31,19 +33,40 @@ const UNIT_TYPE_FEATURES: [RegExp, UnitTypeTag][] = [
   [/^loft$/, 'loft'],
 ];
 
+// Factor 9's yes-or-no systems, as StreetEasy and listings tag them.
+const CENTRAL_AIR = /\bcentral (air|a\/?c)\b/;
+const DISHWASHER = /\bdish ?washer\b/;
+const FIREPLACE = /\bfire ?places?\b/;
+/** A decorative fireplace doesn't work: it stays among the other finishes. */
+const DECORATIVE = /\bdecorative\b|\bnon[- ]?working\b/;
+const WASHER_DRYER = /\bwasher\b|\bw\/d\b|\bin[- ]unit laundry\b|\blaundry in (the )?unit\b/;
+/** Laundry in the building or shared isn't in-unit laundry. */
+const NOT_IN_UNIT = /\bbuilding\b|\bshared\b|\bcommon\b/;
+const ALLOWED = /\b(allowed|permitted)\b/;
+
 export interface FeatureFacts {
   views: string[];
   outdoor_kinds: OutdoorKind[];
   unit_type: UnitTypeTag[];
+  central_air: boolean;
+  dishwasher: boolean;
+  fireplace: boolean;
+  /** `installed` for a washer/dryer, `permitted` for "washer/dryer allowed", else `none_listed`. */
+  laundry: LaundryState;
+  /** The Home Features none of the above claimed — hardwood floors, walk-in closets … */
   finishes: string[];
 }
 
-/** Home Features → views, private outdoor kinds, unit type and the remaining finishes. */
+/** Home Features → views, private outdoor kinds, unit type, factor 9's systems and the remaining finishes. */
 export function deriveFromFeatures(features: readonly string[]): FeatureFacts {
   const views = new Set<string>();
   const outdoor = new Set<OutdoorKind>();
   const unitType = new Set<UnitTypeTag>();
   const finishes = new Set<string>();
+  let centralAir = false;
+  let dishwasher = false;
+  let fireplace = false;
+  let laundry: LaundryState = 'none_listed';
   for (const raw of features) {
     const tag = normalizeTag(raw);
     const view = VIEW.exec(tag);
@@ -52,12 +75,25 @@ export function deriveFromFeatures(features: readonly string[]): FeatureFacts {
     if (type) { unitType.add(type[1]); continue; }
     const kind = PRIVATE_OUTDOOR.find(([re]) => re.test(tag));
     if (kind) { outdoor.add(kind[1]); continue; }
+    if (CENTRAL_AIR.test(tag)) { centralAir = true; continue; }
+    if (DISHWASHER.test(tag)) { dishwasher = true; continue; }
+    if (FIREPLACE.test(tag) && !DECORATIVE.test(tag)) { fireplace = true; continue; }
+    if (WASHER_DRYER.test(tag) && !NOT_IN_UNIT.test(tag)) {
+      // Installed outranks allowed, whichever tag comes first.
+      if (!ALLOWED.test(tag)) laundry = 'installed';
+      else if (laundry !== 'installed') laundry = 'permitted';
+      continue;
+    }
     finishes.add(tag);
   }
   return {
     views: [...views].sort(),
     outdoor_kinds: [...outdoor].sort(),
     unit_type: [...unitType].sort(),
+    central_air: centralAir,
+    dishwasher,
+    fireplace,
+    laundry,
     finishes: [...finishes].sort(),
   };
 }
