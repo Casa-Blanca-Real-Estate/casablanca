@@ -111,7 +111,12 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       const cls = c.record.status.evidence_class;
       const reasons: string[] = [];
       if (c.tier !== 'primary') reasons.push(c.tier === 'secondary' ? 'tiered secondary' : `excluded${c.tier_reason ? `: ${c.tier_reason}` : ''}`);
-      if (!cls) reasons.push(`status "${c.record.status.raw ?? ''}" isn't sold, in contract or active`);
+      if (c.record.listing && !c.record.listing.confirmed) reasons.push('read from its StreetEasy page, and waits for the agent to confirm it');
+      if (!cls) {
+        reasons.push(c.record.status.listing_status === 'off_market'
+          ? "didn't sell: it came off the market unsold, which enters no statistic yet"
+          : `status "${c.record.status.raw ?? ''}" isn't sold, in contract or active`);
+      }
       const type = facts.property_type?.value;
       if (type && type !== reportType) reasons.push(`a ${TYPE_WORDS[type]}, and this is a ${TYPE_WORDS[reportType]} report — like for like only`);
       // A recency window covers sold comps by their closing date and in-contract comps by their
@@ -249,8 +254,10 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
         same_building_as_subject: sameBuilding(input.subject.identity, c.record.identity),
         same_unit_as_subject: sameUnit(input.subject.identity, c.record.identity),
         property_type_mismatch: Boolean(type && type !== reportType),
-        unrecognised_status: c.record.status.evidence_class === null,
+        unrecognised_status: c.record.status.evidence_class === null && c.record.status.listing_status !== 'off_market',
         outside_recency_window: onFacts.not_included_because.some((r) => r.includes('recency window')),
+        off_market: c.record.status.listing_status === 'off_market',
+        unconfirmed: Boolean(c.record.listing && !c.record.listing.confirmed),
       },
       status_date: statusDate ?? null,
       age_days: statusDate ? daysBetween(statusDate, asOf) : null,
@@ -338,6 +345,11 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
   }
   for (const c of compsOut) {
     const name = label(comps.find((x) => x.id === c.id)!);
+    // An unconfirmed link comp's values aren't missing — they wait for the agent: one gap says so.
+    if (c.flags.unconfirmed) {
+      gapFor('comp_unconfirmed', `${name} was read from its StreetEasy page; its values wait for the agent's one-tap confirmation, so it counts in neither result yet.`, c.id, null, [...KINDS]);
+      continue;
+    }
     if (c.flags.area_missing && c.evidence_class) gapFor('comp_area_missing', `${name} has no interior area, so it contributes no unit-rate indication.`, c.id, 'area_sqft', [...KINDS]);
     if (c.flags.price_missing && c.evidence_class) gapFor('comp_price_missing', `${name} has no ${c.evidence_class === 'sold' ? 'sale' : 'asking'} price.`, c.id, c.evidence_class === 'sold' ? 'sale_price' : 'list_price', [...KINDS]);
     if (c.flags.floor_missing) gapFor('comp_floor_missing', `${name} has no floor, so floors can't be compared for it.`, c.id, 'floor', [...KINDS]);
@@ -387,7 +399,17 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
     pendingSeen.add(key);
     return true;
   });
-  for (const r of [subjectResolved.on_facts, ...compResolved.on_facts.values()]) {
+  // A row read from a StreetEasy page is confirmed as a whole, in one tap: one item, not one per value.
+  const unconfirmed = new Map(comps.filter((c) => c.record.listing && !c.record.listing.confirmed).map((c) => [c.id, c]));
+  for (const [id, r] of [['subject', subjectResolved.on_facts] as const, ...compResolved.on_facts.entries()]) {
+    const row = unconfirmed.get(id);
+    if (row) {
+      pendingOut.push({
+        kind: 'listing', id: null, target: id, what: 'listing', value: null, source: 'listing',
+        note: `${label(row)}: read from its StreetEasy page — confirm the row`,
+      });
+      continue;
+    }
     for (const p of r.pending) {
       const key = `${p.kind}|${p.id}|${p.target}|${p.what}`;
       if (!pendingSeen.has(key)) { pendingSeen.add(key); pendingOut.push(p); }

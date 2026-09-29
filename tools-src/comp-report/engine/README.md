@@ -10,7 +10,8 @@ moves the instant a comp is toggled) and in Netlify functions (so every stored v
 authoritatively), and both get the same answer — checked: an esbuild bundle in headless Chromium and
 one in Node produce the same output hash.
 
-**Version 0.2.0** — design v0.4, after CR-2.1. Nothing here has been piloted yet.
+**Version 0.3.0** — design v0.5, CR-2.2 phase 1: comps from StreetEasy links and typed in. Nothing
+here has been piloted yet.
 
 ---
 
@@ -167,17 +168,81 @@ out.results.on_facts.base;       // { value: 4225352, unit: 'usd', confidence: '
 `filename` · `columns` (`mapped`, `unknown`, `missing`) · `comps` (below) · `warnings`.
 
 **Each comp record (`CompRecord`):** `identity` (key, building key, address, unit, StreetEasy link and
-ids) · `status` (`raw`, `evidence_class`) · `facts` (every value sourced — below) · `engagement`
-(page views, saves, shares — context only, never a valuation input; null for closings) ·
+ids) · `status` (`raw`, `evidence_class`, and `listing_status` for a link or a typed-in comp — below)
+· `facts` (every value sourced — below) · `engagement` (page views, saves, shares — context only,
+never a valuation input; null for closings) ·
 `building_name` · `neighborhood` · `agent_commentary` · `tags` · `ignored_export_price_per_sqft` ·
-`flags` (`closing_record`, `approx_area`) · `origin` (parser version, row, as-of date) ·
-`extra_columns` · `suggestions` (inferred values for the agent to confirm, each `{ field, value }`;
-a stated fact or the record's own value always wins over one).
+`flags` (`closing_record`, `approx_area`) · `origin` (parser version, row, as-of date, and `via`:
+`export`, `listing` or `manual`) · `extra_columns` · `suggestions` (inferred values for the agent to
+confirm, each `{ field, value }`; a stated fact or the record's own value always wins over one) ·
+`listing` (a link's comp only — below).
 
 **Parse warnings** (`code`, `message`, `row?`, `column?`): `missing_column`, `unknown_column`,
 `duplicate_column`, `renamed_column`, `unreadable_value`, `value_adjusted`, `zero_price`,
 `closing_record`, `approx_area`, `unrecognised_status`, `missing_address`, `duplicate_property`,
-`ragged_row`, `encoding`, `file_note`, `no_rows`.
+`ragged_row`, `encoding`, `file_note`, `no_rows`; and for links and typed-in comps, `off_market`,
+`rental_listing`, `not_a_listing`, `status_conflict`, `partial_address`.
+
+### Comps from a StreetEasy link, or typed in (§6.2)
+
+Many agents add comps one listing at a time, and Kara never uses StreetEasy's comps generator. So
+there are three ways in, and all three make the same `CompRecord`.
+
+**From a link.** The server reads the page with Firecrawl, passing `LISTING_EXTRACT_SCHEMA` and
+`LISTING_EXTRACT_PROMPT`. It hands the extract to `compRecordFromListing(extract, { as_of, url })`,
+which returns `{ record, warnings }`.
+- **The schema asks for text, not numbers.** Every value is copied as the page shows it
+  (`"$4,650,000"`, `"~1,840 ft²"`, `"Aug 27, 2026"`) and left empty when the page doesn't show it. The
+  engine reads them with the export's own readers, so a figure is typed by rules, not by the model
+  that read the page.
+- **Every value is `inferred`** (source `listing`), because reading a page can misread it. The comp
+  counts in **neither result** until the agent confirms the row in one tap.
+  `confirmListingRecord(record)` returns a new record with each value `exact`, or `approx` where the
+  page marks it approximate or lists none of a kind. A guess beyond the page, such as a penthouse
+  from a "PH" label, stays pending.
+- **Nothing missing is guessed.** No floor comes from a unit number, and no size from rooms.
+- **The key is the export's.** A comp added by link and by export is one property. The city and
+  state come from the page, or failing that from the link's building slug (`…-new_york/10a` means New
+  York, NY). Without either, a `partial_address` warning says the key won't match an export's.
+- **The status** comes from the page's label, or its history where the label is missing. A recorded
+  sale wins over an "off market" label (`status_conflict`). A relisting starts a new listing period,
+  so an old sale doesn't make a relisted home sold. A rental page is flagged (`rental_listing`), and
+  so is a link that isn't a sale listing (`not_a_listing`).
+- **The page's history fills blanks,** with a note: the original ask, the list date, the contract
+  date, the last ask, and a sale's price and date. A sale price on a page that isn't sold is an
+  earlier sale, and it's left out.
+- **`record.listing`** holds what only the page gives: `url`, `confirmed`, `on_confirm` (the input
+  confidence each value takes on confirmation), `history` (oldest first: `date`, `event` as worded,
+  `kind`, `price`) and `description`.
+- **Warnings use the export's codes** where they overlap: `unreadable_value`, `value_adjusted`,
+  `zero_price`, `approx_area`, `closing_record`, `unrecognised_status`, `missing_address`. Blank
+  markers ("n/a", "—") are blanks.
+- **The home itself can come from its link** the same way. Its `record.identity` is the subject's
+  identity. Once the agent confirms the details, `confirmListingRecord(record).facts` are the
+  subject's facts.
+
+**Typed in.** `compRecordFromManual(fields, { as_of })` takes the address (with or without the unit),
+the status, the price, size, floor and date, and optionally beds, baths, property type and the
+monthly charges. Values are numbers or text as typed.
+- **It's the agent's record:** source `agent`, `exact`. A value given as
+  `{ value, estimate: true }` is `guesstimate`, so it counts in "with estimates" only.
+- **`price`** is the sale price for a sold comp and the asking price otherwise.
+- **`date`** is the closing date (sold), the contract date (in contract, and `contract_date` too), the
+  listing date (active, and `list_date` too), or the day it came off the market.
+
+**Didn't sell — not counted yet.** A listing that came off the market unsold (`off_market`) is kept.
+Its `status.listing_status` says so, its `evidence_class` stays null, and it enters no statistic
+until "didn't sell" becomes an evidence status in phase 2 of CR-2.2. The output flags it `off_market`
+and says "didn't sell", not "unrecognised".
+
+**New facts from links:**
+- `original_list_price`, `list_date` and `contract_date`
+- `rooms`, where halves are allowed
+- `new_development`, `sponsor_unit` and `income_restricted` (HDFC and the like)
+
+The engine records them and doesn't use them yet; phase 2's checks will. Those three flags are
+"yes" or unknown, never "no" by omission, because a page that doesn't mention sponsorship says
+nothing about it.
 
 ---
 
@@ -294,7 +359,8 @@ field, with its provenance.
   `anchor`.
 - `flags`: `closing_record`, `approx_area`, `area_missing`, `price_missing`, `floor_missing`,
   `same_building_as_subject`, `same_unit_as_subject`, `property_type_mismatch`,
-  `unrecognised_status`, `outside_recency_window`.
+  `unrecognised_status`, `outside_recency_window`, `off_market` (didn't sell: in no statistic yet),
+  `unconfirmed` (a link's row the agent hasn't confirmed: it counts in neither result).
 - `status_date`, `age_days` (to the analysis date), `days_on_market`, `sale_to_ask_percent` (sold
   comps with a last ask: sale ÷ last ask − 1), `engagement`.
 - `per_result.on_facts` and `per_result.with_estimates`, each:
@@ -353,10 +419,10 @@ field, with its provenance.
   status, reason per comp), `effect_on_base` (the base with the line less the base without it, as
   sure as the lines it rests on) and, for interactions, `interaction` (relationship, why, members).
   With a median, effects needn't add up to the total.
-- `sale_to_ask` — sale-to-last-ask, a statistic over included sold comps. `days_on_market` — per class; closings
-  excluded. `asks_vs_sold` — `sold_band` (low, median, high sold $/sqft) and, for in contract and
-  active, the class median ask $/sqft and how far it sits from the sold median — all null for
-  co-ops.
+- `sale_to_ask` — sale-to-last-ask, a statistic over included sold comps. `days_on_market` — per
+  class; closings excluded. `asks_vs_sold` — `sold_band` (low, median, high sold $/sqft) and, for in
+  contract and active, the class median ask $/sqft and how far it sits from the sold median — all
+  null for co-ops.
 - `carry` — `subject`, `subject_per_sqft`, `comp_median`, `comp_median_per_sqft`, `comp_ids`,
   `subject_vs_median_percent`. Carry isn't price evidence, so the median runs across all statuses.
   The per-sqft figures are null for co-ops.
@@ -401,7 +467,8 @@ modelling.
   results }`. Codes: `subject_area_missing`, `subject_area_estimate_only`, `no_primary_sold_comps`,
   `base_unavailable`, `range_unavailable`, `comp_area_missing`, `comp_price_missing`,
   `comp_floor_missing`, `subject_fact_missing` (with the field to ask for), `subject_carry_missing`
-  (per result: an estimated carry fills "with estimates" and leaves the gap "on the facts").
+  (per result: an estimated carry fills "with estimates" and leaves the gap "on the facts"),
+  `comp_unconfirmed` (one per unconfirmed link row, in place of its "missing" gaps).
 - **`warnings`** — `{ code, message, comp_ids, results }`: `closing_record`, `approx_area`,
   `same_building_as_subject`, `same_unit_as_subject`, `property_type_mismatch`,
   `unrecognised_status`, `anchor_not_sold`, `anchor_not_primary`, `contradiction`,
@@ -409,7 +476,8 @@ modelling.
   `outside_house_bounds`, `narrowing_not_applied`, `narrowing_outside_bracket`, `base_outside_range`,
   `adjusted_value_not_positive`, `analyst_only_factor`.
 - **`pending_confirmation`** — inferred facts and unconfirmed judgments waiting for the agent:
-  `{ kind, id, target, what, value, source, note }`.
+  `{ kind, id, target, what, value, source, note }`. An unconfirmed link row is one item of kind
+  `listing`, not one per value, because the agent confirms it in one tap.
 
 ---
 
@@ -565,8 +633,8 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
 
 ## Versioning and determinism
 
-- `ENGINE_VERSION` (0.2.0) — bump when any output could change for the same input.
-  `PARSER_VERSION` (0.2.0) — bump when any parsed record could change; every import records it.
+- `ENGINE_VERSION` (0.3.0) — bump when any output could change for the same input.
+  `PARSER_VERSION` (0.3.0) — bump when any parsed record could change; every import records it.
   `PROPERTY_KEY_VERSION` (`pk1`) — bump when key rules change. The house method has its own
   `version`, and its `hash`.
 - **Deterministic**: comps are processed in id order; statistics sum in that order; object keys
@@ -643,6 +711,30 @@ answers, every percentage is of the comp's own sale price and the lines add.
    with private storage. The amenities side is its general line, because shared outdoor space has its
    own row.
 
+### New in CR-2.2 (phase 1) — for Casanova to confirm or change
+
+1. **"Didn't sell" waits for phase 2 to become an evidence status.** An evidence status comes with
+   its own statistics and its place against the sold band. Until then a link's or a typed-in
+   `off_market` comp keeps `evidence_class` null, carries `status.listing_status: 'off_market'`, and
+   the output says "didn't sell". This keeps phase 1 additive for Mason: no new key in any
+   `Record<EvidenceClass, …>`.
+2. **An unconfirmed link row counts in neither result, as a whole.** Its status is read from the
+   page too. It gets one gap (`comp_unconfirmed`) and one pending item, not one per value.
+3. **The key's city and state may come from the link.** When the page gives none, StreetEasy's
+   building slug supplies them for the four boroughs it names that way (New York, Brooklyn, Bronx,
+   Staten Island). That's identity, not a valuation fact. Otherwise `partial_address` warns.
+4. **The page's own history fills its blanks,** each noted "from the listing's history":
+   - A recorded sale beats an off-market label.
+   - A relisting starts a new period.
+   - An off-market comp's status date is the day it came off.
+5. **The schema has more than the dispatch lists:**
+   - city, state, ZIP and neighborhood, which the key needs
+   - sponsor-unit and income-restricted flags, which phase 2's checks need
+   - a separate "size approximate" flag, since a page's "~" can be an icon
+6. **No floor from a unit label.** "10A" is often the tenth floor, but the page must say so.
+   Suggesting it as an inferred value for the agent to confirm, like "PH", would give phase 2's floor
+   checks more to work on. Your call.
+
 ---
 
 ## Files
@@ -653,8 +745,12 @@ engine/
   types.ts              inputs and the shared vocabulary (§6.1)
   version.ts            engine and parser versions
   facts-schema.ts       what each fact field must hold — shared by the parser and compute()
-  parser/               the StreetEasy export parser (§6.2)
+  parser/               the StreetEasy export parser (§6.2), links and typed-in comps
     index.ts, columns.ts, values.ts, derive.ts, property-key.ts, csv.ts
+    tag-facts.ts        tags into facts, the same for exports and links
+    listing.ts          LISTING_EXTRACT_SCHEMA, compRecordFromListing, confirmListingRecord
+    manual.ts           compRecordFromManual
+    errors.ts           ParseError and the warning codes every reader shares
     xlsx/               zip.ts, inflate.ts, xml.ts, workbook.ts — XLSX with no dependencies
   catalog/
     factors.ts          Appendix A — the 39 factors
@@ -673,6 +769,6 @@ engine/
     money.ts            carry, price evaluation, monthly cost, deal terms
     output.ts           the output's types
   util/                 dates without Date, canonical JSON, SHA-256, UTF-8, arithmetic
-  test/                 131 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
-                        and the test-only house method
+  test/                 144 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
+                        six listing extracts (listings/), and the test-only house method
 ```

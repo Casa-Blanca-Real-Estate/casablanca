@@ -1,0 +1,39 @@
+{
+  "_fixture": "Hand-written in the shape Firecrawl returns for LISTING_EXTRACT_SCHEMA, after Frankie's email ('Apt #309 was on the market in 12/25 for $625K and never sold'). The delisting date and the rest are made up. Not a captured page.",
+  "address": "111 Fulton Street",
+  "unit": "#309",
+  "city": "New York",
+  "state": "NY",
+  "zip": "10038",
+  "neighborhood": "Financial District",
+  "status": "No longer available",
+  "last_ask": "$625,000",
+  "list_date": "Dec 4, 2025",
+  "days_on_market": "88 days",
+  "floor": "3",
+  "interior_size": "690 ft²",
+  "beds": "1",
+  "baths": "1",
+  "maintenance": "$1,242",
+  "property_type": "Co-op",
+  "features": [
+    "Dishwasher"
+  ],
+  "amenities": [
+    "Doorman",
+    "Elevator"
+  ],
+  "history": [
+    {
+      "date": "03/02/2026",
+      "event": "Delisted",
+      "price": ""
+    },
+    {
+      "date": "12/04/2025",
+      "event": "Listed",
+      "price": "$625,000"
+    }
+  ],
+  "description": ""
+}

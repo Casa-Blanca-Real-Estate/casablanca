@@ -120,13 +120,21 @@ export interface PropertyFacts {
   area_sqft?: Sourced<SquareFeet>;
   beds?: Sourced<number>;
   baths?: Sourced<number>;
+  /** Rooms as New York listings count them; halves allowed ("3.5 rooms"). */
+  rooms?: Sourced<number>;
   floor?: Sourced<number>;
   /** Sold comps: the price paid. */
   sale_price?: Sourced<Dollars>;
   /** The asking price — for a sold comp, the last ask. */
   list_price?: Sourced<Dollars>;
+  /** The first asking price, before any price change — from a listing's history. */
+  original_list_price?: Sourced<Dollars>;
   /** Sold: the closing date. In contract: the contract date. Active: the listing date. */
   status_date?: Sourced<IsoDate>;
+  /** When the listing went on the market. */
+  list_date?: Sourced<IsoDate>;
+  /** When it went into contract — for a sold comp too, where a listing's history shows it. */
+  contract_date?: Sourced<IsoDate>;
   days_on_market?: Sourced<number>;
   common_charges_monthly?: Sourced<Dollars>;
   taxes_monthly?: Sourced<Dollars>;
@@ -135,6 +143,12 @@ export interface PropertyFacts {
   building_units?: Sourced<number>;
   building_stories?: Sourced<number>;
   year_built?: Sourced<number>;
+  /** A new-development unit, sold by its developer — not a resale. */
+  new_development?: Sourced<boolean>;
+  /** A sponsor unit: sold by the building's sponsor, often without a board package. */
+  sponsor_unit?: Sourced<boolean>;
+  /** Income-restricted — HDFC and the like: the price and the buyer's income are capped. */
+  income_restricted?: Sourced<boolean>;
   /** Private outdoor space (balcony, terrace, private roof…). */
   outdoor_private?: Sourced<boolean>;
   outdoor_kinds?: Sourced<OutdoorKind[]>;
@@ -167,6 +181,39 @@ export type FactField = keyof PropertyFacts;
 
 // ─── Records ─────────────────────────────────────────────────────────────────
 
+/**
+ * A listing's status as its page reads. `off_market` is a listing that came off
+ * the market without selling — "didn't sell" (§6.3).
+ */
+export const LISTING_STATUSES = ['sold', 'in_contract', 'active', 'off_market'] as const;
+export type ListingStatus = (typeof LISTING_STATUSES)[number];
+
+/** One row of a listing's history, as the page shows it. */
+export interface ListingEvent {
+  /** Null when the page's date can't be read. */
+  date: IsoDate | null;
+  /** The event as the page words it — "Listed by Corcoran", "Price decreased". */
+  event: string;
+  kind: 'listed' | 'price_change' | 'in_contract' | 'sold' | 'off_market' | 'relisted' | 'other';
+  price: Dollars | null;
+}
+
+/** What only a StreetEasy listing page gives, and whether the agent has confirmed the row (§6.2). */
+export interface ListingRecord {
+  /** The page's URL without its query string. */
+  url: string | null;
+  /**
+   * False until the agent confirms the row in one tap. Until then every value
+   * read from the page is `inferred`, so the comp counts in neither result.
+   */
+  confirmed: boolean;
+  /** The input confidence each value takes on confirmation: `exact`, or `approx` where the page marks it so. */
+  on_confirm: Partial<Record<FactField, 'exact' | 'approx'>>;
+  /** The listing's history, oldest first. */
+  history: ListingEvent[];
+  description: string | null;
+}
+
 /** A comparable as the parser produced it — the property's facts as of an import. */
 export interface CompRecord {
   identity: PropertyIdentity;
@@ -174,6 +221,12 @@ export interface CompRecord {
     /** "SOLD", "IN CONTRACT", "ACTIVE" — as written. */
     raw: string | null;
     evidence_class: EvidenceClass | null;
+    /**
+     * For a comp from a link or typed in: its status as read, including
+     * `off_market` — "didn't sell", which isn't an evidence status yet, so it
+     * enters no statistic (§6.3, CR-2.2 phase 2).
+     */
+    listing_status?: ListingStatus | null;
   };
   facts: PropertyFacts;
   /** StreetEasy engagement — shown for context, never a valuation input. Null for closings. */
@@ -189,8 +242,11 @@ export interface CompRecord {
     closing_record: boolean;
     approx_area: boolean;
   };
-  /** Where it came from: the import and the row. */
-  origin: { parser_version: string; row: number; as_of: IsoDate } | null;
+  /**
+   * Where it came from: the parser, the row, and how it came in — an export,
+   * a StreetEasy link, or typed in by the agent (one row each).
+   */
+  origin: { parser_version: string; row: number; as_of: IsoDate; via?: 'export' | 'listing' | 'manual' } | null;
   /** Columns the parser didn't recognise, kept as written: header → value. */
   extra_columns?: Record<string, string>;
   /**
@@ -198,6 +254,8 @@ export interface CompRecord {
    * Inferred, so pending until the agent confirms; the record's own facts stand meanwhile.
    */
   suggestions?: { field: FactField; value: Sourced<unknown> }[];
+  /** A comp read from a StreetEasy listing page. */
+  listing?: ListingRecord;
 }
 
 export interface SubjectInput {

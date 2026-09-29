@@ -141,3 +141,27 @@ export function parseUsDate(s: string): { date: IsoDate; twoDigitYear: boolean }
   if (!isValidCivil(y, m, d)) return null;
   return { date: formatIsoDate({ y, m, d }), twoDigitYear };
 }
+
+const MONTHS: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5, jun: 6, june: 6,
+  jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10,
+  nov: 11, november: 11, dec: 12, december: 12,
+};
+
+/**
+ * A date with its month in words, as listing pages write them: "Aug 27, 2026",
+ * "August 27 2026", "Aug. 27, 2026", "27 Aug 2026". Null for anything else.
+ */
+export function parseMonthNameDate(s: string): IsoDate | null {
+  const text = s.trim().toLowerCase().replace(/\s+/g, ' ');
+  const monthFirst = /^([a-z]+)\.? (\d{1,2})(?:st|nd|rd|th)?,? (\d{4})$/.exec(text);
+  const dayFirst = /^(\d{1,2})(?:st|nd|rd|th)? ([a-z]+)\.?,? (\d{4})$/.exec(text);
+  const [name, day, year] = monthFirst ? [monthFirst[1]!, monthFirst[2]!, monthFirst[3]!]
+    : dayFirst ? [dayFirst[2]!, dayFirst[1]!, dayFirst[3]!] : [null, null, null];
+  if (name === null) return null;
+  const m = MONTHS[name];
+  const y = Number(year);
+  const d = Number(day);
+  if (!m || !isValidCivil(y, m, d)) return null;
+  return formatIsoDate({ y, m, d });
+}
