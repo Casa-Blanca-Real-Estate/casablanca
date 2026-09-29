@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, type Me, type Report } from '../api.ts';
 import { Access } from './Access.tsx';
-import { PreviewNote } from './Preview.tsx';
 
 export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }) {
   const [reports, setReports] = useState<Report[] | null>(null);
@@ -46,7 +45,14 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }
 
   return (
     <>
-      <PreviewNote />
+      <div className="scaffold-note">
+        <span className="tag tag-stub">Walkthrough scaffold</span>
+        <p>
+          Every step of a report is here, rough and annotated: the home, the export, sorting the comps, your call and the
+          reveal, the assistant, and a placeholder email. Each step says what’s real and what’s still to come.
+          {me.user.role === 'admin' && ' As an admin you can fill any step with sample data (100 Barclay #17L).'}
+        </p>
+      </div>
       <div className="label">New report</div>
       <form className="card row" onSubmit={create}>
         <input
@@ -68,7 +74,10 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }
         {reports?.map((r) => (
           <li key={r.id}>
             <button type="button" className="list-item" onClick={() => onOpen(r.id)}>
-              <span className="list-title">{r.title}</span>
+              <span className="list-title">
+                {r.title}{' '}
+                {r.sampleData && <span className="tag tag-sample" title="Sample data was used in this report. Nothing in it is for clients.">Sample</span>}
+              </span>
               <span className="muted small">{r.propertyType} · updated {new Date(r.updatedAt).toLocaleString()}</span>
             </button>
           </li>

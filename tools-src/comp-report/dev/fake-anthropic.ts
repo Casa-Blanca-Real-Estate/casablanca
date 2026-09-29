@@ -7,8 +7,9 @@
 //
 // With no script queued it answers from the conversation: a progress note and
 // an echo of the agent's last message; a get_report call when the message
-// asks which report this is, and the tool's result once it comes back; and a
-// refusal when the message starts with "refuse".
+// asks which report this is, a get_numbers call when it mentions the numbers,
+// and the tool's result once it comes back; and a refusal when the message
+// starts with "refuse".
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -62,8 +63,11 @@ function echo(body: Block): Script {
   const last = [...messages].reverse().find((m) => m.role === 'user');
   const result = last?.content.find((b) => b.type === 'tool_result');
   if (result) {
+    const asked = [...messages].reverse().find((m) => m.role === 'assistant')?.content.find((b) => b.id === result.tool_use_id);
+    const name = String(asked?.name ?? 'get_report');
+    const got = String(result.content);
     return {
-      content: [{ type: 'text', text: `get_report returned ${String(result.content)} (fake Messages API).` }],
+      content: [{ type: 'text', text: `${name} returned ${got.length > 600 ? `${got.slice(0, 600)}…` : got} (fake Messages API).` }],
       stopReason: 'end_turn',
       delayMs: 15,
     };
@@ -71,6 +75,16 @@ function echo(body: Block): Script {
   const said = last?.content.filter((b) => b.type === 'text').map((b) => String(b.text)).join(' ') ?? '';
   if (/^\s*refuse\b/i.test(said)) {
     return { content: [], stopReason: 'refusal', stopDetails: { type: 'refusal', category: null, explanation: null }, delayMs: 15 };
+  }
+  if (/\bnumbers\b/i.test(said)) {
+    return {
+      content: [
+        { type: 'thinking', thinking: 'Getting the numbers (fake API).', signature: 'fake-signature' },
+        { type: 'tool_use', id: `toolu_fake_${++toolCalls}_${Date.now()}`, name: 'get_numbers', input: {} },
+      ],
+      stopReason: 'tool_use',
+      delayMs: 15,
+    };
   }
   if (/which report/i.test(said)) {
     return {

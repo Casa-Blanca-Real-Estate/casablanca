@@ -19,7 +19,7 @@
 // CR-4 recommendation.
 import Anthropic from '@comp-report/anthropic-sdk';
 import {
-  ASSISTANT, buildMessages, pendingToolUses, runTool, SYSTEM_PROMPT, TOOLS, usageTotals,
+  ASSISTANT, buildMessages, pendingToolUses, promptFor, runTool, usageTotals,
   type StoredMessage,
 } from '../assistant.ts';
 import { withActor, type PoolLike, type Queryable } from '../db.ts';
@@ -31,6 +31,7 @@ export interface TurnDeps extends AuthDeps {
   anthropic: () => Anthropic;
   deadlineMs?: number;
   heartbeatMs?: number;
+  inFlightSeconds?: number;
 }
 
 export function productionAnthropic(): Anthropic {
@@ -41,48 +42,64 @@ export function productionAnthropic(): Anthropic {
 
 const MAX_MESSAGE = 20_000;
 
+/**
+ * A turn is answering while the transcript ends in the agent's side of it — a
+ * message or tool results — with no reply recorded yet. The reply is written
+ * when the model call ends (at most the 50 s deadline, then the write), so a
+ * newer message waits rather than take the reply's place. If a function dies
+ * before it writes one, the report frees itself after this long.
+ */
+const IN_FLIGHT_SECONDS = 90;
+
 type Event = Record<string, unknown> & { type: string };
 
 /** Loads the transcript, records the agent's message and any tool results. */
-async function prepare(pool: PoolLike, user: SessionUser, reportId: string, message: string | null) {
+async function prepare(pool: PoolLike, user: SessionUser, reportId: string, message: string | null, inFlightSeconds: number) {
   return withActor(pool, asUser(user), async (tx) => {
     // The conversation is the owner's; admins can read reports, not talk in them.
     const report = await tx.query('select 1 from comp_report.reports where id = $1 and owner_email = $2', [reportId, user.email]);
     if (!report.rowCount) throw new HttpError(404, 'not_found', 'No such report.');
 
-    const stored = (await tx.query<StoredMessage>(
-      'select seq, role, content, stop_reason, in_context from comp_report.messages where report_id = $1 order by seq',
-      [reportId],
+    const stored: (StoredMessage & { answering?: boolean })[] = (await tx.query<StoredMessage & { answering: boolean }>(
+      `select seq, role, content, stop_reason, in_context, prompt_version,
+              role = 'user' and created_at > now() - make_interval(secs => $2) as answering
+         from comp_report.messages where report_id = $1 order by seq`,
+      [reportId, inFlightSeconds],
     )).rows;
+    if (stored.at(-1)?.answering) {
+      throw new HttpError(409, 'turn_in_progress', 'This report is already answering. Wait for it to finish.');
+    }
     let seq = stored.at(-1)?.seq ?? 0;
+    // The conversation stays on the prompt and tools it started with (§8.3 rule 5).
+    const prompt = promptFor(stored);
 
     const pending = pendingToolUses(stored.findLast((m) => m.in_context));
     if (pending.length) {
       // §8.3 rule 6: run the pending tool calls server-side first.
       const results = [];
-      for (const call of pending) results.push(await runTool(tx, reportId, call));
+      for (const call of pending) results.push(await runTool(tx, reportId, call, prompt));
       const content = message ? [...results, { type: 'text', text: message }] : results;
-      await insertMessage(tx, reportId, ++seq, 'user', content);
+      await insertMessage(tx, reportId, ++seq, 'user', content, { promptVersion: prompt.id });
       stored.push({ seq, role: 'user', content, stop_reason: null, in_context: true });
     } else if (message) {
       const content = [{ type: 'text', text: message }];
-      await insertMessage(tx, reportId, ++seq, 'user', content);
+      await insertMessage(tx, reportId, ++seq, 'user', content, { promptVersion: prompt.id });
       stored.push({ seq, role: 'user', content, stop_reason: null, in_context: true });
     } else {
       throw new HttpError(400, 'nothing_to_send', 'Send a message.');
     }
-    return { messages: buildMessages(stored), nextSeq: seq + 1 };
+    return { messages: buildMessages(stored), nextSeq: seq + 1, prompt };
   });
 }
 
 async function insertMessage(
   tx: Queryable, reportId: string, seq: number, role: 'user' | 'assistant', content: unknown,
-  extra: { model?: string | null; stopReason?: string | null; requestId?: string | null; inContext?: boolean } = {},
+  extra: { model?: string | null; stopReason?: string | null; requestId?: string | null; inContext?: boolean; promptVersion: string },
 ) {
   await tx.query(
-    `insert into comp_report.messages (report_id, seq, role, content, model, stop_reason, request_id, in_context)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [reportId, seq, role, JSON.stringify(content), extra.model ?? null, extra.stopReason ?? null, extra.requestId ?? null, extra.inContext ?? true],
+    `insert into comp_report.messages (report_id, seq, role, content, model, stop_reason, request_id, in_context, prompt_version)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [reportId, seq, role, JSON.stringify(content), extra.model ?? null, extra.stopReason ?? null, extra.requestId ?? null, extra.inContext ?? true, extra.promptVersion],
   );
 }
 
@@ -99,16 +116,17 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
     const message = typeof body.message === 'string' && body.message.trim() ? body.message.trim() : null;
     if (message && message.length > MAX_MESSAGE) throw new HttpError(413, 'message_too_long');
 
+    // Before anything is recorded: without a client (no key here) the agent's message isn't stored unanswered.
+    const client = deps.anthropic();
     let prepared;
     try {
-      prepared = await prepare(pool, user, reportId, message);
+      prepared = await prepare(pool, user, reportId, message, deps.inFlightSeconds ?? IN_FLIGHT_SECONDS);
     } catch (error) {
       if ((error as { code?: string }).code === '23505') {
         throw new HttpError(409, 'turn_in_progress', 'This report is already answering. Wait for it to finish.');
       }
       throw error;
     }
-    const client = deps.anthropic();
 
     const deadline = deps.deadlineMs ?? 50_000;
     const heartbeat = deps.heartbeatMs ?? 10_000;
@@ -153,8 +171,8 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
             fallbacks: 'default',
             thinking: { type: 'adaptive', display: 'updates', block_binding: { prefix_mismatch_behavior: 'error' } },
             output_config: { effort: ASSISTANT.effort },
-            system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-            tools: TOOLS,
+            system: [{ type: 'text', text: prepared.prompt.system, cache_control: { type: 'ephemeral' } }],
+            tools: prepared.prompt.tools,
             tool_choice: { type: 'auto' },
             cache_control: { type: 'ephemeral' },
             messages: prepared.messages,
@@ -171,6 +189,7 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
               stopReason: outcome === 'interrupted' ? 'interrupted' : m?.stop_reason ?? null,
               requestId: stream.request_id ?? null,
               inContext: outcome === 'complete',
+              promptVersion: prepared.prompt.id,
             });
             if (totals) {
               await tx.query(
@@ -179,7 +198,7 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
                  values ($1, $2, 'anthropic', $3, 'assistant', $4, $5, $6, $7, $8, $9, $10)`,
                 [user.email, reportId, m!.model, stream.request_id ?? null, totals.input, totals.output,
                  totals.cacheRead, totals.cacheWrite, totals.costUsd,
-                 JSON.stringify({ stop_reason: m!.stop_reason, iterations: (m!.usage as { iterations?: unknown }).iterations ?? null, prompt: ASSISTANT.promptVersion })],
+                 JSON.stringify({ stop_reason: m!.stop_reason, iterations: (m!.usage as { iterations?: unknown }).iterations ?? null, prompt: prepared.prompt.id })],
               );
             }
           });
