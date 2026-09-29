@@ -93,11 +93,12 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 02 | [Agent sites, Slice 0 — data model + build hardening](docs/dispatch/02-agent-sites-foundations.md) | unnamed | Done — merged #46 |
 | 03 | [Agent sites, Slice 4 — the CMS](docs/dispatch/03-agent-cms.md) | unnamed | Done — merged #47 |
 | 04 | [Comp report — adjustment research (CR-R)](docs/dispatch/04-comp-report-research.md) | Surveyor | Done — merged #49 |
-| 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | Merged #48, #52; step 6 waits on Kimani (a Gmail on no list) |
+| 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | Merged #48, #52; step 6: Kimani has tried the Gmail, Mason confirms from the log |
 | 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | Done — merged #50, #51 |
 | 07 | [Comp report — the walkthrough scaffold (CR-3a)](docs/dispatch/07-comp-report-walkthrough-scaffold.md) | Mason | Done — merged #53 |
-| 08 | [Comp report — the engine for a buyer's argument (CR-2.2)](docs/dispatch/08-comp-report-buyers-argument-engine.md) | Abacus | Phase 1 in review — PR #55; phase 2 next |
+| 08 | [Comp report — the engine for a buyer's argument (CR-2.2)](docs/dispatch/08-comp-report-buyers-argument-engine.md) | Abacus | Phase 1 merged #55; phase 2 next |
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](docs/dispatch/09-comp-report-first-class-start.md) | Mason | Ready |
+| 10 | [Comp report — the decision provider, Jev first (CR-D)](docs/dispatch/10-comp-report-decision-provider.md) | Arbiter (proposed) | Ready (phase 1); phase 2 waits on Casa's Gateway key |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and

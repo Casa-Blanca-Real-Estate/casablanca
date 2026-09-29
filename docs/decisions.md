@@ -10,22 +10,17 @@ track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
 Last updated 2026-09-29 by Casanova.
 
-**What blocks the next builds:** nothing. Dispatches 08 (Abacus) and 09 (Mason) can start now. D-20
-to D-23 are quick screen questions for Mason's second phase; D-12 is needed before Jev goes in.
+**What blocks the next builds:** nothing. Dispatches 08 (phase 2), 09 and 10 can run now. Two
+actions of yours unlock live work: a Casa Vercel AI Gateway key for Jev (Dispatch 10, phase 2), and
+the dev notebook setup (#54).
 
 ## Index — open
 
 | ID | Decision | Urgency | Size | Blocks |
 |---|---|---|---|---|
-| D-12 | The MindBinder Jev handoff | Soon | Quick | Jev in the tool |
-| D-16 | Branches: delete, merge or park | Soon | Quick | — |
 | D-17 | Two questions for counsel | Later | Quick (counsel) | the pilot; factor 18 |
-| D-20 | Tier labels agents see | Soon | Quick | Dispatch 09, phase 2 |
-| D-21 | A headline before the email can be copied | Soon | Quick | Dispatch 09, phase 2 |
-| D-22 | Where the client's name is asked | Soon | Quick | Dispatch 09, phase 1 |
-| D-23 | "Didn't sell" as a fourth group in v1 | Soon | Quick | Dispatches 08 and 09 |
 
-Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-18 and D-19. They're in **Resolved**, with where
+Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
 each was applied.
 
 ## Your actions
@@ -35,17 +30,28 @@ each was applied.
 - [x] ~~Tell Casanova which Netlify plan the site is on.~~ Credit-based.
 - [x] ~~Enable Netlify Identity.~~ On, with email confirmation and Google.
 - [x] ~~Set `CR_ADMIN_EMAILS`.~~ Done, and you're signed in as an admin.
-- [x] **Soon — finish CR-1's step 6.** Sign in with a Gmail that's on no list, and check that it's
-  refused. It can't be the Gmail you use now, since that one is an admin.
+- [x] ~~Finish CR-1's step 6.~~ You've tried a Gmail that's on no list. Mason confirms the refusal from
+  the sign-up log and closes CR-1.
 - [ ] **Optional — brand the Google sign-in.** Google's screen says "Netlify Identity" because sign-in
   uses Netlify's default Google client. To make it say Casa Blanca, paste your Google Cloud client's
   ID and secret into Netlify → **Identity → Registration → External providers → Google**, not into
   environment variables.
-- [ ] **Soon — delete the 11 merged branches** (D-16). This session can't delete branches.
+- [x] ~~Delete the 11 merged branches.~~ Done. **Still to delete: `samplepics`** (D-16).
 - [ ] **Soon — give Casa sessions their own cloud environment**, or take `DATABASE_URL` out of this
   one. It holds MindBinder's database address, and every Casa session carries it.
-- [ ] **Soon — get Casa its own Jev account**, and send the handoff request to a MindBinder session
-  (D-12).
+- [ ] **Soon — get Casa its own Jev access.** Dispatch 10's phase 2 waits on it; its phase 1 doesn't.
+  1. Make a Vercel team on **Pro**. Vercel's free plan is for non-commercial use only, and Pro brings the
+     zero data retention every Jev request will ask for.
+  2. Put a card on file, and buy some AI Gateway credits. Both account gates silently refused every
+     call for MindBinder. Jev costs about $0.04 per million tokens, so a few dollars lasts a long time.
+  3. Create an AI Gateway API key. Add it in Netlify as `AI_GATEWAY_API_KEY` (Functions scope), then
+     redeploy.
+  4. Tell Arbiter it's in. Don't paste the key into a chat.
+- [ ] **Later — label about 30 listings for Jev's calibration** (Dispatch 10 phase 2). Arbiter commits
+  the sheet; filling it in takes about 20 minutes. Hannah could do it instead.
+- [ ] **Now — set up the dev notebook** (#54): add `creative@email.casa-blanca.com` to
+  `CR_ADMIN_EMAILS` (keep `casacalliste@gmail.com`), redeploy, sign in at `/tools/dev-notebook/`, make a
+  key, and add it as `DEV_NOTEBOOK_KEY` in the Claude Code cloud environment.
 - [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
 - [ ] **Later — show Noble the "differences between comps" approach** (design §6.6). It replaces
@@ -57,46 +63,6 @@ each was applied.
 ---
 
 ## Open
-
-### D-12 · The MindBinder Jev handoff
-`Soon — before Jev goes in` · `Quick`
-
-You'd rather have a MindBinder session package what we need than add the repo here. **What to ask
-it for is in `docs/comp-report/jev-handoff-request.md`**: paste that file into a Claude Code
-session in the MindBinder repo, and commit what it produces to `docs/comp-report/sources/` here.
-Until then the tool uses its fallback (Claude Haiku) for judgments.
-
-**Answer →** _type here — when the package is in_
-
-### D-16 · Branches: delete, merge or park
-`Soon` · `Quick`
-
-**The 11 merged branches** are finished and safe to delete, but this session's git access can't
-delete branches (the push is refused). Delete them on GitHub → Branches:
-- `claude/agent-multi-property-mode-bxngmf`
-- `claude/charming-brown-4crlrj`
-- `claude/claw-design-pass-port-qgpebf`
-- `claude/claw-review-fixes-qgpebf`
-- `claude/creative-studio-redesign-prep-9kqfjq`
-- `claude/jolly-shannon-b6j14l`
-- `claude/keen-fermi-ir6w9h`
-- `claude/laughing-newton-f96x9t`
-- `claude/nice-bohr-nj42vw`
-- `claude/serene-wescoff-b187c3`
-- `claude/stoic-goldberg-5foen5`
-
-To stop this piling up, turn on GitHub → Settings → General → **Automatically delete head branches**.
-
-**What isn't merged, and what it needs:**
-
-| Branch | What it is | What's left | Recommendation |
-|---|---|---|---|
-| `claude/qr-code-generator-nva8xf` | A finished QR code generator (July): links, vCards, email, phone, text; on-brand styling; PNG to 4096 px and SVG; its own encoder, no dependencies | Its dashboard entry was written for the dashboard before the August redesign, so it needs porting to the new tool list and a test pass. Its encoder is a separate `qr-core.js`, which the single-file rule would inline. About one short session | **Finish and merge**, as a small dispatch once the comp report's next builds are moving |
-| `claude/motion-graphic-stories-hlpirk` | A Story motion builder prototype (August), plus the React spike CR-1 has since absorbed | It's a prototype, so it needs a review to say how far it is | **Park** |
-| `samplepics` | Four StreetEasy listing photos uploaded in August | Nothing; they're test images and StreetEasy's photos | **Delete** |
-| `claude/kind-heisenberg-ujrdup` (+ `-p2` to `-p5`) | The profile pic stack, #41–#45 | Parked (Dispatch 01): #41 has changes requested, then the rest need review | **Stay parked** |
-
-**Answer →** QR: merge later, stories: park, samplepics: delete. Otherwise done i think
 
 ### D-17 · Two questions for counsel
 `Later — (1) before the pilot, (2) before factor 18 gets a value` · `Quick — forward to counsel or a closing attorney`
@@ -114,62 +80,11 @@ CR-R (Surveyor) found two legal questions research can't settle. Both are in
 
 **Answer →** _type here — who it went to, or their answer_
 
-### D-20 · Tier labels agents see
-`Soon — Dispatch 09, phase 2` · `Quick`
-
-The engine sorts comps into primary, secondary and excluded. Agents could see those words, or plainer
-ones.
-
-- **A — Primary / Secondary / Excluded.** The engine's words, and the glossary's.
-- **B — Counts / Context / Leave out.** Says what each does.
-
-**Recommendation: B**, with the engine's words in the glossary and the analyst view.
-
-**Answer →** eh, haven't decided yet. Hold on A for now, we'll revisit later.
-
-### D-21 · A headline before the email can be copied
-`Soon — Dispatch 09, phase 2` · `Quick`
-
-Noble's goal is a one-sentence headline. Should the Send screen require one before the email can be
-copied?
-
-- **A — Required.** The drafts make it one click for anyone in a hurry.
-- **B — Optional.** Encouraged, not required.
-
-**Recommendation: A.** It's the point of the report, and the drafts keep it cheap.
-
-**Answer →** Sure, A. We'll revisit once we start testing with Noble properly and other agents after that.
-
-### D-22 · Where the client's name is asked
-`Soon — Dispatch 09, phase 1` · `Quick`
-
-- **A — In the new-comp modal**, beside buyer or seller. It's used in the email greeting.
-- **B — Only on Send.**
-
-**Recommendation: A**, optional.
-
-**Answer →** A, the new comp modal. Should be asked at the earliest point we can make sense of, alongside buyer or seller.
-
-### D-23 · "Didn't sell" as a fourth group in v1
-`Soon — Dispatches 08 and 09` · `Quick`
-
-Frankie lists the building's listings that came off the market unsold ("on the market for $635K and
-never sold") as evidence of a ceiling. The tool can show them as their own group, never mixed with
-sales or live asks. They come from a StreetEasy link's listing history; the export doesn't carry
-them.
-
-- **A — Yes, in v1.**
-- **B — Later.**
-
-**Recommendation: A.**
-
-**Answer →** Sure, yeah A.
-
 ---
 
 ## Resolved
 
-### Answered by Kimani, 2026-09-29 — applied in design v0.5 (`01-design.md`)
+### Answered by Kimani, 2026-09-29 — applied in design v0.5 (`01-design.md`) and `02-screens.md`
 
 | ID | Decision | Answer | Applied |
 |---|---|---|---|
@@ -188,6 +103,12 @@ them.
 | D-14 | When to research interaction magnitudes | "Might not be necessary anymore" (Noble: prices already carry features). Closed: no magnitude research; the interaction map stays as structure | §6.6 |
 | D-18 | Order and compounding of adjustments | Kimani asked how adjustments come from comps, and for a way to see how much two similar listings differ in price and why, for buyers above all. Replaced by "the differences between comps" | §6.6 |
 | D-19 | Recording each report's outcome | "Yes B." Automatic first, a one-tap ask second, never a block | §12 |
+| D-12 | The MindBinder Jev handoff | Kimani had a MindBinder session package it instead of adding the repo. In: `docs/comp-report/sources/jev/` | Dispatch 10 |
+| D-16 | Branches | "QR: merge later, stories: park, samplepics: delete. Otherwise done i think." The 11 merged ones are deleted; `samplepics` is Kimani's to delete; the QR generator waits for a small dispatch | `docs/parked/` |
+| D-20 | Tier labels agents see | "Hold on A for now, we'll revisit later." Primary / Secondary / Excluded | `02-screens.md` |
+| D-21 | A headline before the email can be copied | "Sure, A. We'll revisit once we start testing with Noble properly and other agents after that." | `02-screens.md` Send; §10.2 |
+| D-22 | Where the client's name is asked | "A, the new comp modal. Should be asked at the earliest point we can make sense of, alongside buyer or seller." | `02-screens.md` The home |
+| D-23 | "Didn't sell" as a fourth group | "Sure, yeah A." | §6.3; Dispatch 08 phase 2 |
 
 ### D-15 · The esbuild / `@netlify/blobs` rule — resolved 2026-09-28
 The rule was wrong. Netlify bundles every v2 function with `nft` whatever `node_bundler` says, and that

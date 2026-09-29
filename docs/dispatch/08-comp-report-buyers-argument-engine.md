@@ -63,7 +63,7 @@ same `CompRecord` the export parser makes.
 
 ## Phase 2 — the buyer's argument
 
-1. **"Didn't sell"** (§6.3, D-23 recommendation A) is a fourth evidence status, `off_market`.
+1. **"Didn't sell"** (§6.3, D-23 decided: A) is a fourth evidence status, `off_market`.
    - It's a listing that came off the market unsold, taken from a link's status or listing history.
    - Ask basis, never mixed with another status.
    - It has its own statistics, and it's shown against the sold band as a ceiling signal.

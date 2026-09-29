@@ -1,6 +1,6 @@
 # Comp report — the screens, and what goes on each
 
-**Casanova · 2026-09-29 · v0.1, for Kimani's review.** This is the information architecture: for
+**Casanova · 2026-09-29 · v0.2: Kimani's answers to D-20 to D-23 are in.** This is the information architecture: for
 each screen, what the agent must give, what's shown, what folds away, and what moves elsewhere. It
 isn't a visual design; that's Kimani's (Claude Design), on top of this. It builds on:
 - Kara's workshop (how Casa's mentors teach comps), `sources/kara-comp-reports-workshop-transcript.txt`
@@ -137,7 +137,7 @@ New comp (modal)                          Workspace
 - $/sq ft, size, floor, the date, and days on market (Kara: "please please please put in days on
   market")
 - the flags from Add comps
-- **Counts / Context / Leave out**: the tier (see the label question below)
+- **Primary / Secondary / Excluded**: the tier (D-20; plainer labels on hold)
 - **Notes:** one to three short lines, Frankie-style. There are quick-pick chips from what the tool
   compared: "Smaller", "Lower floor", "No outdoor space", "Same layout", "Same building". The note is
   also the reason, so there's no separate reason field and no Record button.
@@ -229,12 +229,10 @@ think it's worth?"* The agent gives a low and a high, with an optional line, or 
 | "Work it through" as a step | The drawer |
 | Both results always side by side | One, unless estimates change the answer |
 
-## Questions for Kimani
+## Decided (2026-09-29)
 
-1. **Tier labels for agents:** keep "primary / secondary / excluded", or use "counts / context /
-   leave out"? The engine's words stay either way.
-2. **Must there be a headline before an email can be copied?** The recommendation is yes, because it's
-   the point (Noble).
-3. **Where does the client's name go:** in the modal (as above), or only on Send?
-4. **"Didn't sell" as a fourth group in v1?** The recommendation is yes: Frankie uses it, and it only
-   needs the listing's history.
+1. **Tier labels:** Primary / Secondary / Excluded, for now (D-20). The plainer "Counts / Context /
+   Leave out" is on hold; revisit after testing with Noble.
+2. **A headline is required before the email can be copied** (D-21). Revisit after testing.
+3. **The client's name is asked in the modal**, beside buyer or seller (D-22).
+4. **"Didn't sell" is a fourth group in v1** (D-23).

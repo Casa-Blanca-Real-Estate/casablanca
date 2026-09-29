@@ -4,10 +4,14 @@
 **Builds from:** `docs/comp-report/02-screens.md` (the screens, what goes on each). Also
 `docs/comp-report/01-design.md` v0.5: §3 (the flow), §6.2 (StreetEasy links), §6.10 (the checks),
 §10.2 (the headline and the email).
-**Depends on:** Abacus's Dispatch 08 phase 1 (`compRecordFromListing`, `LISTING_EXTRACT_SCHEMA`). Build
-against that interface, and stub it until his PR merges. Phase 2 uses his phase 2 (checks, pairs, the
-price table, `headline_facts`) as it lands. Kimani reviews `02-screens.md` in parallel. Where
-decisions D-20 to D-23 are open, use the recommendations, labelled in the build notes.
+**Depends on:** Abacus's Dispatch 08 phase 1 (`compRecordFromListing`, `LISTING_EXTRACT_SCHEMA`),
+**merged as #55**. Phase 2 uses his phase 2 (checks, pairs, the
+price table, `headline_facts`) as it lands. **D-20 to D-23 are decided** (`docs/decisions.md`,
+`02-screens.md` v0.2):
+- tiers keep the labels Primary / Secondary / Excluded (A, for now);
+- a headline is required;
+- the client's name is asked in the modal;
+- "didn't sell" is a fourth group.
 **Protocol:** `docs/dispatch/README.md`. **Open a PR to `claude/main` per phase. Never merge — Casanova
 or Kimani merges. Sign PRs, PR comments and commits "— Mason (CR-3b)".**
 
@@ -27,7 +31,7 @@ transcript and Frankie's email in `docs/comp-report/sources/`.
 
 1. **The new-comp modal** (`02-screens.md`: The home → The details → Add comps). It replaces the
    scaffold's Home and Export steps, and it lands in the workspace on Sort.
-   - It offers buyer or seller (buyer first), plus the client's name (D-22 recommendation A).
+   - It offers buyer or seller (buyer first), plus the client's name beside it (D-22).
    - The target price, deal terms and client note move out of it (phase 2 places them).
 2. **The home by StreetEasy link:** paste the listing and the fields fill themselves. The agent
    confirms or edits them on The details. The typed address still works.
@@ -59,7 +63,10 @@ transcript and Frankie's email in `docs/comp-report/sources/`.
 link, adds five comps by link, confirms them, and lands on Sort with them. The export and typing in
 still work.
 
-## Phase 2 — the screens (after Kimani's review of `02-screens.md`)
+## Phase 2 — the screens (start once phase 1's PR is open)
+
+`02-screens.md` v0.2 carries Kimani's answers so far (D-20 to D-23). Apply further review comments as
+they come.
 
 1. **The workspace has three screens:** Sort, Findings, Send.
    - The agent's number is the gate into Findings (D-1).
@@ -67,19 +74,19 @@ still work.
    - The target and deal terms sit on Findings, after the reveal (D-4).
 2. **Sort rows,** as in `02-screens.md`:
    - one notes field that is also the reason
-   - the tier as three choices (labels per D-20, recommendation B)
+   - the tier as three choices, labelled Primary / Secondary / Excluded (D-20)
    - Kara's checks as flags, with quick-pick note chips
    - opening a row counts as reviewing it, and the anchor is a star inside the opened row
 3. **Findings,** top to bottom:
    - the neutral one-sentence reading
    - one range, or both side by side only when estimates change the answer
    - the agent's number against it
-   - evidence by status, with *didn't sell* per D-23
+   - evidence by status, with *didn't sell* as its own group (D-23)
    - the price table
    - the comps that count
    - "How this was worked out" folded, with the pairs from Dispatch 08
 4. **Send:**
-   - the headline first, required per D-21 (recommendation A)
+   - the headline first, required before the email can be copied (D-21)
    - the assistant's drafts, drawn only from `headline_facts`
    - the email in Frankie's order, still the fixed template
    - QA as one status line
@@ -94,7 +101,7 @@ applied, and a walk from a new comp to a copied email works with sample data and
 
 - **Keep** the error boundary, the effects test, admin-only samples and the sample flag.
 - **Pull `claude/main` first:** Chat.tsx changed under you (the scrollIntoView fix).
-- **Still yours:** CR-1's step-6 proof (Kimani still has to try a Gmail that's on no list), then
+- **Still yours:** CR-1's step-6 proof (Kimani has tried a Gmail that's on no list; confirm the refusal from the sign-up log), then
   CR-1.1 item 3.
 - **Your "wrong shape" notes from #53** (export bytes to Blobs, subject facts as sourced observations,
   a history for the call, versions) belong to CR-3 proper. Do them here only where phase 1 touches

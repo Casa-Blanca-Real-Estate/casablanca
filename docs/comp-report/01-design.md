@@ -1,6 +1,6 @@
 # Comp report tool — master design
 
-**v0.5 · 2026-09-29 · owner: Casanova.** The guiding document for every comp report dispatch.
+**v0.5.1 · 2026-09-29 · owner: Casanova.** The guiding document for every comp report dispatch.
 Dispatches cite sections of this file; when a build finding contradicts it, the dispatch says so
 in its PR and Casanova updates this file — the doc follows reality, not the other way round.
 
@@ -10,6 +10,10 @@ items are dated in §17.
 
 ### Version history
 
+- **v0.5.1** — §7.1 after MindBinder's Jev handoff (D-12):
+  - judgments land as "watch" until their question has a measured bar;
+  - Jev goes through a paced queue, on a Vercel Pro team, with no training and zero retention;
+  - CR-D (Dispatch 10) is in §16.
 - **v0.5** — the reorientation after Kimani walked the CR-3a scaffold, Frankie's email, Kara's
   workshop, Noble's goals and 17 answered decisions:
   - **The report builds to a one-sentence headline** (§1, §10.2).
@@ -478,16 +482,31 @@ one is determined. Until then the bridge shows the judgment with *value not yet 
 
 Thresholds are house-method values, calibrated on Noble's examples.
 
+**Until a question's bar is measured, its answers land as "watch": recorded, never shown.**
+- The bars are per question, per provider and per model, never one global number. MindBinder found
+  Jev's yes/no answers well calibrated, and its many-way choices over overlapping classes not.
+- An answer between 0.4 and 0.6 is always asked.
+- The one bar with evidence behind it is MindBinder's. An answer counts when both option orders give
+  the same answer and their mean probability is at least 0.8.
+
 **Where it runs:** on import, with no LLM involved (every comp classified on arrival, for
 fractions of a cent), and as tools the assistant calls when the conversation needs a
-re-assessment.
+re-assessment. **Casa reaches it through Vercel's AI Gateway,** which allows about five requests a
+minute. So judgments on import arrive over minutes, from a paced queue, and nothing waits on them.
 
 **It sits behind a "decision provider" interface** with Claude Haiku 4.5 (structured outputs) as
-the fallback. Jev is nine days old at the time of writing, invite-only, and doesn't document data
-handling — so Casa needs its own account and terms, client names never go to it, and the tool
-must keep working if it's unavailable.
+the fallback. A judgment that neither answers goes to the agent, never guessed.
+- **Jev is new.** It's two weeks old, and its data handling is only partly documented (handoff §1.4).
+- **So Casa needs its own account and terms.** That's a Vercel Pro team: Vercel requires Pro for
+  commercial use, and it brings zero data retention.
+- **Every request is sent with no training and zero retention.**
+- **Client names never go to it.** Until Jev earns trust on public listing text, nothing an agent or
+  client wrote goes either.
+- **The tool keeps working if Jev is unavailable.**
 
-*Pending: D-12. Kimani will have a MindBinder session prepare a handoff package; what it should contain is in `docs/comp-report/jev-handoff-request.md`.*
+*Decided 2026-09-29: D-12. MindBinder's handoff is in `sources/jev/`. Dispatch 10 (CR-D) builds the
+decision provider from it: a question registry, a durable paced queue with a drop ledger, Jev with a
+Haiku 4.5 fallback, and watch mode first, calibrated on labelled listings.*
 
 ## 8. The assistant
 
@@ -915,6 +934,11 @@ flow, is merged, and Kimani has walked it.
   - adding comps by StreetEasy link, export or by hand
   - the screens restructured to `02-screens.md` (Sort, Findings, Send; the assistant as a drawer)
   - the headline slot on Send
+- **CR-D, the decision provider** (Dispatch 10, Arbiter), from MindBinder's handoff (§7.1):
+  - the question registry
+  - Jev through a durable, paced queue with a drop ledger
+  - the Haiku 4.5 fallback
+  - watch mode on listing text, then calibration on labelled listings
 
 **CR-3 proper** then builds Kimani's visual design on that structure.
 
@@ -1001,6 +1025,8 @@ modelling; more sources.
 | 2026-09-29 | Adjustments become the differences between comps, with clean pairs as evidence; no house values (D-14 closed, D-18 replaced) |
 | 2026-09-29 | "Didn't sell" is a fourth evidence status; a price table for the subject |
 | 2026-09-29 | D-1 C · D-2 A · D-3 A · D-4 A · D-5 A · D-6 A · D-7 B · D-8 visible to mentors and admins · D-9 A · D-10 B · D-11 fifth closed deal · D-13 approved · D-19 B |
+| 2026-09-29 | Jev through Vercel's AI Gateway on a Pro team: no training and zero retention on every request; a durable paced queue; every choice asked in both orders (D-12) |
+| 2026-09-29 | Judgments land as "watch" until their question has a measured bar, per question, provider and model; 0.4–0.6 is always asked |
 
 ## 18. Open items
 
