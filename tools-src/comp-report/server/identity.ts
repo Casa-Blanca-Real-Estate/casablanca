@@ -19,6 +19,42 @@ export interface IdentityUser {
 
 export interface IdentityVerifier {
   verify(token: string): Promise<IdentityUser | null>;
+  /**
+   * Whether Identity makes a password sign-up confirm its address by email.
+   * With autoconfirm on it doesn't, and a password account's address proves
+   * nothing: anyone could sign up as any casa-blanca.com address.
+   */
+  emailConfirmationRequired(): Promise<boolean>;
+}
+
+/** Identity's public settings (GET /.netlify/identity/settings), read strictly. */
+export interface IdentitySettings {
+  /** Unknown counts as on, so a missing field fails closed. */
+  autoconfirm: boolean;
+  openRegistration: boolean;
+  google: boolean;
+}
+
+/**
+ * Null when Identity isn't enabled (404). Throws IdentityUnavailable when it
+ * can't be reached or answers anything else unexpected.
+ */
+export async function readIdentitySettings(identityUrl: string, fetchImpl: typeof fetch = fetch): Promise<IdentitySettings | null> {
+  let res: Response;
+  try {
+    res = await fetchImpl(`${identityUrl}/settings`);
+  } catch (error) {
+    throw new IdentityUnavailable(`Identity unreachable: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (res.status === 404) return null;
+  if (!res.ok) throw new IdentityUnavailable(`Identity settings answered ${res.status}`);
+  const s = (await res.json().catch(() => null)) as { disable_signup?: unknown; autoconfirm?: unknown; external?: Record<string, unknown> } | null;
+  if (!s || typeof s !== 'object') throw new IdentityUnavailable('Identity settings unreadable');
+  return {
+    autoconfirm: s.autoconfirm !== false,
+    openRegistration: s.disable_signup === false,
+    google: s.external?.google === true,
+  };
 }
 
 export class IdentityUnavailable extends Error {}
@@ -66,8 +102,17 @@ export function netlifyIdentityVerifier(
 ): IdentityVerifier {
   // Per warm instance: at most a minute, never past the token's own expiry.
   const cache = new Map<string, { user: IdentityUser; until: number }>();
+  let confirmation: { required: boolean; until: number } | null = null;
 
   return {
+    async emailConfirmationRequired(): Promise<boolean> {
+      if (confirmation && confirmation.until > now()) return confirmation.required;
+      const settings = await readIdentitySettings(identityUrl, fetchImpl);
+      if (!settings) throw new IdentityUnavailable('Identity is not enabled');
+      confirmation = { required: !settings.autoconfirm, until: now() + CACHE_MS };
+      return confirmation.required;
+    },
+
     async verify(token: string): Promise<IdentityUser | null> {
       const key = createHash('sha256').update(token).digest('base64url');
       const hit = cache.get(key);

@@ -11,6 +11,7 @@ import {
   acceptInvite, getSettings, getUser, handleAuthCallback, login, logout, oauthLogin,
   refreshSession, requestPasswordRecovery, updateUser,
 } from '@netlify/identity';
+import { signInErrorNotice } from './sign-in-errors.ts';
 
 export type SessionState =
   | { status: 'loading' }
@@ -52,6 +53,11 @@ const identity: SessionProvider = {
       await getSettings();
     } catch {
       return { status: 'unavailable' };
+    }
+    const refused = signInErrorNotice(location.hash);
+    if (refused) {
+      history.replaceState(null, '', location.pathname + location.search);
+      return { status: 'signed-out', notice: refused };
     }
     if (AUTH_HASH.test(location.hash)) {
       try {

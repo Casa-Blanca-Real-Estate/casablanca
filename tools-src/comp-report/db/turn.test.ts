@@ -39,7 +39,10 @@ describe('the streamed assistant turn', { skip: skipWithoutDatabase }, () => {
     requests = fake.requests;
     const baseURL = fake.url;
     deps = {
-      verifier: { verify: async (t) => (PEOPLE[t] ? ({ id: t, confirmed: true, provider: 'google', name: null, ...PEOPLE[t] } as IdentityUser) : null) },
+      verifier: {
+        verify: async (t) => (PEOPLE[t] ? ({ id: t, confirmed: true, provider: 'google', name: null, ...PEOPLE[t] } as IdentityUser) : null),
+        emailConfirmationRequired: async () => true,
+      },
       access: accessConfig({}),
       pool: pool as unknown as PoolLike,
       anthropic: () => new Anthropic({ apiKey: 'test-key', baseURL, maxRetries: 0 }),

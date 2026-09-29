@@ -35,6 +35,7 @@ describe('comp report API', { skip: skipWithoutDatabase }, () => {
           const p = PEOPLE[token];
           return p ? ({ id: `id-${token}`, confirmed: true, provider: 'google', name: null, ...p } as IdentityUser) : null;
         },
+        emailConfirmationRequired: async () => true,
       },
       access: accessConfig({ CR_ADMIN_EMAILS: 'kimani@casa-blanca.com' }),
       pool: pool as unknown as PoolLike,

@@ -4,7 +4,7 @@ import { describe, test } from 'node:test';
 import { accessConfig, decide, normalizeEmail } from './access.ts';
 import { handleMe } from './api/me.ts';
 import { handleIdentityEvent } from './identity-events.ts';
-import { bearerToken, IdentityUnavailable, netlifyIdentityVerifier, type IdentityUser } from './identity.ts';
+import { bearerToken, IdentityUnavailable, netlifyIdentityVerifier, readIdentitySettings, type IdentityUser } from './identity.ts';
 import { requireUser, type AuthDeps } from './session.ts';
 
 const casa = accessConfig({ CR_ADMIN_EMAILS: 'Kimani@Casa-Blanca.com' });
@@ -14,8 +14,13 @@ describe('the access rule', () => {
     assert.deepEqual(decide('ana@casa-blanca.com', casa, null), { allowed: true, role: 'agent', via: 'domain' });
     assert.deepEqual(decide('kimani@casa-blanca.com', casa, null), { allowed: true, role: 'admin', via: 'admin' });
     assert.deepEqual(decide('counsel@firm.com', casa, 'external'), { allowed: true, role: 'external', via: 'allowlist' });
-    assert.deepEqual(decide('hannah@casa-blanca.com', casa, 'admin'), { allowed: true, role: 'admin', via: 'allowlist' });
+    assert.deepEqual(decide('ben@casa-blanca.com', casa, 'mentor'), { allowed: true, role: 'mentor', via: 'allowlist' });
     assert.equal(decide('someone@gmail.com', casa, null).allowed, false);
+  });
+
+  test('admin comes from CR_ADMIN_EMAILS alone: an allowlist row saying admin grants nothing', () => {
+    assert.deepEqual(decide('hannah@casa-blanca.com', casa, 'admin'), { allowed: true, role: 'agent', via: 'domain' });
+    assert.deepEqual(decide('hannah@partner.com', casa, 'admin'), { allowed: false, role: null, via: null });
   });
 
   test('domains match exactly — a subdomain or a lookalike is not Casa', () => {
@@ -73,6 +78,38 @@ describe('verifying a session with Identity', () => {
     await assert.rejects(unreachable.verify(token), IdentityUnavailable);
   });
 
+  test("reads whether Identity makes password sign-ups confirm their address, and caches it briefly", async () => {
+    const settings = (body: unknown, status = 200) => {
+      let calls = 0;
+      const fetchImpl = (async (url: string) => {
+        calls++;
+        assert.equal(url, 'https://site.example/.netlify/identity/settings');
+        return typeof body === 'string' ? new Response(body, { status }) : Response.json(body, { status });
+      }) as unknown as typeof fetch;
+      return { verifier: netlifyIdentityVerifier('https://site.example/.netlify/identity', fetchImpl), calls: () => calls };
+    };
+    const off = settings({ autoconfirm: false, disable_signup: false, external: { google: true } });
+    assert.equal(await off.verifier.emailConfirmationRequired(), true);
+    assert.equal(await off.verifier.emailConfirmationRequired(), true);
+    assert.equal(off.calls(), 1);
+    assert.equal(await settings({ autoconfirm: true }).verifier.emailConfirmationRequired(), false);
+    assert.equal(await settings({ disable_signup: false }).verifier.emailConfirmationRequired(), false, 'a missing field fails closed');
+    await assert.rejects(settings('Not found', 404).verifier.emailConfirmationRequired(), IdentityUnavailable);
+    await assert.rejects(settings('Bad gateway', 502).verifier.emailConfirmationRequired(), IdentityUnavailable);
+    const unreachable = netlifyIdentityVerifier('https://x', (async () => { throw new TypeError('fetch failed'); }) as unknown as typeof fetch);
+    await assert.rejects(unreachable.emailConfirmationRequired(), IdentityUnavailable);
+  });
+
+  test('the settings reader: not enabled is null, anything unexpected is unavailable', async () => {
+    const reply = (body: string, status: number) => (async () => new Response(body, { status })) as unknown as typeof fetch;
+    assert.equal(await readIdentitySettings('https://x', reply('Not found', 404)), null);
+    await assert.rejects(readIdentitySettings('https://x', reply('<html>', 200)), IdentityUnavailable);
+    assert.deepEqual(
+      await readIdentitySettings('https://x', (async () => Response.json({ autoconfirm: false, disable_signup: true, external: { google: false } })) as unknown as typeof fetch),
+      { autoconfirm: false, openRegistration: false, google: false },
+    );
+  });
+
   test('only an Authorization: Bearer header counts', () => {
     const req = (h: Record<string, string>) => new Request('https://x/api', { headers: h });
     assert.equal(bearerToken(req({ authorization: `Bearer ${token}` })), token);
@@ -82,12 +119,13 @@ describe('verifying a session with Identity', () => {
   });
 });
 
-function stubVerifier(users: Record<string, Partial<IdentityUser>>) {
+function stubVerifier(users: Record<string, Partial<IdentityUser>>, confirmation: () => Promise<boolean> = async () => true) {
   return {
     async verify(token: string): Promise<IdentityUser | null> {
       const u = users[token];
       return u ? { id: 'id-' + token, email: 'x@x.com', confirmed: true, provider: 'google', name: null, ...u } as IdentityUser : null;
     },
+    emailConfirmationRequired: confirmation,
   };
 }
 
@@ -97,6 +135,9 @@ describe('the per-request check, before the database exists', () => {
       'token-ana-0000000': { email: 'ana@casa-blanca.com' },
       'token-gmail-00000': { email: 'someone@gmail.com' },
       'token-unconfirmed': { email: 'new@casa-blanca.com', confirmed: false },
+      'token-password-00': { email: 'ben@casa-blanca.com', provider: 'email' },
+      'token-noprovider0': { email: 'cy@casa-blanca.com', provider: null },
+      'token-github-0000': { email: 'dee@casa-blanca.com', provider: 'github' },
     }),
     access: casa,
     pool: null,
@@ -128,9 +169,39 @@ describe('the per-request check, before the database exists', () => {
   });
 
   test("Identity being unreachable is a 503, not a free pass", async () => {
-    const down: AuthDeps = { ...deps, verifier: { verify: async () => { throw new IdentityUnavailable('down'); } } };
+    const down: AuthDeps = {
+      ...deps,
+      verifier: { verify: async () => { throw new IdentityUnavailable('down'); }, emailConfirmationRequired: async () => true },
+    };
     const res = await handleMe(new Request('https://site/x', { headers: { authorization: 'Bearer token-ana-0000000' } }), down);
     assert.equal(res.status, 503);
+  });
+
+  test('a password account counts only while Identity requires email confirmation; Google always counts', async () => {
+    assert.equal((await call('token-password-00')).status, 200);
+    const users = {
+      'token-ana-0000000': { email: 'ana@casa-blanca.com' },
+      'token-password-00': { email: 'ben@casa-blanca.com', provider: 'email' },
+    };
+    const on: AuthDeps = { ...deps, verifier: stubVerifier(users, async () => false) };
+    const me = (token: string, d: AuthDeps) =>
+      handleMe(new Request('https://site/x', { headers: { authorization: `Bearer ${token}` } }), d);
+    const refused = await me('token-password-00', on);
+    assert.equal(refused.status, 403);
+    assert.equal((await refused.json()).error, 'address_unverified');
+    assert.equal((await me('token-ana-0000000', on)).status, 200, 'Google is unaffected');
+
+    const settingsDown: AuthDeps = { ...deps, verifier: stubVerifier(users, async () => { throw new IdentityUnavailable('down'); }) };
+    assert.equal((await me('token-password-00', settingsDown)).status, 503);
+    assert.equal((await me('token-ana-0000000', settingsDown)).status, 200, 'Google never needs the settings');
+  });
+
+  test('a sign-in from any provider but Google or email is refused, even from a Casa address', async () => {
+    for (const token of ['token-noprovider0', 'token-github-0000']) {
+      const res = await call(token);
+      assert.equal(res.status, 403, token);
+      assert.equal((await res.json()).error, 'provider_not_allowed', token);
+    }
   });
 
   test('requireUser itself refuses outsiders', async () => {

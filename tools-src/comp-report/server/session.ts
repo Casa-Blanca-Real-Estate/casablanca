@@ -33,6 +33,7 @@ export interface AuthDeps {
 }
 
 const NOT_AUTHORISED = 'This account isn\'t authorised for the comp report. Sign in with your Casa Blanca Google account, or ask an admin to add you.';
+const ADDRESS_UNVERIFIED = 'Password sign-in is switched off: Identity is confirming new accounts without checking their inbox. Sign in with Google, or ask an admin to turn email confirmation back on.';
 
 // last_seen_at is refreshed at most this often, so reads don't each cost a write.
 const SEEN_REFRESH_MS = 5 * 60_000;
@@ -63,6 +64,27 @@ export async function requireUser(req: Request, deps: AuthDeps): Promise<Session
   }
   if (!identity) throw new HttpError(401, 'signed_out', 'Your session has ended. Sign in again.');
   if (!identity.confirmed) throw new HttpError(403, 'unconfirmed', 'Confirm your email address first.');
+
+  // Whose address is proven (§13). Google has verified a Google account's
+  // address. A password account's address counts only while Identity makes
+  // people confirm it by email: with autoconfirm on, anyone could sign up as
+  // any casa-blanca.com address and pass the access rule. The comp report uses
+  // no other provider, so any other is refused. All of it fails closed.
+  if (identity.provider !== 'google' && identity.provider !== 'email') {
+    throw new HttpError(403, 'provider_not_allowed', 'Sign in with Google, or with the email account you were invited with.');
+  }
+  if (identity.provider === 'email') {
+    let required: boolean;
+    try {
+      required = await deps.verifier.emailConfirmationRequired();
+    } catch (error) {
+      if (error instanceof IdentityUnavailable) {
+        throw new HttpError(503, 'identity_unavailable', 'Sign-in can\'t be checked right now. Try again in a moment.');
+      }
+      throw error;
+    }
+    if (!required) throw new HttpError(403, 'address_unverified', ADDRESS_UNVERIFIED);
+  }
 
   const email = identity.email;
 

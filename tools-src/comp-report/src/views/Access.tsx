@@ -2,14 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, type AllowlistEntry, type Me, type Role } from '../api.ts';
 
 // Admins only (server/api/allowlist.ts): who beyond Casa's domain may use the
-// comp report, and roles other than agent for Casa people.
+// comp report, and roles other than agent for Casa people. Admin isn't one of
+// them: admins come from CR_ADMIN_EMAILS in Netlify, nowhere else.
 const ROLES: { value: Role; label: string }[] = [
   { value: 'external', label: 'External' },
   { value: 'mentor', label: 'Mentor' },
   { value: 'agent', label: 'Agent' },
-  { value: 'admin', label: 'Admin' },
 ];
-const roleLabel = (role: Role) => ROLES.find((r) => r.value === role)?.label ?? role;
+// A row written before CR-1.1 could say admin. The access rule ignores it.
+const roleLabel = (role: Role) => ROLES.find((r) => r.value === role)?.label ?? 'Admin — not applied';
 
 export function Access({ me }: { me: Me }) {
   const [entries, setEntries] = useState<AllowlistEntry[] | null>(null);
@@ -70,7 +71,8 @@ export function Access({ me }: { me: Me }) {
         <p className="muted">
           Anyone with a Casa Blanca address gets in as an agent. Add anyone else here, or give a Casa
           address another role. For someone new, then send the invitation from Netlify → Identity →
-          Invite users. Changes apply on the person's next request.
+          Invite users. Changes apply on the person's next request. Admins are set in Netlify
+          (CR_ADMIN_EMAILS), not here.
         </p>
         <div className="row wrap">
           <input
