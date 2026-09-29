@@ -10,6 +10,7 @@ import { accessConfig } from '../server/access.ts';
 import { handleMessages } from '../server/api/messages.ts';
 import { handleReports } from '../server/api/reports.ts';
 import { handleTurn, type TurnDeps } from '../server/api/turn.ts';
+import { CURRENT_PROMPT } from '../server/assistant.ts';
 import { withActor, type PoolLike } from '../server/db.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import { startFakeAnthropic, type FakeAnthropic, type Script } from '../dev/fake-anthropic.ts';
@@ -97,7 +98,9 @@ describe('the streamed assistant turn', { skip: skipWithoutDatabase }, () => {
     assert.deepEqual(sent.body.thinking, { type: 'adaptive', display: 'updates', block_binding: { prefix_mismatch_behavior: 'error' } });
     assert.equal(sent.body.fallbacks, 'default');
     assert.deepEqual(sent.body.tool_choice, { type: 'auto' });
-    assert.deepEqual((sent.body.tools as Block[]).map((t) => t.name), ['get_report']);
+    // A new conversation starts on the current prompt and tools, and stays on them.
+    assert.deepEqual((sent.body.tools as Block[]).map((t) => t.name), ['get_report', 'get_numbers']);
+    assert.equal((sent.body.system as Block[])[0]!.text, CURRENT_PROMPT.system);
     assert.equal(sent.body.stream, true);
     const betas = String(sent.headers['anthropic-beta']);
     for (const b of ['thinking-display-updates-2026-08-18', 'server-side-fallback-2026-07-01', 'thinking-binding-controls-2026-08-01']) {
@@ -172,6 +175,37 @@ describe('the streamed assistant turn', { skip: skipWithoutDatabase }, () => {
     assert.equal((last.content[0] as { text?: string }).text, 'A reply the agent will read after reloading.');
   });
 
+  test('a message sent while a reply is still being written waits: it is refused, and that reply is still recorded', async () => {
+    scripts.push({ content: [{ type: 'text', text: 'A slow reply that must not be lost.' }], stopReason: 'end_turn', delayMs: 40 });
+    const before = (await stored()).length;
+    const first = await handleTurn(new Request('https://site/api/comp-report/turn', {
+      method: 'POST', headers: { authorization: 'Bearer tok-ana-000000000' }, body: JSON.stringify({ reportId, message: 'First' }),
+    }), deps);
+    const reader = first.body!.getReader();
+    await reader.read(); // under way: the message is stored, its reply isn't yet
+    const second = await turn('Second, too soon');
+    assert.equal(second.res.status, 409);
+    assert.equal((await second.res.json()).error, 'turn_in_progress');
+    while (!(await reader.read()).done); // the first runs to its end
+    const rows = await stored();
+    assert.equal(rows.length, before + 2, 'the refused message was never stored');
+    assert.deepEqual(rows.slice(-2).map((r) => [r.role, r.stop_reason, r.in_context]), [['user', null, true], ['assistant', 'end_turn', true]]);
+    assert.equal((rows.at(-1)!.content[0] as { text?: string }).text, 'A slow reply that must not be lost.');
+  });
+
+  test('a message left without a reply (a function that died) holds the report only for a while', async () => {
+    const next = (await stored()).at(-1)!.seq + 1;
+    await withActor(pool as unknown as PoolLike, { kind: 'user', email: 'ana@casa-blanca.com', role: 'agent' }, (tx) =>
+      tx.query(`insert into comp_report.messages (report_id, seq, role, content, prompt_version) values ($1, $2, 'user', $3, $4)`,
+        [reportId, next, JSON.stringify([{ type: 'text', text: 'Left unanswered' }]), CURRENT_PROMPT.id]));
+    assert.equal((await turn('Anyone there?')).res.status, 409);
+    scripts.push({ content: [{ type: 'text', text: 'Back.' }], stopReason: 'end_turn' });
+    const later = await turn('Anyone there?', 'tok-ana-000000000', { inFlightSeconds: 0 });
+    assert.equal(later.events.at(-1).type, 'done');
+    const sent = requests.at(-1)!.body.messages as Array<{ role: string; content: Block[] }>;
+    assert.deepEqual(sent.slice(-2).map((m) => m.content.map((b) => b.text)), [['Left unanswered'], ['Anyone there?']]);
+  });
+
   test("another agent can't talk in, or read, Ana's report", async () => {
     const ben = await turn('hello', 'tok-ben-000000000');
     assert.equal(ben.res.status, 404);
@@ -195,12 +229,13 @@ describe('the streamed assistant turn', { skip: skipWithoutDatabase }, () => {
   test('usage is logged per call', async () => {
     const rows = await withActor(pool as unknown as PoolLike, { kind: 'user', email: 'ana@casa-blanca.com', role: 'agent' }, async (tx) =>
       (await tx.query<{ model: string; purpose: string; output_tokens: number }>('select model, purpose, output_tokens from comp_report.usage where report_id = $1', [reportId])).rows);
-    // Seven calls: the first turn, the tool call and its continuation, the
-    // refusal, the ordinary turn after it, the one the browser left — each 300
-    // output tokens as scripted — and the interrupted turn, which logs what it
-    // had used when it was stopped.
-    assert.equal(rows.length, 7);
+    // Nine calls: the first turn, the tool call and its continuation, the
+    // refusal, the ordinary turn after it, the one the browser left, the slow
+    // reply a second message waited for and the reply after an unanswered
+    // message — each 300 output tokens as scripted — and the interrupted turn,
+    // which logs what it had used when it was stopped. Refused requests make none.
+    assert.equal(rows.length, 9);
     assert.ok(rows.every((r) => r.model === 'claude-opus-5-5' && r.purpose === 'assistant'));
-    assert.deepEqual(rows.map((r) => r.output_tokens).sort((a, b) => a - b), [1, 300, 300, 300, 300, 300, 300]);
+    assert.deepEqual(rows.map((r) => r.output_tokens).sort((a, b) => a - b), [1, 300, 300, 300, 300, 300, 300, 300, 300]);
   });
 });
