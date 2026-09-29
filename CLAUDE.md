@@ -12,6 +12,19 @@ is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`
 **Pending decisions for Kimani, across every track, are in `docs/decisions.md`** — each with its
 context and a field to answer in. Don't guess at an open decision; check there first.
 
+**Kimani's notes on the site are in the dev notebook** — he writes them while using it (Ctrl+. / ⌘. on
+any studio page). Read them at the start of open-ended work, or when asked what's on the list:
+
+```sh
+npm run -s notebook                          # open notes; the first line counts them
+npm run -s notebook -- --id=<id> --shots     # one note: its context, history and screenshots
+```
+
+Picking one up: `--set=read --by=<session>`. A note on it: `--note="…" --by=<session>`. Fixed in your
+PR: `--set=resolved --pr=<n> --note="…" --by=<session>`. It needs `DEV_NOTEBOOK_KEY` in the environment;
+without it, say so and carry on. You can't delete a note: use `--set=wontfix` or `--set=duplicate`
+with a `--note`. The notes aren't app data: no tool may read them. See `docs/dev-notebook/README.md`.
+
 **Read `docs/context/casa-blanca.md` before substantive work.** It's the condensed working
 reference: who the company is, the hard constraints, the brand tokens, the stack and its gotchas,
 current tool state, and ways of working. Tool state drifts — confirm anything load-bearing with
@@ -60,6 +73,8 @@ file points you there by section when you need it.
 | `docs/decisions.md` | Pending decisions for Kimani, with context and answer fields |
 | `docs/comp-report/` | The comp report tool — `01-design.md` (the master design), `02-screens.md` (what each screen shows), `00-orientation.md` (research, requirements), `sources/` (kickoff transcripts, the reference StreetEasy export, Frankie's email, Kara's workshop, the ChatGPT workflow audit) |
 | `docs/parked/` | Work paused for a priority change, with the state it was left in and how to resume |
+| `docs/dev-notebook/` | The dev notebook: Kimani's in-app notes for Claude Code sessions — `README.md` (setup, the CLI, the rules), and the handoff it was built from |
+| `tools/dev-notebook/`, `assets/dev-notebook.js` | The notebook page (sign-in, notes, keys, the only delete) and the capture box it turns on across the studio; the API and CLI are in `tools-src/dev-notebook/` |
 
 ## Session roles
 
