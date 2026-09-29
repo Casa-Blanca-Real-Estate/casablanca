@@ -41,7 +41,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
 | **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
-| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a) | 05: merged #48, #52; step-6 sign-in proof and CR-1.1 item 3 open. 07: ready |
+| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a) | 05: merged #48, #52; step-6 sign-in proof and CR-1.1 item 3 open. 07: PR #53 open |
 | **Abacus** | The comp report's calculation engine and parser | 06 (CR-2) | Done — merged #50 and CR-2.1 (#51) |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
@@ -57,4 +57,4 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | Done — merged #49 |
 | 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | Merged #48, #52; step 6 waits on Kimani (`CR_ADMIN_EMAILS`, redeploy) |
 | 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Done — merged #50, #51 |
-| 07 | [Comp report — the walkthrough scaffold (CR-3a)](07-comp-report-walkthrough-scaffold.md) | Mason | Ready |
+| 07 | [Comp report — the walkthrough scaffold (CR-3a)](07-comp-report-walkthrough-scaffold.md) | Mason | PR #53 open |

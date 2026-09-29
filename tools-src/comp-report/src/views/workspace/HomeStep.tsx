@@ -72,7 +72,7 @@ export function HomeStep({ ws }: StepProps) {
             label="Interior size (sq ft)"
             sample={intake.areaSqft?.sample}
             estimate={intake.areaSqft?.estimate}
-            hint="Your estimate counts in “with estimates” only; “on the facts” then says the size is missing (§6.4)."
+            hint="Input confidence (§6.1): marked as your estimate, it counts in “with estimates” only, and “on the facts” says the size is missing (§6.4)."
           >
             <NumberInput label="Interior size in square feet" value={intake.areaSqft} onChange={set('areaSqft')} today={today} disabled={off} placeholder="e.g. 1,850" />
             <label className="check">

@@ -80,7 +80,7 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 04 | [Comp report — adjustment research (CR-R)](docs/dispatch/04-comp-report-research.md) | Surveyor | Done — merged #49 |
 | 05 | [Comp report — foundations (CR-1)](docs/dispatch/05-comp-report-foundations.md) | Mason | Merged #48, #52; step 6 waits on Kimani (`CR_ADMIN_EMAILS`, redeploy) |
 | 06 | [Comp report — engine and parser (CR-2)](docs/dispatch/06-comp-report-engine.md) | Abacus | Done — merged #50, #51 |
-| 07 | [Comp report — the walkthrough scaffold (CR-3a)](docs/dispatch/07-comp-report-walkthrough-scaffold.md) | Mason | Ready |
+| 07 | [Comp report — the walkthrough scaffold (CR-3a)](docs/dispatch/07-comp-report-walkthrough-scaffold.md) | Mason | PR #53 open |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and
