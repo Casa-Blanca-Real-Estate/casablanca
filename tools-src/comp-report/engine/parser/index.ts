@@ -17,13 +17,14 @@
 // The export date is an input: the engine has no clock.
 
 import { EXPORT_SCHEMA, PARSER_VERSION } from '../version.ts';
+import { ParseError, type ParseWarning } from './errors.ts';
 import { FACT_CHECKS } from '../facts-schema.ts';
 import { isIsoDate, type IsoDate } from '../util/dates.ts';
 import { cp1252Decode, utf8DecodeStrict } from '../util/utf8.ts';
-import type { CompRecord, Confidence, PropertyFacts, Sourced, UnitTypeTag } from '../types.ts';
+import type { CompRecord, Confidence, PropertyFacts, Sourced } from '../types.ts';
 import { readCsv } from './csv.ts';
 import { COLUMNS, mapColumns, type ColumnMapping } from './columns.ts';
-import { deriveFromAmenities, deriveFromFeatures, unitLabelSuggestsPenthouse } from './derive.ts';
+import { EXPORT_TAG_NAMES, penthouseSuggestion, tagFacts } from './tag-facts.ts';
 import { identify } from './property-key.ts';
 import {
   cellText, isBlank, readArea, readCount, readDate, readFloor, readHalfCount, readMoney,
@@ -42,19 +43,7 @@ export interface ParseOptions {
   filename?: string;
 }
 
-export type ParseWarningCode =
-  | 'missing_column' | 'unknown_column' | 'duplicate_column' | 'renamed_column'
-  | 'unreadable_value' | 'value_adjusted' | 'closing_record' | 'approx_area'
-  | 'unrecognised_status' | 'missing_address' | 'duplicate_property' | 'ragged_row'
-  | 'encoding' | 'file_note' | 'no_rows' | 'zero_price';
-
-export interface ParseWarning {
-  code: ParseWarningCode;
-  message: string;
-  /** 1-based data row (the header is row 0), when the warning is about one row. */
-  row?: number;
-  column?: string;
-}
+export { ParseError, type ParseWarning, type ParseWarningCode } from './errors.ts';
 
 export interface ParsedExport {
   parser: { version: string; schema: string };
@@ -68,13 +57,6 @@ export interface ParsedExport {
   };
   comps: CompRecord[];
   warnings: ParseWarning[];
-}
-
-export class ParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ParseError';
-  }
 }
 
 /** Parses an export from its bytes, CSV or XLSX (detected from the content). */
@@ -291,50 +273,19 @@ function buildComp(
     amenities: readTags(cell('amenities')),
     policies: readTags(cell('policies')),
   };
-  if (tags.features.length > 0) {
-    const f = deriveFromFeatures(tags.features);
-    const none = (what: string) => `no ${what} listed among the Home Features`;
-    facts.views = tagged(f.views, f.views.length > 0, f.views.length ? 'from the Home Features view tags' : none('view'));
-    const outdoor = f.outdoor_kinds.length > 0;
-    facts.outdoor_private = tagged(outdoor, outdoor, outdoor ? `Home Features list ${f.outdoor_kinds.join(', ')}` : none('private outdoor space'));
-    facts.outdoor_kinds = tagged(f.outdoor_kinds, outdoor, outdoor ? 'from the Home Features; the export carries no outdoor size' : none('private outdoor space'));
-    facts.unit_type = tagged(f.unit_type, f.unit_type.length > 0, f.unit_type.length ? 'from the Home Features' : none('penthouse, duplex, triplex or loft'));
-    facts.central_air = tagged(f.central_air, f.central_air, f.central_air ? 'from the Home Features' : none('central air'));
-    facts.dishwasher = tagged(f.dishwasher, f.dishwasher, f.dishwasher ? 'from the Home Features' : none('dishwasher'));
-    facts.fireplace = tagged(f.fireplace, f.fireplace, f.fireplace ? 'from the Home Features' : none('fireplace'));
-    facts.laundry = tagged(f.laundry, f.laundry !== 'none_listed',
-      f.laundry === 'installed' ? 'a washer/dryer among the Home Features'
-        : f.laundry === 'permitted' ? 'the Home Features say a washer/dryer is allowed'
-          : `${none('washer/dryer')}; whether one is permitted isn't known`);
-    facts.finishes = tagged(f.finishes, f.finishes.length > 0, f.finishes.length
-      ? 'Home Features other than views, outdoor space, unit type and the systems above'
-      : 'no other finishes listed among the Home Features');
+  for (const t of tagFacts(tags, EXPORT_TAG_NAMES)) {
+    (facts as Record<string, Sourced<unknown>>)[t.field] = tagged(t.value, t.listed, t.note);
   }
   // A penthouse guessed from the unit label is a suggestion for the agent to
-  // confirm; the exact fact from the Home Features stands meanwhile.
+  // confirm; the fact from the Home Features stands meanwhile.
   const suggestions: CompRecord['suggestions'] = [];
   const unitRaw = identity.unit.raw;
-  if (unitLabelSuggestsPenthouse(unitRaw) && !facts.unit_type?.value.includes('penthouse')) {
-    const types: UnitTypeTag[] = [...(facts.unit_type?.value ?? []), 'penthouse'];
+  const penthouse = penthouseSuggestion(unitRaw, facts.unit_type?.value);
+  if (penthouse) {
     suggestions.push({
       field: 'unit_type',
-      value: { value: types.sort(), source: 'se_export', as_of: asOf, confidence: 'inferred', note: `the unit label ${unitRaw} suggests a penthouse — confirm` },
+      value: { value: penthouse, source: 'se_export', as_of: asOf, confidence: 'inferred', note: `the unit label ${unitRaw} suggests a penthouse — confirm` },
     });
-  }
-  if (tags.amenities.length > 0) {
-    const a = deriveFromAmenities(tags.amenities);
-    // Door service and concierge are both read from the tags: a part not listed is "none listed".
-    const serviceListed = a.service.doorman !== 'none_listed' && a.service.concierge;
-    facts.service = tagged(a.service, serviceListed, serviceListed ? 'from the Building Amenities'
-      : `from the Building Amenities; ${[a.service.doorman === 'none_listed' ? 'no doorman' : '', a.service.concierge ? '' : 'no concierge'].filter(Boolean).join(' and ')} listed`);
-    facts.parking = tagged(a.parking, a.parking.length > 0, a.parking.length ? 'from the Building Amenities; deeded or not can\'t be told' : 'no parking listed among the Building Amenities');
-    facts.outdoor_shared = tagged(a.outdoor_shared, a.outdoor_shared, a.outdoor_shared ? 'shared outdoor space listed among the Building Amenities' : 'no shared outdoor space listed among the Building Amenities');
-    facts.amenities = tagged(a.amenities, a.amenities.length > 0, a.amenities.length
-      ? 'Building Amenities other than door service, parking and shared outdoor space'
-      : 'no other amenities listed among the Building Amenities');
-  }
-  if (tags.policies.length > 0) {
-    facts.policies = exact(tags.policies.map((p) => p.toLowerCase()).sort(), 'from the Building Policies');
   }
 
   if (closing) {
@@ -371,7 +322,7 @@ function buildComp(
       ? null
       : { raw: ppsfRaw, value: ppsfNumber !== null && Number.isFinite(ppsfNumber) ? ppsfNumber : null },
     flags: { closing_record: closing, approx_area: area?.confidence === 'approx' },
-    origin: { parser_version: PARSER_VERSION, row, as_of: asOf },
+    origin: { parser_version: PARSER_VERSION, row, as_of: asOf, via: 'export' },
   };
   if (Object.keys(extra).length > 0) record.extra_columns = extra;
   if (suggestions.length > 0) record.suggestions = suggestions;

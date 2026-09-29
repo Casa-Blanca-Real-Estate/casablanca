@@ -133,6 +133,10 @@ export interface CompOut {
     property_type_mismatch: boolean;
     unrecognised_status: boolean;
     outside_recency_window: boolean;
+    /** Came off the market unsold — "didn't sell", which enters no statistic yet (§6.3). */
+    off_market: boolean;
+    /** Read from a StreetEasy page and not yet confirmed by the agent: it counts in neither result. */
+    unconfirmed: boolean;
   };
   status_date: IsoDate | null;
   /** Days from the status date to the analysis date. */
@@ -338,7 +342,8 @@ export interface Warning {
 }
 
 export interface PendingItem {
-  kind: 'fact' | 'assessment';
+  /** `listing`: a row read from a StreetEasy page, waiting for the agent's one-tap confirm — one item for the whole row. */
+  kind: 'fact' | 'assessment' | 'listing';
   id: string | null;
   target: string;
   what: string;

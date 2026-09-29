@@ -1,0 +1,27 @@
+{
+  "_fixture": "Hand-written in the shape Firecrawl returns for LISTING_EXTRACT_SCHEMA, after the active comp in Frankie's email ('20 Pine #617 - asking $725,000 … on the market for 86 days'). Every other value is made up; the city and state are left for the link's slug to supply. Not a captured page.",
+  "address": "20 Pine Street",
+  "unit": "#617",
+  "neighborhood": "Financial District",
+  "status": "For sale",
+  "last_ask": "$725,000",
+  "list_date": "Jun 30, 2026",
+  "days_on_market": "86 days",
+  "floor": "6th floor",
+  "interior_size": "780 ft²",
+  "beds": "1 bed",
+  "baths": "1 bath",
+  "common_charges": "$790",
+  "taxes": "$640",
+  "property_type": "Condo in Financial District",
+  "building_units": "408",
+  "building_stories": "28",
+  "year_built": "1928",
+  "features": ["Dishwasher", "Hardwood floors"],
+  "amenities": ["Full-time doorman", "Concierge", "Gym", "Roof deck"],
+  "policies": ["Pets allowed", "Guarantors accepted"],
+  "history": [
+    { "date": "Jun 30, 2026", "event": "Listed", "price": "$725,000" }
+  ],
+  "description": ""
+}

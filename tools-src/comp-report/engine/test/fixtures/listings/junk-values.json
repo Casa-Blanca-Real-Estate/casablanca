@@ -1,0 +1,29 @@
+{
+  "_fixture": "Hand-written: what a misread page might return. Every value but the address, status and one history row is junk the reader must refuse without stopping.",
+  "address": "99 John Street",
+  "unit": "#612",
+  "city": "New York",
+  "state": "NY",
+  "status": "Sold",
+  "sale_price": "Call for price",
+  "sale_date": "last month",
+  "last_ask": "$0",
+  "days_on_market": "n/a",
+  "floor": "PH",
+  "interior_size": "large",
+  "beds": "many",
+  "baths": "—",
+  "rooms": "0",
+  "common_charges": "TBD",
+  "property_type": "Mansion",
+  "building_units": "0",
+  "year_built": "prewar",
+  "new_development": "maybe",
+  "features": "Central air; Dishwasher",
+  "amenities": [7, "", "Gym", null],
+  "history": [
+    { "date": "yesterday", "event": "Sold", "price": "$620,000" },
+    "not a row"
+  ],
+  "description": 42
+}

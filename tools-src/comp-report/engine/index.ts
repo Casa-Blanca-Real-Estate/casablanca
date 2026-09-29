@@ -19,7 +19,15 @@ export {
   parseExport, parseCsvExport, parseXlsxExport, ParseError,
   type ParsedExport, type ParseOptions, type ParseWarning, type ParseWarningCode,
 } from './parser/index.ts';
-export { identify, sameBuilding, sameUnit, normalizeStreet, normalizeUnit, PROPERTY_KEY_VERSION, type IdentityInput } from './parser/property-key.ts';
+export {
+  identify, sameBuilding, sameUnit, normalizeStreet, normalizeUnit, parseStreetEasyUrl, PROPERTY_KEY_VERSION, type IdentityInput,
+} from './parser/property-key.ts';
+/** Comps from a StreetEasy link (read by the server with Firecrawl) and comps typed in by the agent (§6.2). */
+export {
+  compRecordFromListing, confirmListingRecord, LISTING_EXTRACT_PROMPT, LISTING_EXTRACT_SCHEMA,
+  type ListingExtract, type ListingRead, type ListingReadOptions,
+} from './parser/listing.ts';
+export { compRecordFromManual, type ManualCompFields, type ManualReadOptions, type ManualValue } from './parser/manual.ts';
 export { FACTORS, FACTOR_BY_ID, allLines, lineId, magnitudeKeys, type FactorDefinition, type FactorLine, type MagnitudeShape } from './catalog/factors.ts';
 export { INTERACTIONS, interactionPairs, type InteractionDefinition, type InteractionMember, type Relationship } from './catalog/interactions.ts';
 export {
