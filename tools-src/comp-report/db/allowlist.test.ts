@@ -8,7 +8,7 @@ import pg from 'pg';
 import { accessConfig } from '../server/access.ts';
 import { handleAllowlist } from '../server/api/allowlist.ts';
 import { handleMe } from '../server/api/me.ts';
-import type { PoolLike } from '../server/db.ts';
+import { withActor, type PoolLike } from '../server/db.ts';
 import { handleIdentityEvent } from '../server/identity-events.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import type { AuthDeps } from '../server/session.ts';
@@ -35,6 +35,7 @@ describe('the allowlist API', { skip: skipWithoutDatabase }, () => {
           const email = PEOPLE[token];
           return email ? ({ id: `id-${token}`, email, confirmed: true, provider: 'google', name: null } as IdentityUser) : null;
         },
+        emailConfirmationRequired: async () => true,
       },
       access: accessConfig({ CR_ADMIN_EMAILS: 'kimani@casa-blanca.com' }),
       pool: pool as unknown as PoolLike,
@@ -101,7 +102,7 @@ describe('the allowlist API', { skip: skipWithoutDatabase }, () => {
     assert.equal(await roleOf('tok-counsel-00000'), 403);
     assert.equal((await call('tok-kimani-000000', 'DELETE', undefined, '?email=counsel@firm.com')).status, 404);
 
-    await call('tok-kimani-000000', 'POST', { email: 'hannah@partner.com', role: 'admin' });
+    await call('tok-kimani-000000', 'POST', { email: 'hannah@partner.com', role: 'mentor' });
     const listed = (await (await call('tok-kimani-000000')).json()).entries as { email: string; revokedAt: string | null }[];
     assert.deepEqual(listed.map((e) => [e.email, e.revokedAt === null]), [['hannah@partner.com', true], ['counsel@firm.com', false]]);
 
@@ -111,15 +112,29 @@ describe('the allowlist API', { skip: skipWithoutDatabase }, () => {
     assert.equal(await roleOf('tok-counsel-00000'), 'external');
   });
 
-  test('an admin by grant can manage it too, but not their own access', async () => {
-    assert.equal(await roleOf('tok-hannah-000000'), 'admin');
-    assert.equal((await call('tok-hannah-000000', 'POST', { email: 'photographer@studio.com' })).status, 200);
-    assert.equal((await call('tok-hannah-000000', 'DELETE', undefined, '?email=hannah@partner.com')).status, 400);
-    assert.equal((await call('tok-hannah-000000', 'POST', { email: 'hannah@partner.com', role: 'external' })).status, 400);
-    assert.equal(await roleOf('tok-hannah-000000'), 'admin');
+  test('a grant can never make someone an admin: not through the API, not in the database', async () => {
+    const res = await call('tok-kimani-000000', 'POST', { email: 'hannah@partner.com', role: 'admin' });
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error, 'bad_role');
+    assert.equal(await roleOf('tok-hannah-000000'), 'mentor');
+    // A mentor isn't an admin, so can't manage grants either.
+    assert.equal((await call('tok-hannah-000000')).status, 403);
+
+    const asAdmin = (sql: string) =>
+      withActor(pool as unknown as PoolLike, { kind: 'user', email: 'kimani@casa-blanca.com', role: 'admin' }, (tx) => tx.query(sql));
+    const checkViolation = (e: { code?: string }) => e.code === '23514';
+    await assert.rejects(asAdmin("update comp_report.allowlist set role = 'admin' where email = 'hannah@partner.com'"), checkViolation);
+    await assert.rejects(asAdmin("insert into comp_report.allowlist (email, role) values ('boss@partner.com', 'admin')"), checkViolation);
+  });
+
+  test("an admin can't change or remove their own access", async () => {
+    assert.equal((await call('tok-kimani-000000', 'POST', { email: 'kimani@casa-blanca.com', role: 'agent' })).status, 400);
+    assert.equal((await call('tok-kimani-000000', 'DELETE', undefined, '?email=kimani@casa-blanca.com')).status, 400);
+    assert.equal(await roleOf('tok-kimani-000000'), 'admin');
   });
 
   test('the sign-up gate reads grants made here', async () => {
+    assert.equal((await call('tok-kimani-000000', 'POST', { email: 'photographer@studio.com' })).status, 200);
     const gate = (email: string) =>
       handleIdentityEvent(
         new Request('https://site/.netlify/functions/identity-signup', {

@@ -1,5 +1,6 @@
 // /api/comp-report/allowlist — admins decide who beyond Casa's domain may use
-// the comp report, and with which role (design §13). Admins only.
+// the comp report, and with which role (design §13). Admins only. A grant is
+// agent, mentor or external: admin comes from CR_ADMIN_EMAILS alone.
 //   GET                           every entry, current ones first
 //   POST {email, role?, note?}    grant access or change a grant; granting a
 //                                 removed entry again restores it
@@ -9,13 +10,12 @@
 // Inviting someone from outside Casa takes two steps: the grant here, then the
 // invitation from Netlify → Identity → Invite users. The sign-up gate and the
 // per-request check both read this table.
-import { normalizeEmail } from '../access.ts';
+import { GRANTABLE_ROLES, normalizeEmail } from '../access.ts';
 import { withActor, type Role } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond } from '../http.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
 
-const ROLES: readonly Role[] = ['external', 'mentor', 'agent', 'admin'];
 const MAX_NOTE = 500;
 
 export interface AllowlistEntry {
@@ -94,7 +94,10 @@ export function handleAllowlist(req: Request, deps: AuthDeps): Promise<Response>
     if (!email) throw new HttpError(400, 'bad_email', 'Enter one email address.');
     if (email === user.email) throw new HttpError(400, 'own_access', 'You can\'t change your own access.');
     const role = body.role ?? 'external';
-    if (!ROLES.includes(role as Role)) throw new HttpError(400, 'bad_role', 'The role is external, mentor, agent or admin.');
+    if (role === 'admin') {
+      throw new HttpError(400, 'bad_role', 'Admins are set in Netlify (CR_ADMIN_EMAILS), not here.');
+    }
+    if (!GRANTABLE_ROLES.includes(role as Role)) throw new HttpError(400, 'bad_role', 'The role is external, mentor or agent.');
     if (body.note !== undefined && body.note !== null && typeof body.note !== 'string') {
       throw new HttpError(400, 'bad_note', 'The note is text.');
     }

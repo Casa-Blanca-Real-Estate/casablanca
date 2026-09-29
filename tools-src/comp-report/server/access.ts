@@ -2,10 +2,15 @@
 // Identity event functions at sign-up and log-in, and by every API request,
 // whatever Identity decided.
 //
-//   1. an email in CR_ADMIN_EMAILS            → admin (bootstrap; Kimani sets it)
-//   2. an unrevoked allowlist entry           → that entry's role
+//   1. an email in CR_ADMIN_EMAILS            → admin (the only way to be one)
+//   2. an unrevoked allowlist entry           → that entry's role: agent,
+//                                               mentor or external, never admin
 //   3. an email on one of Casa's domains      → agent
 //   4. anything else                          → refused
+//
+// An allowlist row that says admin (none can be written since CR-1.1; the
+// database refuses them) grants nothing: the rule reads on as if it weren't
+// there.
 //
 // Domains match exactly: listing casa-blanca.com does not admit
 // email.casa-blanca.com. Which domains Casa's Workspace uses is Kimani's call
@@ -13,6 +18,9 @@
 import type { Role } from './db.ts';
 
 export const DEFAULT_DOMAINS = ['casa-blanca.com'];
+
+/** The roles an allowlist grant can give. Admin comes from CR_ADMIN_EMAILS only. */
+export const GRANTABLE_ROLES: readonly Role[] = ['external', 'mentor', 'agent'];
 
 export interface AccessConfig {
   domains: string[];
@@ -58,7 +66,7 @@ export function isCasaEmail(email: string, config: AccessConfig): boolean {
 
 export function decide(email: string, config: AccessConfig, allowlistRole: Role | null): AccessDecision {
   if (config.adminEmails.includes(email)) return { allowed: true, role: 'admin', via: 'admin' };
-  if (allowlistRole) return { allowed: true, role: allowlistRole, via: 'allowlist' };
+  if (allowlistRole && GRANTABLE_ROLES.includes(allowlistRole)) return { allowed: true, role: allowlistRole, via: 'allowlist' };
   if (isCasaEmail(email, config)) return { allowed: true, role: 'agent', via: 'domain' };
   return { allowed: false, role: null, via: null };
 }
