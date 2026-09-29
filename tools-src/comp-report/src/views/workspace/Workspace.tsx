@@ -12,6 +12,7 @@ import { engineInput, namedPrices, workspaceComps, type ParsedImport } from '../
 import {
   isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
+import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
 import { Chat } from '../Chat.tsx';
 import { About, STEPS, type StepId } from './About.tsx';
@@ -208,6 +209,17 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   }, [today, intake, dealTerms, comps, prices]);
 
   const readOnly = Boolean(data && data.report.ownerEmail.toLowerCase() !== me.user.email.toLowerCase());
+
+  // What the dev notebook records with a note written here: the report, by name as well as id.
+  const reportTitle = data?.report.title;
+  const reportSample = data?.report.sampleData;
+  useEffect(() => {
+    if (!reportTitle) return;
+    publishCaptureContext('report', { id: reportId, name: reportTitle, sample: Boolean(reportSample), readOnly });
+    return () => {
+      publishCaptureContext('report', null);
+    };
+  }, [reportId, reportTitle, reportSample, readOnly]);
   const canSample = me.user.role === 'admin' && !readOnly;
   const hasSampleImport = (data?.imports ?? []).some((i) => i.sample);
 

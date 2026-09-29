@@ -440,6 +440,12 @@
           <span class="crcard-blurb">The preview build. Sign in with your Casa Blanca Google account.</span>
           <span class="crcard-arrow" aria-hidden="true">&rarr;</span>
         </a>
+        <a class="crcard" id="dnCard" href="tools/dev-notebook/" hidden>
+          <span class="crcard-kicker">Developer only</span>
+          <span class="crcard-title">Dev notebook</span>
+          <span class="crcard-blurb">Notes on the studio, written while using it (Ctrl+. anywhere). Claude Code sessions read them.</span>
+          <span class="crcard-arrow" aria-hidden="true">&rarr;</span>
+        </a>
 
         <!-- Display-only by decision (2026-08-28): no RSVP or check-in flow here.
              The Edit button is the pre-existing dev affordance, not a sign-up. -->
@@ -637,12 +643,17 @@
 
 <script src="assets/feedback.js" defer></script>
 <script>
+/* The dev notebook's capture box (docs/dev-notebook/README.md): loaded only in a browser signed in to the notebook. */
+try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(dn&&dn.token&&Date.parse(dn.expiresAt)>Date.now()){var dns=document.createElement('script');dns.src='assets/dev-notebook.js';dns.defer=true;dns.setAttribute('data-cb-dev-notebook','1');document.head.appendChild(dns);}}catch(e){}
+</script>
+<script>
 (function(){
   /* ---------- shared ---------- */
   var BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
   var SITE=BACKEND+'/.netlify/functions/site';
   var ALLOWED=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
   function currentEmail(){return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}
+  function dnSignedIn(){try{var d=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');return !!(d&&d.token&&Date.parse(d.expiresAt)>Date.now());}catch(e){return false;}}
   function authed(){return ALLOWED.indexOf(currentEmail())!==-1;}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function $(id){return document.getElementById(id);}
@@ -941,6 +952,8 @@
     $('wEdit').hidden=!on;
     $('clAdd').hidden=!on;
     $('crCard').hidden=!on;
+    /* The dev notebook: for its developers (docs/dev-notebook/README.md). The page itself signs in with Google. */
+    $('dnCard').hidden=!(dnSignedIn() || currentEmail()==='creative@email.casa-blanca.com');
     /* Every tool in this tab is team-only — signed out it would render an empty tab. */
     $('webTab').hidden=!on;
     /* Sign out while it's open: showTab moves the aria-current highlight too, but it also

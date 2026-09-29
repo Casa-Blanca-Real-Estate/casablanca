@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Casa Blanca — Dev notebook</title>
+<!-- The dev notebook (docs/dev-notebook/README.md): Kimani's notes on the studio,
+     written while using it, read by Claude Code sessions. Signing in here also turns
+     on the capture box (Ctrl+. / ⌘.) on every studio page in this browser.
+     This page is the only place a note can be deleted. -->
+<style>
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-style:normal;font-display:swap}
+  :root{--ink:#0f0f0f;--paper:#f4f3f0;--line:#dddbd5;--muted:#888680;--accent:#aaa3cf;--plum:#3c3654;--sand:#c0c2b5;--surface:#fff;--gutter:clamp(18px,4vw,48px)}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font:400 13px/1.5 'Object Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+  header{display:flex;align-items:center;gap:14px;background:var(--ink);color:#fff;padding:18px var(--gutter)}
+  header img{height:22px;width:auto;display:block}
+  header .stax{font-size:10px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
+  main{max-width:1180px;margin:0 auto;padding:24px var(--gutter) 64px}
+  h1{font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.02em;margin:6px 0 6px}
+  h2{font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:30px 0 10px}
+  p{margin:0 0 10px}
+  .muted{color:var(--muted)} .small{font-size:11px}
+  button,.btn{font:inherit;font-size:12px;font-weight:800;letter-spacing:.04em;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 12px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button.danger{border-color:#c9b3b3;color:#6b1f1f}
+  button.link{border:none;background:none;padding:0;border-bottom:1px solid var(--accent);border-radius:0;font-weight:400;letter-spacing:0}
+  button:disabled{opacity:.45;cursor:default}
+  input,select,textarea{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(170,163,207,.35)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .notice{background:var(--surface);border:1px solid var(--ink);border-radius:10px;padding:10px 12px;margin:10px 0}
+  .bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:flex-end;margin:0 0 6px}
+  .summary{font-size:15px;font-weight:800;margin:4px 0 12px}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+  .chip{font-size:11px;font-weight:800;border-radius:999px;padding:5px 10px}
+  .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .layout{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:start}
+  @media(max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+  .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .item{width:100%;text-align:left;display:flex;flex-direction:column;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-weight:400;letter-spacing:0;font-size:13px}
+  .item[aria-current="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .item .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--muted)}
+  .item .text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pill{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+  .pill.open{background:var(--accent);border-color:var(--accent);color:var(--plum)}
+  .pill.read{border-color:var(--plum);color:var(--plum)}
+  .pill.resolved,.pill.answered{background:var(--ink);border-color:var(--ink);color:#fff}
+  .pill.deferred{background:var(--sand);border-color:var(--sand);color:var(--ink)}
+  .tagpill{font-size:10px;font-weight:800;border:1px dashed var(--line);border-radius:999px;padding:1px 7px;color:var(--ink)}
+  .detail{position:sticky;top:12px}
+  .detail .body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;margin:10px 0 14px}
+  .facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12px;margin:0 0 14px}
+  .facts dt{color:var(--muted)} .facts dd{margin:0;overflow-wrap:anywhere}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .shots{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+  .shots a{display:block;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
+  .shots img{display:block;max-width:220px;max-height:150px}
+  .log{list-style:none;margin:0 0 14px;padding:0;border-left:2px solid var(--line)}
+  .log li{padding:4px 0 6px 12px;font-size:12px}
+  .log .who{color:var(--muted)}
+  .act{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+  .act .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .act textarea{width:100%;min-height:64px;resize:vertical}
+  .keys{display:flex;flex-direction:column;gap:6px}
+  .key{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+  .token{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .help li{margin:0 0 6px}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#ebe9e3;border-radius:5px;padding:1px 5px}
+</style>
+</head>
+<body>
+<header>
+  <a href="../../"><img src="../../assets/brand/casa-blanca-wordmark-white.png" alt="Casa Blanca"></a>
+  <span class="stax">Dev notebook</span>
+</header>
+
+<main>
+  <section id="signedOut" hidden>
+    <h1>Dev notebook</h1>
+    <p>Notes on the studio's tools, written while you use them, for the Claude Code sessions building them.
+      Developers only: sign in with the Google account the notebook knows.</p>
+    <p id="signInNotice" class="notice" hidden></p>
+    <button type="button" class="primary" id="signIn">Sign in with Google</button>
+    <p class="muted small" style="margin-top:12px">Signing in here turns on the capture box — <b>Ctrl+.</b> or <b>⌘.</b>, or the ✎ at the bottom left — on every studio page in this browser, for 30 days.</p>
+  </section>
+
+  <section id="app" hidden>
+    <div class="bar small">
+      <span>Signed in as <b id="who"></b></span>
+      <button type="button" class="link" id="signOut">Sign out</button>
+      <button type="button" class="link" id="signOutAll">Sign out everywhere</button>
+    </div>
+    <h1>Dev notebook</h1>
+    <p class="summary" id="summary">Loading…</p>
+    <p id="appNotice" class="notice" role="alert" hidden></p>
+    <div class="filters">
+      <label class="small muted" for="status">Showing</label>
+      <select id="status" aria-label="Status">
+        <option value="open">Open</option>
+        <option value="active">Open and read</option>
+        <option value="all">Everything</option>
+        <option value="read">Read</option>
+        <option value="resolved">Resolved</option>
+        <option value="answered">Answered</option>
+        <option value="deferred">Deferred</option>
+        <option value="wontfix">Won't fix</option>
+        <option value="duplicate">Duplicate</option>
+      </select>
+      <span id="tagFilters" class="filters" style="margin:0"></span>
+      <button type="button" id="refresh">Refresh</button>
+      <button type="button" class="primary" id="write">Write a note</button>
+    </div>
+    <div class="layout">
+      <ul class="list" id="list" aria-label="Notes"></ul>
+      <article class="detail card" id="detail" hidden></article>
+    </div>
+
+    <h2>Keys for Claude Code sessions</h2>
+    <p class="muted">A session reads the notebook with a key: it can read notes, pick one up, leave a note on it and mark it resolved against its PR.
+      It can't write a note, delete one, or make keys.</p>
+    <div class="keys" id="keys"></div>
+    <div class="row" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <input id="keyLabel" value="Claude Code" maxlength="40" aria-label="Key name">
+      <button type="button" id="makeKey">Make a key</button>
+    </div>
+    <div id="newKey" class="card" style="margin-top:10px" hidden>
+      <p><b>Copy this key now — it's shown once.</b></p>
+      <input class="token" id="newKeyToken" readonly aria-label="The new key">
+      <p style="margin-top:8px"><button type="button" id="copyKey">Copy</button></p>
+      <p class="small">Add it to the Claude Code environment as <code>DEV_NOTEBOOK_KEY</code>: in a Claude Code session, open the cloud
+        environment menu in the title bar → <b>Edit</b> → environment variables. New sessions pick it up. Never paste it into a chat.</p>
+    </div>
+
+    <h2>How it works</h2>
+    <ul class="help small">
+      <li><b>Write:</b> Ctrl+. (⌘. on a Mac) on any studio page, even inside a text field, or the ✎ at the bottom left. Tags are optional; paste or drop screenshots straight into the box.</li>
+      <li><b>What's recorded:</b> the page, its report and step (never what's typed in a search box), what the page says is open, the window size, and the commit the site was built from. The line under the box shows it before you save.</li>
+      <li><b>Sessions:</b> <code>npm run notebook</code> lists open notes; <code>--id=…</code> shows one; <code>--set=resolved --pr=57</code> marks it off. Resolving needs the PR; won't fix, deferred, answered and duplicate need a note.</li>
+      <li><b>Deleting</b> happens only here. Sessions can't.</li>
+    </ul>
+  </section>
+</main>
+
+<script src="../../assets/studio-header.js" defer></script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'cb.devNotebook';
+  var API = '/api/dev/notebook';
+  var STATUS_WORDS = { open: 'Open', read: 'Read', resolved: 'Resolved', answered: 'Answered', deferred: 'Deferred', wontfix: "Won't fix", duplicate: 'Duplicate' };
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { status: 'open', tag: '', selected: new URLSearchParams(location.search).get('note'), vocab: null };
+  var shotUrls = [];
+
+  /** Builds an element; text is always text (textContent), never HTML. */
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      var v = attrs[k];
+      if (v === undefined || v === null || v === false) return;
+      if (k === 'text') el.textContent = v;
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c === null || c === undefined || c === false) continue;
+      el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+
+  function readSession() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY) || 'null');
+      return s && s.token && Date.parse(s.expiresAt) > Date.now() ? s : null;
+    } catch (e) { return null; }
+  }
+
+  function notice(id, text) { var el = $(id); el.textContent = text || ''; el.hidden = !text; }
+
+  function showSignedOut(message) {
+    $('app').hidden = true; $('signedOut').hidden = false;
+    notice('signInNotice', message || '');
+  }
+
+  /** A notebook API call. `as` is 'blob' for a screenshot; everything else is JSON. */
+  function api(method, path, body, as) {
+    var s = readSession();
+    if (!s) { showSignedOut(); return Promise.reject(new Error('Signed out.')); }
+    var headers = { Authorization: 'Bearer ' + s.token };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    return fetch(API + path, { method: method, headers: headers, body: body !== undefined ? JSON.stringify(body) : undefined })
+      .then(function (res) {
+        if (res.status === 401) {
+          try { localStorage.removeItem(KEY); } catch (e) { /* fine */ }
+          showSignedOut('Your notebook session ended. Sign in again.');
+          throw new Error('Signed out.');
+        }
+        if (as === 'blob') return res.ok ? res.blob() : Promise.reject(new Error('Couldn’t load it (' + res.status + ').'));
+        return res.json().then(function (data) {
+          if (!res.ok) { var err = new Error(data.message || ('Failed (' + res.status + ').')); err.code = data.error; throw err; }
+          return data;
+        });
+      });
+  }
+
+  // ── Signing in: Google through the site's Identity, then a notebook session ──
+  var NOTICES = {
+    webhook: 'That Google account can’t sign in to the studio yet. Add it to CR_ADMIN_EMAILS in Netlify (Site configuration → Environment variables), redeploy, then sign in again.',
+    cancelled: 'Sign-in was cancelled.',
+    failed: 'Sign-in didn’t complete. Try again.',
+  };
+
+  function fromHash() {
+    var hash = location.hash;
+    if (!/^#(access_token|error)=/.test(hash)) return null;
+    history.replaceState(null, '', location.pathname + location.search);
+    var p = new URLSearchParams(hash.slice(1));
+    if (p.get('error')) {
+      // The description comes from the URL: choose fixed wording, never echo it.
+      var d = p.get('error_description') || '';
+      return { error: /webhook/i.test(d) ? NOTICES.webhook : p.get('error') === 'access_denied' ? NOTICES.cancelled : NOTICES.failed };
+    }
+    return { token: p.get('access_token') };
+  }
+
+  function exchange(identityToken) {
+    return fetch(API + '/session', { method: 'POST', headers: { Authorization: 'Bearer ' + identityToken } })
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (r) {
+        if (!r.ok) { showSignedOut(r.data.message || 'Couldn’t sign in.'); return false; }
+        // Signing in again replaces this browser's session: end the old one rather than leave it to expire.
+        var old = readSession();
+        if (old) fetch(API + '/session', { method: 'DELETE', headers: { Authorization: 'Bearer ' + old.token } }).catch(function () { /* already gone */ });
+        localStorage.setItem(KEY, JSON.stringify({ token: r.data.token, email: r.data.email, expiresAt: r.data.expiresAt }));
+        loadWidget();
+        return true;
+      });
+  }
+
+  function loadWidget() {
+    if (document.querySelector('script[data-cb-dev-notebook]') || window.__cbDevNotebookLoaded) return;
+    var s = document.createElement('script');
+    s.src = '../../assets/dev-notebook.js'; s.defer = true; s.setAttribute('data-cb-dev-notebook', '1');
+    document.head.appendChild(s);
+  }
+
+  $('signIn').onclick = function () { location.href = '/.netlify/identity/authorize?provider=google'; };
+
+  function signOut(everywhere) {
+    return api('DELETE', everywhere ? '/sessions' : '/session').catch(function () { /* already gone */ })
+      .then(function () { try { localStorage.removeItem(KEY); } catch (e) { /* fine */ } location.reload(); });
+  }
+  $('signOut').onclick = function () { signOut(false); };
+  $('signOutAll').onclick = function () { if (confirm('Sign the notebook out in every browser?')) signOut(true); };
+
+  // ── The list ──────────────────────────────────────────────────────────────
+  function statusPill(n) {
+    var word = STATUS_WORDS[n.status] || n.status;
+    return h('span', { class: 'pill ' + n.status, text: n.status === 'resolved' && n.resolvedPr ? word + ' #' + n.resolvedPr : word });
+  }
+
+  function renderTagFilters() {
+    var wrap = $('tagFilters'); wrap.textContent = '';
+    (state.vocab ? state.vocab.tags : []).forEach(function (t) {
+      wrap.appendChild(h('button', {
+        type: 'button', class: 'chip', 'aria-pressed': String(state.tag === t.id), text: t.label,
+        onclick: function () { state.tag = state.tag === t.id ? '' : t.id; renderTagFilters(); loadList(); },
+      }));
+    });
+  }
+
+  function loadList() {
+    var q = new URLSearchParams({ status: state.status });
+    if (state.tag) q.set('tag', state.tag);
+    return api('GET', '/notes?' + q).then(function (data) {
+      $('summary').textContent = data.summary;
+      var list = $('list'); list.textContent = '';
+      if (!data.notes.length) list.appendChild(h('li', { class: 'muted', text: 'Nothing here.' }));
+      data.notes.forEach(function (n) {
+        var first = n.body.split('\n')[0];
+        list.appendChild(h('li', null, h('button', {
+          type: 'button', class: 'item', 'aria-current': String(n.id === state.selected), onclick: function () { select(n.id); },
+        },
+          h('span', { class: 'meta' }, statusPill(n), h('span', { class: 'mono', text: n.id }), h('span', { text: n.createdAt.slice(0, 10) }),
+            h('span', { text: n.surface })),
+          h('span', { class: 'text', text: first }),
+          n.tags.length ? h('span', { class: 'meta' }, n.tags.map(function (t) { return h('span', { class: 'tagpill', text: t }); }).reduce(function (f, e) { f.appendChild(e); return f; }, document.createDocumentFragment())) : null)));
+      });
+    }).catch(function (e) { notice('appNotice', e.message); });
+  }
+
+  function select(id) {
+    state.selected = id;
+    var u = new URL(location.href); u.searchParams.set('note', id); history.replaceState(null, '', u);
+    [].forEach.call(document.querySelectorAll('.item'), function (b) { b.setAttribute('aria-current', 'false'); });
+    return openNote(id).then(loadList);
+  }
+
+  // ── One note ──────────────────────────────────────────────────────────────
+  function fact(dl, label, value) {
+    if (value === null || value === undefined || value === '') return;
+    dl.appendChild(h('dt', { text: label }));
+    dl.appendChild(h('dd', { class: /Build|Params|Context|Browser/.test(label) ? 'mono' : null, text: value }));
+  }
+
+  function openNote(id) {
+    shotUrls.forEach(function (u) { URL.revokeObjectURL(u); }); shotUrls = [];
+    return api('GET', '/notes/' + encodeURIComponent(id)).then(function (data) {
+      var n = data.note;
+      var d = $('detail'); d.textContent = ''; d.hidden = false;
+      d.appendChild(h('div', { class: 'meta', style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' },
+        statusPill(n), h('span', { class: 'mono', text: n.id }), h('span', { class: 'muted small', text: new Date(n.createdAt).toLocaleString() })));
+      d.appendChild(h('p', { class: 'body', text: n.body }));
+
+      var dl = h('dl', { class: 'facts' });
+      fact(dl, 'Tags', n.tags.join(', '));
+      fact(dl, 'Page', (n.route || '—') + '  (' + n.surface + ')');
+      fact(dl, 'Title', n.title);
+      fact(dl, 'Params', Object.keys(n.params).map(function (k) { return k + '=' + n.params[k]; }).join('  '));
+      Object.keys(n.context || {}).forEach(function (k) { fact(dl, 'Context', k + ': ' + JSON.stringify(n.context[k])); });
+      fact(dl, 'Window', n.viewport ? n.viewport.replace('x', ' × ') : 'unknown');
+      fact(dl, 'Build', (n.commit || 'unknown commit') + (n.deployId ? '  · deploy ' + n.deployId : ''));
+      fact(dl, 'Browser', n.userAgent);
+      fact(dl, 'Written by', n.author);
+      d.appendChild(dl);
+
+      if (n.shots.length) {
+        var shots = h('div', { class: 'shots' });
+        d.appendChild(shots);
+        n.shots.forEach(function (s) {
+          api('GET', '/notes/' + n.id + '/shots/' + s.id, undefined, 'blob').then(function (blob) {
+            var url = URL.createObjectURL(blob); shotUrls.push(url);
+            shots.appendChild(h('a', { href: url, target: '_blank', rel: 'noopener', title: 'Open full size' }, h('img', { src: url, alt: 'Screenshot' })));
+          }).catch(function () { shots.appendChild(h('span', { class: 'muted small', text: 'A screenshot didn’t load.' })); });
+        });
+      }
+
+      var log = h('ol', { class: 'log', 'aria-label': 'History' });
+      n.log.forEach(function (e) {
+        log.appendChild(h('li', null,
+          h('b', { text: e.status ? (STATUS_WORDS[e.status] || e.status) : 'Note' }),
+          e.pr ? ' · PR #' + e.pr : '',
+          h('span', { class: 'who', text: ' — ' + e.by + (e.via.indexOf('key:') === 0 ? ' (' + e.via.slice(4) + ')' : '') + ', ' + new Date(e.at).toLocaleString() }),
+          e.note ? h('div', { text: e.note }) : null));
+      });
+      d.appendChild(h('h2', { text: 'History', style: 'margin-top:0' }));
+      d.appendChild(log);
+
+      // Re-status, comment, delete.
+      var status = h('select', { 'aria-label': 'New status' }, h('option', { value: '', text: 'Just add a note' }));
+      Object.keys(STATUS_WORDS).forEach(function (k) { status.appendChild(h('option', { value: k, text: STATUS_WORDS[k] })); });
+      var pr = h('input', { type: 'number', min: '1', placeholder: 'PR #', 'aria-label': 'PR number', style: 'width:90px', hidden: true });
+      var text = h('textarea', { 'aria-label': 'Note', placeholder: 'A note for the history (why, what changed, the answer…)' });
+      var err = h('p', { class: 'notice', role: 'alert', hidden: true });
+      status.addEventListener('change', function () { pr.hidden = status.value !== 'resolved'; });
+      var record = h('button', {
+        type: 'button', class: 'primary', text: 'Record',
+        onclick: function () {
+          var body = {};
+          if (status.value) body.status = status.value;
+          if (text.value.trim()) body.note = text.value.trim();
+          if (!pr.hidden && pr.value) body.pr = Number(pr.value);
+          record.disabled = true;
+          api('PATCH', '/notes/' + n.id, body).then(function () { return select(n.id); })
+            .catch(function (e) { err.textContent = e.message; err.hidden = false; record.disabled = false; });
+        },
+      });
+      var del = h('button', {
+        type: 'button', class: 'danger', text: 'Delete',
+        onclick: function () {
+          if (!confirm('Delete this note, its screenshots and its history? This can’t be undone.')) return;
+          api('DELETE', '/notes/' + n.id).then(function () {
+            state.selected = null; $('detail').hidden = true;
+            var u = new URL(location.href); u.searchParams.delete('note'); history.replaceState(null, '', u);
+            return loadList();
+          }).catch(function (e) { err.textContent = e.message; err.hidden = false; });
+        },
+      });
+      d.appendChild(h('div', { class: 'act' }, h('div', { class: 'row' }, status, pr), text, err, h('div', { class: 'row' }, record, h('span', { style: 'flex:1' }), del)));
+    }).catch(function (e) { notice('appNotice', e.message); });
+  }
+
+  // ── Keys ─────────────────────────────────────────────────────────────────
+  function loadKeys() {
+    return api('GET', '/keys').then(function (data) {
+      var wrap = $('keys'); wrap.textContent = '';
+      if (!data.keys.length) wrap.appendChild(h('p', { class: 'muted small', text: 'No keys yet.' }));
+      data.keys.forEach(function (k) {
+        wrap.appendChild(h('div', { class: 'key' },
+          h('span', null, h('b', { text: k.label }), h('span', { class: 'muted small', text: '  made ' + new Date(k.createdAt).toLocaleDateString() + ' by ' + k.createdBy })),
+          h('button', {
+            type: 'button', class: 'danger', text: 'Revoke',
+            onclick: function () { if (confirm('Revoke “' + k.label + '”? Sessions using it stop reading the notebook.')) api('DELETE', '/keys/' + k.id).then(loadKeys); },
+          })));
+      });
+    });
+  }
+
+  $('makeKey').onclick = function () {
+    api('POST', '/keys', { label: $('keyLabel').value }).then(function (data) {
+      $('newKeyToken').value = data.token; $('newKey').hidden = false; $('newKeyToken').select();
+      return loadKeys();
+    }).catch(function (e) {
+      // A key outlives this session, so making one needs a sign-in from the last 15 minutes.
+      if (e.code === 'sign_in_again' && confirm('Making a key needs a fresh sign-in. Sign in with Google again now?')) {
+        location.href = '/.netlify/identity/authorize?provider=google';
+        return;
+      }
+      notice('appNotice', e.message);
+    });
+  };
+  $('copyKey').onclick = function () {
+    var v = $('newKeyToken').value;
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).catch(function () { $('newKeyToken').select(); document.execCommand('copy'); })
+      .then(function () { $('copyKey').textContent = 'Copied'; });
+  };
+
+  $('status').onchange = function () { state.status = $('status').value; loadList(); };
+  $('refresh').onclick = function () { loadList(); if (state.selected) openNote(state.selected); };
+  $('write').onclick = function () { if (window.CBDevNotebook) window.CBDevNotebook.open(); else loadWidget(); };
+
+  function showApp() {
+    var s = readSession();
+    $('signedOut').hidden = true; $('app').hidden = false;
+    $('who').textContent = s.email;
+    return api('GET', '/vocabulary').then(function (v) {
+      state.vocab = v; renderTagFilters();
+      return Promise.all([loadList(), loadKeys(), state.selected ? openNote(state.selected) : null]);
+    }).catch(function (e) { if (e.message !== 'Signed out.') notice('appNotice', e.message); });
+  }
+
+  var back = fromHash();
+  if (back && back.error) showSignedOut(back.error);
+  else if (back && back.token) exchange(back.token).then(function (ok) { if (ok) showApp(); });
+  else if (readSession()) showApp();
+  else showSignedOut();
+})();
+</script>
+</body>
+</html>
