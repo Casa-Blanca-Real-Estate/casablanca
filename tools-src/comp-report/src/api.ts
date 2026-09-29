@@ -1,5 +1,7 @@
 // Calls to the comp report's functions. Same origin; the session token rides
 // in the Authorization header on every request.
+import type { WorkspaceData } from '../server/api/workspace.ts';
+import type { Brief, CallState, DealTermsState, Intake, ReasonType, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
 import { session } from './session.ts';
 
 export class ApiError extends Error {
@@ -49,6 +51,8 @@ export interface Report {
   propertyType: 'condo' | 'coop';
   status: 'active' | 'archived';
   ownerEmail: string;
+  /** Filled with sample data at some point (Dispatch 07). */
+  sampleData: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -111,3 +115,39 @@ export async function* streamTurn(reportId: string, message?: string): AsyncGene
     }
   }
 }
+
+// ─── The walkthrough (CR-3a) ────────────────────────────────────────────────
+
+export type { WorkspaceData, WorkspaceImport } from '../server/api/workspace.ts';
+
+export interface SampleWalkthrough {
+  intake: Intake;
+  brief: Brief;
+  target: TargetState;
+  dealTerms: DealTermsState;
+  call: Omit<CallState, 'at'>;
+  send: SendState;
+}
+
+export interface WorkspacePatch {
+  brief?: Brief;
+  call?: CallState | null;
+  target?: TargetState | null;
+  state?: WorkspaceState;
+  sampleData?: true;
+}
+
+export const workspaceApi = {
+  load: (reportId: string) => api<WorkspaceData>(`/api/comp-report/workspace?report=${reportId}`),
+  save: (reportId: string, patch: WorkspacePatch) =>
+    api<{ saved: true; updatedAt: string }>('/api/comp-report/workspace', { method: 'PATCH', body: { reportId, ...patch } }),
+  importFile: (reportId: string, file: { filename: string; contentBase64: string; asOf: string }) =>
+    api<WorkspaceData>('/api/comp-report/imports', { method: 'POST', body: { reportId, ...file } }),
+  importSample: (reportId: string) => api<WorkspaceData>('/api/comp-report/imports', { method: 'POST', body: { reportId, sample: true } }),
+  tier: (reportId: string, reportCompId: string, tier: string, reason: string, reasonType: ReasonType) =>
+    api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, reportCompId, tier, reason, reasonType } }),
+  mark: (reportId: string, reportCompId: string, change: { reviewed?: boolean; anchor?: boolean }) =>
+    api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, ...change } }),
+  sortSample: (reportId: string) => api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, sample: true } }),
+  sample: () => api<SampleWalkthrough>('/api/comp-report/sample'),
+};

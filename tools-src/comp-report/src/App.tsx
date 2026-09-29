@@ -3,7 +3,7 @@ import { api, ApiError, type Me } from './api.ts';
 import { session, type SessionState } from './session.ts';
 import { AcceptInvite, NotAuthorised, SetNewPassword, SignIn, Unavailable } from './views/SignIn.tsx';
 import { Reports } from './views/Reports.tsx';
-import { ReportChat } from './views/ReportChat.tsx';
+import { Workspace } from './views/workspace/Workspace.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
 
 function currentReportId(): string | null {
@@ -51,7 +51,7 @@ export function App() {
   else if (state.status === 'signed-out') body = <SignIn notice={state.notice} onSignedIn={setState} />;
   else if (refusal) body = <NotAuthorised email={state.email} error={refusal} onSignOut={signOut} />;
   else if (!me) body = <p className="muted">Checking your access…</p>;
-  else if (reportId) body = <ReportChat reportId={reportId} onBack={() => open(null)} />;
+  else if (reportId) body = <Workspace key={reportId} reportId={reportId} me={me} onBack={() => open(null)} />;
   else body = <Reports me={me} onOpen={open} />;
 
   return (
@@ -69,7 +69,7 @@ export function App() {
         </section>
       )}
 
-      <main className="page">
+      <main className={reportId ? 'page wide-page' : 'page'}>
         {/* The studio chrome owns the header's right edge (Feedback), so the account line lives here. */}
         {state.status === 'signed-in' && (
           <p className="account muted small">

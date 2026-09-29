@@ -1,6 +1,8 @@
+// The assistant (§8), as a panel: in a drawer reachable from every step of the
+// walkthrough, and inline beside the numbers in step 5. CR-1's turn endpoint:
+// one model call per request, the server owns the transcript (§8.3 rule 6).
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { api, ApiError, streamTurn, type Report, type ShownMessage } from '../api.ts';
-import { PreviewSteps } from './Preview.tsx';
+import { api, ApiError, streamTurn, type ShownMessage } from '../api.ts';
 
 interface Live {
   text: string;
@@ -11,8 +13,16 @@ interface Live {
 
 const empty: Live = { text: '', progress: [], tools: [], note: null };
 
-export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () => void }) {
-  const [report, setReport] = useState<Report | null>(null);
+const SUGGESTIONS = ['Which report is this?', 'What do the numbers say so far?', 'Which comps need a closer look?'];
+
+export function Chat({ reportId, readOnly = false, onCount, seed }: {
+  reportId: string;
+  readOnly?: boolean;
+  /** How many messages the agent has sent, after each load: the step rail marks step 5 by it. */
+  onCount?: (n: number) => void;
+  /** A question to put in the composer, unsent (the sample fill for step 5). */
+  seed?: { text: string; n: number } | null;
+}) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [live, setLive] = useState<Live | null>(null);
@@ -22,20 +32,34 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
   const end = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const [loaded, setLoaded] = useState(false);
+  // A reply still being written — sent from the other panel, or before a reload. The server
+  // refuses a new message until it lands (server/api/turn.ts), so this waits for it.
+  const [waiting, setWaiting] = useState(false);
 
   async function load() {
-    const [r, m] = await Promise.all([
-      api<{ report: Report }>(`/api/comp-report/reports?id=${reportId}`),
-      api<{ messages: ShownMessage[] }>(`/api/comp-report/messages?report=${reportId}`),
-    ]);
-    setReport(r.report);
+    const m = await api<{ messages: ShownMessage[] }>(`/api/comp-report/messages?report=${reportId}`);
     setMessages(m.messages);
     setLoaded(true);
+    const last = m.messages.at(-1);
+    setWaiting(Boolean(last && last.role === 'user' && Date.now() - Date.parse(last.createdAt) < 90_000));
+    onCount?.(m.messages.filter((x) => x.role === 'user' && !x.toolResultsOnly).length);
   }
 
   useEffect(() => {
-    load().catch((e) => setError(e instanceof ApiError && e.status === 404 ? 'No such report.' : String(e.message ?? e)));
+    if (!waiting || live) return;
+    const t = setTimeout(() => void load().catch(() => undefined), 2000);
+    return () => clearTimeout(t);
+  }, [waiting, live, messages]);
+
+  useEffect(() => {
+    load().catch((e) => setError(String(e.message ?? e)));
   }, [reportId]);
+
+  useEffect(() => {
+    if (!seed || readOnly) return;
+    setDraft(seed.text);
+    input.current?.focus();
+  }, [seed, readOnly]);
 
   useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [messages, live]);
 
@@ -43,7 +67,7 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
   async function send(e: FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || live) return;
+    if (!text || live || waiting) return;
     setDraft('');
     setError(null);
     setNotice(null);
@@ -71,6 +95,8 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The assistant could not be reached.');
+      // Refused before it started (another reply still being written): keep what they typed.
+      if (err instanceof ApiError && err.code === 'turn_in_progress' && message !== undefined) setDraft(text);
     } finally {
       setLive(null);
       setNotice(lastNote);
@@ -79,13 +105,20 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
   }
 
   return (
-    <>
-      <button type="button" className="link" onClick={onBack}>‹ All reports</button>
-      <h2 className="report-title">{report?.title ?? '…'}</h2>
+    <div className="chat-panel">
       {error && <p className="notice">{error}</p>}
 
       {loaded && messages.length === 0 && !live && (
-        <PreviewSteps onTry={(text) => { setDraft(text); input.current?.focus(); }} />
+        <div className="chat-empty">
+          <p className="muted small">It can read this report and its numbers. It never sees your call or your target.</p>
+          {!readOnly && (
+            <div className="row wrap">
+              {SUGGESTIONS.map((text) => (
+                <button key={text} type="button" className="btn" onClick={() => { setDraft(text); input.current?.focus(); }}>{text}</button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="chat">
@@ -107,10 +140,12 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
             {live.note && <p className="notice">{live.note}</p>}
           </div>
         )}
+        {waiting && !live && <p className="muted small" aria-live="polite">Still answering the last message…</p>}
         {notice && <p className="notice">{notice}</p>}
         <div ref={end} />
       </div>
 
+      {readOnly ? <p className="muted small">Only the report's owner can talk to the assistant here.</p> : (
       <form className="composer" onSubmit={send}>
         <textarea
           ref={input}
@@ -126,8 +161,9 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
           }}
           rows={2}
         />
-        <button className="btn primary" disabled={!!live || !draft.trim()}>Send</button>
+        <button className="btn primary" disabled={!!live || waiting || !draft.trim()}>Send</button>
       </form>
-    </>
+      )}
+    </div>
   );
 }
