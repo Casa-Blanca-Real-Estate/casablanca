@@ -47,7 +47,7 @@ that can create roles and databases, because each test file makes a throwaway da
 | Variable | Where | What |
 |---|---|---|
 | `NETLIFY_DB_URL` | set by Netlify | The database — production, or the deploy preview's branch |
-| `CR_ADMIN_EMAILS` | Netlify | Bootstrap admins, comma-separated |
+| `CR_ADMIN_EMAILS` | Netlify | Admins, comma-separated: the only way to be one (an allowlist grant can't make an admin). Redeploy after changing it |
 | `CR_ALLOWED_DOMAINS` | Netlify | Casa's sign-in domains; default `casa-blanca.com`, matched exactly |
 | `ANTHROPIC_API_KEY` | Netlify | The assistant. Never reaches the browser |
 | `CR_LOCAL_DATABASE_URL` | local only | Ignored wherever `NETLIFY_DB_URL` exists |
