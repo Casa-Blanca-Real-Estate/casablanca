@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, type Me, type Report } from '../api.ts';
 import { Access } from './Access.tsx';
+import { PreviewNote } from './Preview.tsx';
 
 export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }) {
   const [reports, setReports] = useState<Report[] | null>(null);
@@ -45,6 +46,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }
 
   return (
     <>
+      <PreviewNote />
       <div className="label">New report</div>
       <form className="card row" onSubmit={create}>
         <input

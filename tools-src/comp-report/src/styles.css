@@ -114,3 +114,35 @@ input:focus, textarea:focus, select:focus, button:focus-visible { outline: none;
   background: var(--cb-bg); padding: 12px 0 18px; border-top: 1px solid var(--cb-border);
 }
 .composer textarea { flex: 1; resize: vertical; min-height: 44px; }
+
+/* Preview-build orientation (src/views/Preview.tsx) — until the workspace (CR-3) replaces it. */
+.preview-tag {
+  display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase;
+  color: #3c3654; background: var(--cb-lavender); border-radius: 6px; padding: 4px 8px;
+}
+.preview-note {
+  display: flex; gap: 12px; align-items: flex-start; margin: 0 0 22px;
+  background: var(--cb-surface); border: 1px solid var(--cb-lavender); border-radius: 12px; padding: 12px 16px;
+}
+.preview-note p { margin: 0; color: var(--cb-black); }
+.preview {
+  background: var(--cb-surface); border: 1px solid var(--cb-lavender); border-radius: 14px;
+  padding: 20px 22px; margin: 0 0 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+}
+.preview h3 { margin: 4px 0 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.preview-steps { list-style: none; margin: 6px 0 0; padding: 0; width: 100%; counter-reset: step; }
+.preview-steps li {
+  counter-increment: step; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 2px 10px;
+  padding: 10px 0; border-top: 1px solid var(--cb-border);
+}
+.preview-steps li::before { content: counter(step); grid-row: span 2; font-weight: 800; color: var(--cb-mid); }
+.preview-step-name { font-weight: 800; }
+.preview-step-note { grid-column: 2 / 4; color: var(--cb-mid); }
+.preview-state {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; border-radius: 6px;
+  padding: 3px 7px; align-self: start; border: 1px solid var(--cb-border); color: var(--cb-mid);
+}
+.preview-state.connected, .preview-state.partly { background: var(--cb-lavender); border-color: var(--cb-lavender); color: #3c3654; }
+.preview-state.next { border-color: var(--cb-black); color: var(--cb-black); }
+.preview-try { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.preview-try .btn { text-transform: none; letter-spacing: 0; font-weight: 800; padding: 8px 12px; }

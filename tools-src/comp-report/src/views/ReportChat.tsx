@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, ApiError, streamTurn, type Report, type ShownMessage } from '../api.ts';
+import { PreviewSteps } from './Preview.tsx';
 
 interface Live {
   text: string;
@@ -19,6 +20,8 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
   // What the last turn ended with (declined, stopped, failed), kept until the next message.
   const [notice, setNotice] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const [loaded, setLoaded] = useState(false);
 
   async function load() {
     const [r, m] = await Promise.all([
@@ -27,6 +30,7 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
     ]);
     setReport(r.report);
     setMessages(m.messages);
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -80,6 +84,10 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
       <h2 className="report-title">{report?.title ?? '…'}</h2>
       {error && <p className="notice">{error}</p>}
 
+      {loaded && messages.length === 0 && !live && (
+        <PreviewSteps onTry={(text) => { setDraft(text); input.current?.focus(); }} />
+      )}
+
       <div className="chat">
         {messages.filter((m) => !m.toolResultsOnly).map((m) => (
           <div key={`${m.seq}-${m.createdAt}`} className={`msg ${m.role}${m.inContext ? '' : ' dim'}`}>
@@ -105,6 +113,7 @@ export function ReportChat({ reportId, onBack }: { reportId: string; onBack: () 
 
       <form className="composer" onSubmit={send}>
         <textarea
+          ref={input}
           aria-label="Message the assistant"
           placeholder="Ask about this report…"
           value={draft}

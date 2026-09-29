@@ -165,6 +165,15 @@
     font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;padding:5px 8px;cursor:pointer}
   .wedit:hover{border-color:var(--accent);color:#fff}
 
+  /* Team-only launcher for the comp report preview (2026-09-29). */
+  .crcard{position:relative;display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;flex:0 0 auto;
+    background:var(--hdr-bg);color:#fff;border:1px solid var(--accent);transition:background .15s}
+  .crcard:hover{background:#1b1826}
+  .crcard-kicker{font-size:9.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+  .crcard-title{font-size:23px;font-weight:800;letter-spacing:-.025em;padding-right:34px}
+  .crcard-blurb{font-size:12.5px;line-height:1.45;color:var(--hdr-muted);padding-right:34px}
+  .crcard-arrow{position:absolute;right:16px;bottom:12px;font-size:30px;line-height:1;font-weight:800;color:var(--accent)}
+
   .util-label{font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);
     padding-top:4px}
 
@@ -423,6 +432,15 @@
     <!-- ============================== sidebar ============================== -->
     <aside class="side">
       <div class="sidescroll">
+        <!-- Team only: shown after the dashboard's dev sign-in (applyAuth). The comp report has its
+             own sign-in (Casa Google accounts), so this saves finding the URL and protects nothing. -->
+        <a class="crcard" id="crCard" href="tools/comp-report/" hidden>
+          <span class="crcard-kicker">In development · team only</span>
+          <span class="crcard-title">Comp report</span>
+          <span class="crcard-blurb">The preview build. Sign in with your Casa Blanca Google account.</span>
+          <span class="crcard-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+
         <!-- Display-only by decision (2026-08-28): no RSVP or check-in flow here.
              The Edit button is the pre-existing dev affordance, not a sign-up. -->
         <section class="wcard" id="workshop" hidden>
@@ -922,6 +940,7 @@
     }
     $('wEdit').hidden=!on;
     $('clAdd').hidden=!on;
+    $('crCard').hidden=!on;
     /* Every tool in this tab is team-only — signed out it would render an empty tab. */
     $('webTab').hidden=!on;
     /* Sign out while it's open: showTab moves the aria-current highlight too, but it also

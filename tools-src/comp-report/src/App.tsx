@@ -4,6 +4,7 @@ import { session, type SessionState } from './session.ts';
 import { AcceptInvite, NotAuthorised, SetNewPassword, SignIn, Unavailable } from './views/SignIn.tsx';
 import { Reports } from './views/Reports.tsx';
 import { ReportChat } from './views/ReportChat.tsx';
+import { ErrorBoundary } from './ErrorBoundary.tsx';
 
 function currentReportId(): string | null {
   return new URLSearchParams(location.search).get('report');
@@ -77,7 +78,7 @@ export function App() {
             <button type="button" className="link" onClick={signOut}>Sign out</button>
           </p>
         )}
-        {body}
+        <ErrorBoundary resetKey={`${state.status}:${reportId ?? ''}`} onBack={() => open(null)}>{body}</ErrorBoundary>
       </main>
     </>
   );
