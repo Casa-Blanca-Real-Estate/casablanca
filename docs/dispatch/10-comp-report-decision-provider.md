@@ -13,6 +13,10 @@ days with Jev, measured, plus copied code in `code/`, which is reference, not dr
 
 **Protocol:** `docs/dispatch/README.md`. **Open a PR to `claude/main` per phase. Never merge — Casanova
 or Kimani merges. Sign PRs, PR comments and commits "— Arbiter (CR-D)".**
+**Never use `DATABASE_URL`.** This cloud environment carries MindBinder's database address by mistake
+(`docs/decisions.md`), and MindBinder's code reads that variable. Casa's code reads `NETLIFY_DB_URL` in
+production and `CR_LOCAL_DATABASE_URL` locally (`npm run db:local`). Keep it that way, and make sure
+no ported script or test falls back to `DATABASE_URL`.
 
 ## Why this exists
 
