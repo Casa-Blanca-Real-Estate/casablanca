@@ -19,8 +19,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: typecheck the comp report
+      - name: typecheck the comp report and the dev notebook
         run: npm run typecheck
+      - name: the dev notebook's tests (its API on Blobs' local server, the CLI, the rules)
+        run: npm run test:dev-notebook
       - name: the Netlify build
         run: npm run build
       - name: the build wrote nothing outside its gitignored output
