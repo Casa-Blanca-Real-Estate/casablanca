@@ -61,7 +61,12 @@ export function Chat({ reportId, readOnly = false, onCount, seed }: {
     input.current?.focus();
   }, [seed, readOnly]);
 
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [messages, live]);
+  // A block body, not an expression: an effect's return value is its cleanup, and newer Chrome
+  // returns a Promise from scrollIntoView(). React then called that Promise on the next update and
+  // the page crashed ("l is not a function", 2026-09-29). src/effects.test.ts keeps it that way.
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'end' });
+  }, [messages, live]);
 
   // One model call per request (§8.3 rule 6): after a tool call, ask again.
   async function send(e: FormEvent) {
