@@ -42,8 +42,12 @@ export async function handleIdentityEvent(req: Request, deps: GateDeps): Promise
   }
 
   const decision = email ? decide(email, deps.access, allowlistRole) : { allowed: false, via: null };
-  // One line per decision, so the non-Casa refusal can be read in the function log.
-  console.log(JSON.stringify({ gate: 'comp-report', event, email, provider, allowed: decision.allowed, via: decision.via }));
+  // One line per decision, readable in the function log. Someone refused isn't a user, so their
+  // line carries only their address's domain (CR-1.1): enough to tell a personal Google account
+  // from a Casa address on another domain, and nothing more about them.
+  console.log(JSON.stringify(decision.allowed
+    ? { gate: 'comp-report', event, email, provider, allowed: true, via: decision.via }
+    : { gate: 'comp-report', event, domain: email ? email.slice(email.lastIndexOf('@') + 1) : null, provider, allowed: false }));
 
   return decision.allowed
     ? new Response(null, { status: 204 })

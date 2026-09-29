@@ -230,6 +230,17 @@ describe('the sign-up and log-in gate, before the database exists', () => {
     }
   });
 
+  test('logs each decision; a refused person’s line names only their address’s domain', async (t) => {
+    const lines: string[] = [];
+    t.mock.method(console, 'log', (line: string) => lines.push(line));
+    await gate('ana@casa-blanca.com');
+    await gate('Someone.Private@gmail.com');
+    const [admitted, refused] = lines.map((l) => JSON.parse(l) as Record<string, unknown>);
+    assert.deepEqual(admitted, { gate: 'comp-report', event: 'signup', email: 'ana@casa-blanca.com', provider: 'google', allowed: true, via: 'domain' });
+    assert.deepEqual(refused, { gate: 'comp-report', event: 'signup', domain: 'gmail.com', provider: 'google', allowed: false });
+    assert.equal(lines.join('\n').includes('someone.private'), false);
+  });
+
   test('refuses a non-Casa Google account, junk, and anything but POST', async () => {
     assert.equal((await gate('someone@gmail.com')).status, 403);
     assert.equal((await gate('someone@gmail.com', 'login')).status, 403);

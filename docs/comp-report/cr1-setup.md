@@ -133,11 +133,13 @@ different role, such as Mentor. It can't make anyone an admin; only `CR_ADMIN_EM
 
 Since CR-1.1 the page says why: "That account isn't authorised for the comp report" means our gate
 refused the Google account. Before CR-1.1 it returned to the sign-in page with no message. To see
-exactly which address was refused:
+which kind of account was refused:
 
 1. Netlify > **Logs > Functions > identity-validate** (then `identity-signup`, `identity-login`).
-2. Find the line `{"gate":"comp-report","event":"…","email":"…","allowed":false,…}`. The `email` is
-   the Google account's address, as Google reported it.
+2. Find the line `{"gate":"comp-report","event":"…","domain":"…","allowed":false,…}`. A refused
+   person isn't a user, so since 2026-09-30 their line names only their address's **domain**, as
+   Google reported it (`gmail.com`, `email.casa-blanca.com`). Admitted people's lines carry their
+   address.
 3. Then:
    - **A personal account** (gmail.com and the like): sign in with the Casa Blanca Google account
      instead. To use that account anyway, add its exact address to `CR_ADMIN_EMAILS` or grant it
