@@ -35,7 +35,7 @@ each was applied.
 - [x] ~~Tell Casanova which Netlify plan the site is on.~~ Credit-based.
 - [x] ~~Enable Netlify Identity.~~ On, with email confirmation and Google.
 - [x] ~~Set `CR_ADMIN_EMAILS`.~~ Done, and you're signed in as an admin.
-- [ ] **Soon — finish CR-1's step 6.** Sign in with a Gmail that's on no list, and check that it's
+- [x] **Soon — finish CR-1's step 6.** Sign in with a Gmail that's on no list, and check that it's
   refused. It can't be the Gmail you use now, since that one is an admin.
 - [ ] **Optional — brand the Google sign-in.** Google's screen says "Netlify Identity" because sign-in
   uses Netlify's default Google client. To make it say Casa Blanca, paste your Google Cloud client's
@@ -96,7 +96,7 @@ To stop this piling up, turn on GitHub → Settings → General → **Automatica
 | `samplepics` | Four StreetEasy listing photos uploaded in August | Nothing; they're test images and StreetEasy's photos | **Delete** |
 | `claude/kind-heisenberg-ujrdup` (+ `-p2` to `-p5`) | The profile pic stack, #41–#45 | Parked (Dispatch 01): #41 has changes requested, then the rest need review | **Stay parked** |
 
-**Answer →** _type here — e.g. "QR: merge later, stories: park, samplepics: delete"_
+**Answer →** QR: merge later, stories: park, samplepics: delete. Otherwise done i think
 
 ### D-17 · Two questions for counsel
 `Later — (1) before the pilot, (2) before factor 18 gets a value` · `Quick — forward to counsel or a closing attorney`
@@ -125,7 +125,7 @@ ones.
 
 **Recommendation: B**, with the engine's words in the glossary and the analyst view.
 
-**Answer →** _type here_
+**Answer →** eh, haven't decided yet. Hold on A for now, we'll revisit later.
 
 ### D-21 · A headline before the email can be copied
 `Soon — Dispatch 09, phase 2` · `Quick`
@@ -138,7 +138,7 @@ copied?
 
 **Recommendation: A.** It's the point of the report, and the drafts keep it cheap.
 
-**Answer →** _type here_
+**Answer →** Sure, A. We'll revisit once we start testing with Noble properly and other agents after that.
 
 ### D-22 · Where the client's name is asked
 `Soon — Dispatch 09, phase 1` · `Quick`
@@ -148,7 +148,7 @@ copied?
 
 **Recommendation: A**, optional.
 
-**Answer →** _type here_
+**Answer →** A, the new comp modal. Should be asked at the earliest point we can make sense of, alongside buyer or seller.
 
 ### D-23 · "Didn't sell" as a fourth group in v1
 `Soon — Dispatches 08 and 09` · `Quick`
@@ -163,7 +163,7 @@ them.
 
 **Recommendation: A.**
 
-**Answer →** _type here_
+**Answer →** Sure, yeah A.
 
 ---
 
