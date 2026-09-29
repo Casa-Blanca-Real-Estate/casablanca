@@ -11,10 +11,16 @@
 // a feature the other lacks, reads as better. Where the facts don't settle a
 // direction — two different sets of views, a loft against a duplex — the
 // comparison is "differs" and needs a judgment.
+//
+// A listing agent types the tags, so a tag that isn't there is weak evidence:
+// a difference that rests on one side not listing something is approximate at
+// best (§6.2).
 
 import { FACTORS, lineId, type FactorDefinition, type FactorLine } from '../catalog/factors.ts';
 import { DAYS_PER_MONTH, daysBetween } from '../util/dates.ts';
-import type { Confidence, Direction, EvidenceClass, FactField, FactorAssessment, IsoDate, PropertyFacts, ReportPropertyType, ServiceFacts, Sourced } from '../types.ts';
+import type {
+  Confidence, Direction, EvidenceClass, FactField, FactorAssessment, IsoDate, LaundryState, PropertyFacts, ReportPropertyType, ServiceFacts, Source, Sourced,
+} from '../types.ts';
 import { normalizeTag, parkingKind, viewKind } from '../parser/derive.ts';
 import { usableIn, weakest, type FactContext } from './facts.ts';
 import type { ComparisonOut, EstimateUse, MissingInput, PendingItem } from './output.ts';
@@ -55,6 +61,20 @@ function directionFromSets(subject: readonly string[], comp: readonly string[]):
 }
 
 const list = (xs: readonly string[]) => (xs.length ? xs.join(', ') : 'none listed');
+
+/** Sources whose lists are tags a listing agent typed — where an absent tag is weak evidence. */
+const TAG_SOURCES: ReadonlySet<Source> = new Set<Source>(['se_export', 'se_pdf', 'listing']);
+
+/** How sure "this side lacks it" is: approximate at best when the side's facts are listing tags. */
+function lacking(fact: Sourced<unknown>): Confidence {
+  return TAG_SOURCES.has(fact.source) ? weakest(fact.confidence, 'approx') : fact.confidence;
+}
+
+/** A direction's confidence: both facts, and the side that lacks something if the direction rests on it. */
+function directedConfidence(s: Sourced<unknown>, c: Sourced<unknown>, direction: Direction): Confidence {
+  return weakest(s.confidence, c.confidence,
+    direction === 'comp_inferior' ? lacking(c) : direction === 'comp_superior' ? lacking(s) : null);
+}
 
 const DOORMAN_RANK: Record<ServiceFacts['doorman'], number | null> = {
   none_listed: 0, virtual: 1, part_time: 2, full_time: 4, hours_unspecified: null,
@@ -125,20 +145,53 @@ function setCompare(s: Sourced<string[]> | undefined, c: Sourced<string[]> | und
   const cv = tags(c!.value);
   const direction = orderless ? (directionFromSets(sv, cv) === 'similar' ? 'similar' : 'differs') : directionFromSets(sv, cv);
   return {
-    status: 'compared', direction, units: null, unit_label: null, confidence: weakest(s!.confidence, c!.confidence),
+    status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s!, c!, direction),
     basis: `subject: ${list(sv)}; comp: ${list(cv)}`, missing: [],
   };
 }
 
-function presence(s: Sourced<boolean> | undefined, c: Sourced<boolean> | undefined, field: FactField, what: string): Derived {
+/** Has it or not. `article` reads "has a dishwasher"; a tag that isn't there reads "lists no dishwasher". */
+function presence(s: Sourced<boolean> | undefined, c: Sourced<boolean> | undefined, field: FactField, what: string, article = ''): Derived {
   const missing = needBoth(s, c, field, what);
   if (missing.length) return unknown(missing);
   const units = (s!.value ? 1 : 0) - (c!.value ? 1 : 0);
+  const direction = directionFromUnits(units);
+  const says = (f: Sourced<boolean>) => (f.value ? `has ${article}${what}` : TAG_SOURCES.has(f.source) ? `lists no ${what}` : `has no ${what}`);
   return {
-    status: 'compared', direction: directionFromUnits(units), units: null, unit_label: null,
-    confidence: weakest(s!.confidence, c!.confidence),
-    basis: `subject ${s!.value ? 'has' : 'has no'} ${what}; comp ${c!.value ? 'has' : 'has no'} ${what}`, missing: [],
+    status: 'compared', direction, units: null, unit_label: null,
+    confidence: directedConfidence(s!, c!, direction),
+    basis: `subject ${says(s!)}; comp ${says(c!)}`, missing: [],
   };
+}
+
+const LAUNDRY_RANK: Record<Exclude<LaundryState, 'none_listed'>, number> = { installed: 2, permitted: 1, prohibited: 0 };
+const LAUNDRY_WORDS: Record<LaundryState, string> = {
+  installed: 'washer/dryer installed', permitted: 'washer/dryer permitted, none installed',
+  prohibited: 'washer/dryer prohibited', none_listed: 'no washer/dryer listed',
+};
+
+/**
+ * Laundry's three states rank installed > permitted > prohibited. "None listed"
+ * means not installed, with permitted or prohibited unknown: it loses to
+ * installed, and against permitted or prohibited it can't be ranked until the
+ * agent says which.
+ */
+function laundryCompare(s: Sourced<LaundryState> | undefined, c: Sourced<LaundryState> | undefined): Derived {
+  const missing = needBoth(s, c, 'laundry', 'in-unit laundry');
+  if (missing.length) return unknown(missing);
+  const sv = s!.value;
+  const cv = c!.value;
+  const basis = `subject: ${LAUNDRY_WORDS[sv]}; comp: ${LAUNDRY_WORDS[cv]}`;
+  let direction: Direction;
+  if (sv === cv) direction = 'similar';
+  else if (sv !== 'none_listed' && cv !== 'none_listed') direction = directionFromUnits(LAUNDRY_RANK[sv] - LAUNDRY_RANK[cv]);
+  else if (sv === 'installed') direction = 'comp_inferior';
+  else if (cv === 'installed') direction = 'comp_superior';
+  else {
+    const side = sv === 'none_listed' ? 'subject' : 'comp';
+    return unknown([{ side, field: 'laundry', label: `whether the ${side}'s building permits a washer/dryer` }], basis);
+  }
+  return { status: 'compared', direction, units: null, unit_label: null, confidence: weakest(s!.confidence, c!.confidence), basis, missing: [] };
 }
 
 function deriveLine(
@@ -166,7 +219,7 @@ function deriveLine(
         : sv.length > 0 && cv.length === 0 ? 'comp_inferior'
           : sv.length === 0 && cv.length > 0 ? 'comp_superior'
             : directionFromSets(sv, cv) === 'similar' ? 'similar' : 'differs';
-      return { status: 'compared', direction, units: null, unit_label: null, confidence: weakest(s.views!.confidence, c.views!.confidence), basis: `subject: ${list(sv)}; comp: ${list(cv)}`, missing: [] };
+      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.views!, c.views!, direction), basis: `subject: ${list(sv)}; comp: ${list(cv)}`, missing: [] };
     }
     case 'outdoor_space': {
       const base = presence(s.outdoor_private, c.outdoor_private, 'outdoor_private', 'private outdoor space');
@@ -187,8 +240,15 @@ function deriveLine(
       }
       return { ...base, direction: 'differs', basis: `both have private outdoor space (subject: ${list(sk)}; comp: ${list(ck)}) — size or a judgment settles which is better` };
     }
-    case 'finishes_systems':
-      return setCompare(s.finishes, c.finishes, 'finishes', 'finishes');
+    // Kitchen and bath quality and en-suite bathrooms take a judgment: no case here.
+    case 'finishes_systems.central_air':
+      return presence(s.central_air, c.central_air, 'central_air', 'central air');
+    case 'finishes_systems.dishwasher':
+      return presence(s.dishwasher, c.dishwasher, 'dishwasher', 'dishwasher', 'a ');
+    case 'finishes_systems.fireplace':
+      return presence(s.fireplace, c.fireplace, 'fireplace', 'fireplace', 'a ');
+    case 'finishes_systems.laundry':
+      return laundryCompare(s.laundry, c.laundry);
     case 'unit_type': {
       const missing = needBoth(s.unit_type, c.unit_type, 'unit_type', 'unit type');
       // A unit with no type tags is a standard unit — but only where tags were available to say so.
@@ -201,7 +261,7 @@ function deriveLine(
         const cp = cvt.includes('penthouse');
         direction = sp && !cp ? 'comp_inferior' : cp && !sp ? 'comp_superior' : 'differs';
       }
-      return { status: 'compared', direction, units: null, unit_label: null, confidence: weakest(s.unit_type!.confidence, c.unit_type!.confidence), basis: `subject: ${st.join(', ') || 'standard'}; comp: ${cvt.join(', ') || 'standard'}`, missing: [] };
+      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.unit_type!, c.unit_type!, direction), basis: `subject: ${st.join(', ') || 'standard'}; comp: ${cvt.join(', ') || 'standard'}`, missing: [] };
     }
     case 'service_level': {
       const missing = needBoth(s.service, c.service, 'service', 'service level');
@@ -257,7 +317,7 @@ function deriveLine(
       const direction: Direction = sp.length > 0 && cp.length === 0 ? 'comp_inferior'
         : sp.length === 0 && cp.length > 0 ? 'comp_superior'
           : directionFromSets(sp, cp) === 'similar' ? 'similar' : 'differs';
-      return { status: 'compared', direction, units: null, unit_label: null, confidence: weakest(s.parking!.confidence, c.parking!.confidence), basis: `subject: ${list(sp)}; comp: ${list(cp)} (deeded or not can't be told)`, missing: [] };
+      return { status: 'compared', direction, units: null, unit_label: null, confidence: directedConfidence(s.parking!, c.parking!, direction), basis: `subject: ${list(sp)}; comp: ${list(cp)} (deeded or not can't be told)`, missing: [] };
     }
     case 'recency_market': {
       if (evidenceClass !== 'sold') return null;
@@ -321,7 +381,12 @@ export function compareComp(
         base.direction = usable.direction;
         base.degree = usable.degree ?? null;
         base.source = usable.source;
-        base.confidence = usable.confidence;
+        // A judgment that agrees with the facts, or settles a "differs" they left open, rests on them
+        // too — so a confirmed judgment can't make a "none listed" exact. One that overrides them
+        // stands alone.
+        const buildsOnFacts = derived?.status === 'compared' && derived.confidence !== null &&
+          (derived.direction === usable.direction || derived.direction === 'differs');
+        base.confidence = buildsOnFacts ? weakest(derived!.confidence, usable.confidence) : usable.confidence;
         base.missing = [];
         base.basis = [derived?.status === 'compared' ? derived.basis : '', `${usable.source} judgment: ${usable.direction.replace('_', ' ')}${usable.degree ? `, ${usable.degree}` : ''}${usable.note ? ` — ${usable.note}` : ''}`].filter(Boolean).join('; ');
         if (ctx.kind === 'with_estimates' && usable.confidence === 'guesstimate') {

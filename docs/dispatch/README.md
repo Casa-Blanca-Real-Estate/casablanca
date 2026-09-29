@@ -42,7 +42,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
 | **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
 | **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1) | Phases 1–4 merged #48. Open: the step-6 production sign-in proof (waits on Kimani: Identity, OAuth client) and follow-ups CR-1.1 |
-| **Abacus** | The comp report's calculation engine and parser | 06 (CR-2) | Merged #50. Open: follow-ups CR-2.1 |
+| **Abacus** | The comp report's calculation engine and parser | 06 (CR-2) | Merged #50. CR-2.1 in review — PR #51 |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
 | *unnamed* (`claude/laughing-newton-f96x9t`) | Agent CMS | 03 | Done — merged #47 |
@@ -56,4 +56,4 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | unnamed | Done |
 | 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | Done — merged #49 |
 | 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | Merged #48; step 6 waits on Kimani (Identity, OAuth client); CR-1.1 open |
-| 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Merged #50; CR-2.1 open |
+| 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Merged #50; CR-2.1 in review — #51 |

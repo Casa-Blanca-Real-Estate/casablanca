@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  compInputsFromExport, compute, parseCsvExport, parseExport, ParseError, PARSER_VERSION, type ParsedExport,
+  compInputsFromExport, compute, deriveFromFeatures, parseCsvExport, parseExport, ParseError, PARSER_VERSION, type ParsedExport,
+  type PropertyFacts,
 } from '../index.ts';
 import { readCsv } from '../parser/csv.ts';
 import { readArea, readDate, readFloor, readMoney, readStatus } from '../parser/values.ts';
@@ -129,9 +130,9 @@ test('tags are split, and service, outdoor presence, parking and views are deriv
   assert.equal(get(KEY.leonard108).facts.views, undefined); // no Home Features at all: unknown, not "none"
   const reade = get(KEY.reade);
   assert.deepEqual(reade.facts.outdoor_kinds?.value, ['roof_deck', 'terrace']);
-  // No penthouse among its Home Features — that exact fact stands — but its "PHA" label suggests one.
+  // No penthouse among its Home Features — that "none listed" fact stands, approximate — but its "PHA" label suggests one.
   assert.deepEqual(reade.facts.unit_type?.value, []);
-  assert.equal(reade.facts.unit_type?.confidence, 'exact');
+  assert.equal(reade.facts.unit_type?.confidence, 'approx');
   assert.equal(reade.suggestions?.length, 1);
   assert.deepEqual(reade.suggestions![0]!.value.value, ['penthouse']);
   assert.equal(reade.suggestions![0]!.value.confidence, 'inferred');
@@ -141,6 +142,55 @@ test('tags are split, and service, outdoor presence, parking and views are deriv
   // Confirmed by the agent, it's used.
   const confirmed = compute(input({ stated_facts: [{ id: 'ph', target: { comp_id: KEY.reade }, field: 'unit_type', value: { value: ['penthouse'], source: 'agent', as_of: '2026-09-24', confidence: 'exact' } }] }));
   assert.ok(!confirmed.pending_confirmation.some((p) => p.target === KEY.reade && p.what === 'unit_type'));
+});
+
+test('"none listed" is approximate; a listed tag is exact; a blank column is unknown', () => {
+  const get = (key: string) => original.comps.find((c) => c.identity.key === key)!;
+  const conf = (key: string, field: keyof PropertyFacts) => {
+    const f = get(key).facts[field];
+    return f ? [f.value, f.confidence] : undefined;
+  };
+  // 200 Chambers: Central air; City view; Water view; Dishwasher; Hardwood floors; Washer/dryer.
+  assert.deepEqual(conf(KEY.chambers, 'views'), [['city', 'water'], 'exact']);
+  assert.deepEqual(conf(KEY.chambers, 'central_air'), [true, 'exact']);
+  assert.deepEqual(conf(KEY.chambers, 'dishwasher'), [true, 'exact']);
+  assert.deepEqual(conf(KEY.chambers, 'laundry'), ['installed', 'exact']);
+  assert.deepEqual(conf(KEY.chambers, 'finishes'), [['hardwood floors'], 'exact']);
+  assert.deepEqual(conf(KEY.chambers, 'fireplace'), [false, 'approx']);
+  assert.match(get(KEY.chambers).facts.fireplace!.note!, /no fireplace listed among the Home Features/);
+  assert.deepEqual(conf(KEY.chambers, 'outdoor_private'), [false, 'approx']);
+  assert.deepEqual(conf(KEY.chambers, 'outdoor_kinds'), [[], 'approx']);
+  assert.deepEqual(conf(KEY.chambers, 'unit_type'), [[], 'approx']);
+  assert.deepEqual(conf(KEY.chambers, 'parking'), [[], 'approx']);
+  assert.deepEqual(conf(KEY.chambers, 'outdoor_shared'), [true, 'exact']);
+  assert.deepEqual(conf(KEY.chambers, 'service'), [{ doorman: 'full_time', concierge: true }, 'exact']);
+  // 181 Hudson: Dishwasher; Loft; Washer/dryer — and no doorman or concierge among its amenities.
+  assert.deepEqual(conf(KEY.hudson, 'central_air'), [false, 'approx']);
+  assert.deepEqual(conf(KEY.hudson, 'views'), [[], 'approx']);
+  assert.deepEqual(conf(KEY.hudson, 'unit_type'), [['loft'], 'exact']);
+  assert.deepEqual(conf(KEY.hudson, 'service'), [{ doorman: 'none_listed', concierge: false }, 'approx']);
+  assert.match(get(KEY.hudson).facts.service!.note!, /no doorman and no concierge listed/);
+  // A gas fireplace is a fireplace; 66 Leonard lists one, 77 Reade lists a plain "Fireplace".
+  assert.deepEqual(conf(KEY.leonard66, 'fireplace'), [true, 'exact']);
+  assert.deepEqual(conf(KEY.reade, 'fireplace'), [true, 'exact']);
+  // 108 Leonard's Home Features are blank: unknown, never "none listed".
+  for (const field of ['views', 'central_air', 'dishwasher', 'fireplace', 'laundry', 'finishes', 'outdoor_private', 'unit_type'] as const) {
+    assert.equal(get(KEY.leonard108).facts[field], undefined, field);
+  }
+  // Laundry's permitted state, from a listing that says so; installed wins whatever the order.
+  const derive = (tags: string[]) => deriveFromFeatures(tags).laundry;
+  assert.equal(derive(['Washer/dryer allowed']), 'permitted');
+  assert.equal(derive(['Washer/dryer allowed', 'Washer/dryer']), 'installed');
+  assert.equal(derive(['Washer/Dryer', 'W/D allowed']), 'installed');
+  assert.equal(derive(['Hardwood floors']), 'none_listed');
+  // Shared laundry isn't in-unit laundry, and a decorative fireplace isn't a working one: both stay among the finishes.
+  assert.deepEqual(deriveFromFeatures(['Washer/dryer in building', 'Decorative fireplace']), {
+    views: [], outdoor_kinds: [], unit_type: [], central_air: false, dishwasher: false, fireplace: false, laundry: 'none_listed',
+    finishes: ['decorative fireplace', 'washer/dryer in building'],
+  });
+  assert.deepEqual(deriveFromFeatures(['Central AC', 'Dish washer', 'Wood-burning fireplace']), {
+    views: [], outdoor_kinds: [], unit_type: [], central_air: true, dishwasher: true, fireplace: true, laundry: 'none_listed', finishes: [],
+  });
 });
 
 test('CSV edge cases: BOM, CRLF, quoted commas, quotes and line breaks, blank lines', () => {

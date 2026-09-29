@@ -10,7 +10,7 @@
 // - Interaction magnitudes aren't implemented until CR-R2, so a non-null one
 //   is refused rather than silently ignored.
 
-import { FACTORS, magnitudeKeys, type MagnitudeShape } from '../catalog/factors.ts';
+import { FACTOR_BY_ID, FACTORS, magnitudeKeys, type MagnitudeShape } from '../catalog/factors.ts';
 import { INTERACTIONS } from '../catalog/interactions.ts';
 import { canonicalJson } from '../util/canonical-json.ts';
 import { isIsoDate, type IsoDate } from '../util/dates.ts';
@@ -119,7 +119,15 @@ export function loadHouseMethod(raw: unknown): HouseMethod {
     issues.push('lines must be an object');
   } else {
     const given = raw['lines'];
-    for (const key of Object.keys(given)) if (!expected.has(key)) issues.push(`lines.${key} is not a factor in the catalog`);
+    for (const key of Object.keys(given)) {
+      if (expected.has(key)) continue;
+      // A file written for an earlier catalog names lines that have since moved: say which.
+      const factor = FACTOR_BY_ID.get(key.split('.')[0]!);
+      issues.push(!factor ? `lines.${key} is not a factor in the catalog`
+        : factor.role === 'selection_rule' ? `lines.${key}: ${factor.name.toLowerCase()} is a selection rule, not an adjustment, so it takes no magnitude`
+          : factor.role !== 'adjustment' ? `lines.${key}: ${factor.name.toLowerCase()} is not an adjustment`
+            : `lines.${key} is not a line of ${factor.id} — its lines: ${factor.lines.map((l) => (l.facet ? `${factor.id}.${l.facet}` : factor.id)).join(', ')}`);
+    }
     for (const [lineId, shape] of expected) {
       const entry = given[lineId];
       if (!isObject(entry)) { issues.push(`lines.${lineId} is missing`); continue; }

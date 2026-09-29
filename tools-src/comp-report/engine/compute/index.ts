@@ -114,10 +114,13 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       if (!cls) reasons.push(`status "${c.record.status.raw ?? ''}" isn't sold, in contract or active`);
       const type = facts.property_type?.value;
       if (type && type !== reportType) reasons.push(`a ${TYPE_WORDS[type]}, and this is a ${TYPE_WORDS[reportType]} report — like for like only`);
-      if (cls === 'sold' && windowStart) {
+      // A recency window covers sold comps by their closing date and in-contract comps by their
+      // contract date (Status Date is each). Active listings are exempt: an ask is current evidence.
+      if ((cls === 'sold' || cls === 'in_contract') && windowStart) {
         const date = facts.status_date?.value as string | undefined;
-        if (!date) reasons.push('no sale date to test against the recency window');
-        else if (date < windowStart) reasons.push(`sold ${date}, before the recency window opens (${windowStart})`);
+        const what = cls === 'sold' ? { date: 'sale date', did: 'sold' } : { date: 'contract date', did: 'went into contract' };
+        if (!date) reasons.push(`no ${what.date} to test against the recency window`);
+        else if (date < windowStart) reasons.push(`${what.did} ${date}, before the recency window opens (${windowStart})`);
       }
       const price = (cls === 'sold' ? facts.sale_price : facts.list_price) as Sourced<number> | undefined;
       const area = facts.area_sqft as Sourced<number> | undefined;

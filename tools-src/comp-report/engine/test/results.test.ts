@@ -115,15 +115,45 @@ test('a recency window applies to both results and says what it dropped', () => 
   assert.deepEqual([...r.indicators.unit_rate.median.comp_ids].sort(), [KEY.hudson, KEY.franklin, KEY.leonard66].sort());
   const chambers = out.comps.find((c) => c.id === KEY.chambers)!;
   assert.equal(chambers.flags.outside_recency_window, true);
-  assert.match(chambers.per_result.with_estimates.not_included_because[0]!, /before the recency window opens/);
-  // In-contract and active asks are current evidence; the window is about sales.
-  assert.equal(r.evidence.in_contract.counts.included, 3);
+  assert.match(chambers.per_result.with_estimates.not_included_because[0]!, /^sold 2026-08-27, before the recency window opens \(2026-09-01\)$/);
+  // In-contract comps count by their contract date: all three went into contract before September.
+  assert.equal(r.evidence.in_contract.counts.included, 0);
+  const moore = out.comps.find((c) => c.id === KEY.moore)!;
+  assert.equal(moore.flags.outside_recency_window, true);
+  assert.deepEqual(moore.per_result.on_facts.not_included_because, ['went into contract 2026-04-13, before the recency window opens (2026-09-01)']);
+  // Active asks are current evidence: exempt.
+  assert.equal(r.evidence.active.counts.included, 3);
+  // Three months back from 2026-09-24 opens on 2026-06-24: both Leonard contracts (7/22, 7/28) are in, 25 N Moore (4/13) is out.
+  const quarter = compute(input({ method: { recency: { months: 3 } } })).results.on_facts;
+  assert.deepEqual([...quarter.evidence.in_contract.price_per_sqft!.comp_ids].sort(), [KEY.leonard101, KEY.leonard108].sort());
   // One month back from 2026-09-24 opens the window on 2026-08-24; 79 Laight, sold that day, is inside.
   const month = compute(input({ method: { recency: { months: 1 } } })).results.on_facts;
   assert.equal(month.indicators.unit_rate.median.n, 5);
   const dayLater = compute(input({ method: { recency: { since: '2026-08-25' } } })).results.on_facts;
   assert.equal(dayLater.indicators.unit_rate.median.n, 4);
   assert.ok(!dayLater.indicators.unit_rate.median.comp_ids.includes(KEY.laight));
+});
+
+test('an in-contract comp needs a contract date inside the window; an estimated one is disclosed', () => {
+  const window = { recency: { months: 3 } };
+  // No contract date: it can't be tested, so it's out — and says why.
+  const undated = comps().map((c) => (c.id === KEY.leonard108
+    ? { ...c, record: { ...c.record, facts: { ...c.record.facts, status_date: undefined } } }
+    : c));
+  const out = compute(input({ comps: undated, method: window }));
+  assert.deepEqual(out.comps.find((c) => c.id === KEY.leonard108)!.per_result.on_facts.not_included_because,
+    ['no contract date to test against the recency window']);
+  // The agent's guess at an earlier contract date takes 108 Leonard out of "with estimates" only.
+  const guessed = compute(input({
+    method: window,
+    stated_facts: [{ id: 'contract', target: { comp_id: KEY.leonard108 }, field: 'status_date', value: agentFact('2026-05-01', 'guesstimate') }],
+  }));
+  assert.equal(guessed.results.on_facts.evidence.in_contract.counts.included, 2);
+  assert.equal(guessed.results.with_estimates.evidence.in_contract.counts.included, 1);
+  assert.ok(guessed.results.with_estimates.estimates_used.some((e) => e.id === 'contract' && e.target === KEY.leonard108));
+  assert.equal(guessed.results.with_estimates.evidence.in_contract.price_per_sqft!.median.confidence, 'guesstimate');
+  assert.equal(guessed.results.on_facts.evidence.in_contract.price_per_sqft!.median.confidence, 'exact');
+  assert.equal(guessed.divergence.same, true); // asks don't make the base or the range
 });
 
 test('like for like: a co-op in a condo report never enters a statistic', () => {
@@ -228,8 +258,8 @@ test('deterministic: the same input gives the same output and hash; comp order d
   tampered.results.on_facts.base!.value += 1;
   assert.equal(verifyOutputHash(tampered), false);
   assert.match(a.meta.inputs_hash, /^sha256:[0-9a-f]{64}$/);
-  assert.equal(a.meta.engine_version, '0.1.0');
-  assert.deepEqual(a.meta.parser_versions, ['0.1.0']);
+  assert.equal(a.meta.engine_version, '0.2.0');
+  assert.deepEqual(a.meta.parser_versions, ['0.2.0']);
 });
 
 test('the hash changes with anything that changes the answer', () => {

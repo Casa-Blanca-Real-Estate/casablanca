@@ -2,10 +2,13 @@
 // another's value, and how. Structure only: no magnitudes (those are CR-R2).
 //
 // v1 behaviour (§6.6):
-// - substitutes: applied as the larger adjustment, never the sum;
+// - substitutes: pulling the same way, applied as the larger adjustment, never
+//   the sum; pulling opposite ways, they net out;
 // - overlapping and otherwise-related pairs: a double-counting warning when
-//   both carry values;
+//   both sides carry a value, from the house method or the agent;
 // - complements: an interaction line whose value is not yet determined.
+//
+// The last five rows were added in design v0.4, from CR-R's evidence.
 
 export type Relationship =
   | 'substitute'
@@ -74,6 +77,26 @@ export const INTERACTIONS: readonly InteractionDefinition[] = [
   { id: 'sponsor_sales~concessions_credits', pattern: 'pair', relationship: 'overlap',
     members: [{ factor: 'sponsor_sales' }, { factor: 'concessions_credits' }],
     why: 'Sponsor pricing and credits are often the same discount',
+    v1_behaviour: 'warn_double_counting' },
+  { id: 'tax_abatements~carrying_costs', pattern: 'pair', relationship: 'overlap',
+    members: [{ factor: 'tax_abatements' }, { factor: 'carrying_costs' }],
+    why: 'An exemption is lower taxes, already in the carry',
+    v1_behaviour: 'warn_double_counting' },
+  { id: 'carrying_costs~building_financials,ground_lease', pattern: 'hub', relationship: 'overlap',
+    members: [{ factor: 'carrying_costs' }, { factor: 'building_financials' }, { factor: 'ground_lease' }],
+    why: 'Both already sit inside maintenance or common charges',
+    v1_behaviour: 'warn_double_counting' },
+  { id: 'outdoor_space~interior_size', pattern: 'pair', relationship: 'overlap',
+    members: [{ factor: 'outdoor_space' }, { factor: 'interior_size' }],
+    why: 'When outdoor area is converted into square footage, adjusting size as well counts it twice',
+    v1_behaviour: 'warn_double_counting' },
+  { id: 'amenities~parking,private_storage', pattern: 'hub', relationship: 'overlap',
+    members: [{ factor: 'amenities', facet: 'general' }, { factor: 'parking' }, { factor: 'private_storage' }],
+    why: 'The export lists garage and storage as building amenities',
+    v1_behaviour: 'warn_double_counting' },
+  { id: 'finishes_systems~condition', pattern: 'pair', relationship: 'overlap',
+    members: [{ factor: 'finishes_systems' }, { factor: 'condition' }],
+    why: 'A renovation shows up in both',
     v1_behaviour: 'warn_double_counting' },
 ];
 

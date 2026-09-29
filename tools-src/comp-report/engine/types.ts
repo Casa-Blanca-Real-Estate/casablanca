@@ -97,10 +97,23 @@ export interface ServiceFacts {
 export type UnitTypeTag = 'penthouse' | 'duplex' | 'triplex' | 'loft';
 
 /**
+ * In-unit laundry (factor 9). Co-ops need all three states, because a board
+ * must approve a washer/dryer (CR-R):
+ * - `installed` — one is in the unit
+ * - `permitted` — the building allows one; none is installed
+ * - `prohibited` — the building doesn't allow one
+ * - `none_listed` — the listing names none; whether one is permitted isn't known
+ */
+export const LAUNDRY_STATES = ['installed', 'permitted', 'prohibited', 'none_listed'] as const;
+export type LaundryState = (typeof LAUNDRY_STATES)[number];
+
+/**
  * A property's facts. Every field is optional and sourced. For comps they come
  * from the parser; for the subject, from the listing lookup or the agent. An
- * empty list (no views, no parking) means "none listed" where the source had
- * data to list; a missing field means unknown.
+ * empty list, a `false` or a `none_listed` from listing tags means "none
+ * listed": the source had tags and named none of that kind. It carries
+ * confidence `approx`, because a listing agent types the tags and may leave one
+ * out (§6.2). A missing field means unknown.
  */
 export interface PropertyFacts {
   property_type?: Sourced<PropertyType>;
@@ -134,7 +147,16 @@ export interface PropertyFacts {
   parking?: Sourced<string[]>;
   service?: Sourced<ServiceFacts>;
   unit_type?: Sourced<UnitTypeTag[]>;
-  /** Finish and system features — central air, washer/dryer, fireplace … */
+  /** Central air conditioning. */
+  central_air?: Sourced<boolean>;
+  dishwasher?: Sourced<boolean>;
+  /** A working fireplace, wood-burning or gas; a decorative one doesn't count. */
+  fireplace?: Sourced<boolean>;
+  laundry?: Sourced<LaundryState>;
+  /**
+   * The other Home Features — hardwood floors, walk-in closets … Context for a
+   * judgment of kitchen, bath and finish quality; not compared by the engine.
+   */
   finishes?: Sourced<string[]>;
   /** Building amenities other than door service, parking and shared outdoor space. */
   amenities?: Sourced<string[]>;
@@ -272,7 +294,11 @@ export type LeadIndicator =
 export interface MethodSettings {
   /** Which indicator leads. Default: the median (unit rate for condos) — labelled as the default. */
   lead?: { indicator: LeadIndicator; reason?: string };
-  /** Only sold comps whose status date falls in the window count. Applies to both results. */
+  /**
+   * A recency window (§6.5): sold comps count only if they closed inside it, in-contract comps
+   * only if they went into contract inside it. Active listings are exempt. A method setting, so
+   * it applies to both results.
+   */
   recency?: { months: number; reason?: string } | { since: IsoDate; reason?: string };
   /**
    * The agent narrowing the range, with a reason (§6.5). It carries a number,
