@@ -10,8 +10,10 @@ track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
 Last updated 2026-09-28 by Casanova.
 
-**What actually blocks the next build:** CR-3 (the workspace) needs **D-1, D-10 and D-12**. CR-4
-needs D-4 and CR-5 needs D-2, but those start later. Everything else can wait.
+**What actually blocks the next build:** nothing blocks CR-3a (Dispatch 07, the walkthrough
+scaffold): it shows the recommended defaults, labelled. CR-3 proper (the designed workspace) needs
+**D-1, D-10 and D-12**. CR-4 needs D-4 and CR-5 needs D-2, but those start later. Everything else can
+wait.
 
 ## Index
 

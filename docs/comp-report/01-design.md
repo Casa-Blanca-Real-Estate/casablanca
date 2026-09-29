@@ -770,7 +770,10 @@ Dispatches in dependency order; `docs/dispatch/README.md` has the protocol and t
 CR-1 and CR-2 are merged** (#49, #48, #50 — 2026-09-28). CR-1's sign-in proof waits on Identity
 being switched on. Follow-ups: **CR-1.1** (autoconfirm refused, admin only from the environment,
 refused-sign-up log cut to the domain, then the proof) and **CR-2.1** (v0.4's engine changes and
-Appendix A's new definitions). **CR-3 is next**, once D-1, D-10 and D-12 are answered.
+Appendix A's new definitions). **Next: CR-3a** (Dispatch 07), a rough, annotated scaffold of the
+whole flow with sample prefill, so Kimani can walk it before designing the screens; it shows the
+recommended defaults for the open decisions. **CR-3 proper** builds his design on it, once D-1, D-10
+and D-12 are answered.
 
 - **CR-R — Adjustment research** (Dispatch 04). For every factor in Appendix A: how practitioners
   derive its value, what data each method needs, what published evidence reports — sourced. Plus a
