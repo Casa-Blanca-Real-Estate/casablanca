@@ -557,9 +557,9 @@ closest sales put #517 at $880–$925 a square foot — about $640K–$670K"* �
   Chambers" in a headline isn't taken for a figure.
 - `missing` — what a headline can't say yet, and why: no range, no base, no closest comp.
 
-Each engine fact is one the output already carries, so it traces to its derivation. Facts hold
-exact values; a headline shows $/sqft truncated and prices rounded ("about $640K"), which is
-presentation (§6.1) and for QA's matching to allow.
+Every engine figure among them (all but the counts) is one the output already carries, so it traces
+to its derivation. Facts hold exact values; a headline shows $/sqft truncated and prices rounded
+("about $640K"), which is presentation (§6.1) and for QA's matching to allow.
 
 ### `divergence`
 
