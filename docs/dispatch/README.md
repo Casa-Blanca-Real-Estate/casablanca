@@ -41,8 +41,8 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
 | **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
-| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a) | 05: merged #48, #52; step-6 sign-in proof and CR-1.1 item 3 open. 07: PR #53 open |
-| **Abacus** | The comp report's calculation engine and parser | 06 (CR-2) | Done — merged #50 and CR-2.1 (#51) |
+| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b) | 05: merged #48, #52; step-6 proof and CR-1.1 item 3 open. 07: done, merged #53. 09: ready |
+| **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: ready |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
 | *unnamed* (`claude/laughing-newton-f96x9t`) | Agent CMS | 03 | Done — merged #47 |
@@ -55,6 +55,8 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 02 | [Agent sites, Slice 0 — data model + build hardening](02-agent-sites-foundations.md) | unnamed | Done |
 | 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | unnamed | Done |
 | 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | Done — merged #49 |
-| 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | Merged #48, #52; step 6 waits on Kimani (`CR_ADMIN_EMAILS`, redeploy) |
+| 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | Merged #48, #52; step 6 waits on Kimani (a Gmail on no list) |
 | 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Done — merged #50, #51 |
-| 07 | [Comp report — the walkthrough scaffold (CR-3a)](07-comp-report-walkthrough-scaffold.md) | Mason | PR #53 open |
+| 07 | [Comp report — the walkthrough scaffold (CR-3a)](07-comp-report-walkthrough-scaffold.md) | Mason | Done — merged #53 |
+| 08 | [Comp report — the engine for a buyer's argument (CR-2.2)](08-comp-report-buyers-argument-engine.md) | Abacus | Ready |
+| 09 | [Comp report — the first-class start, and the screens (CR-3b)](09-comp-report-first-class-start.md) | Mason | Ready |

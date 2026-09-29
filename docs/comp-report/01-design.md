@@ -1,6 +1,6 @@
 # Comp report tool — master design
 
-**v0.4 · 2026-09-28 · owner: Casanova.** The guiding document for every comp report dispatch.
+**v0.5 · 2026-09-29 · owner: Casanova.** The guiding document for every comp report dispatch.
 Dispatches cite sections of this file; when a build finding contradicts it, the dispatch says so
 in its PR and Casanova updates this file — the doc follows reality, not the other way round.
 
@@ -10,6 +10,17 @@ items are dated in §17.
 
 ### Version history
 
+- **v0.5** — the reorientation after Kimani walked the CR-3a scaffold, Frankie's email, Kara's
+  workshop, Noble's goals and 17 answered decisions:
+  - **The report builds to a one-sentence headline** (§1, §10.2).
+  - **Buyers first** (§1).
+  - **A guided start:** the home, its details, then add comps, by StreetEasy link, export or hand
+    (§3, §6.2).
+  - **Mentors' comp rules become checks** (§6.10).
+  - **Adjustments become the differences between comps**, not house values (§6.6).
+  - **"Didn't sell" is a fourth evidence status** (§6.3), and there's a **price table** (§6.5).
+  - **The training gate unlocks at five closed deals** (§11).
+  - **The screens are specified in `02-screens.md`.**
 - **v0.4** — after CR-R, CR-1 and CR-2 merged. A turn runs in a background function, because CR-1
   measured a 60 s cap on every response (§8.3 rule 6, §15). Google sign-in is tested on production
   (§13). CR-2's interpretations are settled (§6.2–§6.6, §7.1): "none listed" is approximate; recency
@@ -39,13 +50,22 @@ and a Casa Blanca–branded report.
 diligent agent going back and forth to understand a comp in depth is the tool working, not
 failing.
 
+**The point of a report is one sentence.** Noble: the goal of a comp report is a one-sentence
+headline of what the comps show, told to the client. The rest matters, and it's there to back the
+headline up. Every screen feeds the headline or supports it (§10.2).
+
+**Buyers first.** About 95% of Casa's comps are for buyers deciding what to offer. Kara: a comp
+report is pulled when a buyer wants to make an offer, because "there needs to be some sort of logic
+behind what they're offering — the comparative market report is the logic." Seller pricing uses the
+same engine and screens with seller wording.
+
 **Users:** Casa agents, piloted with a small group first, then released behind the training gate
 (§11); admins (Kimani, Hannah); an allowlist of authorised non-Casa people. The heaviest users
 will be the most active, highest-ticket agents — so luxury factors matter from the start, and
 the architecture handles them the same way it handles everything else (§6.5).
 
-**v1 does:** condo reports from a StreetEasy comp export; subject capture by StreetEasy URL or by
-hand; an assistant that operates the analysis; two results (§6.4); rudimentary carrying cost and
+**v1 does:** condo reports from comps added by StreetEasy link, by the StreetEasy comp export, or
+by hand; subject capture by StreetEasy URL or by hand; an assistant that operates the analysis; two results (§6.4); rudimentary carrying cost and
 price evaluation (§6.7); versioned numbers; client email in three lengths; a PDF of the client
 report; saved, recoverable reports and chats.
 
@@ -87,26 +107,30 @@ of them re-runs the analysis.
 
 ## 3. The workflow
 
-1. **Intake — progressive and skippable.** Only the subject property is required to start
-   (StreetEasy URL prefill via the existing Firecrawl import, or by hand). Everything else is a
-   module the agent can fill now, later or never: the comps, the brief (question, audience, client
-   profile — §8.6), the call, a target, deal terms (§6.7). The assistant nudges for a module when it
-   starts to matter. An agent who wants to start with almost nothing and build up as they go, can.
-2. **Import.** The StreetEasy comp export, parsed and normalised; each comp tagged on arrival (§7);
-   each property recorded (§12).
-3. **First-pass review — range hidden.** The agent tiers each comp (primary / secondary / excluded)
-   with a reason, opens the listing, marks it reviewed. **The computed range stays hidden until the
-   agent gives their call, or skips it** (§3.1). Hiding it during the first pass also stops tiering
-   done to move the number.
-4. **The reveal, then the loop.** The call is shown against the data — the teaching moment
-   (§8.4). From here the range moves live as tiers, facts and settings change, and the agent can
-   re-enter at any time: new comps, a corrected fact, a changed setting. Intake is never asked
-   again.
-5. **Communicate.** The writer drafts from the current numbers for the chosen audience — full
-   email, short email, text — and the report narrative. **Drafting pins those numbers as a
-   version** (v1, v2 …). QA runs (§9). The agent edits.
-6. **Export.** Copy the email; print the client report to PDF. Saved with its versions, chat and
+**What each screen shows, and what folds away, is in `02-screens.md`.** The flow:
+
+1. **New comp: a guided start, in a modal.** It has three screens.
+   - **The home:** a StreetEasy link or an address; buyer or seller; the client's name.
+   - **Its details:** the size is the one must; notes on what stands out; the rest folds away.
+   - **Add comps:** paste StreetEasy links, drop the export, or type one in (§6.2). Each comp is
+     checked against the mentors' rules as it lands (§6.10), and each property is recorded (§12).
+
+   Everything past the home can be skipped. The target, deal terms and the client note come later,
+   when they matter.
+2. **Sort — range hidden.** The agent tiers each comp and notes, in a line or three, how it differs
+   from the home. Kara calls the notes column "unbelievably important"; the note is the reason.
+   **The range stays hidden until the agent gives their number, or skips it** (§3.1), which also stops
+   tiering done to move the number.
+3. **Findings.** First the agent's own number, then the reveal: what the comps say in one sentence,
+   the range, the number against it (the teaching moment, §8.4), the evidence by status, and the price
+   table. From here the range moves live as tiers, facts and settings change, and the agent can add
+   comps or correct a fact at any time. The target price and deal terms appear here (D-4).
+4. **Send.** First the headline: one sentence, the agent's, with drafts on offer (§10.2). Then the
+   email built around it, in three lengths, and QA (§9). **Drafting pins the numbers as a version**
+   (v1, v2 …). Copy the email; print the client report to PDF. Saved with its versions, chat and
    exports.
+
+The assistant is a drawer, open from Sort, Findings and Send.
 
 **No lock button.** Every draft is bound to the version it was written from. Change anything
 afterwards — including by pushing back on the AI while drafting ("actually, drop 79 Laight") — and
@@ -124,7 +148,7 @@ this draft — regenerate?"
 **Skipping is allowed.** If the agent skips the call, the range is revealed and the teaching
 comparison simply doesn't happen for that report. In practice mode (§11) the call is required.
 
-*Pending: D-1 (the order), D-10 (which deal-terms modules intake offers).*
+*Decided 2026-09-29: D-1 (C, the call before the reveal), D-10 (B: buyer traditional purchase and seller pricing).*
 
 ## 4. Non-negotiables
 
@@ -203,6 +227,20 @@ alone (§16, CR-2).
 - The subject is never in the export. XLSX is the same schema.
 - **Expected second variant:** standard-tier StreetEasy exports (requested 2026-09-24).
 
+**StreetEasy links are the second input, and for many agents the first.** Kara never uses
+StreetEasy's comps generator ("it misses obvious comps and brings in things that I don't really think
+are comps"), and newer agents research comps one listing at a time.
+- **How a link comes in:** the agent pastes a listing link, or several. The server reads the page with
+  the Firecrawl import the carousel tools already use, with a schema for comps: status, sale price and
+  date, last and original ask, list date, days on market, floor, size, beds, baths, charges and taxes,
+  the building, its features and its listing history.
+- **The engine maps the result into the same comp record the export makes** (source `listing`).
+- **Reading a page can misread it,** so every value read from the page is `inferred` until the agent
+  confirms the row in one tap. Then it's `exact`, or `approx` where the page says so.
+- **Anything the page didn't give is missing,** never guessed.
+- **By hand:** a comp typed in (address, status, price, size, floor, date) comes in as the agent's
+  record, `exact` unless marked an estimate.
+
 **StreetEasy's own PDF report** (`sources/streeteasy-comp-report-…pdf`) carries **year built**,
 photos and floor plans, none of which are in the CSV. Year built comes from the listing lookup in
 v1; parsing the PDF is a later enrichment.
@@ -215,8 +253,11 @@ $1,906/ft², matches this engine's exactly. This is what agents send clients tod
 
 ### 6.3 Indicators
 
-Evidence statuses — **sold**, **in contract** (ask basis), **active** (ask basis) — never mix
-inside one statistic. (One term: **evidence status**. The engine's field is `evidence_class`.)
+Evidence statuses — **sold**, **in contract** (ask basis), **active** (ask basis), and **didn't
+sell** (ask basis: a listing that came off the market unsold) — never mix inside one statistic. (One
+term: **evidence status**. The engine's field is `evidence_class`.) *Didn't sell* is a ceiling
+signal: Frankie lists a building's unsold listings ("on the market in 12/25 for $625K and never
+sold") beside its sales. It comes from a link's listing history; the export doesn't carry it.
 
 - **Unit-rate indicators** ($/sqft) — need area on both subject and comp: median, mean, and the
   **anchor** (the single most comparable sold comp — the agent marks it; Jev suggests one).
@@ -259,6 +300,9 @@ listing and the agent doesn't know it, it's left out of both results and the out
 - **Range** = lowest to highest implied value among the agent's **primary sold** comps. This is
   bracketing on a curated like-for-like set — not StreetEasy's lowest-to-highest of everything.
   The agent can narrow it, with a reason.
+- **The price table.** The subject's implied price at $/sq ft steps across the range, as in Frankie's
+  email: "$880 – $638K · $900 – $652,500 …". It's the subject's size times each step, computed and
+  labelled by the engine. Clients read a price more easily than a rate.
 - **Recency window** (optional, a method setting): sold comps count only if they closed inside it,
   in-contract comps only if they went into contract inside it. Active listings are exempt: an ask
   is current evidence. **v1 limitation:** practice measures a sale's recency from its contract date,
@@ -280,9 +324,8 @@ it captures, what data it needs, where the data can come from. **None has a numb
   theirs, labelled the agent's estimate, and lands only in *with estimates*. **A value is a
   magnitude; the comparison supplies the direction** — a comp without the terrace moves up, one with
   a better terrace moves down. The one signed value is the market's monthly movement.
-- **Order and compounding** are undecided: today every adjustment comes off the comp's own sale
-  price and they add. Appraisal practice applies transaction adjustments first, in sequence, then
-  property adjustments on the result (D-18, for Noble).
+- **Order and compounding** (D-18) no longer come up: see "The differences between comps" below.
+  If values are ever added, an adjustment comes off the comp's own sale price and the adjustments add.
 - **Noble's view (2026-09-29): the adjustments may never need values.** A comp's price already
   carries what its features are worth, so well-chosen comps may be enough. The engine already works
   that way: with every value null, the results are the comps' own $/sqft and prices, and each
@@ -307,7 +350,34 @@ the sum when they pull the same way, and nets them when they pull opposite ways;
 about double counting** whenever both sides of an overlapping pair carry a value, from the house
 method or the agent. Interaction magnitudes are determined later, with the rest (CR-R2, §16).
 
-*Pending: D-14 (when to research interaction magnitudes), D-18 (adjustment order and compounding).*
+**The differences between comps — what replaces adjustment values (2026-09-29).** Kimani, on D-18:
+"we need to be able to see … how much two similar listings differ in price and what features of them
+might have caused that difference", for buyers above all. Appraisal adjustments answer a
+different question. They give each feature a set value so every sale can be moved onto the subject,
+and they're built for valuing a sale. In practice they're usually *derived* from comps, by paired
+sales:
+- Two sales alike in everything but one feature: the gap between their prices is evidence of what
+  that feature is worth.
+- Several such pairs give a range.
+- Hundreds of sales allow a regression.
+
+**What the engine does instead, with no house values at all:**
+- **Every comp against the home.** The factor-by-factor comparison it already makes: comp better,
+  worse or similar on floor, size, outdoor space, views, condition and the rest.
+- **Every comp against every other comp,** within a status. The gap in price and $/sq ft, and the
+  factors that differ. For example: *"5 Franklin #14A sold for $156 a sq ft more than 200 Chambers
+  #10A. It has a terrace and a skyline view, and it's 4 floors higher."*
+- **Clean pairs, flagged:** two comps that differ in one factor, or one close group of factors. Their
+  gap is evidence of what that factor adds *here*: *"the only difference is the terrace: about
+  $150/sq ft."* It's shown as evidence, never applied as a value.
+- **For a buyer, this is the argument.** *"The ask is $X. The similar unit without the terrace sold for
+  $Y. The seller is asking about $Z for the terrace — is it worth it?"* It serves a buyer better than
+  appraisal-style adjustments.
+- **Values stay optional.** An agent can still state one ("I'd add 5% for the terrace"), and it lands in
+  *with estimates* (§6.4). House values come only if Noble later wants them.
+
+*Closed 2026-09-29: D-14 (interaction magnitudes: not needed; the interaction map stays as structure,
+because it keeps pairs honest, e.g. floor and view overlapping). D-18 is replaced by this section.*
 
 ### 6.7 Carrying cost and price evaluation — rudimentary, in v1
 
@@ -354,6 +424,28 @@ neighbours each mean one thing.
 - **CR-R seeds a draft from authoritative sources; Noble and the mentors make it official.** Until
   then every entry is marked draft.
 
+### 6.10 Comparability checks — the mentors' rules
+
+Kara's rules for what makes a comp, run by the engine as **flags on a comp**, each with a
+suggested tier and a reason the agent can accept or overrule. They're never a block, and the tool
+never tiers a comp for the agent (§4).
+
+| Check | Flag | Suggests |
+|---|---|---|
+| Same building | "In the home's building": the best comps are here | Counts; the closest comp |
+| First floor, when the home isn't | "First floor: a different product" | Leave out, unless nothing else |
+| Private outdoor space on one side only | "Has private outdoor space; the home doesn't" (or the reverse) | Leave out: "never compare" |
+| New development against resale | "New development; the home is a resale" | Leave out |
+| Co-op against condo; HDFC against not | "A co-op; the home is a condo" | Leave out |
+| Sponsor unit | "Sponsor sale: often sells higher (no board package)" | Context, with the note |
+| Sold long ago | Over 3 months: noted. Over 6: "old for a comp". Over 12: "market has moved" | Context past 6 months |
+| Size far off | More than about 25% bigger or smaller | Context |
+| Floor far off | Beyond the home's floor band | Context, with the note |
+| Distance | Beyond ¼ mile: noted. Beyond ½ mile: "far for Manhattan" (needs coordinates, later) | Context |
+
+The thresholds are house-method settings. They're Kara's today and Noble's to set. The flags also
+seed the notes' quick-pick chips (`02-screens.md`, Sort).
+
 ## 7. Who decides what: code, then Jev, then the LLM
 
 **Use the cheapest thing that can make the decision correctly.**
@@ -395,7 +487,7 @@ the fallback. Jev is nine days old at the time of writing, invite-only, and does
 handling — so Casa needs its own account and terms, client names never go to it, and the tool
 must keep working if it's unavailable.
 
-*Pending: D-12 (reusing the MindBinder Jev integration).*
+*Pending: D-12. Kimani will have a MindBinder session prepare a handoff package; what it should contain is in `docs/comp-report/jev-handoff-request.md`.*
 
 ## 8. The assistant
 
@@ -471,13 +563,14 @@ recommendation for the agent (§8.3).
 9. **Coaching level scales with the agent.** In practice mode and for newer agents, the tool asks
    before it drafts. For unlocked, experienced agents it drafts directly — always with the neutral
    numbers beside the draft and every departure from the data marked. Heavy Socratic questioning of
-   an experienced agent who knows what they want is friction, not teaching.
+   an experienced agent who knows what they want is friction, not teaching. **It loosens with the
+   number of comps the agent has done in the tool** (D-5).
 10. **Disambiguate intent only when it's actually ambiguous.** "Help me explain why $11.5M is right"
     can mean the analysis, the negotiation case, or the emotional argument. Jev classifies the
     request; when confident, the assistant proceeds; when not, it offers the three as a one-tap
     choice. Never a quiz on every request.
 
-*Pending: D-5 (coaching levels), D-6 (intent disambiguation).*
+*Decided 2026-09-29: D-5 (A, loosening with the agent's comp count), D-6 (A, only when ambiguous).*
 
 ### 8.4 Keeping the valuation neutral — and the teaching moment
 
@@ -515,7 +608,7 @@ first-class mode, not an afterthought.
   supported path to the target, or a recommendation to re-anchor the target to what the data
   supports.
 
-*Pending: D-4 (when the assistant first sees the target).*
+*Decided 2026-09-29: D-4 (A, hidden until the neutral result exists).*
 
 ### 8.6 Audience, client profile and psychology
 
@@ -532,7 +625,7 @@ first-class mode, not an afterthought.
   disability, lawful source of income and every other federal and NYC protected class: the profile has
   no fields for them, capture refuses them, and the writer never tailors on them (§14).
 
-*Pending: D-7 (the profile's dimensions).*
+*Decided 2026-09-29: D-7 (B now, MindBinder's framework when it's stable).*
 
 ### 8.7 Agent voice
 
@@ -543,10 +636,11 @@ first-class mode, not an afterthought.
 - **Samples must be the agent's own writing**, attested on upload. AI-written samples teach the writer
   to sound like AI.
 - **Client names and contact details are stripped** before storage. Samples never go to Jev.
+- **Mentors and admins can see an agent's samples and style profile** (D-8), to coach the writing.
 - **House rules outrank voice.** Range language, compliance and the glossary apply whatever the
   agent's habits are.
 
-*Pending: D-8 (attestation, and who can see samples).*
+*Decided 2026-09-29: D-8 (attestation is enough; mentors and admins can see samples and the profile).*
 
 ### 8.8 Calling Claude
 
@@ -589,7 +683,7 @@ Run on every draft before it can be copied or exported.
 4. **Freshness — warn.** Old inputs are disclosed or confirmed.
 5. **Estimates — automatic.** If the copy uses *with estimates*, the estimates are disclosed.
 
-*Pending: D-2 (compliance as the only hard block), D-3 (how estimates are worded for clients).*
+*Decided 2026-09-29: D-2 (A, compliance the only hard block, for now), D-3 (A, "agent's estimate").*
 
 ## 10. Outputs
 
@@ -602,6 +696,23 @@ Run on every draft before it can be copied or exported.
   assumptions and their dates, disclosures, agent contact.
 
 ### 10.2 Email — the primary deliverable
+
+**The headline comes first.** It's one sentence, the agent's, on what the comps show, for example
+*"The three closest sales put #517 at $880–$925 a square foot — about $640K–$670K."* The assistant
+offers drafts grounded in the numbers, the agent picks or rewrites, and QA checks that every number
+in it traces to the engine (§9). No email is copied without one (`02-screens.md`, Send).
+
+**Then the email backs it up, in the order Frankie's does** (`sources/2026-07-29-frankie-…`):
+- the headline
+- one line on how the comps were chosen, from the agent's sorting
+- sold, in contract, active and didn't sell, each comp as a link with its price and the agent's notes
+- things to consider: buildings that trade higher or lower, carrying costs, recent activity in the
+  building
+- the price table
+- the next step (the offer advice)
+- sign-off and the disclaimer
+
+Empty sections are left out (Kara).
 
 Full email, short email, text; per audience. Copied as rich HTML that pastes cleanly into Gmail,
 with plain text alongside. The tool doesn't send.
@@ -642,15 +753,18 @@ can't tell a good comp from a bad one. It also shows Casa, for the first time, w
   exclusion reason substantive?"). The LLM writes feedback. **Noble makes the pass/fail call** until the
   rubric is trusted. Then the reveal: their range against the computed one, their tiers against the
   tool's suggestions, with reasons.
-- **Unlock:** new agents — a set number of practice reports, at least one passed. Experienced agents —
-  one passed submission, or a direct grant. **Admins and mentors grant or deny access with one click**
-  on the admin side. A mentor sign-off path ties it into Casa's mentorship programme.
+- **Unlock (D-11, 2026-09-29): new agents unlock the full tool when they close their fifth deal and
+  graduate from mentorship.** Until then they use practice mode for their real deals. Experienced
+  agents unlock by one passed submission or a direct grant. **Admins and mentors grant or deny access
+  with one click** on the admin side, and a mentor's sign-off counts.
+- **The deal count is set on the admin side** (a mentor or admin records the fifth closing) until
+  outcomes (§12, D-19) can count them.
 - **Aggregate results by rubric criterion** feed Noble's teaching.
 - **Scaffolded in v1, built after launch.** v1 ships the pieces that are expensive to retrofit: a
   report mode, a user capability, results that can be withheld from view, a submissions table, and the
   mentor role. Building practice mode later then adds screens, not a rebuild.
 
-*Pending: D-11 (the gate's rules).*
+*Decided 2026-09-29: D-11 (the fifth closed deal and graduation; either path; admins and mentors grant; mentor sign-off counts).*
 
 ## 12. Data model
 
@@ -702,7 +816,7 @@ can eventually look for recent sales in the area that a given export missed — 
 building in the last six months came in on other agents' reports" — and offer them for review. **Using
 records across agents waits on D-9**; the schema supports it from day one either way.
 
-*Pending: D-9 (cross-agent use of property records).*
+*Decided 2026-09-29: D-9 (A: records are kept and suggested across agents).*
 
 ## 13. Auth
 
@@ -735,8 +849,10 @@ records across agents waits on D-9**; the schema supports it from day one either
   Executive Law §160-a defines appraisal broadly, the §160-jjjj(3) carve-out and the Department of
   State's FAQ come close — but no DOS page says so outright; counsel to confirm (D-17, from CR-R).
   StreetEasy's own report says it "is not an appraisal, valuation, broker price opinion,
-  and is meant to be a starting point." Ours says the equivalent; **wording approved by Hannah
-  before the pilot.**
+  and is meant to be a starting point." Ours, **approved 2026-09-29 (D-13):** *"This comparative
+  market analysis is an estimate of market value prepared by a licensed real estate agent for
+  informational purposes. It is not an appraisal. Data provided by StreetEasy and other sources, which
+  may be incomplete or subject to change."*
 - **StreetEasy attribution** — "Data provided by StreetEasy" — on every export, as their report does.
   Re-presenting the data in Casa-branded reports is cleared by Hannah (§17).
 - **Fair housing** — the Fair Housing Act (HUD's 2024 guidance applies it to AI-generated content)
@@ -746,15 +862,14 @@ records across agents waits on D-9**; the schema supports it from day one either
   in client copy unless Hannah approves wording.
 - **Listing photos** linked, not hosted. **Client data** private by default, isolated per owner,
   never sent to Jev.
-- **The property pool.** Re-presenting StreetEasy data in Casa-branded reports is cleared. Keeping
-  StreetEasy-derived records beyond a report and suggesting them across agents is a different use —
-  compiling a database — and needs Hannah to confirm it's within Casa's StreetEasy agreement (D-9).
-  Public-record closings are public; listing descriptions, photos and engagement figures are
-  StreetEasy's.
+- **The property pool.** Re-presenting StreetEasy data in Casa-branded reports is cleared. Records
+  are kept and suggested across agents (D-9, A). Public-record closings are public. Listing
+  descriptions, photos and engagement figures are StreetEasy's, so they're shown with attribution and
+  not republished outside reports.
 - **Client profiles** hold no protected characteristics (§8.6). **Voice samples** are stored with
   client details stripped (§8.7).
 
-*Pending: D-9 (the property pool), D-13 (disclaimer wording), D-17 (counsel: CMA vs appraisal).*
+*Decided 2026-09-29: D-9 (A), D-13 (approved). Pending: D-17 (counsel: CMA vs appraisal).*
 
 ## 15. Risks
 
@@ -784,10 +899,24 @@ Dispatches in dependency order; `docs/dispatch/README.md` has the protocol and t
 CR-1 and CR-2 are merged** (#49, #48, #50 — 2026-09-28). CR-1's sign-in proof waits on Identity
 being switched on. Follow-ups: **CR-1.1** (autoconfirm refused, admin only from the environment,
 refused-sign-up log cut to the domain, then the proof) and **CR-2.1** (v0.4's engine changes and
-Appendix A's new definitions). **Next: CR-3a** (Dispatch 07), a rough, annotated scaffold of the
-whole flow with sample prefill, so Kimani can walk it before designing the screens; it shows the
-recommended defaults for the open decisions. **CR-3 proper** builds his design on it, once D-1, D-10
-and D-12 are answered.
+Appendix A's new definitions). **CR-3a** (Dispatch 07, #53), the annotated scaffold of the whole
+flow, is merged, and Kimani has walked it.
+
+**Next, in parallel:**
+- **CR-2.2, the engine for a buyer's argument** (Dispatch 08, Abacus):
+  - the comparability checks (§6.10)
+  - the differences between comps and clean pairs (§6.6)
+  - comp records from a StreetEasy listing page (§6.2)
+  - *didn't sell* (§6.3)
+  - the price table (§6.5)
+  - the inputs the headline draws on
+- **CR-3b, the first-class start** (Dispatch 09, Mason):
+  - the guided new-comp modal
+  - adding comps by StreetEasy link, export or by hand
+  - the screens restructured to `02-screens.md` (Sort, Findings, Send; the assistant as a drawer)
+  - the headline slot on Send
+
+**CR-3 proper** then builds Kimani's visual design on that structure.
 
 - **CR-R — Adjustment research** (Dispatch 04). For every factor in Appendix A: how practitioners
   derive its value, what data each method needs, what published evidence reports — sourced. Plus a
@@ -865,6 +994,13 @@ modelling; more sources.
 | 2026-09-28 | $/sqft displays truncated, as StreetEasy shows it |
 | 2026-09-28 | School zone never moves a number, from the house method or the agent |
 | 2026-09-28 | Distance (26) selects and weights comps; it is not an adjustment |
+| 2026-09-29 | The report builds to a one-sentence headline, the agent's; no email without one (Noble) |
+| 2026-09-29 | Buyers first: the default question is what to offer |
+| 2026-09-29 | A guided start in a modal; comps by StreetEasy link, export or by hand |
+| 2026-09-29 | Kara's comp rules run as flags with suggested tiers, never blocks |
+| 2026-09-29 | Adjustments become the differences between comps, with clean pairs as evidence; no house values (D-14 closed, D-18 replaced) |
+| 2026-09-29 | "Didn't sell" is a fourth evidence status; a price table for the subject |
+| 2026-09-29 | D-1 C · D-2 A · D-3 A · D-4 A · D-5 A · D-6 A · D-7 B · D-8 visible to mentors and admins · D-9 A · D-10 B · D-11 fifth closed deal · D-13 approved · D-19 B |
 
 ## 18. Open items
 

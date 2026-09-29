@@ -10,317 +10,93 @@ track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
 Last updated 2026-09-29 by Casanova.
 
-**What actually blocks the next build:** nothing blocks CR-3a (Dispatch 07, the walkthrough
-scaffold): it shows the recommended defaults, labelled. CR-3 proper (the designed workspace) needs
-**D-1, D-10 and D-12**. CR-4 needs D-4 and CR-5 needs D-2, but those start later. Everything else can
-wait.
+**What blocks the next builds:** nothing. Dispatches 08 (Abacus) and 09 (Mason) can start now. D-20
+to D-23 are quick screen questions for Mason's second phase; D-12 is needed before Jev goes in.
 
-## Index
+## Index — open
 
 | ID | Decision | Urgency | Size | Blocks |
 |---|---|---|---|---|
-| D-1 | When the agent gives their call | Soon | Think | CR-3 |
-| D-2 | Compliance as the only hard block in QA | Soon | Quick | CR-5 |
-| D-3 | How agent estimates are worded for clients | Later | Quick | CR-5, CR-6 |
-| D-4 | When the assistant first sees a target price | Soon | Quick | CR-4 |
-| D-5 | How much the tool coaches versus drafts | Later | Think | CR-4 |
-| D-6 | When to ask the agent what kind of argument they want | Later | Quick | CR-4 |
-| D-7 | The client profile's dimensions | Later | Think | CR-5 |
-| D-8 | Voice samples: attestation and visibility | Later | Quick | CR-5 |
-| D-9 | Keeping property records across agents | Later | Quick (Hannah) | the property pool |
-| D-10 | Which deal-terms modules intake offers in v1 | Soon | Think | CR-3 |
-| D-11 | The training gate's rules | Later | Think (Hannah, Noble) | practice mode |
-| D-12 | Reusing the MindBinder Jev integration | Soon | Quick | CR-3 |
-| D-13 | Disclaimer wording | Later | Quick (Hannah) | the pilot |
-| D-14 | When to research interaction magnitudes | Later | Quick | CR-R2 |
-| D-16 | Unmerged branches | Later | Quick | — |
+| D-12 | The MindBinder Jev handoff | Soon | Quick | Jev in the tool |
+| D-16 | Branches: delete, merge or park | Soon | Quick | — |
 | D-17 | Two questions for counsel | Later | Quick (counsel) | the pilot; factor 18 |
-| D-18 | The order adjustments apply in, and whether they compound | Parked | Quick (Noble) | only if adjustments get values |
-| D-19 | Recording each report's outcome | Later | Quick | outcome capture (after v1) |
+| D-20 | Tier labels agents see | Soon | Quick | Dispatch 09, phase 2 |
+| D-21 | A headline before the email can be copied | Soon | Quick | Dispatch 09, phase 2 |
+| D-22 | Where the client's name is asked | Soon | Quick | Dispatch 09, phase 1 |
+| D-23 | "Didn't sell" as a fourth group in v1 | Soon | Quick | Dispatches 08 and 09 |
+
+Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-18 and D-19. They're in **Resolved**, with where
+each was applied.
 
 ## Your actions
 
-- [ ] **Now — protect Netlify's non-production deploys.** Old deploy previews
-  (`deploy-preview-N--casa-blanca-creative-studio.netlify.app`, numbered by PR, so guessable) still
-  serve the internal docs from before the 404 fix, and new previews now carry sign-in and a database
-  branch. Site configuration → access and security → password-protect or restrict non-production
-  deploys.
-- [x] ~~Name and start the three new sessions.~~ Surveyor, Mason and Abacus — all three delivered and
-  merged (#49, #48, #50) on 2026-09-28.
-- [x] ~~Tell Casanova which Netlify plan the site is on.~~ Credit-based: CR-1's preview was given a
-  database, which Netlify only does on credit-based plans.
-- [ ] **Now, blocks CR-1's last step — enable Netlify Identity**, following
-  `docs/comp-report/cr1-setup.md`: open registration, **email confirmation on**, Google on. Then
-  `/api/comp-report/health` should show `emailConfirmation: true`.
-- [ ] **Now, blocks CR-1's last step — create a Google OAuth client** for Identity's Google provider,
-  so the sign-in screen says Casa Blanca. Its client ID and secret go into Identity's settings.
-- [ ] **Now — set `CR_ADMIN_EMAILS`** (your address, and anyone else who should run the allowlist) in
-  Netlify's environment variables. And tell Casanova: **does anyone sign in with an
-  `@email.casa-blanca.com` address?** If so, `CR_ALLOWED_DOMAINS` gets set too.
-- [ ] **Then — run step 6 of `cr1-setup.md`:** the health page, a personal Gmail refused, a Casa account
-  creating a report that survives a reload, then a turn that uses a tool and a second message. About
-  15 minutes; Mason's session can walk you through it.
+- [x] ~~Protect Netlify's non-production deploys.~~ Done: deploy previews answer 401 (Mason, #53).
+- [x] ~~Name and start the three new sessions.~~ Surveyor, Mason and Abacus, all merged.
+- [x] ~~Tell Casanova which Netlify plan the site is on.~~ Credit-based.
+- [x] ~~Enable Netlify Identity.~~ On, with email confirmation and Google.
+- [x] ~~Set `CR_ADMIN_EMAILS`.~~ Done, and you're signed in as an admin.
+- [ ] **Soon — finish CR-1's step 6.** Sign in with a Gmail that's on no list, and check that it's
+  refused. It can't be the Gmail you use now, since that one is an admin.
+- [ ] **Optional — brand the Google sign-in.** Google's screen says "Netlify Identity" because sign-in
+  uses Netlify's default Google client. To make it say Casa Blanca, paste your Google Cloud client's
+  ID and secret into Netlify → **Identity → Registration → External providers → Google**, not into
+  environment variables.
+- [ ] **Soon — delete the 11 merged branches** (D-16). This session can't delete branches.
 - [ ] **Soon — give Casa sessions their own cloud environment**, or take `DATABASE_URL` out of this
-  one. The Claude Code environment Casa's sessions run in holds MindBinder's database address. Nothing
-  in this repo reads it (CR-1 made sure), but every Casa session, including the research ones that
-  read the open web, carries it.
-- [ ] **Soon — get Casa its own Jev account.** Early access is invite-only; your access is through
-  MindBinder. The tool falls back to Claude Haiku until then.
-- [ ] **Later — build the house glossary with Noble and the mentors.** Official definitions for
-  mortgage payment, interest-only payment, monthly carry, ownership carrying cost and the rest, so the
-  tool and every agent use each term one way. **The draft is ready:**
-  `docs/comp-report/research/glossary-draft.md` — 152 entries, every one marked DRAFT, with 12
-  questions for Noble at the top. The three that matter most: "carry" is used three ways; whether
-  "mortgage payment" includes escrowed taxes (if it does, the tool counts taxes twice); and whether
-  sale-to-ask divides by the first or the last asking price.
-- [ ] **Later — send Noble the adjustment evidence** (`docs/comp-report/research/adjustments.md`,
-  all 36 factors, sourced) along with D-18. It's what he sets the house method's first values from.
-- [ ] **Later — propose the training gate to Hannah** (D-11 has the detail).
-- [ ] **Parked — agent sites:** Sam Valk's bio and neighborhoods (the build warns without them); confirm
-  `casa-blanca-creative-studio.netlify.app` is the production origin.
-- [ ] **Parked — profile pic:** 3–5 of your genuinely hard portraits for the Phase 1 re-cut; the
-  outpaint provider key once Phase 1 lands (Nano Banana 2 → `GEMINI_API_KEY`).
+  one. It holds MindBinder's database address, and every Casa session carries it.
+- [ ] **Soon — get Casa its own Jev account**, and send the handoff request to a MindBinder session
+  (D-12).
+- [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
+  `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
+- [ ] **Later — show Noble the "differences between comps" approach** (design §6.6). It replaces
+  house adjustment values with what the comps themselves show, and it builds on his point that prices
+  already carry their features.
+- [ ] **Parked — agent sites:** Sam Valk's bio and neighborhoods; confirm the production origin.
+- [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---
 
-## Comp report
-
-### D-1 · When the agent gives their call
-`Soon — CR-3` · `Think`
-
-The agent's call is their own opinion of value ("I think it trades at $3.4–3.6M"). It never feeds the
-calculation, but comparing it against the data is the teaching moment. The question is when to ask.
-
-- **A — Call first**, before any data. Purest read of their intuition, no anchoring. But agents new to
-  an area have no basis for a view, so the call is noise, and it adds friction up front.
-- **B — Data first**, call after seeing the range. Fastest. But the agent anchors on the computed
-  number, the gap collapses, and the tool has done the thinking.
-- **C — Call before the reveal.** The agent imports and reviews the comps — tiers, reasons, listings —
-  with the computed range hidden, then gives their call, then sees the range. A view formed the way real
-  agents form one, without being handed the answer. It also stops first-pass tiering done to move the
-  number. Skippable; required in practice mode.
-
-**Recommendation: C.** Design `01-design.md` §3.1.
-
-**Answer →** Agreed, C.
-
-### D-2 · Compliance as the only hard block in QA
-`Soon — CR-5` · `Quick`
-
-You asked that numbers not traceable to the calculation be flagged and acknowledged rather than block
-export — agreed and designed that way. The question is whether *anything* should hard-block. The
-proposal: only compliance — the words "appraisal" or "appraised value" in client copy, and
-high-confidence fair-housing hits. Lower-confidence fair-housing flags only warn. Reason: those are
-legal exposure for Casa, not judgment calls, and the fixes are quick rewrites.
-
-- **A — Compliance hard-blocks, as proposed.**
-- **B — Nothing hard-blocks; compliance warns like everything else.**
-
-**Recommendation: A.**
-
-**Answer →** Sure A, for now.
-
-### D-3 · How agent estimates are worded for clients
-`Later — CR-5, CR-6` · `Quick`
-
-Internally, an agent's rough figure is a "guesstimate", and the tool shows a result "with estimates".
-When client copy uses those numbers, it discloses them. What should the client read?
-
-- **A — "agent's estimate"** ("outdoor space of about 400 sq ft, per the agent's estimate")
-- **B — "approximate"**
-- **C — something else** (write it)
-
-**Recommendation: A** — honest and professional; "guesstimate" reads casual to a client.
-
-**Answer →** Agreed, A.
-
-### D-4 · When the assistant first sees a target price
-`Soon — CR-4` · `Quick`
-
-A target ("the seller wants $11.5M") is kept out of the assistant's view while it helps with the neutral
-valuation, so it can't tune the analysis toward it. You want the assistant to actively help close a gap
-to the target — designed as *Path to target* (§8.5).
-
-- **A — Hidden until the neutral result exists**, then Path to target becomes available. Entering it pins
-  the neutral numbers as a version, so the before and after are always side by side.
-- **B — Visible from the start.** Simpler, but the neutral valuation is no longer neutral.
-
-**Recommendation: A.**
-
-**Answer →** Yes A.
-
-### D-5 · How much the tool coaches versus drafts
-`Later — CR-4` · `Think`
-
-You don't want thinking offloaded to the tool; the agent should lead the recommendation. The design: the
-broker recommendation is always the agent's — the tool asks for it, then checks and sharpens it. The open
-part is how Socratic the rest of the experience is.
-
-- **A — Coaching scales with the agent.** Practice mode and newer agents: the tool asks before it drafts.
-  Unlocked, experienced agents: the tool drafts directly, always with the neutral numbers beside it and
-  every departure from the data marked.
-- **B — Ask-first for everyone.** Maximum learning; slower, and grating for experienced agents who know
-  what they want.
-- **C — Draft-first for everyone**, with the numbers beside it.
-
-**Recommendation: A.** Hannah herself asks ChatGPT to "convince him $11.5M is a good price" — making her
-answer a quiz first would be friction, not teaching.
-
-**Answer →** A. We'll loosen it over time by the count of the user's comps in the tool.
-
-### D-6 · When to ask the agent what kind of argument they want
-`Later — CR-4` · `Quick`
-
-"Help me explain why $11.5M is right" can mean the analysis, the negotiation case, or the emotional
-argument. Your idea: offer a choice.
-
-- **A — Only when ambiguous.** Jev classifies the request; when confident, the assistant proceeds; when
-  not, it offers the three as a one-tap choice.
-- **B — Always offer the choice** for requests like this.
-
-**Recommendation: A.**
-
-**Answer →** Yep, A.
-
-### D-7 · The client profile's dimensions
-`Later — CR-5` · `Think`
-
-The client profile describes how the client decides — never who they are — and shapes the writing and
-strategy, never the range. Protected characteristics are excluded by design. Starting dimensions: decision
-style (numbers-driven, narrative, sentimental, time-pressured), priorities (price, speed, certainty),
-sophistication, agent notes. You mentioned MindBinder's trait framework — defined dimensions, each
-measured on a stated scale.
-
-- **A — Borrow MindBinder's framework** once it settles, adapted to client decision traits.
-- **B — Start with the dimensions above** and grow them from pilot use.
-
-**Recommendation: B now, A when MindBinder's framework is stable.**
-
-**Answer →** Agreed, B now, A later.
-
-### D-8 · Voice samples: attestation and visibility
-`Later — CR-5` · `Quick`
-
-Agents upload their own writing so the writer can match their voice. Two questions:
-
-1. **Attestation** — agents confirm "I wrote these myself" on upload. Enough? (AI-text detectors are too
-   unreliable to lean on.)
-2. **Visibility** — can mentors and admins see an agent's samples and style profile, or only the agent?
-
-**Recommendation: 1 — attestation is enough. 2 — agent only**, with admins able to delete.
-
-**Answer →** Attestation is good, and mentors/admins should be able to see an agent's samples and style profile.
-
-### D-9 · Keeping property records across agents
-`Later — before the property pool is built` · `Quick, for Hannah`
-
-Every import records the properties in it, so over time Casa builds its own record of recent sales across
-the city. The tool could then say "two more sales in this building in the last six months came in on other
-agents' reports" and offer them. Hannah cleared re-presenting StreetEasy data in Casa-branded *reports*.
-Keeping StreetEasy-derived records beyond a report and sharing them across agents is a different use —
-compiling a database — and may or may not be covered by Casa's StreetEasy agreement. Public-record
-closings are public either way.
-
-- **A — Allowed:** keep records and suggest them across agents.
-- **B — Keep records per agent only** — an agent's own history, not shared.
-- **C — Public-record facts only across agents** (address, unit, sale price, date, size); StreetEasy
-  listing content stays with the report that imported it.
-
-**Recommendation: ask Hannah; C is the safe middle** if the agreement is unclear. The schema supports all
-three: CR-1 built it so a property's identity (building, unit) is shared, so imports dedupe, while what
-each import observed stays private to the agent who imported it.
-
-**Answer →** A.
-
-### D-10 · Which deal-terms modules intake offers in v1
-`Soon — CR-3` · `Think`
-
-Deal terms are an optional intake module built from scenario templates. v1 captures and displays them and
-runs carry, monthly cost and price evaluation on them; rent-credit and closing-timeline arithmetic comes
-later. Which templates should v1 offer?
-
-- **Buyer — traditional purchase:** price point, deposit, financing, target closing
-- **Buyer — rent-to-own:** the above plus interim rent and credit
-- **Seller — pricing:** target, timing, flexibility
-
-- **A — All three.**
-- **B — Traditional purchase and seller pricing**; rent-to-own with full offer modelling.
-
-**Recommendation: B** — v1 can't compute a rent-to-own properly yet, and a form that implies it can will
-mislead.
-
-**Answer →** B.
-
-### D-11 · The training gate's rules
-`Later — practice mode` · `Think — Hannah and Noble`
-
-To propose to Hannah: agents unlock the full tool by building comps themselves in practice mode — the same
-tool with the help off. Graded by code, Jev and the LLM, with Noble making the pass/fail call at first.
-
-1. How many practice reports before unlocking, for new agents?
-2. How do experienced agents unlock — one passing submission, a direct grant, or either?
-3. Who can grant — admins, mentors, or both?
-4. Should a mentor's sign-off count, tying the gate into the mentorship programme?
-
-**Recommendation:** 2 — either; 3 — both; 4 — yes. 1 is Noble's call.
-
-**Answer →** 1. We'll gate it to their first 5 actual deals. Once they close their 5th and graduate out of mentorship, they'll unlock the tool in full. 2. Either. 3. Both. 4. Yes, see 1.
-
-### D-12 · Reusing the MindBinder Jev integration
-`Soon — CR-3` · `Quick`
-
-You're already using Jev in MindBinder. If Casanova can read that repo, CR-3 can reuse the integration
-pattern rather than start cold. That means adding the MindBinder repo to this session.
-
-- **A — Yes**, add it (name the repo).
-- **B — No**, build fresh.
-
-**Answer →** Pending. I might just have a package prepped for you instead of adding the repo. If anything, just will need an MD file of what you're looking for and I'll have a Claude Code track in the MindBinder repo gather everything you'll need into a handoff.
-
-### D-13 · Disclaimer wording
-`Later — before the pilot` · `Quick, for Hannah`
-
-Every export carries a not-an-appraisal disclaimer and "Data provided by StreetEasy". StreetEasy's own
-report reads: *"This report is provided for informational purposes only and is based on StreetEasy's
-proprietary and third-party data, which may be incomplete or subject to change. It is not an appraisal,
-valuation, broker price opinion, and is meant to be a starting point."* Proposed for Casa: *"This
-comparative market analysis is an estimate of market value prepared by a licensed real estate agent for
-informational purposes. It is not an appraisal. Data provided by StreetEasy and other sources, which may
-be incomplete or subject to change."*
-
-**Answer →** Approved.
-
-### D-14 · When to research interaction magnitudes
-`Later — CR-R2` · `Quick`
-
-Factors interact — a private terrace makes a building roof deck worth less to that unit; a terrace with a
-skyline view is worth more than the two apart. The *structure* is mapped now and v1 warns about double
-counting. The *magnitudes* need research (CR-R2).
-
-- **A — After CR-R lands and Noble has set first values** for the main factors.
-- **B — In parallel with CR-R**, now.
-
-**Recommendation: A** — interaction magnitudes are adjustments to adjustments; they need the base values
-first.
-
-**Answer →** Might not be necessary anymore, Noble pointed out that a property's value pretty much accounts for all of its amenities in the listing price, or that of past sales or similarly featured sales in the building. We might not need to calculate and/or adjust that stuff ourselves at all per unit. Lmk your thoughts.
-
-## Repo and deploy
-
-### D-16 · Unmerged branches
-`Later` · `Quick`
-
-Thirteen remote branches are merged into `claude/main`. Nine are finished work and can be deleted;
-four belong to live sessions (Casanova, Surveyor, Mason, Abacus) and stay. Three aren't merged and have
-no PR: `claude/qr-code-generator-nva8xf` (a QR code generator, July), `claude/motion-graphic-stories-hlpirk`
-(the React spike — CR-1 has now absorbed it), and `samplepics` (an upload branch, August).
-
-- **A — Delete the nine finished and the React spike; you decide on the QR generator and `samplepics`.**
-- **B — Leave everything.**
-
-**Answer →** Delete what's definitely done and needs no further work. The ones that still need work, leave them and/or open and merge PRs for them depending on their progress. If it's ready for use, open and merge. If it still needs work, report how much more and I'll decide whether to park it or not. Likely will be parked for the time being, Comp tool takes priority.
-
-## Comp report — for outside sign-off
+## Open
+
+### D-12 · The MindBinder Jev handoff
+`Soon — before Jev goes in` · `Quick`
+
+You'd rather have a MindBinder session package what we need than add the repo here. **What to ask
+it for is in `docs/comp-report/jev-handoff-request.md`**: paste that file into a Claude Code
+session in the MindBinder repo, and commit what it produces to `docs/comp-report/sources/` here.
+Until then the tool uses its fallback (Claude Haiku) for judgments.
+
+**Answer →** _type here — when the package is in_
+
+### D-16 · Branches: delete, merge or park
+`Soon` · `Quick`
+
+**The 11 merged branches** are finished and safe to delete, but this session's git access can't
+delete branches (the push is refused). Delete them on GitHub → Branches:
+- `claude/agent-multi-property-mode-bxngmf`
+- `claude/charming-brown-4crlrj`
+- `claude/claw-design-pass-port-qgpebf`
+- `claude/claw-review-fixes-qgpebf`
+- `claude/creative-studio-redesign-prep-9kqfjq`
+- `claude/jolly-shannon-b6j14l`
+- `claude/keen-fermi-ir6w9h`
+- `claude/laughing-newton-f96x9t`
+- `claude/nice-bohr-nj42vw`
+- `claude/serene-wescoff-b187c3`
+- `claude/stoic-goldberg-5foen5`
+
+To stop this piling up, turn on GitHub → Settings → General → **Automatically delete head branches**.
+
+**What isn't merged, and what it needs:**
+
+| Branch | What it is | What's left | Recommendation |
+|---|---|---|---|
+| `claude/qr-code-generator-nva8xf` | A finished QR code generator (July): links, vCards, email, phone, text; on-brand styling; PNG to 4096 px and SVG; its own encoder, no dependencies | Its dashboard entry was written for the dashboard before the August redesign, so it needs porting to the new tool list and a test pass. Its encoder is a separate `qr-core.js`, which the single-file rule would inline. About one short session | **Finish and merge**, as a small dispatch once the comp report's next builds are moving |
+| `claude/motion-graphic-stories-hlpirk` | A Story motion builder prototype (August), plus the React spike CR-1 has since absorbed | It's a prototype, so it needs a review to say how far it is | **Park** |
+| `samplepics` | Four StreetEasy listing photos uploaded in August | Nothing; they're test images and StreetEasy's photos | **Delete** |
+| `claude/kind-heisenberg-ujrdup` (+ `-p2` to `-p5`) | The profile pic stack, #41–#45 | Parked (Dispatch 01): #41 has changes requested, then the rest need review | **Stay parked** |
+
+**Answer →** _type here — e.g. "QR: merge later, stories: park, samplepics: delete"_
 
 ### D-17 · Two questions for counsel
 `Later — (1) before the pilot, (2) before factor 18 gets a value` · `Quick — forward to counsel or a closing attorney`
@@ -330,61 +106,88 @@ CR-R (Surveyor) found two legal questions research can't settle. Both are in
 
 1. **Is a CMA an "appraisal" under New York law?** Executive Law §160-a defines appraisal broadly. The
    Department of State's appraiser FAQ and the §160-jjjj(3) carve-out come close to excluding a
-   comparative market analysis by a licensed agent, but no DOS page says so outright. D-13's disclaimer
-   wording depends on the answer.
+   comparative market analysis by a licensed agent, but no DOS page says so outright. The disclaimer
+   (D-13, approved) says it isn't one.
 2. **Sponsor sales: does transfer tax the buyer pays count toward the taxable consideration?** A NYC law
-   firm says it raises it; the TP-584 instructions say it's excluded. Factor 18 (sponsor sale) does
-   this arithmetic, so the tool needs the right answer before it computes it.
+   firm says it raises it; the TP-584 instructions say it's excluded. This only matters if the tool
+   ever computes the sponsor arithmetic (factor 18).
 
 **Answer →** _type here — who it went to, or their answer_
 
-### D-18 · The order adjustments apply in, and whether they compound
-`Parked — only matters if adjustments get values` · `Quick — Noble`
+### D-20 · Tier labels agents see
+`Soon — Dispatch 09, phase 2` · `Quick`
 
-**Parked 2026-09-29.** Noble thinks the adjustments may not need values at all: a comp's price
-already carries what its features are worth. The engine already works that way (every value null).
-If values are ever added, this comes back.
+The engine sorts comps into primary, secondary and excluded. Agents could see those words, or plainer
+ones.
 
-Today the engine takes every adjustment off the comp's own sale price and adds them up, so order never
-matters. Appraisal practice works in two stages: **transaction** adjustments first (market movement since
-the sale, financing, conditions of sale), each applied to the price the one before produced; then
-**property** adjustments (size, floor, view, condition and the rest) added together on that result. The
-difference is small per comp, but it runs through every number once values exist.
+- **A — Primary / Secondary / Excluded.** The engine's words, and the glossary's.
+- **B — Counts / Context / Leave out.** Says what each does.
 
-- **A — Keep it flat:** everything off the sale price, added. Simplest to explain.
-- **B — Appraisal practice:** transaction adjustments first, in sequence; property adjustments added on
-  the result.
+**Recommendation: B**, with the engine's words in the glossary and the analyst view.
 
-**Recommendation: B, if Noble agrees.** It's what an appraiser or a reviewing broker expects, and the
-property adjustments stay additive (§6.5). It's a small engine change, and nothing moves until values
-exist.
+**Answer →** _type here_
 
-**Answer →** Perhaps let's reorient, how does the engine take adjustments off the comps own sale price and add them up if we don't yet know the value of an adjustment? I guess, walk me through how an adjustment would be determined based on comps. Flat is likely not the right move because we need to be able to see the difference between comps of how much two similar listings differ in price and what features of them might have caused that difference. My current understanding of this stuff tells me it's important to know that for buyers just as much as sellers, and since our agents are 95% focused on buyer side stuff, we need to make sure the reasons and engine around estimating feature adjustments are actually sound and necessary. Appraisals are sales-focused, and that's not so important at the current moment.
+### D-21 · A headline before the email can be copied
+`Soon — Dispatch 09, phase 2` · `Quick`
 
-### D-19 · Recording each report's outcome
-`Later — outcome capture, after v1` · `Quick`
+Noble's goal is a one-sentence headline. Should the Send screen require one before the email can be
+copied?
 
-Noble wants every report's outcome attached to it: when the subject goes into contract or sells,
-whether through Casa or not, the final accepted offer and the sale price. That's how Casa learns
-whether its ranges hold, and what Noble calibrates against. He called it a requirement. But agents
-are hard to get responses from, so a step that depends on them coming back will have gaps.
+- **A — Required.** The drafts make it one click for anyone in a hurry.
+- **B — Optional.** Encouraged, not required.
 
-- **A — Required.** The agent records the outcome before a report can be closed or archived, with
-  reminders until they do.
-- **B — Automatic first, the agent second.** The tool matches the subject's sale itself, from public
-  records and from any later export that includes it, by property key. It asks the agent only for
-  what the records can't show (the accepted offer, the terms). The ask is one tap and never blocks.
-- **C — Automatic only.** Public-record sale prices, no agent input.
+**Recommendation: A.** It's the point of the report, and the drafts keep it cheap.
 
-**Recommendation: B.** It gets the sale price for every report without depending on the agent. It
-still asks for the accepted offer, which only the agent knows. A hard requirement (A) would mostly
-produce skipped or guessed entries. Design §12.
+**Answer →** _type here_
 
-**Answer →** Yes B.
+### D-22 · Where the client's name is asked
+`Soon — Dispatch 09, phase 1` · `Quick`
+
+- **A — In the new-comp modal**, beside buyer or seller. It's used in the email greeting.
+- **B — Only on Send.**
+
+**Recommendation: A**, optional.
+
+**Answer →** _type here_
+
+### D-23 · "Didn't sell" as a fourth group in v1
+`Soon — Dispatches 08 and 09` · `Quick`
+
+Frankie lists the building's listings that came off the market unsold ("on the market for $635K and
+never sold") as evidence of a ceiling. The tool can show them as their own group, never mixed with
+sales or live asks. They come from a StreetEasy link's listing history; the export doesn't carry
+them.
+
+- **A — Yes, in v1.**
+- **B — Later.**
+
+**Recommendation: A.**
+
+**Answer →** _type here_
 
 ---
 
 ## Resolved
+
+### Answered by Kimani, 2026-09-29 — applied in design v0.5 (`01-design.md`)
+
+| ID | Decision | Answer | Applied |
+|---|---|---|---|
+| D-1 | When the agent gives their call | "Agreed, C." Before the reveal, skippable | §3, §3.1; `02-screens.md` Findings |
+| D-2 | Compliance as the only hard block in QA | "Sure A, for now." | §9 |
+| D-3 | How agent estimates are worded for clients | "Agreed, A." "agent's estimate" | §9.5 |
+| D-4 | When the assistant first sees a target price | "Yes A." Hidden until the neutral result exists | §8.5; Findings |
+| D-5 | How much the tool coaches versus drafts | "A. We'll loosen it over time by the count of the user's comps in the tool." | §8.3 rule 9 |
+| D-6 | When to ask what kind of argument they want | "Yep, A." Only when ambiguous | §8.3 rule 10 |
+| D-7 | The client profile's dimensions | "Agreed, B now, A later." | §8.6 |
+| D-8 | Voice samples: attestation and visibility | "Attestation is good, and mentors/admins should be able to see an agent's samples and style profile." | §8.7 |
+| D-9 | Keeping property records across agents | "A." Kept and suggested across agents | §12, §14 |
+| D-10 | Deal-terms modules in v1 | "B." Buyer traditional purchase and seller pricing | §6.7 |
+| D-11 | The training gate's rules | "1. We'll gate it to their first 5 actual deals. Once they close their 5th and graduate out of mentorship, they'll unlock the tool in full. 2. Either. 3. Both. 4. Yes." | §11 |
+| D-13 | Disclaimer wording | "Approved." | §14 |
+| D-14 | When to research interaction magnitudes | "Might not be necessary anymore" (Noble: prices already carry features). Closed: no magnitude research; the interaction map stays as structure | §6.6 |
+| D-18 | Order and compounding of adjustments | Kimani asked how adjustments come from comps, and for a way to see how much two similar listings differ in price and why, for buyers above all. Replaced by "the differences between comps" | §6.6 |
+| D-19 | Recording each report's outcome | "Yes B." Automatic first, a one-tap ask second, never a block | §12 |
 
 ### D-15 · The esbuild / `@netlify/blobs` rule — resolved 2026-09-28
 The rule was wrong. Netlify bundles every v2 function with `nft` whatever `node_bundler` says, and that
