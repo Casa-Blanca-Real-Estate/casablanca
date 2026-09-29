@@ -16,6 +16,8 @@ export interface ReportSummary {
   mode: 'practice' | 'full';
   status: 'active' | 'archived';
   ownerEmail: string;
+  /** Filled with sample data at some point: badged as a sample report (Dispatch 07). */
+  sampleData: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,11 +29,12 @@ interface ReportRow {
   mode: 'practice' | 'full';
   status: 'active' | 'archived';
   owner_email: string;
+  sample_data: boolean;
   created_at: Date;
   updated_at: Date;
 }
 
-const COLUMNS = 'id, title, property_type, mode, status, owner_email, created_at, updated_at';
+const COLUMNS = 'id, title, property_type, mode, status, owner_email, sample_data, created_at, updated_at';
 
 function summary(r: ReportRow): ReportSummary {
   return {
@@ -41,6 +44,7 @@ function summary(r: ReportRow): ReportSummary {
     mode: r.mode,
     status: r.status,
     ownerEmail: r.owner_email,
+    sampleData: r.sample_data,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   };
