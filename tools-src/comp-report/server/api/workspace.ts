@@ -221,6 +221,9 @@ function checkCall(call: unknown) {
     if ((low as number) > (high as number)) throw new HttpError(400, 'bad_call', 'The low is above the high.');
   }
   if (typeof call.at !== 'string') throw new HttpError(400, 'bad_call', 'The call needs the time it was given.');
+  if (call.note !== undefined && (typeof call.note !== 'string' || call.note.length > 500)) {
+    throw new HttpError(400, 'bad_call', 'Keep the line under 500 characters.');
+  }
 }
 
 function checkTarget(target: unknown) {

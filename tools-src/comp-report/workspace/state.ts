@@ -106,6 +106,8 @@ export interface CallState {
   low?: number;
   high?: number;
   skipped?: boolean;
+  /** An optional line on why (`02-screens.md`, Findings). Never shown to the assistant (§8.4). */
+  note?: string;
   at: string;
   sample?: boolean;
 }
@@ -119,6 +121,15 @@ export interface CallState {
  */
 export interface SendState {
   result?: ResultKind;
+  /** The one sentence, the agent's (D-21): required before the email can be copied. */
+  headline?: Entry<string>;
+  /** How the comps were chosen: "I focused on lower floors and homes close in size…" */
+  chosen?: Entry<string>;
+  /** Things to consider: the agent's points, buildings that trade higher or lower. */
+  consider?: Entry<string>;
+  /** The next step: the offer advice for a buyer, the pricing advice for a seller. */
+  nextStep?: Entry<string>;
+  length?: 'full' | 'short' | 'text';
   clientName?: Entry<string>;
   signOff?: Entry<string>;
   draft?: { subject: string; body: string; basedOn: string; at: string };

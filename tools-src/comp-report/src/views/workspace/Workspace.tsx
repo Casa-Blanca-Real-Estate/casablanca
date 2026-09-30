@@ -5,9 +5,9 @@
 // both results in the browser whenever a fact, a tier or the call changes.
 //
 // The start is the new-comp modal (the home, its details, add comps), over the
-// workspace; then the steps: Sort, the call and the reveal, working it through,
-// and Send. Free movement: the rail goes anywhere, every step can be skipped.
-// The assistant is a drawer reachable from every step.
+// workspace; then three screens: Sort, Findings, Send (`02-screens.md`). Free
+// movement: the rail goes anywhere. The assistant is a drawer on all three.
+// Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
 import { ApiError, workspaceApi, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
@@ -21,10 +21,10 @@ import { ErrorBoundary } from '../../ErrorBoundary.tsx';
 import { Chat } from '../Chat.tsx';
 import { StartFlow, type StartScreen } from '../newcomp/NewComp.tsx';
 import { About, STEPS, type StepId } from './About.tsx';
-import { SampleTag, StubTag } from './bits.tsx';
+import { BuildNotesContext, useBuildNotesSwitch } from './buildNotes.tsx';
+import { Findings, LiveNumbers } from './Findings.tsx';
 import { fromBase64, localToday, type Workspace as WorkspaceModel } from './model.ts';
 import { useLinkReads } from './reads.ts';
-import { LiveNumbers, RevealStep } from './RevealStep.tsx';
 import { SendStep } from './SendStep.tsx';
 import { SortStep } from './SortStep.tsx';
 
@@ -92,16 +92,24 @@ function useAutosave(reportId: string) {
   return { status, queue, flush };
 }
 
-/** What each step's "Fill with sample" fills — 100 Barclay #17L throughout. */
+/** What each screen's "Fill with sample" fills (a build note) — 100 Barclay #17L throughout. */
 const SAMPLE_FILLS: Record<StepId, string> = {
-  sort: 'A first-pass sort of the sample export’s comps, with reasons (imports the export first if it isn’t here).',
-  reveal: 'Hannah’s own call from the briefing: $3.4M to $4.2M.',
-  work: 'A question to start with, in the composer. Nothing is sent.',
-  send: 'A made-up client name, and the result that has a range.',
+  sort: 'A first-pass sort of the sample export’s comps, with notes (imports the export first if it isn’t here).',
+  findings: 'Hannah’s own number from the briefing ($3.4M to $4.2M), a target and seller terms.',
+  send: 'The email’s own lines (how the comps were chosen, things to consider, the next step), a made-up client and the result that has a range. The headline stays yours.',
 };
 
+/** The assistant's starter question on each screen (`02-screens.md`, The assistant drawer). */
+const STARTERS: Record<StepId, string> = {
+  sort: 'Which of these are closest to the home?',
+  findings: 'What’s the strongest case for where this should trade?',
+  send: 'Tighten my headline.',
+};
+
+/** CR-3a's steps map onto the three screens: the reveal and "work it through" are Findings now. */
 function stepFromUrl(): StepId {
   const s = new URLSearchParams(location.search).get('step');
+  if (s === 'reveal' || s === 'work') return 'findings';
   return STEPS.some((x) => x.id === s) ? (s as StepId) : 'sort';
 }
 
@@ -138,11 +146,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const [state, setStateState] = useState<WorkspaceState>({});
   const [step, setStep] = useState<StepId>(stepFromUrl);
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
-  const [chatSeed, setChatSeed] = useState<{ text: string; n: number } | null>(null);
   const today = useMemo(localToday, []);
   const save = useAutosave(reportId);
 
@@ -182,7 +189,6 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     history.pushState(null, '', `?${params}`);
     setStep(next);
     setStart(null);
-    if (next === 'work') setChatOpen(false);
     scrollTo({ top: 0 });
   }, [reportId]);
 
@@ -259,6 +265,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     };
   }, [reportId, reportTitle, reportSample, readOnly]);
   const canSample = me.user.role === 'admin' && !readOnly;
+  const [buildNotes, setBuildNotes] = useBuildNotesSwitch(me.user.role === 'admin');
   const hasSampleImport = (data?.imports ?? []).some((i) => i.sample);
 
   const markSample = useCallback(() => {
@@ -357,12 +364,12 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const ownValues = (which: StepId | 'all'): boolean => {
     const own = (o: object | null | undefined) =>
       Boolean(o) && Object.values(o as Record<string, unknown>).some((v) => typeof v === 'object' && v !== null && 'value' in v && !(v as { sample?: boolean }).sample);
-    const home = own(intake) || own(brief) || own(target) || own(dealTerms);
-    const reveal = Boolean(call && !call.sample);
+    const home = own(intake) || own(brief);
+    const findings = Boolean(call && !call.sample) || own(target) || own(dealTerms);
     const sendOwn = own(send);
-    if (which === 'reveal') return reveal;
+    if (which === 'findings') return findings;
     if (which === 'send') return sendOwn;
-    return which === 'all' && (home || reveal || sendOwn);
+    return which === 'all' && (home || findings || sendOwn);
   };
 
   if (ws) {
@@ -371,17 +378,29 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       if (ownValues(which) && !confirm('Replace what you’ve entered here with the sample (100 Barclay #17L)?')) return;
       const all = which === 'all';
       await ws.run(all ? 'Filling the whole report with sample data…' : 'Filling with sample…', async () => {
-        const needsWalkthrough = all || which === 'reveal' || which === 'send';
+        const needsWalkthrough = all || which === 'findings' || which === 'send';
         const sample = needsWalkthrough ? await workspaceApi.sample() : null;
         let nextState = stateRef.current;
         if (sample && all) {
-          nextState = { ...nextState, intake: sample.intake, dealTerms: sample.dealTerms };
-          setBriefState(sample.brief);
-          save.queue('brief', sample.brief);
+          nextState = { ...nextState, intake: sample.intake };
+          const nextBrief = { ...sample.brief, ...(sample.send.clientName ? { clientName: sample.send.clientName } : {}) };
+          setBriefState(nextBrief);
+          save.queue('brief', nextBrief);
+        }
+        if (sample && (all || which === 'findings')) {
+          nextState = { ...nextState, dealTerms: sample.dealTerms };
           setTargetState(sample.target);
           save.queue('target', sample.target);
         }
-        if (sample && (all || which === 'send')) nextState = { ...nextState, send: { ...nextState.send, ...sample.send } };
+        if (sample && (all || which === 'send')) {
+          const { clientName, ...lines } = sample.send;
+          nextState = { ...nextState, send: { ...nextState.send, ...lines } };
+          if (!all && clientName && !brief.clientName) {
+            const nextBrief = { ...brief, clientName };
+            setBriefState(nextBrief);
+            save.queue('brief', nextBrief);
+          }
+        }
         if (nextState !== stateRef.current) setState(nextState);
         if (all || which === 'sort') {
           // The sample sorts the sample export's comps, so the export comes first.
@@ -390,15 +409,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
           if (all || which === 'sort') latest = await workspaceApi.sortSample(reportId);
           if (latest) ws.applyServer(latest);
         }
-        if (sample && (all || which === 'reveal')) {
+        if (sample && (all || which === 'findings')) {
           const next: CallState = { ...sample.call, at: new Date().toISOString() };
           setCallState(next);
           save.queue('call', next);
-        }
-        if (which === 'work') {
-          // Nothing to record: a question to start with, in the composer, unsent.
-          setChatSeed((s) => ({ text: 'What do the numbers say so far, and which comps need a closer look?', n: (s?.n ?? 0) + 1 }));
-          return;
         }
         markSample();
         await save.flush();
@@ -422,38 +436,47 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
 
   const has: Record<StepId, boolean> = {
     sort: comps.some((c) => c.judgment?.tier),
-    reveal: Boolean(call),
-    work: messageCount > 0,
-    send: Boolean(send.copiedAt || send.draft),
+    findings: Boolean(call),
+    send: Boolean(send.copiedAt || send.draft || send.headline),
   };
   const current = STEPS.find((s) => s.id === step)!;
 
   return (
-    <div className={`workspace${chatOpen && step !== 'work' ? ' with-drawer' : ''}`}>
+    <BuildNotesContext.Provider value={buildNotes}>
+    <div className={`workspace${chatOpen ? ' with-drawer' : ''}`}>
       <div className="ws-head">
         <button type="button" className="link" onClick={onBack}>‹ All reports</button>
         <div className="ws-title-row">
           <h2 className="report-title">{data.report.title}</h2>
-          {data.report.sampleData && <span className="tag tag-sample" title="Sample data was used in this report. Nothing in it is for clients.">Sample report</span>}
-          {readOnly && <span className="tag tag-stub" title={`${data.report.ownerEmail}'s report. Admins can read it; only its owner can change it.`}>Read only</span>}
+          {readOnly && <span className="tag" title={`${data.report.ownerEmail}'s report. Admins can read it; only its owner can change it.`}>Read only</span>}
         </div>
         <div className="ws-tools">
           {!readOnly && <SaveLine status={save.status} onRetry={() => void save.flush()} />}
           <button type="button" className="btn small-btn" onClick={() => openStart('details')}>The home</button>
-          {canSample && (
+          <button type="button" className="btn small-btn" aria-expanded={chatOpen} onClick={() => setChatOpen((o) => !o)}>
+            {chatOpen ? 'Close the assistant' : 'Assistant'}
+          </button>
+          {me.user.role === 'admin' && (
+            <label className="check small" title="The build’s own notes: what each screen implements, what’s stubbed, the decisions behind it. Admins only.">
+              <input type="checkbox" checked={buildNotes} onChange={(e) => setBuildNotes(e.target.checked)} />
+              Build notes
+            </label>
+          )}
+          {canSample && buildNotes && (
             <button type="button" className="btn small-btn" disabled={Boolean(busy)} onClick={() => void ws.fillSample('all')}>
               Fill the whole report with sample data
-            </button>
-          )}
-          {step !== 'work' && (
-            <button type="button" className="btn small-btn" aria-expanded={chatOpen} onClick={() => setChatOpen((o) => !o)}>
-              {chatOpen ? 'Close the assistant' : 'Assistant'}
             </button>
           )}
         </div>
       </div>
 
-      <nav className="rail" aria-label="Steps">
+      {data.report.sampleData && (
+        <p className="sample-banner" role="note">
+          <strong>Sample report.</strong> It uses sample data (100 Barclay #17L) for trying the tool. Nothing in it is for clients.
+        </p>
+      )}
+
+      <nav className="rail" aria-label="Screens">
         {STEPS.map((s) => (
           <button
             key={s.id}
@@ -477,12 +500,12 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         </p>
       )}
 
-      {ws.revealed && step !== 'reveal' && step !== 'work' && <LiveNumbers ws={ws} />}
+      {ws.revealed && step !== 'findings' && <LiveNumbers ws={ws} />}
 
       <section className="step" aria-labelledby="step-title">
         <div className="step-head">
-          <h3 id="step-title"><span className="muted">{current.n}.</span> {current.title}</h3>
-          {canSample && (
+          <h3 id="step-title">{current.title}</h3>
+          {canSample && buildNotes && (
             <button
               type="button"
               className="btn small-btn"
@@ -497,18 +520,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         <About key={step} step={step} />
         <ErrorBoundary resetKey={step} onBack={onBack}>
           {step === 'sort' && <SortStep ws={ws} />}
-          {step === 'reveal' && <RevealStep ws={ws} />}
-          {step === 'work' && (
-            <div className="work">
-              {ws.revealed ? <LiveNumbers ws={ws} /> : (
-                <p className="muted small">The numbers show here after your call (step 2). The assistant can already read the comps and their tiers.</p>
-              )}
-              <p className="muted small">
-                <StubTag>CR-4</StubTag> The assistant’s full tool set — tiering, what-ifs, the path to target — comes with CR-4.
-              </p>
-              <Chat reportId={reportId} readOnly={readOnly} onCount={setMessageCount} seed={chatSeed} />
-            </div>
-          )}
+          {step === 'findings' && <Findings ws={ws} />}
           {step === 'send' && <SendStep ws={ws} />}
         </ErrorBoundary>
         <div className="step-nav">
@@ -517,7 +529,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
           )}
           {current.n < STEPS.length && (
             <button type="button" className="btn primary" onClick={() => go(STEPS[current.n]!.id)}>
-              {has[step] ? 'Next' : 'Skip'}: {STEPS[current.n]!.short} ›
+              {STEPS[current.n]!.short} ›
             </button>
           )}
         </div>
@@ -529,16 +541,16 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         </ErrorBoundary>
       )}
 
-      {chatOpen && step !== 'work' && (
+      {chatOpen && (
         <aside className="drawer" aria-label="The assistant">
           <div className="drawer-head">
             <span className="label">Assistant</span>
-            <SampleTag show={data.report.sampleData} />
             <button type="button" className="link" onClick={() => setChatOpen(false)}>Close</button>
           </div>
-          <Chat reportId={reportId} readOnly={readOnly} onCount={setMessageCount} seed={chatSeed} />
+          <Chat reportId={reportId} readOnly={readOnly} onCount={setMessageCount} starter={STARTERS[step]} />
         </aside>
       )}
     </div>
+    </BuildNotesContext.Provider>
   );
 }

@@ -32,6 +32,21 @@ export function clientPrice(value: number | null | undefined): string {
   return `$${three}`;
 }
 
+const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+/** A small count as a sentence says it: "the two closest sales". */
+export function countWord(n: number): string {
+  return COUNT_WORDS[n] ?? String(n);
+}
+
+/** A sale against its last ask, in words: "3.5% below its last ask", "at its last ask". */
+export function againstAsk(percent: number, whose = 'its'): string {
+  const r = Math.round(percent * 10) / 10;
+  const ask = `${whose ? `${whose} ` : ''}last ask`;
+  if (r === 0) return `at ${ask}`;
+  return `${Math.abs(r).toFixed(1)}% ${r < 0 ? 'below' : 'above'} ${ask}`;
+}
+
 /** A range, low to high. */
 export function usdRange(low: number | null | undefined, high: number | null | undefined, format = usd): string {
   return `${format(low)} – ${format(high)}`;

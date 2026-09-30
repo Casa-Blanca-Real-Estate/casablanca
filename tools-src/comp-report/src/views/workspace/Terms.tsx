@@ -1,46 +1,92 @@
-// The target price and deal terms (§2, §6.7, §8.4): after the reveal, on the
-// call-and-reveal step (Dispatch 09 moved them out of the start; phase 2 places
-// them on Findings, D-4). The target never enters a number, and the assistant
-// never sees it.
+// The target price and the offer details (`02-screens.md`, Findings, items 7
+// and 8): after the reveal, on Findings (D-4). The target never enters a
+// number, and the assistant never sees it (§8.4). Offer details fold away:
+// for a buyer, the offer price and terms; for a seller, pricing (§6.7, D-10).
+import type { EngineOutput, ResultKind } from '../../../engine/index.ts';
+import { answerResult } from '../../../workspace/reading.ts';
+import { clientPrice, pct, usd } from '../../../workspace/format.ts';
 import type { DealTermsState } from '../../../workspace/state.ts';
 import { DecisionTag, entry, Field, NumberInput, TextInput } from './bits.tsx';
 import type { StepProps } from './model.ts';
 
-export function TargetAndTerms({ ws }: StepProps) {
-  const { today, readOnly: off } = ws;
+const POSITION = { below: 'below what the sales support', within: 'inside what the sales support', above: 'above what the sales support' } as const;
+
+/** The target: a price goal, and where it sits against the range. */
+export function TargetSection({ ws }: StepProps) {
+  const { today, readOnly: off, output } = ws;
+  const evaluation = output?.prices.find((p) => p.id === 'target');
+  const kind: ResultKind | null = output ? answerResult(output) : null;
+  const where = evaluation && kind ? evaluation.per_result[kind].vs_range : null;
   return (
-    <>
-      <fieldset className="group">
-        <legend>A target price <DecisionTag id="D-4">recommendation A</DecisionTag></legend>
-        <p className="muted small">
-          The client’s price goal. It never goes into the numbers, and it’s kept out of the assistant’s context
-          while it helps with the valuation (§8.4). After the reveal it shows against the range.
+    <section className="target" aria-label="The target price">
+      <div className="label">The target price <DecisionTag id="D-4" /></div>
+      <div className="grid">
+        <Field label={ws.brief.audience?.value === 'seller' ? 'The seller’s target' : 'The buyer’s ceiling or goal'} sample={ws.target?.price.sample}>
+          <NumberInput
+            label="Target price"
+            prefix="$"
+            value={ws.target?.price}
+            onChange={(v) => ws.setTarget(v ? { ...ws.target, price: v } : null)}
+            today={today}
+            disabled={off}
+          />
+        </Field>
+        <Field label="Whose, and why" sample={ws.target?.note?.sample} wide>
+          <TextInput
+            label="Target note"
+            value={ws.target?.note}
+            onChange={(v) => ws.target && ws.setTarget(withField(ws.target, 'note', v))}
+            today={today}
+            disabled={off || !ws.target}
+            placeholder={ws.target ? 'e.g. The seller’s number from the listing meeting' : 'Give a target first'}
+          />
+        </Field>
+      </div>
+      {ws.target && where && evaluation && (
+        <p>
+          {clientPrice(evaluation.price)} sits {POSITION[where.position]}
+          {evaluation.per_result[kind!].vs_base ? ` (${pct(evaluation.per_result[kind!].vs_base!.percent)} against the base)` : ''}.
         </p>
-        <div className="grid">
-          <Field label="Target" sample={ws.target?.price.sample}>
-            <NumberInput
-              label="Target price"
-              prefix="$"
-              value={ws.target?.price}
-              onChange={(v) => ws.setTarget(v ? { ...ws.target, price: v } : null)}
-              today={today}
-              disabled={off}
-            />
-          </Field>
-          <Field label="Note" sample={ws.target?.note?.sample} wide>
-            <TextInput
-              label="Target note"
-              value={ws.target?.note}
-              onChange={(v) => ws.target && ws.setTarget(withField(ws.target, 'note', v))}
-              today={today}
-              disabled={off || !ws.target}
-              placeholder={ws.target ? 'Whose goal, and why' : 'Give a target first'}
-            />
-          </Field>
-        </div>
-      </fieldset>
+      )}
+      <p className="muted small">It never enters the numbers, and the assistant never sees it. Path to target comes later.</p>
+    </section>
+  );
+}
+
+/** Offer details, folded: the deal terms and what the engine can compute on them. */
+export function OfferDetails({ ws }: StepProps) {
+  const t = ws.output?.deal_terms ?? null;
+  return (
+    <details className="offer-details">
+      <summary>{ws.brief.audience?.value === 'seller' ? 'Pricing details' : 'Offer details'}</summary>
       <DealTerms ws={ws} />
-    </>
+      {t && ws.output && <DealTermsOut output={ws.output} />}
+    </details>
+  );
+}
+
+function DealTermsOut({ output }: { output: EngineOutput }) {
+  const t = output.deal_terms!;
+  const kind = answerResult(output);
+  return (
+    <div className="sub">
+      {t.price_evaluations.length > 0 && (
+        <ul className="plain small">
+          {t.price_evaluations.map((p) => (
+            <li key={p.id}>
+              <strong>{p.label}</strong> {usd(p.price)}: {p.per_result[kind].vs_range ? POSITION[p.per_result[kind].vs_range!.position] : 'no range to compare with'}
+            </li>
+          ))}
+        </ul>
+      )}
+      {t.monthly_cost?.[kind] && (
+        <p className="small">
+          Monthly cost: {usd(t.monthly_cost[kind]!.mortgage_payment)} mortgage on {usd(t.monthly_cost[kind]!.price)}
+          {t.monthly_cost[kind]!.housing_cash_outflow !== null && `, ${usd(t.monthly_cost[kind]!.housing_cash_outflow)} a month in all`}.
+        </p>
+      )}
+      {t.not_computed_in_v1.length > 0 && <p className="muted small">Kept, not calculated yet: {t.not_computed_in_v1.join('; ')}.</p>}
+    </div>
   );
 }
 
@@ -71,8 +117,7 @@ function DealTerms({ ws }: StepProps) {
 
   return (
     <fieldset className="group">
-      <legend>Deal terms <DecisionTag id="D-10">recommendation B</DecisionTag></legend>
-      <p className="muted small">Optional. Two templates in v1: a buyer’s traditional purchase and a seller’s pricing (§6.7).</p>
+      <legend>Terms <DecisionTag id="D-10" /></legend>
       <div className="grid">
         <Field label="Template" sample={anySampleTerm(terms)}>
           <select
@@ -85,7 +130,7 @@ function DealTerms({ ws }: StepProps) {
               else if (t !== terms?.template) ws.setDealTerms({ template: t });
             }}
           >
-            <option value="">None — skip deal terms</option>
+            <option value="">None</option>
             <option value="buyer_traditional">Buyer — traditional purchase</option>
             <option value="seller_pricing">Seller — pricing</option>
           </select>
@@ -119,12 +164,6 @@ function DealTerms({ ws }: StepProps) {
             <TextInput label="Flexibility" value={terms.flexibility} onChange={setTerm('flexibility')} today={today} disabled={off} />
           </Field>
         </div>
-      )}
-      {terms && (
-        <p className="muted small">
-          The engine evaluates these prices against both results after the reveal, and, with financing, a monthly cost.
-          Rent credits and the closing timeline are captured, not calculated, until full offer modelling.
-        </p>
       )}
     </fieldset>
   );
