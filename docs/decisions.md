@@ -32,6 +32,14 @@ each was applied.
 - [x] ~~Set `CR_ADMIN_EMAILS`.~~ Done, and you're signed in as an admin.
 - [x] ~~Finish CR-1's step 6.~~ You've tried a Gmail that's on no list. Mason confirms the refusal from
   the sign-up log and closes CR-1.
+- [ ] **Now — walk the new comp report on production** (#57). Make a new comp from 100 Barclay
+  #17L's link, add five comps by link and confirm them, then tier and note them on Sort. Give your
+  number on Findings, then pick a headline and copy the email on Send. Leave notes with Ctrl+. as you go.
+- [ ] **Soon — confirm CR-1's step 6 in Netlify's log.** Go to **Logs → Functions → identity-signup** (or
+  `identity-validate`) and find one line with `"allowed":false` from your Gmail test. No session can
+  read those logs.
+- [ ] **Soon — skim Jev's seven questions** (wording at the end of #56's description). Phase 2 goes live
+  on the reviewed text. Casanova has read them and found nothing to change.
 - [ ] **Optional — brand the Google sign-in.** Google's screen says "Netlify Identity" because sign-in
   uses Netlify's default Google client. To make it say Casa Blanca, paste your Google Cloud client's
   ID and secret into Netlify → **Identity → Registration → External providers → Google**, not into

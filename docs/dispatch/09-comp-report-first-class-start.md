@@ -97,12 +97,29 @@ they come.
 **Phase 2 is done when** the three screens match `02-screens.md` with Kimani's review comments
 applied, and a walk from a new comp to a copied email works with sample data and with real links.
 
+## Phase 3 — wire in Abacus's phase 2 (#58, merged)
+
+`#57` stubs each of these and marks it in the build notes:
+1. **Sort:** the flags and chips from `comps[].checks`. A check's `label` seeds its chip, and a flag
+   that rests on an inferred value says so.
+2. **Findings:**
+   - *didn't sell* from `results.*.evidence.off_market`, with the ceiling line (`asks_vs_sold.ceiling`);
+   - the price table (`results.*.price_table`);
+   - the pairs and `clean_pair_evidence`, in "How this was worked out".
+3. **Send:**
+   - the drafts drawn only from `headline_facts.facts` and `names`;
+   - `agent_number` only in Findings' sentence (§8.4);
+   - the price table in the email, in Frankie's order.
+
+**Phase 3 is done when** the sample walk shows the flags on Sort, the price table and pairs on
+Findings, and drafts that cite only `headline_facts`, and the phase 1–2 walk still passes.
+
 ## Also
 
 - **Keep** the error boundary, the effects test, admin-only samples and the sample flag.
 - **Pull `claude/main` first:** Chat.tsx changed under you (the scrollIntoView fix).
-- **Still yours:** CR-1's step-6 proof (Kimani has tried a Gmail that's on no list; confirm the refusal from the sign-up log), then
-  CR-1.1 item 3.
+- **CR-1:** item 3 merged in #57. The step-6 proof is Kimani's, in Netlify's function log, since no
+  session can read it.
 - **Your "wrong shape" notes from #53** (export bytes to Blobs, subject facts as sourced observations,
   a history for the call, versions) belong to CR-3 proper. Do them here only where phase 1 touches
   them anyway, and say which.

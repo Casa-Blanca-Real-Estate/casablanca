@@ -154,6 +154,21 @@ layer may import the engine's factor and check ids.
 - production is unchanged for agents: `CR_JEV_MODE` is off;
 - the new endpoints refuse anyone signed out, or not an admin.
 
+## Phase 1 follow-ups (after #56; small, no key)
+
+1. **Check ids from the engine.** #58 gives every check a `code`. Import those in place of the
+   registry's own `CHECK_IDS`. If the engine doesn't export them as a constant, add the one-line
+   export and say so in your PR (rule 8).
+2. **Wire the link import.** Put `enqueueListingJudgments` in Mason's link import
+   (`tools-src/comp-report/server/api/links.ts`), after the observation's transaction commits. The
+   mode stays `off`.
+3. **Settled on #56:**
+   - The Haiku fallback stays off until phase 2's numbers.
+   - A 401, 402 or 403 falls back, as built.
+   - Yes/no questions are asked once.
+   - Casanova renamed your migration to `20260930120000_comp_report_decide.sql` at merge, because
+     Mason's had the same timestamp.
+
 ## Phase 2 — live watch mode, and calibration (needs Casa's key)
 
 1. **The go/no-go call.** One tiny request with no user data before any batch, and stop if it fails.
