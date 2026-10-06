@@ -30,6 +30,8 @@ import {
   compRecordFromListing, ParseError, PARSER_VERSION, type CompRecord, type ParseWarning,
 } from '../../engine/index.ts';
 import { withActor, type Queryable } from '../db.ts';
+import type { DecideConfig } from '../decide/config.ts';
+import { enqueueListingJudgments } from '../decide/enqueue.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { checkListingLink, MAX_LINKS_PER_REQUEST, newYorkToday, readLimit, type LinkPurpose, type PageReader } from '../links.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
@@ -154,6 +156,8 @@ export interface LinkReadDeps extends AuthDeps {
   reader: PageReader;
   /** The day the page is read, in New York. Tests pin it. */
   today?: () => string;
+  /** The decision layer's switch and its kick (Dispatch 10). Tests pass their own; production reads CR_JEV_MODE. */
+  decide?: { config?: DecideConfig; fetchImpl?: typeof fetch };
 }
 
 type Outcome =
@@ -232,10 +236,10 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
     }
 
     const finished = outcome;
-    const save = async (tx: Queryable) => {
+    const save = async (tx: Queryable): Promise<number | null> => {
       if (finished.status === 'failed') {
         await markFailed(tx, readId, finished.error, finished.message, finished);
-        return;
+        return null;
       }
       const { record } = finished;
       const key = record.identity.key!;
@@ -272,14 +276,24 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
         [readId, finished.asOf, JSON.stringify(finished.extract), JSON.stringify(finished.warnings),
           record.origin?.parser_version ?? PARSER_VERSION, observation.id, reportCompId],
       );
+      return Number(observation.id);
     };
+    let observationId: number | null;
     try {
-      await withActor(pool, asUser(user), save);
+      observationId = await withActor(pool, asUser(user), save);
     } catch (error) {
       // Recording failed after the read: say so on the row rather than leave it running.
       console.error('comp-report: recording a link read failed', error);
       await withActor(pool, asUser(user), (tx) => markFailed(tx, readId, 'internal', 'The page was read, but it couldn’t be saved. Try the link again.'));
       throw error;
+    }
+    // Committed: queue what the listing's text says for Jev (CR-D, Dispatch 10). With
+    // CR_JEV_MODE off — the default — this returns at once and touches nothing. It never throws.
+    if (finished.status === 'done' && observationId !== null) {
+      await enqueueListingJudgments(
+        { observationId, record: finished.record, userEmail: user.email },
+        { pool, origin: new URL(req.url).origin, config: deps.decide?.config, fetchImpl: deps.decide?.fetchImpl },
+      );
     }
     return json({ read: readId, started: true, status: finished.status }, 200);
   });

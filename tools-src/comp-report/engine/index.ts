@@ -14,6 +14,8 @@ import type { CompInput, Tier } from './types.ts';
 export { ENGINE_VERSION, PARSER_VERSION, EXPORT_SCHEMA } from './version.ts';
 export * from './types.ts';
 export type * from './compute/output.ts';
+/** The §6.10 checks' codes, for code outside the engine that names a check (the decision layer). */
+export { CHECK_CODES } from './compute/output.ts';
 export type { MarketDateBasis } from './compute/market-date.ts';
 export { compute, EngineInputError, type ComputeOptions } from './compute/index.ts';
 export {
