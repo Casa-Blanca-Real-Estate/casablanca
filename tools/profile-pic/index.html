@@ -873,6 +873,9 @@ const CB_CUTOUT_DEFAULTS = {
   refine:           true,   // guided-filter the alpha against the image
   refineRadius:     0,      // 0 = auto from image size
   refineEps:        1e-4,
+  edgeSharpen:      true,   // pull alpha toward binary where the IMAGE has a real edge
+  edgeRef:          0.07,   // mean-gradient magnitude that counts as a confident edge
+  edgeGain:         3.5,    // contrast gain on alpha at a fully confident edge
   decontaminate:    true,
   decontamRadius:   0,      // 0 = auto
   decontamMinAlpha: 0.05,   // below this, trust the neighbourhood foreground colour
@@ -1008,34 +1011,43 @@ function cbGuidedFilter(guide, p, w, h, r, eps, out) {
 }
 
 // ── weighted local colour average: mean of pixels whose weight is 1 ──
-// Returns {r,g,b,support} planes. Two radii: tight first, wide as fallback.
+// Two scales, blended CONTINUOUSLY by how much support each has. The obvious
+// implementation picks one scale per pixel with an if — and that is a bug, because a
+// box filter's level sets are axis-aligned rectangles, so "which scale won" flips
+// along a rectangular contour and leaves straight seams inside the feathered band.
+// Blending by confidence keeps the estimate continuous everywhere.
 function cbLocalColour(rgb, weight, w, h, r1, r2) {
   const n = w * h;
-  const acc = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
   const tmp = new Float32Array(n);
-  const out = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
-  const outW = new Float32Array(n);
-  const wide = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
-  const wideW = new Float32Array(n);
+  const tight = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  const wide  = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  const tightW = new Float32Array(n), wideW = new Float32Array(n);
   for (let c = 0; c < 3; c++) {
     for (let i = 0; i < n; i++) tmp[i] = rgb[i * 4 + c] * weight[i];
-    cbBoxBlur(tmp, w, h, r1, acc[c]);
+    cbBoxBlur(tmp, w, h, r1, tight[c]);
     cbBoxBlur(tmp, w, h, r2, wide[c]);
   }
-  cbBoxBlur(weight, w, h, r1, outW);
+  cbBoxBlur(weight, w, h, r1, tightW);
   cbBoxBlur(weight, w, h, r2, wideW);
+
   let gr = 0, gg = 0, gb = 0, gw = 0;
   for (let i = 0; i < n; i++) if (weight[i] > 0) { gr += rgb[i*4]; gg += rgb[i*4+1]; gb += rgb[i*4+2]; gw++; }
   if (gw > 0) { gr /= gw; gg /= gw; gb /= gw; } else { gr = gg = gb = 128; }
+
+  // Confidence ramps in over a support floor rather than crossing a threshold.
+  const FLOOR = 0.02;
+  const out = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
   for (let i = 0; i < n; i++) {
-    if (outW[i] > 1e-3) {
-      const iw = 1 / outW[i];
-      out[0][i] = acc[0][i] * iw; out[1][i] = acc[1][i] * iw; out[2][i] = acc[2][i] * iw;
-    } else if (wideW[i] > 1e-4) {
-      const iw = 1 / wideW[i];
-      out[0][i] = wide[0][i] * iw; out[1][i] = wide[1][i] * iw; out[2][i] = wide[2][i] * iw;
-    } else {
-      out[0][i] = gr; out[1][i] = gg; out[2][i] = gb;
+    const tw = tightW[i], ww = wideW[i];
+    let ct = tw / FLOOR; ct = ct > 1 ? 1 : ct; ct = ct * ct * (3 - 2 * ct);
+    let cw = ww / FLOOR; cw = cw > 1 ? 1 : cw; cw = cw * cw * (3 - 2 * cw);
+    const itw = tw > 1e-6 ? 1 / tw : 0;
+    const iww = ww > 1e-6 ? 1 / ww : 0;
+    for (let c = 0; c < 3; c++) {
+      const vTight = tight[c][i] * itw;
+      const vWide  = wide[c][i]  * iww;
+      const regional = vWide * cw + (c === 0 ? gr : c === 1 ? gg : gb) * (1 - cw);
+      out[c][i] = vTight * ct + regional * (1 - ct);
     }
   }
   return out;
@@ -1084,14 +1096,16 @@ function cbCutout(img, maskData, mW, mH, userOpts) {
     }
   }
 
+  const guide = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    guide[i] = (0.2126 * px[i*4] + 0.7152 * px[i*4+1] + 0.0722 * px[i*4+2]) / 255;
+  }
+  const baseR = o.refineRadius > 0 ? o.refineRadius
+              : Math.max(2, Math.round(Math.min(w, h) / 400));
+
   // 4 ── refine against the image, inside the transition band only
   if (o.refine) {
-    const guide = new Float32Array(w * h);
-    for (let i = 0; i < w * h; i++) {
-      guide[i] = (0.2126 * px[i*4] + 0.7152 * px[i*4+1] + 0.0722 * px[i*4+2]) / 255;
-    }
-    const r = o.refineRadius > 0 ? o.refineRadius
-            : Math.max(2, Math.round(Math.min(w, h) / 400));
+    const r = baseR;
     const q = new Float32Array(w * h);
     cbGuidedFilter(guide, alpha, w, h, r, o.refineEps, q);
     const band = new Float32Array(w * h);
@@ -1101,6 +1115,38 @@ function cbCutout(img, maskData, mW, mH, userOpts) {
     for (let i = 0; i < w * h; i++) {
       const t = Math.min(1, bandW[i] * 4);
       const v = alpha[i] * (1 - t) + q[i] * t;
+      alpha[i] = v < 0 ? 0 : v > 1 ? 1 : v;
+    }
+  }
+
+  // 4b ── crisp where the image is crisp.
+  // Keeping the full soft band everywhere is right for hair and defocus and wrong for an
+  // in-focus sleeve, which the model resolves nearly binary and which reads as a glow rim
+  // if it ships as a ramp. Gradient MAGNITUDE can't tell the two apart — hair is full of
+  // it. Gradient DIRECTION can: a real edge pushes the same way over a neighbourhood, so
+  // the mean gradient vector stays long, while hair's strands alternate and cancel it.
+  if (o.edgeSharpen && o.edgeGain > 1) {
+    const n = w * h;
+    const gx = new Float32Array(n), gy = new Float32Array(n);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        gx[i] = (guide[i + 1] - guide[i - 1]) * 0.5;
+        gy[i] = (guide[i + w] - guide[i - w]) * 0.5;
+      }
+    }
+    const mx = new Float32Array(n), my = new Float32Array(n);
+    cbBoxBlur(gx, w, h, baseR, mx);
+    cbBoxBlur(gy, w, h, baseR, my);
+    const ref = Math.max(1e-6, o.edgeRef);
+    for (let i = 0; i < n; i++) {
+      const a = alpha[i];
+      if (a <= 0.002 || a >= 0.998) continue;
+      let conf = Math.hypot(mx[i], my[i]) / ref;
+      if (conf > 1) conf = 1;
+      conf = conf * conf * (3 - 2 * conf);
+      const gain = 1 + conf * (o.edgeGain - 1);
+      const v = 0.5 + (a - 0.5) * gain;
       alpha[i] = v < 0 ? 0 : v > 1 ? 1 : v;
     }
   }
