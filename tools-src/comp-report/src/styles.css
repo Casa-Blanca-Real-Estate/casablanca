@@ -396,6 +396,17 @@ table.facts th { font-size: 11px; font-weight: 800; color: var(--cb-mid); white-
 .qa-line.fix::before { background: var(--cb-black); }
 .starter { margin: 0 0 8px; }
 
+/* Wired to the engine (CR-3b phase 3): Kara's checks, the ceiling, the price table, the pairs. */
+.flag.check { color: var(--cb-black); border-color: var(--cb-lavender); }
+.flag.check.suggests-excluded { border-color: var(--cb-black); }
+.flag-sure { font-style: normal; color: var(--cb-mid); }
+.checks-list ul.plain { margin-top: 4px; }
+.checks-list .suggestion { color: #3c3654; }
+.ceiling { margin: 8px 0 0; }
+.price-table tr.row-comp td:first-child, .price-table tr.row-comp td:nth-child(2) { font-weight: 800; }
+.pairs details { margin-top: 6px; }
+.pairs summary { cursor: pointer; }
+
 @media (max-width: 760px) {
   .results { grid-template-columns: minmax(0, 1fr); }
   .about-cols { grid-template-columns: minmax(0, 1fr); }

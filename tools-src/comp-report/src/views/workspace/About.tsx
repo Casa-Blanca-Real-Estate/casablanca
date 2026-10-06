@@ -24,31 +24,32 @@ interface Note {
 const NOTES: Record<StepId, Note> = {
   sort: {
     forWhat: 'Deciding which comps count, and noting in a line or three how each differs from the home. The note is the reason.',
-    implements: '§3, §4.6 (judgment is structural), §6.3 (the anchor), §12 (reason history); 02-screens.md, Sort',
+    implements: '§3, §4.6 (judgment is structural), §6.3 (the anchor), §6.10 (the checks), §12 (reason history); 02-screens.md, Sort',
     real: [
       'Reasons are append-only: every tier or note change records a new one, and the latest is the current reason.',
       'An unsorted comp counts toward nothing. The tool never sorts a comp for you.',
       'Opening a row marks it reviewed. The anchor is the star in an opened sold row, and must be primary.',
       'The range stays hidden until your number, so sorting can’t chase it (D-1).',
-      'Quick-pick notes come from what the engine compared: size, floor, outdoor space, the building.',
+      'Kara’s checks are the engine’s flags, each with the tier it suggests; a flag resting on an inferred value or your estimate says so. The agent decides.',
+      'Quick-pick notes start with the checks’ labels, then what else the engine compared: size, floor, rooms, views, monthlies.',
     ],
     stubbed: [
-      'Kara’s checks as flags wait on CR-2.2 phase 2 (Abacus’s checks).',
+      'Distance waits on coordinates for the home and the comps.',
       'Jev’s tier suggestions (§7) wait on CR-D.',
       'Undo, redo and versions come with CR-3.',
     ],
     decisions: [<>D-1: your number before the range. D-20: the tier labels stay Primary / Secondary / Excluded for now.</>],
   },
   findings: {
-    forWhat: 'Your number first, then what the comps say: one sentence, the range, your number against it, the evidence by status, the comps that count. The target and offer details after.',
-    implements: '§3.1, §6.3–§6.5, §8.4; 02-screens.md, Findings',
+    forWhat: 'Your number first, then what the comps say: one sentence, the range, your number against it, the evidence by status, the price table, the comps that count. The target and offer details after.',
+    implements: '§3.1, §6.3–§6.6, §8.4, §10.2; 02-screens.md, Findings',
     real: [
-      'The sentence and every figure come from the engine; nothing is written by a model.',
+      'The sentence reads the engine’s headline facts; your number against it reads agent_number, which only Findings shows.',
       'Both results show side by side only when your estimates change the answer.',
-      'How this was worked out (the method, the bridge, the gaps, warnings, carry, the engine version) is folded.',
+      '“Didn’t sell” is its own status, and its lowest ask is the ceiling line.',
+      'How this was worked out (the method, the pairs and what clean pairs show, the gaps, warnings, carry, the engine version) is folded.',
     ],
     stubbed: [
-      'The price table, the pairs, and “didn’t sell” statistics wait on CR-2.2 phase 2.',
       'Path to target (§8.5), choosing the lead indicator, narrowing the range and versions come later.',
     ],
     decisions: [<>D-1: your number is the gate. D-4: the target shows only after the reveal. D-23: “didn’t sell” is a fourth group.</>],
@@ -58,11 +59,12 @@ const NOTES: Record<StepId, Note> = {
     implements: '§9 (QA), §10.2 (the email); 02-screens.md, Send',
     real: [
       'The headline is required before the email can be copied (D-21).',
-      'Drafts of the headline are built from the engine’s figures only.',
+      'Drafts of the headline cite only headline_facts and its names, never your number; the price table is in the full email.',
+      'QA warns when a number in the headline matches none of the headline facts.',
       'The appraisal-word check is the one hard block in client copy (§9.3).',
     ],
     stubbed: [
-      'The assistant’s headline drafts from headline_facts wait on CR-2.2 phase 2; numeric grounding and the fair-housing screen on CR-5.',
+      'The assistant’s own headline drafts, QA’s full numeric grounding and the fair-housing screen come with CR-5.',
       'The client report and its PDF (CR-6).',
     ],
     decisions: [<>D-2: compliance as the only hard block. D-3: how estimates are worded. D-13: the disclaimer. D-21: the headline is required.</>],

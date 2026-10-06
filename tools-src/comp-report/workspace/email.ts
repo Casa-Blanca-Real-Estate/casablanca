@@ -4,15 +4,18 @@
 //
 //   greeting · the headline · how the comps were chosen · sold, in contract,
 //   active and didn't sell, each comp a link with its price and the agent's
-//   notes · things to consider · (the price table, with CR-2.2) · the next
-//   step · sign-off · the approved disclaimer (D-13)
+//   notes · things to consider · the price table · the next step · sign-off ·
+//   the approved disclaimer (D-13)
 //
 // Empty sections are left out (Kara). Every figure comes from the engine's
 // output or from what the agent wrote; nothing here computes a number (§4.1).
-// A draft built from sample values says so at the top (Dispatch 07).
-import type { EngineOutput, ResultKind } from '../engine/index.ts';
+// The headline drafts cite only the engine's headline facts (§10.2). A draft
+// built from sample values says so at the top (Dispatch 07).
+import type { EngineOutput, HeadlineFacts, ResultKind } from '../engine/index.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { againstAsk, clientPrice, countWord, estimateWords, psf, usd } from './format.ts';
+import { numbersNotInFacts } from './grounding.ts';
+import { fact, homeName, readingFromFacts } from './reading.ts';
 
 export const SAMPLE_BANNER = '[SAMPLE DATA — this draft uses sample values. Not for clients.]';
 
@@ -54,7 +57,11 @@ export interface EmailDraft {
   html: string;
 }
 
-type Block = { kind: 'p'; text: string } | { kind: 'h'; text: string } | { kind: 'comp'; name: string; url: string | null; line: string; note: string | null };
+type Block =
+  | { kind: 'p'; text: string }
+  | { kind: 'h'; text: string }
+  | { kind: 'comp'; name: string; url: string | null; line: string; note: string | null }
+  | { kind: 'rows'; rows: string[] };
 
 const STATUS_HEADINGS = { sold: 'Sold', in_contract: 'In contract', active: 'Active', off_market: 'Didn’t sell' } as const;
 const ORDER = ['sold', 'in_contract', 'active', 'off_market'] as const;
@@ -70,7 +77,7 @@ function urlOf(c: WorkspaceComp): string | null {
   return url && /^https:\/\/(www\.)?streeteasy\.com\//.test(url) ? url : null;
 }
 
-/** The comps the email lists: those counted in the chosen result, and primary "didn't sell" listings. */
+/** The comps the email lists: those counted in the chosen result, "didn't sell" included (§6.3). */
 function counted(input: EmailInput): { status: (typeof ORDER)[number]; comp: WorkspaceComp; line: string }[] {
   const outById = new Map(input.output.comps.map((c) => [c.id, c]));
   const rows: { status: (typeof ORDER)[number]; comp: WorkspaceComp; line: string }[] = [];
@@ -79,9 +86,7 @@ function counted(input: EmailInput): { status: (typeof ORDER)[number]; comp: Wor
     if (!status) continue;
     const out = outById.get(c.id);
     const pr = out?.per_result[input.result];
-    const inNumbers = Boolean(pr?.included);
-    const didntSell = status === 'off_market' && c.judgment?.tier === 'primary';
-    if (!inNumbers && !didntSell) continue;
+    if (!pr?.included) continue;
     const f = c.record.facts;
     const rate = pr?.price_per_sqft?.value ?? null;
     const perFoot = rate !== null ? ` (${psf(rate)} a sq ft)` : '';
@@ -90,7 +95,7 @@ function counted(input: EmailInput): { status: (typeof ORDER)[number]; comp: Wor
       const vsAsk = out?.sale_to_ask_percent ? `, ${againstAsk(out.sale_to_ask_percent.value)}` : '';
       line = `sold for ${usd(f.sale_price?.value)}${perFoot}${vsAsk}`;
     } else if (status === 'off_market') {
-      line = `on the market for ${usd(f.list_price?.value)}, and never sold`;
+      line = `on the market for ${usd(f.list_price?.value)}${perFoot}, and never sold`;
     } else {
       line = `${status === 'in_contract' ? 'last asking' : 'asking'} ${usd(f.list_price?.value)}${perFoot}`;
     }
@@ -137,6 +142,12 @@ function blocks(input: EmailInput): Block[] {
     out.push({ kind: 'h', text: 'Things to consider' });
     p(input.consider);
   }
+  // The price table, as Frankie gives it: "$880 - $638K", a line a step (§6.5).
+  const table = r.price_table;
+  if (input.length === 'full' && table) {
+    out.push({ kind: 'h', text: `Price per sq ft for ${input.homeLine || 'the home'}` });
+    out.push({ kind: 'rows', rows: table.rows.map((row) => `${psf(row.per_sqft.value)} - ${clientPrice(row.price.value)}`) });
+  }
   p(input.nextStep);
   p(input.agentName || '[your name]');
   p(DISCLAIMER);
@@ -156,6 +167,9 @@ export function buildEmail(input: EmailInput): EmailDraft {
     } else if (b.kind === 'h') {
       text.push(b.text.toUpperCase());
       html.push(`<p><strong>${escape(b.text)}</strong></p>`);
+    } else if (b.kind === 'rows') {
+      text.push(...b.rows, '');
+      html.push(`<p>${b.rows.map(escape).join('<br>')}</p>`);
     } else {
       text.push(`- ${b.name} — ${b.line}${b.url ? ` — ${b.url}` : ''}`);
       if (b.note) text.push(`  ${b.note.replace(/\n/g, ' ')}`);
@@ -199,17 +213,28 @@ export function appraisalFindings(text: string): QaFinding[] {
 }
 
 export interface QaCheck {
-  id: 'headline' | 'appraisal' | 'disclaimer' | 'estimates' | 'sample';
+  id: 'headline' | 'grounding' | 'appraisal' | 'disclaimer' | 'estimates' | 'sample';
   state: 'pass' | 'fail' | 'warn';
   message: string;
 }
 
-/** The checks before an email goes out, and whether it can be copied: every fail blocks. */
+/**
+ * The checks before an email goes out, and whether it can be copied: every
+ * fail blocks. A headline number that traces to none of the headline facts
+ * warns (§10.2); the full numeric grounding is QA's, with the writer (CR-5).
+ */
 export function emailChecks(args: { text: string; headline: string | undefined; result: ResultKind; output: EngineOutput; sample: boolean }): QaCheck[] {
   const checks: QaCheck[] = [];
-  checks.push(args.headline?.trim()
+  const headline = args.headline?.trim();
+  checks.push(headline
     ? { id: 'headline', state: 'pass', message: 'The headline leads.' }
     : { id: 'headline', state: 'fail', message: 'Write the headline: one sentence on what the comps show.' });
+  if (headline) {
+    const stray = numbersNotInFacts(headline, args.output.headline_facts[args.result], { agent: true });
+    checks.push(stray.length
+      ? { id: 'grounding', state: 'warn', message: `Check ${stray.join(', ')} in the headline: ${stray.length === 1 ? 'it doesn’t' : 'they don’t'} match the numbers.` }
+      : { id: 'grounding', state: 'pass', message: 'Every number in the headline matches the numbers.' });
+  }
   const words = appraisalFindings(args.text);
   checks.push(words.length
     ? { id: 'appraisal', state: 'fail', message: `Take out “${words[0]!.match}”: this is a comparative market analysis, never an appraisal.` }
@@ -234,17 +259,53 @@ export function qaStatus(checks: QaCheck[]): { ready: boolean; line: string } {
   return { ready: true, line: checks.some((c) => c.state === 'warn') ? 'Ready, with a note' : 'Ready to send' };
 }
 
-/** Headline drafts from the engine's figures only (the assistant's, from headline_facts, come with CR-2.2). */
-export function headlineDrafts(output: EngineOutput, result: ResultKind, homeName: string, reading: string): string[] {
-  const r = output.results[result];
-  if (!r.range) return [];
-  const drafts = [reading];
-  const n = r.range.comp_ids.length;
-  drafts.push(`Recent sales of the ${n === 1 ? 'most similar home' : `${countWord(n)} most similar homes`} support about ${clientPrice(r.range.low.value)}–${clientPrice(r.range.high.value)} for ${homeName}.`);
-  if (r.sale_to_ask) {
-    const median = Math.round(r.sale_to_ask.median.value * 10) / 10;
+/** The name of a home or comp a fact rests on, from the facts' own names: "17L", "200 Chambers Street #10A". */
+function named(h: HeadlineFacts, id: string | undefined): string | null {
+  const n = h.names.find((x) => x.id === id);
+  if (!n) return null;
+  if (id === 'subject') return homeName(n.unit, n.address);
+  return [n.address, n.unit ? (n.unit.startsWith('#') ? n.unit : `#${n.unit}`) : null].filter(Boolean).join(' ') || null;
+}
+
+/**
+ * Headline drafts for the agent to pick and make their own (§10.2), drawn only
+ * from the result's headline facts and the names beside them — never from the
+ * agent's own number (§8.4). The first is the neutral reading Findings shows.
+ */
+export function headlineDrafts(h: HeadlineFacts): string[] {
+  const home = named(h, 'subject') ?? 'the home';
+  const drafts: string[] = [];
+  const reading = readingFromFacts(h, home);
+  if (reading) drafts.push(reading);
+  const low = fact(h, 'range.low');
+  const high = fact(h, 'range.high');
+  const n = fact(h, 'range.comps');
+  const prices = low && high ? `about ${clientPrice(low.value)}–${clientPrice(high.value)}` : null;
+  const toAsk = fact(h, 'sold.median_sale_to_ask');
+  if (prices && toAsk) {
+    const median = Math.round(toAsk.value * 10) / 10;
     const closing = median === 0 ? 'closing at their last ask, at the median' : `closing a median ${againstAsk(median, 'their')}`;
-    drafts.push(`The closest sales put ${homeName} at about ${clientPrice(r.range.low.value)}–${clientPrice(r.range.high.value)}, ${closing}.`);
+    drafts.push(`The closest sales put ${home} at ${prices}, ${closing}.`);
   }
-  return [...new Set(drafts)];
+  const anchorRate = fact(h, 'anchor.per_sqft');
+  const anchorImplied = fact(h, 'anchor.implied');
+  const anchor = named(h, anchorRate?.comp_ids[0]);
+  if (anchorRate && anchorImplied && anchor) {
+    drafts.push(`The closest comp, ${anchor}, sold at ${psf(anchorRate.value)} a sq ft — about ${clientPrice(anchorImplied.value)} for ${home}.`);
+  }
+  const ceiling = fact(h, 'off_market.lowest_per_sqft');
+  if (prices && ceiling) {
+    drafts.push(`The sales support ${prices} for ${home}, and a listing that didn’t sell at ${psf(ceiling.value)} a sq ft marks the ceiling.`);
+  }
+  // The plainest restatement of the reading, kept only while there's room.
+  if (prices && n) {
+    drafts.push(`Recent sales of the ${n.value === 1 ? 'most similar home' : `${countWord(n.value)} most similar homes`} support ${prices} for ${home}.`);
+  }
+  if (!drafts.length) {
+    const median = fact(h, 'sold.median_per_sqft');
+    const sold = fact(h, 'sold.count');
+    // No range yet: what the sales say per foot.
+    if (median && sold) drafts.push(`The ${sold.value === 1 ? 'closest sale came in at' : `${countWord(sold.value)} closest sales have a median of`} ${psf(median.value)} a sq ft.`);
+  }
+  return [...new Set(drafts)].slice(0, 4);
 }

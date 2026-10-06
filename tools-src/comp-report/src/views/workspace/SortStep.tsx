@@ -97,10 +97,7 @@ export function SortStep({ ws }: StepProps) {
         <section key={g.status} className="status-group" aria-label={g.status === 'unknown' ? 'Can’t be sorted' : STATUS_LABEL[g.status]}>
           <h4>{g.status === 'unknown' ? 'Can’t be sorted' : STATUS_LABEL[g.status]} <span className="muted">· {g.comps.length}</span></h4>
           {g.status === 'off_market' && (
-            <p className="muted small">
-              Listings that came off the market unsold: a ceiling on what buyers would pay. They don’t count in the numbers yet.{' '}
-              <StubTag>CR-2.2 phase 2</StubTag>
-            </p>
+            <p className="muted small">Listings that came off the market unsold: their last asks are a ceiling on what buyers would pay.</p>
           )}
           <ul className="list">
             {g.comps.map((c) => <CompRow key={c.id} ws={ws} c={c} out={outById.get(c.id)} save={save} />)}
@@ -108,8 +105,9 @@ export function SortStep({ ws }: StepProps) {
         </section>
       ))}
       <BuildNote>
-        <StubTag>CR-2.2 phase 2</StubTag> Kara’s checks as flags, each with its suggested tier (§6.10); until then the chips come from
-        what the engine compared. <StubTag>Waits on D-12</StubTag> Jev’s tier suggestions (§7). <StubTag>CR-3</StubTag> Undo, redo and versions.
+        Kara’s checks are the engine’s <code>comps[].checks</code> (§6.10): flags with their suggested tier, whose labels lead the chips; the
+        other chips word what else the engine compared. <StubTag>Waits on D-12</StubTag> Jev’s tier suggestions (§7). <StubTag>CR-3</StubTag> Undo,
+        redo and versions.
       </BuildNote>
     </div>
   );
@@ -358,8 +356,34 @@ function CompRow({ ws, c, out, save }: { ws: Workspace; c: WorkspaceComp; out: C
       )}
       {j && ws.readOnly && latest && <p className="reason">{latest.reason}</p>}
 
-      {open && <CompDetails ws={ws} c={c} id={detailsId} canAnchor={canAnchor} off={off} onStar={() => void star()} />}
+      {open && <CompDetails ws={ws} c={c} out={out} id={detailsId} canAnchor={canAnchor} off={off} onStar={() => void star()} />}
     </li>
+  );
+}
+
+/**
+ * Kara's checks on this comp (§6.10): each flag with the rule, what it saw and
+ * the tier it suggests. A suggestion, never a decision: the agent sorts. A
+ * check that can't be told yet says what it needs.
+ */
+function Checks({ out }: { out: CompOut | undefined }) {
+  const checks = out?.checks ?? [];
+  if (!checks.length) return null;
+  const flagged = checks.filter((k) => k.status === 'flagged');
+  const unknown = checks.filter((k) => k.status === 'unknown');
+  return (
+    <div className="checks-list">
+      <span className="about-label">Kara’s checks</span>
+      <ul className="plain small">
+        {flagged.map((k) => (
+          <li key={k.code}>
+            <strong>{k.label}</strong>: {k.message}.{k.suggestion && <> <span className="suggestion">Suggests {k.suggestion}.</span></>}
+          </li>
+        ))}
+        {flagged.length === 0 && <li className="muted">None flagged.</li>}
+        {unknown.map((k) => <li key={k.code} className="muted">{k.message}.</li>)}
+      </ul>
+    </div>
   );
 }
 
@@ -372,8 +396,8 @@ function originLine(c: WorkspaceComp): string {
   return `From StreetEasy’s export${o?.row ? `, row ${o.row}` : ''}${on ? `, pulled ${on}` : ''}.`;
 }
 
-function CompDetails({ ws, c, id, canAnchor, off, onStar }: {
-  ws: Workspace; c: WorkspaceComp; id: string; canAnchor: boolean; off: boolean; onStar: () => void;
+function CompDetails({ ws, c, out, id, canAnchor, off, onStar }: {
+  ws: Workspace; c: WorkspaceComp; out: CompOut | undefined; id: string; canAnchor: boolean; off: boolean; onStar: () => void;
 }) {
   const j = c.judgment;
   const facts = useMemo(() => factLines(c.record), [c.record]);
@@ -395,6 +419,7 @@ function CompDetails({ ws, c, id, canAnchor, off, onStar }: {
       {j && !ws.readOnly && !canAnchor && compStatus(c) === 'sold' && (
         <p className="muted small">A primary sale can be starred as the closest comp.</p>
       )}
+      <Checks out={out} />
       <p className="muted small">{originLine(c)}</p>
       <div className="table-wrap">
         <table className="facts">

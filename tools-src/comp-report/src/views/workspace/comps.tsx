@@ -1,7 +1,7 @@
 // A comp as the walkthrough shows it, in the add-comps list and in Sort: its
 // record, with the engine's own $/sqft (§6.2: the export's is never used), where
-// it came from, and the flags a reviewer needs.
-import type { CompOut, ListingStatus } from '../../../engine/index.ts';
+// it came from, and the flags a reviewer needs, Kara's checks first (§6.10).
+import type { CompOut, Confidence, ListingStatus } from '../../../engine/index.ts';
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
 import { isoDay, psf, sqft, usd } from '../../../workspace/format.ts';
 
@@ -46,20 +46,36 @@ export function rowPsf(c: WorkspaceComp, out: CompOut | undefined): number | nul
   return price && area ? Math.trunc(price / area) : null;
 }
 
+const SURENESS: Partial<Record<Confidence, string>> = { inferred: 'inferred', guesstimate: 'on your estimate' };
+
+/**
+ * The flags a reviewer needs. Kara's checks first, the engine's (§6.10): each
+ * a few words, with the rule, what it saw and its suggested tier on hover, and
+ * marked when it rests on an inferred value or the agent's estimate. Then the
+ * data's own flags: a public-record closing, an approximate or missing size, no
+ * floor.
+ */
 export function Flags({ c, out }: { c: WorkspaceComp; out: CompOut | undefined }) {
   const f = c.record.facts;
-  const flags: string[] = [];
-  if (out?.flags.same_building_as_subject) flags.push('Same building as the home');
-  if (out?.flags.same_unit_as_subject) flags.push('The home itself');
-  if (c.record.flags.closing_record) flags.push('Public-record closing');
-  if (c.record.flags.approx_area) flags.push('Approximate size');
-  if (!f.area_sqft) flags.push('No size');
-  if (!f.floor) flags.push('No floor');
-  if (c.unsortable) flags.push('Can’t be sorted');
-  if (!flags.length) return null;
+  const data: string[] = [];
+  if (c.record.flags.closing_record) data.push('Public-record closing');
+  if (c.record.flags.approx_area) data.push('Approximate size');
+  if (!f.area_sqft) data.push('No size');
+  if (!f.floor) data.push('No floor');
+  if (c.unsortable) data.push('Can’t be sorted');
+  const checks = (out?.checks ?? []).filter((k) => k.status === 'flagged');
+  if (!checks.length && !data.length) return null;
   return (
     <span className="flags">
-      {flags.map((x) => <span key={x} className="flag">{x}</span>)}
+      {checks.map((k) => {
+        const sure = k.confidence ? SURENESS[k.confidence] : undefined;
+        return (
+          <span key={k.code} className={`flag check${k.suggested_tier ? ` suggests-${k.suggested_tier}` : ''}`} title={[k.message, k.suggestion].filter(Boolean).join('. ')}>
+            {k.label}{sure && <em className="flag-sure"> · {sure}</em>}
+          </span>
+        );
+      })}
+      {data.map((x) => <span key={x} className="flag">{x}</span>)}
     </span>
   );
 }

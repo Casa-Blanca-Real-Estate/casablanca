@@ -24,20 +24,18 @@ const chipsFor = (street: string, unit: string, note = '') => {
   return noteChips(o, c.record, out.subject, note);
 };
 
-test('chips restate what the engine compared, the same building and the mentors’ rules first', () => {
+test('Kara’s checks lead the chips, each flag’s label; the engine’s other comparisons follow (§6.10)', () => {
   const same = chipsFor('100 barclay', '11F');
-  assert.equal(same[0], 'Same building');
-  assert.ok(same.includes('Has outdoor space'), 'the comp has outdoor space; the home has none');
-  assert.ok(same.includes('Lower floor'));
+  assert.deepEqual(same.slice(0, 3), ['Same building', 'Has private outdoor space', '6 floors lower'], 'the checks, in the engine’s order');
+  assert.ok(!same.includes('Has outdoor space') && !same.includes('Lower floor'), 'a check’s chip stands for the comparison’s');
   assert.ok(same.includes('Higher monthlies'), '$6,712 a month against $5,130');
   assert.ok(!same.includes('Same line'), '11F and 17L are different lines');
 
   const first = chipsFor('79 laight', '1A');
-  assert.ok(first.includes('First floor'));
-  assert.ok(!first.includes('Lower floor'), 'a first floor says it once');
-  assert.ok(first.includes('Bigger'));
+  assert.deepEqual(first.slice(0, 2), ['First floor', '50% bigger']);
+  assert.ok(!first.includes('Lower floor') && !first.includes('Bigger'), 'said once, by the check');
 
-  assert.deepEqual(chipsFor('200 chambers', '10A').slice(0, 2), ['Bigger', 'Lower floor']);
+  assert.deepEqual(chipsFor('200 chambers', '10A').slice(0, 2), ['7 floors lower', 'Bigger'], 'a size within the band still gets its chip');
 });
 
 test('a size within a few percent reads as the same size, or the same layout when the rooms match too', () => {

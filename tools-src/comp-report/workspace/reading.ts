@@ -1,8 +1,10 @@
 // What the comps say, in words (`02-screens.md`, Findings): the tool's neutral
 // one-sentence reading, and the agent's number against it — the teaching moment
-// (§8.4). Every figure comes from the engine's output; this only words them. The
-// agent's own headline is written on Send.
-import type { CompOut, EngineOutput, PriceEvaluation, Result, ResultKind } from '../engine/index.ts';
+// (§8.4). Both read the engine's headline facts (§10.2), the only figures a
+// headline may cite: the reading from `facts`, the agent's number from
+// `agent_number`, which only Findings shows. This only words them. The agent's
+// own headline is written on Send.
+import type { AgentNumberPosition, EngineOutput, HeadlineFact, HeadlineFacts, ResultKind } from '../engine/index.ts';
 import { clientPrice, countWord, psf } from './format.ts';
 
 /** The result the one sentence reads: "on the facts" when it has a range, else "with estimates". */
@@ -18,59 +20,62 @@ export function estimatesChangeTheAnswer(output: EngineOutput): boolean {
   return !output.divergence.same;
 }
 
-/** The unit rates the range rests on: each range comp's adjusted $/sq ft, lowest to highest. */
-function rangeRates(r: Result, comps: CompOut[]): { low: number; high: number } | null {
-  if (!r.range) return null;
-  const byId = new Map(comps.map((c) => [c.id, c]));
-  const rates: number[] = [];
-  for (const id of r.range.comp_ids) {
-    const pr = byId.get(id)?.per_result[r.kind];
-    const rate = pr?.adjusted_price_per_sqft?.value ?? pr?.price_per_sqft?.value;
-    if (rate === undefined || rate === null) return null; // an adjusted-price range: no unit rates to quote
-    rates.push(rate);
-  }
-  return rates.length ? { low: Math.min(...rates), high: Math.max(...rates) } : null;
+/** One headline fact, by its id ("range.low", "anchor.per_sqft"), or null. */
+export function fact(h: HeadlineFacts, id: string): HeadlineFact | null {
+  return h.facts.find((f) => f.id === id) ?? null;
 }
 
 /**
- * The neutral reading, e.g. "The three closest sales put 17L at $2,112–$2,457 a
- * sq ft — about $4.65M–$5.41M." "Closest" because they're the sales the agent
- * counted as primary: the comps most like the home.
+ * The reading from the headline facts alone, e.g. "The three closest sales put
+ * 17L at $2,112–$2,457 a sq ft — about $4.23M–$4.92M." "Closest" because
+ * they're the sales the agent counted as primary: the comps most like the home.
+ * Null without a range.
  */
-export function neutralReading(output: EngineOutput, kind: ResultKind, homeName: string): string {
-  const r = output.results[kind];
-  if (!r.range) return `The comps don’t give a range yet: ${r.range_unavailable_because ?? 'the analysis needs more to go on.'}`;
-  const n = r.range.comp_ids.length;
-  const who = n === 1 ? 'The closest sale puts' : `The ${countWord(n)} closest sales put`;
+export function readingFromFacts(h: HeadlineFacts, homeName: string): string | null {
+  const low = fact(h, 'range.low');
+  const high = fact(h, 'range.high');
+  const n = fact(h, 'range.comps');
+  if (!low || !high || !n) return null;
+  const who = n.value === 1 ? 'The closest sale puts' : `The ${countWord(n.value)} closest sales put`;
   const home = homeName || 'the home';
-  const low = r.range.low.value;
-  const high = r.range.high.value;
-  const prices = low === high ? `about ${clientPrice(low)}` : `about ${clientPrice(low)}–${clientPrice(high)}`;
-  const rates = rangeRates(r, output.comps);
-  if (!rates) return `${who} ${home} at ${prices}.`;
-  const perFoot = rates.low === rates.high ? `${psf(rates.low)} a sq ft` : `${psf(rates.low)}–${psf(rates.high)} a sq ft`;
+  const prices = low.value === high.value ? `about ${clientPrice(low.value)}` : `about ${clientPrice(low.value)}–${clientPrice(high.value)}`;
+  const lowRate = fact(h, 'range.low_per_sqft');
+  const highRate = fact(h, 'range.high_per_sqft');
+  if (!lowRate || !highRate) return `${who} ${home} at ${prices}.`;
+  const perFoot = psf(lowRate.value) === psf(highRate.value) ? `${psf(lowRate.value)} a sq ft` : `${psf(lowRate.value)}–${psf(highRate.value)} a sq ft`;
   return `${who} ${home} at ${perFoot} — ${prices}.`;
 }
 
-type Position = 'below' | 'within' | 'above';
+/** The neutral reading for a result, or why there's none yet. */
+export function neutralReading(output: EngineOutput, kind: ResultKind, homeName: string): string {
+  return readingFromFacts(output.headline_facts[kind], homeName)
+    ?? `The comps don’t give a range yet: ${output.results[kind].range_unavailable_because ?? 'the analysis needs more to go on.'}`;
+}
+
+const POSITION_WORDS: Record<AgentNumberPosition, string> = {
+  below: 'sits below what the sales support',
+  within: 'sits inside what the sales support',
+  above: 'sits above what the sales support',
+  overlaps_low: 'starts below what the sales support and ends inside it',
+  overlaps_high: 'starts inside what the sales support and runs above it',
+  spans: 'is wider than what the sales support, on both sides',
+};
 
 /**
- * The agent's number against the range: "Your $3.4M–$4.2M sits below what the
- * sales support." Null when there's no number (skipped) or no range to compare.
+ * The agent's number against the range, from the engine's `agent_number`:
+ * "Your $3.4M–$4.2M sits below what the sales support, by about $25.4K." Only
+ * Findings says it; no draft headline uses it. Null when there's no number
+ * (skipped) or no range to compare.
  */
 export function numberAgainstIt(output: EngineOutput, kind: ResultKind): string | null {
-  const low = output.prices.find((p) => p.id === 'call_low');
-  const high = output.prices.find((p) => p.id === 'call_high');
+  const a = output.headline_facts[kind].agent_number;
+  if (!a?.position) return null;
+  const low = a.facts.find((f) => f.id === 'agent.low');
+  const high = a.facts.find((f) => f.id === 'agent.high');
   if (!low || !high) return null;
-  const pos = (p: PriceEvaluation): Position | null => p.per_result[kind].vs_range?.position ?? null;
-  const a = pos(low);
-  const b = pos(high);
-  if (!a || !b) return null;
-  const yours = `Your ${clientPrice(low.price)}–${clientPrice(high.price)}`;
-  if (a === b) return `${yours} sits ${a === 'within' ? 'inside' : a} what the sales support.`;
-  if (a === 'below' && b === 'within') return `${yours} starts below what the sales support and ends inside it.`;
-  if (a === 'within' && b === 'above') return `${yours} starts inside what the sales support and runs above it.`;
-  return `${yours} is wider than what the sales support, on both sides.`;
+  const yours = low.value === high.value ? `Your ${clientPrice(low.value)}` : `Your ${clientPrice(low.value)}–${clientPrice(high.value)}`;
+  const gap = a.facts.find((f) => f.id === 'agent.below_range_by' || f.id === 'agent.above_range_by');
+  return `${yours} ${POSITION_WORDS[a.position]}${gap ? `, by about ${clientPrice(gap.value)}` : ''}.`;
 }
 
 /** "17L" from "#17L", else the street: how the sentence names the home. */
