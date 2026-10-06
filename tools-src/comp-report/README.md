@@ -63,6 +63,7 @@ that can create roles and databases, because each test file makes a throwaway da
 | `AI_GATEWAY_API_KEY` | Netlify | Casa's own Vercel AI Gateway key, for Jev. Without it, every judgment is recorded as dropped `no-key` |
 | `JEV_MIN_INTERVAL_MS` | Netlify | Pacing between Jev requests; default 12,500 (under the Gateway's ~5 a minute) |
 | `CR_DECIDE_FALLBACK` | Netlify | `haiku` turns on the Claude Haiku 4.5 fallback for when Jev can't answer; default off. Uses `ANTHROPIC_API_KEY` |
+| `CR_JEV_ZDR` | Netlify | Ask the Gateway for zero data retention: `on` (the default) or `off`. It needs a Vercel Pro team, so it's `off` on Kimani's existing account. With it off, only a lane whose text is public (the listing lane) is sent; a private lane's request is recorded as dropped `zdr-required` |
 
 Nothing reads `DATABASE_URL`: in the Claude Code cloud environment it's another project's database.
 

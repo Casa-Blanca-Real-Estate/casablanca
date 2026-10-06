@@ -8,6 +8,10 @@
 //   JEV_MIN_INTERVAL_MS   pacing between request starts; default 12,500
 //   CR_DECIDE_FALLBACK    off (the default) | haiku — the Haiku 4.5 fallback's
 //                         own switch. It also needs ANTHROPIC_API_KEY.
+//   CR_JEV_ZDR            on (the default) | off — ask the Gateway for zero data
+//                         retention. Needs a Vercel Pro team; off for Kimani's
+//                         existing account. Only the literal "off" turns it off.
+//                         With it off, only a lane whose text is public is sent.
 //
 // The database is db.ts's business: NETLIFY_DB_URL, or CR_LOCAL_DATABASE_URL
 // locally. Nothing in the decision layer reads DATABASE_URL.
@@ -23,6 +27,8 @@ export interface DecideConfig {
   minIntervalMs: number;
   fallback: 'off' | 'haiku';
   anthropicKey: string | null;
+  /** Ask for zero data retention. On unless CR_JEV_ZDR is literally "off". */
+  zdr: boolean;
 }
 
 export function decideConfig(env: Env = process.env): DecideConfig {
@@ -38,6 +44,7 @@ export function decideConfig(env: Env = process.env): DecideConfig {
     minIntervalMs: interval !== '' && Number.isFinite(n) && n >= 0 ? n : JEV_DEFAULT_MIN_INTERVAL_MS,
     fallback: (env.CR_DECIDE_FALLBACK ?? '').trim().toLowerCase() === 'haiku' ? 'haiku' : 'off',
     anthropicKey: key('ANTHROPIC_API_KEY'),
+    zdr: (env.CR_JEV_ZDR ?? '').trim().toLowerCase() !== 'off',
   };
 }
 
@@ -54,5 +61,6 @@ export function configSummary(c: DecideConfig) {
     minIntervalMs: c.minIntervalMs,
     fallback: c.fallback,
     fallbackReady: fallbackReady(c),
+    zdr: c.zdr,
   };
 }

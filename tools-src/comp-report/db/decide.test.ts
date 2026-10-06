@@ -280,6 +280,14 @@ describe('the decision layer in the database', { skip: skipWithoutDatabase }, ()
     assert.deepEqual(usage, [{ user_email: 'ana@casa-blanca.com', provider: 'jev', model: 'typesafe-ai/jev', purpose: 'decide:listing', input_tokens: 520, output_tokens: 0, usd: 0.000022 }]);
   });
 
+  test('the ledger takes zdr-required (CR_JEV_ZDR), and still refuses a reason it doesn\'t know', async () => {
+    const store = new PgStore(P());
+    const { id } = await store.enqueueDropped(request(9), Date.now(), 'zdr-required');
+    const row = (await asSystem((tx) => tx.query('select status, drop_reason from comp_report.decide_requests where id = $1', [id]))).rows[0];
+    assert.deepEqual(row, { status: 'dropped', drop_reason: 'zdr-required' });
+    await assert.rejects(store.enqueueDropped(request(10), Date.now(), 'made-up' as never), /check constraint/);
+  });
+
   test('the readout: admins only; coverage by reason, cost at Jev\'s price', async () => {
     const get = (token?: string) => handleDecide(new Request('https://site/api/comp-report/decide', {
       headers: token ? { authorization: `Bearer ${token}` } : {},
@@ -291,6 +299,7 @@ describe('the decision layer in the database', { skip: skipWithoutDatabase }, ()
     const body = await res.json();
     assert.equal(body.setup.mode, 'watch');
     assert.equal(body.setup.jevKey, true);
+    assert.equal(body.setup.zdr, true, 'zero retention is on unless CR_JEV_ZDR is off');
     assert.doesNotMatch(JSON.stringify(body), /test-key-not-real/);
     assert.equal(body.coverage.questions.answered, 6);
     assert.equal(body.coverage.droppedQuestionsByReason.unanswered, 1);

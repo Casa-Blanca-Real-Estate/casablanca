@@ -25,7 +25,7 @@ import { askHaiku, type HaikuClient } from './haiku.ts';
 import {
   JEV_ATTEMPT_TIMEOUT_MS, JEV_MAX_ATTEMPTS, JEV_MODEL, jevAttempt, type DropReason, type ParsedAnswer,
 } from './jev.ts';
-import { QUESTION_BY_ID, REGISTRY_VERSION } from './registry.ts';
+import { LANE_TEXT, QUESTION_BY_ID, REGISTRY_VERSION, type LaneText } from './registry.ts';
 import { optionOrderHash, renderRequest } from './render.ts';
 import type { DecideStore, JudgmentRecord, QueueItem, UsageRecord } from './store.ts';
 import { bandOf, barFor, landingOf, verdictFor, type ProviderId } from './verdict.ts';
@@ -56,6 +56,17 @@ export interface DrainDeps {
   leaseMs?: number;
   attemptTimeoutMs?: number;
   log?: (event: string, data: Record<string, unknown>) => void;
+  /** What each lane's text is. The registry's LANE_TEXT; tests pass their own. */
+  lanes?: Readonly<Record<string, LaneText>>;
+}
+
+/**
+ * PURE: whether a lane's request must be refused before it's sent. Only a lane
+ * declared public goes out with zero retention off; a private lane — or one
+ * that declares nothing — needs CR_JEV_ZDR on.
+ */
+export function zdrRefusal(lane: string, config: Pick<DecideConfig, 'zdr'>, lanes: Readonly<Record<string, LaneText>> = LANE_TEXT): boolean {
+  return !config.zdr && lanes[lane] !== 'public';
 }
 
 export interface DrainReport {
@@ -187,8 +198,18 @@ async function runItem(
   const purpose = `decide:${item.lane}`;
   const usageFor = (provider: UsageRecord['provider'], model: string, inputTokens: number, outputTokens: number, detail: Record<string, unknown>): UsageRecord => ({
     userEmail: item.userEmail ?? 'system:decide', provider, model, purpose, inputTokens, outputTokens,
-    costUsd: costUsd(model, inputTokens, outputTokens), detail: { request: item.id, ...detail },
+    costUsd: costUsd(model, inputTokens, outputTokens), detail: { request: item.id, zdr: config.zdr, ...detail },
   });
+
+  if (zdrRefusal(item.lane, config, deps.lanes)) {
+    // Neither Jev nor the fallback may see private text without zero retention.
+    const ok = await store.finishDropped(holder, item.id, clock.now(), {
+      reason: 'zdr-required', attempts: item.attempts, lastStatus: null, usage: [],
+      detail: { zdr: false, note: `the ${item.lane} lane's text isn't public, and CR_JEV_ZDR is off: nothing sent` },
+    });
+    if (ok) count('dropped', 'zdr-required');
+    return ok ? 'dropped' : 'lost';
+  }
 
   if (questionIds.length === 0) {
     const ok = await store.finishDropped(holder, item.id, clock.now(), {
@@ -228,7 +249,7 @@ async function runItem(
       attempts++;
       const startedAt = clock.now();
       const out = await jevAttempt({
-        key: config.jevKey, state: item.state, questions, attempt: attempts, fetchImpl: deps.fetchImpl,
+        key: config.jevKey, state: item.state, questions, zdr: config.zdr, attempt: attempts, fetchImpl: deps.fetchImpl,
         nowMs: () => clock.now(), timeoutMs: attemptTimeout,
       });
       lastStatus = out.status;
@@ -236,7 +257,7 @@ async function runItem(
         const model = out.response.model ?? JEV_MODEL;
         const { judgments, unanswered } = judge(item, questionIds, out.response.answers, 'jev', out.response.model);
         const usage = [usageFor('jev', model, out.response.inputTokens, 0, { ms: clock.now() - startedAt, attempts })];
-        const detail = { waitedMs: clock.now() - item.enqueuedAt };
+        const detail = { zdr: config.zdr, waitedMs: clock.now() - item.enqueuedAt };
         if (judgments.length === 0) {
           // A 200 that answered none of it: every question is unanswered.
           const ok = await store.finishDropped(holder, item.id, clock.now(), { reason: 'unanswered', attempts, lastStatus, usage, detail });
@@ -273,7 +294,7 @@ async function runItem(
 
   // Jev didn't answer. The fallback, if it may.
   const usage: UsageRecord[] = [];
-  const detail: Record<string, unknown> = { jev: { reason: jevDrop!.reason, note: jevDrop!.note }, waitedMs: clock.now() - item.enqueuedAt };
+  const detail: Record<string, unknown> = { zdr: config.zdr, jev: { reason: jevDrop!.reason, note: jevDrop!.note }, waitedMs: clock.now() - item.enqueuedAt };
   if (FALLBACK_REASONS.has(jevDrop!.reason) && fallbackReady(config) && deps.haiku) {
     const h = await askHaiku(deps.haiku, item.state, questionIds);
     if (h.calls > 0) usage.push(usageFor('anthropic', h.ok ? h.model : HAIKU_MODEL, h.inputTokens, h.outputTokens, { fallback: true, calls: h.calls }));

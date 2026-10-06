@@ -10,21 +10,35 @@
 //   whether the wait holds every request), or a named drop.
 // Nothing here throws into a caller.
 //
-// ── Privacy, with no switch ─────────────────────────────────────────────────
-// Every request carries BOTH `disallowPromptTraining: true` and
-// `zeroDataRetention: true`, from the first call (Dispatch 10, "Where Casa
-// differs" 3). Both fail closed on the Gateway: a team that can't satisfy them
-// is refused rather than routed somewhere that would train on or keep the
-// text. There is no code path that sends either as false or leaves one out; a
-// test asserts it on the wire and reads this file for it.
+// ── Privacy ─────────────────────────────────────────────────────────────────
+// Every request carries `disallowPromptTraining: true`, with no switch. It's
+// available on every Vercel plan.
+//
+// `zeroDataRetention: true` needs a Vercel Pro team. Casa starts on Kimani's
+// existing account, which isn't on Pro (2026-10-06), so it's a switch,
+// CR_JEV_ZDR, on by default (Dispatch 10, "Where Casa differs" 3). With it off,
+// the flag is left out — never sent as false — and drain.ts refuses a private
+// lane's request before it's sent. Both flags fail closed on the Gateway.
+//
+// No code path sends either flag as false. The two shapes below are the only
+// ones; a test asserts them on the wire and reads this file for it.
 
 export const JEV_MODEL = 'typesafe-ai/jev';
 export const JEV_ENDPOINT = 'https://ai-gateway.vercel.sh/v1/evaluate';
 
-/** Frozen, so nothing downstream can switch a flag off. */
+/** Both flags: zero retention on (CR_JEV_ZDR on, the default). Frozen, so nothing downstream can switch a flag off. */
 export const JEV_PROVIDER_OPTIONS = Object.freeze({
   gateway: Object.freeze({ disallowPromptTraining: true as const, zeroDataRetention: true as const }),
 });
+/** No training only: CR_JEV_ZDR off, for public text on a team that isn't on Pro. */
+export const JEV_PROVIDER_OPTIONS_NO_ZDR = Object.freeze({
+  gateway: Object.freeze({ disallowPromptTraining: true as const }),
+});
+
+/** The provider options for a request; zero retention unless the caller says it's off. */
+export function jevProviderOptions(zdr: boolean) {
+  return zdr ? JEV_PROVIDER_OPTIONS : JEV_PROVIDER_OPTIONS_NO_ZDR;
+}
 
 /** Statuses that mean "busy — ask again later". */
 export const JEV_RETRY_STATUSES: ReadonlySet<number> = new Set([429, 502, 503, 504]);
@@ -62,9 +76,9 @@ export interface ParsedResponse {
   inputTokens: number;
 }
 
-/** PURE: the exact request body. */
-export function buildJevRequestBody(state: unknown, questions: Record<string, JevQuestionWire>) {
-  return { model: JEV_MODEL, state, questions, providerOptions: JEV_PROVIDER_OPTIONS };
+/** PURE: the exact request body. `zdr` is required, so no caller gets a shape by default. */
+export function buildJevRequestBody(state: unknown, questions: Record<string, JevQuestionWire>, opts: { zdr: boolean }) {
+  return { model: JEV_MODEL, state, questions, providerOptions: jevProviderOptions(opts.zdr === true) };
 }
 
 const isProb = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;
@@ -138,7 +152,9 @@ export function jevRetryDelayMs(attempt: number, retryAfter: string | null | und
 
 export type DropReason =
   | 'no-key' | 'queue-full' | 'retries-exhausted' | 'network' | 'malformed' | `http-${number}` | 'unanswered'
-  | 'out-of-time';
+  | 'out-of-time'
+  /** A private lane's request with zero retention off: refused before it's sent. */
+  | 'zdr-required';
 
 export type AttemptOutcome =
   | { kind: 'answered'; response: ParsedResponse; status: number }
@@ -154,6 +170,8 @@ export async function jevAttempt(opts: {
   key: string;
   state: unknown;
   questions: Record<string, JevQuestionWire>;
+  /** Ask for zero data retention (CR_JEV_ZDR). */
+  zdr: boolean;
   attempt: number;
   fetchImpl: typeof fetch;
   nowMs: () => number;
@@ -165,7 +183,7 @@ export async function jevAttempt(opts: {
     const res = await opts.fetchImpl(JEV_ENDPOINT, {
       method: 'POST',
       headers: { Authorization: `Bearer ${opts.key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildJevRequestBody(opts.state, opts.questions)),
+      body: JSON.stringify(buildJevRequestBody(opts.state, opts.questions, { zdr: opts.zdr })),
       signal: ctl.signal,
     });
     if (!res.ok) {
