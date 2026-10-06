@@ -16,6 +16,7 @@ Then read the one surface brief you're working on.
 | 2 | Editorial Carousel Builder | [`surfaces/02-editorial-carousel-builder.md`](surfaces/02-editorial-carousel-builder.md) | `tools/carousel/cb_editorial.html` | Briefed |
 | 3 | Closed Carousel Builder | [`surfaces/03-closed-carousel-builder.md`](surfaces/03-closed-carousel-builder.md) | `tools/closed-carousel/` | Briefed |
 | 4 | The Watermark tools — **combine into one** | [`surfaces/04-watermark-tools.md`](surfaces/04-watermark-tools.md) | `tools/watermarker/` | **Merged in code**, redesign pending |
+| 5 | The comp report (React; the one exception to single-file) | [`surfaces/05-comp-report.md`](surfaces/05-comp-report.md) | `tools/comp-report/` (source `tools-src/comp-report/`) | **Structure built** (#57); briefed for Claude Design |
 
 Surface 4 was different in kind: it briefed **two existing tools with the goal of merging
 them into a single surface**. That merge has now happened in code — one tool, both
