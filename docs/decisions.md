@@ -47,14 +47,14 @@ each was applied.
 - [x] ~~Delete the 11 merged branches.~~ Done. **Still to delete: `samplepics`** (D-16).
 - [ ] **Soon — give Casa sessions their own cloud environment**, or take `DATABASE_URL` out of this
   one. It holds MindBinder's database address, and every Casa session carries it.
-- [ ] **Soon — get Casa its own Jev access.** Dispatch 10's phase 2 waits on it; its phase 1 doesn't.
-  1. Make a Vercel team on **Pro**. Vercel's free plan is for non-commercial use only, and Pro brings the
-     zero data retention every Jev request will ask for.
-  2. Put a card on file, and buy some AI Gateway credits. Both account gates silently refused every
-     call for MindBinder. Jev costs about $0.04 per million tokens, so a few dollars lasts a long time.
-  3. Create an AI Gateway API key. Add it in Netlify as `AI_GATEWAY_API_KEY` (Functions scope), then
-     redeploy.
-  4. Tell Arbiter it's in. Don't paste the key into a chat.
+- [ ] **Soon — a Jev key for Casa, from your existing Vercel account.** Dispatch 10's phase 2 waits on it.
+  1. **After Arbiter's zero-retention switch merges,** create a new AI Gateway API key on the account
+     MindBinder uses. It draws on the same $25 of credits, which at Jev's price is effectively forever.
+  2. **In Netlify, add `AI_GATEWAY_API_KEY`** (Functions scope) **and `CR_JEV_ZDR=off`**, then redeploy.
+     Leave `CR_JEV_MODE` alone: Arbiter turns it on after the go/no-go call.
+  3. **Tell Arbiter it's in.** Don't paste the key into a chat.
+  - **Pro later, for two reasons.** Vercel's free plan is for non-commercial use, which is your call
+    for now. And zero retention needs Pro, before Jev reads anything an agent or client wrote.
 - [ ] **Later — label about 30 listings for Jev's calibration** (Dispatch 10 phase 2). Arbiter commits
   the sheet; filling it in takes about 20 minutes. Hannah could do it instead.
 - [ ] **Now — set up the dev notebook** (#54): add `creative@email.casa-blanca.com` to

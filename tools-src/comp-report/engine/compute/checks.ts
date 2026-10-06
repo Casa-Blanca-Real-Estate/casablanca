@@ -237,7 +237,8 @@ export function compChecks(subject: CheckSide, comp: CheckSide, ctx: CheckContex
       const months = age[level];
       const verdict = level === 'market_moved' ? 'the market has moved' : level === 'old' ? 'old for a comp' : 'noted';
       const what = describeMarketDate(md);
-      const short = cls === 'sold' ? 'Sold' : cls === 'in_contract' ? 'In contract' : 'Off the market';
+      // A sale dated by its contract (§6.5) is labelled by that date, not by the closing it isn't measured from.
+      const short = cls === 'sold' ? (md.basis === 'contract_date' ? 'Contract signed' : 'Sold') : cls === 'in_contract' ? 'In contract' : 'Off the market';
       out.push(flagged({
         code: 'sale_age',
         label: `${short} over ${months} months ago`,

@@ -497,9 +497,10 @@ minute. So judgments on import arrive over minutes, from a paced queue, and noth
 **It sits behind a "decision provider" interface** with Claude Haiku 4.5 (structured outputs) as
 the fallback. A judgment that neither answers goes to the agent, never guessed.
 - **Jev is new.** It's two weeks old, and its data handling is only partly documented (handoff §1.4).
-- **So Casa needs its own account and terms.** That's a Vercel Pro team: Vercel requires Pro for
-  commercial use, and it brings zero data retention.
-- **Every request is sent with no training and zero retention.**
+- **Casa's key comes from Kimani's existing Vercel account for now** (2026-10-06). A Pro team comes
+  later: Vercel's free plan is for non-commercial use, and zero retention needs Pro.
+- **Every request is sent with no training.** Zero retention is on unless switched off, and is never
+  off for anything an agent or client wrote.
 - **Client names never go to it.** Until Jev earns trust on public listing text, nothing an agent or
   client wrote goes either.
 - **The tool keeps working if Jev is unavailable.**
@@ -1027,6 +1028,7 @@ modelling; more sources.
 | 2026-09-29 | D-1 C · D-2 A · D-3 A · D-4 A · D-5 A · D-6 A · D-7 B · D-8 visible to mentors and admins · D-9 A · D-10 B · D-11 fifth closed deal · D-13 approved · D-19 B |
 | 2026-09-29 | Jev through Vercel's AI Gateway on a Pro team: no training and zero retention on every request; a durable paced queue; every choice asked in both orders (D-12) |
 | 2026-09-29 | Judgments land as "watch" until their question has a measured bar, per question, provider and model; 0.4–0.6 is always asked |
+| 2026-10-06 | Jev starts on Kimani's existing Vercel account: no training always; zero retention a switch, never off for text an agent or client wrote; Pro later |
 
 ## 18. Open items
 

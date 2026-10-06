@@ -45,12 +45,14 @@ lessons shape this build:
 2. **Judgments have to land.** MindBinder only watches. Casa's judgments become suggestions and,
    later, applied values (§7.1). So the provider interface and the Haiku 4.5 fallback get built now
    (handoff §3.3).
-3. **Both privacy flags go on every request from the first call, with no switch:**
-   `disallowPromptTraining` and `zeroDataRetention`.
-   - Casa's Vercel team is on Pro. Vercel requires Pro for commercial use, and it brings zero data
-     retention.
-   - Both flags fail closed, so a team that isn't on Pro gets refused, and the go/no-go call catches
-     it.
+3. **No training on every request, with no switch. Zero retention whenever the text isn't public.**
+   - `disallowPromptTraining` is available on every Vercel plan, and is always on.
+   - `zeroDataRetention` needs a Vercel Pro team. Casa starts on Kimani's existing account, which
+     isn't on Pro (2026-10-06), so zero retention is a switch: `CR_JEV_ZDR`, `on` by default.
+   - **Each lane declares its text** as `public` (a listing's own words) or `private` (anything an
+     agent or a client wrote). With zero retention off, a private lane's request is refused before
+     it's sent, as a named drop.
+   - Both flags fail closed. A refusal is a 4xx, so the go/no-go call catches a wrong setting.
    - In this dispatch `state` carries only public listing text, scrubbed.
    - Never in `state`: a client's name, an agent's notes, a message, the agent's call or a target.
 4. **Nothing lands above "watch" until its question is calibrated.**
@@ -137,7 +139,7 @@ layer may import the engine's factor and check ids.
    - `verify-jev-transport.ts`'s simulated Gateway on a fake clock, ported to the durable queue. That
      includes two drainers racing for the lease, and a 112 s run of 503s.
    - the strict parser
-   - both privacy flags on the wire, with no code path that turns either off
+   - no training on the wire with no way to turn it off; zero retention on unless switched off, and never off for a private lane
    - a source-reading check that no question or option text interpolates state
    - the verdict math and the score conversion
    - "nothing lands above watch while uncalibrated"
@@ -168,6 +170,16 @@ layer may import the engine's factor and check ids.
    - Yes/no questions are asked once.
    - Casanova renamed your migration to `20260930120000_comp_report_decide.sql` at merge, because
      Mason's had the same timestamp.
+
+## Before phase 2: run on Kimani's existing Vercel account (2026-10-06)
+
+Kimani adds a new Gateway key from his existing Vercel account, the one MindBinder uses. It draws on
+the same credits and is not on Pro. Before the key goes live:
+1. **Make zero retention a switch** as in "Where Casa differs" 3: `CR_JEV_ZDR`, a public or private
+   lane declared in the registry, the `zdr-required` drop, and tests. The listing lane is `public`.
+   Kimani sets `CR_JEV_ZDR=off` with the key.
+2. **Expect to share MindBinder's rate limit.** It's unknown whether the limit is per key or per team.
+   Measure 429s against MindBinder's run times; the coverage numbers in phase 2 will show any contention.
 
 ## Phase 2 — live watch mode, and calibration (needs Casa's key)
 
