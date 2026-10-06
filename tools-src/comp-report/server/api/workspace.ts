@@ -2,14 +2,16 @@
 //   GET   ?report=<uuid>   everything the walkthrough needs to rebuild itself:
 //                          the report, the brief, the call, the target, the
 //                          intake and deal terms, every import (the file, for
-//                          the browser's own parse) and every comp's judgment
-//   PATCH {reportId, brief?, call?, target?, state?, sampleData?}
+//                          the browser's own parse), every comp's judgment and
+//                          where its record comes from, and the link reads
+//   PATCH {reportId, title?, brief?, call?, target?, state?, sampleData?}
 //                          saves what the agent entered. Each field given
 //                          replaces the stored one; sampleData can only be set
 //
 // The owner or an admin can read a report; only its owner can change it.
 // Every query is scoped by owner as well as by row-level security (§12).
-import type { CompJudgment } from '../../workspace/state.ts';
+import type { ParseWarning } from '../../engine/index.ts';
+import type { CompJudgment, CompSource } from '../../workspace/state.ts';
 import { withActor, type Queryable } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
@@ -30,6 +32,26 @@ export interface WorkspaceImport {
   contentBase64: string;
 }
 
+/** A StreetEasy page the agent asked the tool to read, as the browser shows it (links.ts). */
+export interface LinkReadView {
+  id: string;
+  purpose: 'comp' | 'subject';
+  url: string;
+  status: 'queued' | 'running' | 'done' | 'failed';
+  error: string | null;
+  errorMessage: string | null;
+  /** The comp it made, once done. */
+  reportCompId: string | null;
+  asOf: string | null;
+  /** What the page said: kept for the home (its details fill from it) and for a failed read ("type it in" starts from it). */
+  extract: Record<string, unknown> | null;
+  warnings: ParseWarning[];
+  confirmedAt: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
 export interface WorkspaceData {
   report: { id: string; title: string; propertyType: 'condo' | 'coop'; ownerEmail: string; sampleData: boolean; updatedAt: string };
   brief: Record<string, unknown>;
@@ -38,6 +60,8 @@ export interface WorkspaceData {
   state: Record<string, unknown>;
   imports: WorkspaceImport[];
   comps: CompJudgment[];
+  /** Every link read not cleared away: the home's, and the comps' (§6.2). */
+  reads: LinkReadView[];
   /** The assistant's transcript so far, as a count: the step rail marks step 5 by it. */
   messageCount: number;
 }
@@ -54,14 +78,26 @@ export async function reportFor(tx: Queryable, user: SessionUser, reportId: stri
   return rows[0];
 }
 
-/** Every comp in the report with the agent's judgment of it: tier, anchor, reviewed, and every reason, oldest first. */
+/**
+ * Every comp in the report with the agent's judgment of it — tier, anchor,
+ * reviewed, every reason oldest first — and where its record comes from: the
+ * comp's newest observation (§12). An export's comp is read from the stored
+ * file; a link's from what its page said; a typed-in one from what was typed.
+ */
 export async function loadJudgments(tx: Queryable, reportId: string): Promise<CompJudgment[]> {
   const comps = (await tx.query<{
-    id: string; property_key: string; evidence_class: 'sold' | 'in_contract' | 'active'; tier: 'primary' | 'secondary' | 'excluded' | null;
+    id: string; property_key: string; evidence_class: CompJudgment['evidenceClass']; tier: 'primary' | 'secondary' | 'excluded' | null;
     is_anchor: boolean; reviewed_at: Date | null;
+    source: 'se_export' | 'se_pdf' | 'listing' | 'agent' | null; import_id: string | null; raw: unknown; as_of: string | null; links: string[] | null;
+    read_id: string | null; confirmed_at: Date | null;
   }>(
-    `select rc.id, p.property_key, rc.evidence_class, rc.tier, rc.is_anchor, rc.reviewed_at
-       from comp_report.report_comps rc join comp_report.properties p on p.id = rc.property_id
+    `select rc.id, p.property_key, rc.evidence_class, rc.tier, rc.is_anchor, rc.reviewed_at,
+            o.source, o.import_id, o.raw, o.as_of::text as as_of, o.links,
+            lr.id as read_id, lr.confirmed_at
+       from comp_report.report_comps rc
+       join comp_report.properties p on p.id = rc.property_id
+       left join comp_report.property_observations o on o.id = rc.observation_id
+       left join comp_report.link_reads lr on lr.observation_id = rc.observation_id and lr.report_id = rc.report_id
       where rc.report_id = $1 order by rc.created_at, rc.id`,
     [reportId],
   )).rows;
@@ -75,6 +111,14 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     [reportId],
   )).rows;
 
+  const source = (c: (typeof comps)[number]): CompSource => {
+    if (c.source === 'listing' && c.raw && c.as_of) {
+      return { kind: 'listing', extract: c.raw, asOf: c.as_of, url: c.links?.[0] ?? null, readId: c.read_id, confirmedAt: c.confirmed_at ? iso(c.confirmed_at) : null };
+    }
+    if (c.source === 'agent' && c.raw && c.as_of) return { kind: 'manual', fields: c.raw, asOf: c.as_of };
+    return { kind: 'export', importId: c.import_id };
+  };
+
   return comps.map((c) => ({
     reportCompId: c.id,
     propertyKey: c.property_key,
@@ -85,6 +129,30 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     reasons: reasons
       .filter((r) => r.report_comp_id === c.id)
       .map((r) => ({ tier: r.tier, reason: r.reason, reasonType: r.reason_type, actor: r.actor, at: iso(r.created_at), by: r.created_by, sample: r.sample })),
+    source: source(c),
+  }));
+}
+
+/** The report's link reads, oldest first, less the failed ones the agent cleared away. */
+export async function loadReads(tx: Queryable, reportId: string): Promise<LinkReadView[]> {
+  const rows = (await tx.query<{
+    id: string; purpose: LinkReadView['purpose']; url: string; status: LinkReadView['status']; error: string | null; error_message: string | null;
+    report_comp_id: string | null; as_of: string | null; extract: Record<string, unknown> | null; warnings: ParseWarning[] | null;
+    confirmed_at: Date | null; created_at: Date; started_at: Date | null; finished_at: Date | null;
+  }>(
+    `select id, purpose, url, status, error, error_message, report_comp_id, as_of::text as as_of,
+            case when purpose = 'subject' or status = 'failed' then extract end as extract,
+            warnings, confirmed_at, created_at, started_at, finished_at
+       from comp_report.link_reads
+      where report_id = $1 and dismissed_at is null
+      order by seq`,
+    [reportId],
+  )).rows;
+  const at = (d: Date | null) => (d ? iso(d) : null);
+  return rows.map((r) => ({
+    id: r.id, purpose: r.purpose, url: r.url, status: r.status, error: r.error, errorMessage: r.error_message,
+    reportCompId: r.report_comp_id, asOf: r.as_of, extract: r.extract, warnings: r.warnings ?? [],
+    confirmedAt: at(r.confirmed_at), createdAt: iso(r.created_at), startedAt: at(r.started_at), finishedAt: at(r.finished_at),
   }));
 }
 
@@ -129,6 +197,7 @@ export async function loadWorkspace(tx: Queryable, user: SessionUser, reportId: 
       createdAt: iso(i.created_at), createdBy: i.created_by, contentBase64: Buffer.from(i.content).toString('base64'),
     })),
     comps: await loadJudgments(tx, reportId),
+    reads: await loadReads(tx, reportId),
     messageCount,
   };
 }
@@ -152,6 +221,9 @@ function checkCall(call: unknown) {
     if ((low as number) > (high as number)) throw new HttpError(400, 'bad_call', 'The low is above the high.');
   }
   if (typeof call.at !== 'string') throw new HttpError(400, 'bad_call', 'The call needs the time it was given.');
+  if (call.note !== undefined && (typeof call.note !== 'string' || call.note.length > 500)) {
+    throw new HttpError(400, 'bad_call', 'Keep the line under 500 characters.');
+  }
 }
 
 function checkTarget(target: unknown) {
@@ -183,6 +255,12 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
       values.push(value === null ? null : JSON.stringify(value));
       sets.push(`${column} = $${values.length}::jsonb`);
     };
+    if ('title' in body) {
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      if (title.length < 1 || title.length > 200) throw new HttpError(400, 'bad_title', 'Give the report a title of up to 200 characters.');
+      values.push(title);
+      sets.push(`title = $${values.length}`);
+    }
     if ('brief' in body) {
       if (!isObject(body.brief)) throw new HttpError(400, 'bad_brief', 'The brief is an object.');
       checkSize('The brief', body.brief, 16 * 1024);

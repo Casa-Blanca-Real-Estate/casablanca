@@ -3,22 +3,34 @@
 // mark sample and estimated values wherever they show.
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Entry } from '../../../workspace/state.ts';
+import { useBuildNotes } from './buildNotes.tsx';
 
 // `show` is required: a value's flag is often undefined, and undefined must never show the tag.
+// A sample report has one banner (the workspace's); the per-value mark is a build note.
 export function SampleTag({ show }: { show: boolean | undefined }) {
-  return show ? <span className="tag tag-sample" title="Filled in from the sample (100 Barclay #17L). Not a real value.">Sample</span> : null;
+  const notes = useBuildNotes();
+  return show && notes ? <span className="tag tag-sample" title="Filled in from the sample (100 Barclay #17L). Not a real value.">Sample</span> : null;
 }
 
 export function EstimateTag({ show }: { show: boolean | undefined }) {
-  return show ? <span className="tag tag-estimate" title="Your estimate: it counts in “with estimates” only (§6.4).">Estimate</span> : null;
+  return show ? <span className="tag tag-estimate" title="Your estimate: it counts in “with estimates” only.">Estimate</span> : null;
 }
 
+/** What's still to come, for admins with build notes on. */
 export function StubTag({ children = 'Stubbed' }: { children?: ReactNode }) {
-  return <span className="tag tag-stub">{children}</span>;
+  return useBuildNotes() ? <span className="tag tag-stub">{children}</span> : null;
 }
 
+/** A decision behind something on screen, for admins with build notes on. */
 export function DecisionTag({ id, children }: { id: string; children?: ReactNode }) {
-  return <span className="tag tag-decision" title={`Pending decision ${id} — see docs/decisions.md`}>{id}{children ? <> · {children}</> : null}</span>;
+  return useBuildNotes()
+    ? <span className="tag tag-decision" title={`Decision ${id} — see docs/decisions.md`}>{id}{children ? <> · {children}</> : null}</span>
+    : null;
+}
+
+/** A line only admins with build notes on see: what's stubbed, and why. */
+export function BuildNote({ children }: { children: ReactNode }) {
+  return useBuildNotes() ? <p className="build-note small">{children}</p> : null;
 }
 
 /** A new entry, typed by the agent: never a sample, dated today. */
@@ -26,22 +38,30 @@ export function entry<T>(value: T, today: string, estimate?: boolean): Entry<T> 
   return { value, asOf: today, ...(estimate ? { estimate: true } : {}) };
 }
 
+/** A value read from the home's StreetEasy page: marked until the agent changes it. */
+export function ListingTag({ show }: { show: boolean | undefined }) {
+  return show ? <span className="field-hint from-listing" title="Read from the home’s StreetEasy page. Change it and it’s yours.">From StreetEasy</span> : null;
+}
+
 interface FieldProps {
   label: string;
   hint?: string;
   sample?: boolean | undefined;
   estimate?: boolean | undefined;
+  /** Filled from the home's StreetEasy page. */
+  from?: boolean | undefined;
   children: ReactNode;
   wide?: boolean;
 }
 
-export function Field({ label, hint, sample, estimate, children, wide }: FieldProps) {
+export function Field({ label, hint, sample, estimate, from, children, wide }: FieldProps) {
   return (
     <div className={`field${wide ? ' wide' : ''}`}>
       <span className="field-label">
         {label} <SampleTag show={sample} /> <EstimateTag show={estimate} />
       </span>
       {children}
+      <ListingTag show={from} />
       {hint && <span className="field-hint">{hint}</span>}
     </div>
   );

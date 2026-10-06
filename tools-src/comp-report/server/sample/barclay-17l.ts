@@ -49,10 +49,16 @@ export const SAMPLE_DEAL_TERMS: DealTermsState = {
   flexibility: s('Some room on price for a quick, clean close'),
 };
 
-/** Step 6: a made-up client for the placeholder email, and the result that has a range. */
+/**
+ * Send: a made-up client, the result that has a range, and the email's own
+ * lines. The headline isn't here: it's the agent's, picked from the drafts.
+ */
 export const SAMPLE_SEND: SendState = {
   result: 'with_estimates',
   clientName: s('Jordan and Sam'),
+  chosen: s('I focused on full-service condos close in size and floor, sold in the last few months.'),
+  consider: s('Newer towers nearby trade higher than 100 Barclay. Its monthly charges run below most of the comps.'),
+  nextStep: s('List in October near the top of what the sales support, with some room on price for a quick, clean close.'),
 };
 
 /** Hannah's own read in the briefing: "between 3.4 and 4-something". */

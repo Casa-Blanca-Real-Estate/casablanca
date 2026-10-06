@@ -145,7 +145,7 @@ input:focus, textarea:focus, select:focus, button:focus-visible { outline: none;
 .save-line { font-size: 11px; color: var(--cb-mid); margin-right: auto; }
 .save-line.error { color: var(--cb-black); font-weight: 800; }
 
-.rail { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 6px 0 16px; }
+.rail { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0 16px; }
 .rail-step {
   font: inherit; text-align: left; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px;
   background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 10px; padding: 9px 10px; min-width: 0;
@@ -275,9 +275,135 @@ ul.plain { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-di
   .workspace.with-drawer { padding-right: 440px; }
 }
 
+/* ─── The start and adding comps (CR-3b, Dispatch 09) ─────────────────────── */
+.card.new-comp { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.card.new-comp > div { flex: 1 1 320px; }
+
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 60; background: rgba(15, 15, 15, .45);
+  display: flex; align-items: flex-start; justify-content: center; padding: 56px 16px 24px; overflow-y: auto;
+}
+.modal {
+  width: min(880px, 100%); background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(15, 15, 15, .22); display: flex; flex-direction: column; outline: none;
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px 0; }
+.modal-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-mid); }
+.modal-steps li[aria-current='step'] { color: var(--cb-black); }
+.modal-steps .link { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-mid); }
+.modal-title { margin: 10px 20px 4px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.modal-body { padding: 8px 20px 12px; }
+.modal-foot {
+  position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px;
+  padding: 12px 20px; border-top: 1px solid var(--cb-border); background: var(--cb-surface); border-radius: 0 0 16px 16px;
+}
+.modal-foot .link { margin-right: auto; }
+.guidance { margin: 0 0 12px; font-weight: 800; }
+
+.from-listing { color: #3c3654; }
+.from-listing::before { content: '↳ '; }
+.details .more { margin-top: 10px; border-top: 1px solid var(--cb-border); padding-top: 10px; }
+.details .more summary { cursor: pointer; font-weight: 800; }
+
+.add-comps { display: flex; flex-direction: column; gap: 12px; margin: 0 0 16px; }
+.ways { align-self: flex-start; flex-wrap: wrap; }
+.way { display: flex; flex-direction: column; gap: 10px; }
+.way textarea { width: 100%; font-family: inherit; resize: vertical; }
+.drop { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; border: 1px dashed var(--cb-border); border-radius: 12px; padding: 12px 14px; background: var(--cb-bg); }
+.drop.over { border-color: var(--cb-lavender); background: var(--cb-surface); }
+.refused li { color: var(--cb-black); }
+
+.reads { display: flex; flex-direction: column; gap: 8px; }
+.comp-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+  background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 12px; padding: 10px 14px;
+}
+.comp-row.reading { border-style: dashed; color: var(--cb-mid); }
+.comp-row.failed { border-color: var(--cb-black); }
+.comp-row.unconfirmed { border-color: var(--cb-lavender); }
+.row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 360px; }
+.row-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.row-title a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--cb-lavender); }
+.row-actions { display: flex; align-items: center; gap: 10px; }
+.status-group { margin: 14px 0 0; }
+.status-group h4 { margin: 0 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.import-notes { margin-top: 12px; }
+.import-notes summary { cursor: pointer; }
+.sort-add { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin: 0 0 14px; }
+.sort-add > .btn { align-self: flex-start; }
+
+/* ─── The three screens (CR-3b phase 2): Sort, Findings, Send ─────────────── */
+.sample-banner { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--cb-lavender); color: #3c3654; }
+.build-note { margin: 10px 0 0; padding: 8px 12px; border: 1px dashed var(--cb-lavender); border-radius: 10px; background: var(--cb-bg); color: #3c3654; }
+
+/* Sort: one compact row per comp; the row opens to its facts and history. */
+.comp-line { display: flex; gap: 10px; align-items: flex-start; }
+.row-toggle {
+  font: inherit; flex: none; width: 28px; height: 28px; margin-top: -3px; cursor: pointer;
+  background: var(--cb-surface); color: var(--cb-black); border: 1px solid var(--cb-border); border-radius: 8px;
+}
+.row-toggle:hover { border-color: var(--cb-lavender); }
+.comp-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.comp-address { font-weight: 800; color: inherit; }
+a.comp-address { text-decoration: none; border-bottom: 1px solid var(--cb-lavender); }
+.star { font-size: 11px; font-weight: 800; }
+.sort-controls { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; padding-left: 38px; }
+.segmented button.on.pending { background: var(--cb-lavender); color: #3c3654; }
+.note { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.note-input { width: 100%; resize: vertical; line-height: 1.4; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 11px; cursor: pointer; color: var(--cb-black);
+  background: var(--cb-bg); border: 1px solid var(--cb-border); border-radius: 999px; padding: 4px 10px;
+}
+.chip:hover { background: var(--cb-surface); border-color: var(--cb-lavender); }
+.note-status { margin: 0; color: var(--cb-mid); }
+.note-status.error { color: var(--cb-black); font-weight: 800; }
+.comp-details { display: flex; flex-direction: column; gap: 10px; margin-left: 38px; padding-top: 10px; border-top: 1px solid var(--cb-border); }
+.star-toggle {
+  align-self: flex-start; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+  background: var(--cb-surface); color: var(--cb-black); border: 1px solid var(--cb-border); border-radius: 999px; padding: 6px 12px;
+}
+.star-toggle.on { background: var(--cb-black); color: #fff; border-color: var(--cb-black); }
+table.facts { width: 100%; border-collapse: collapse; }
+table.facts th, table.facts td { text-align: left; vertical-align: top; padding: 4px 12px 4px 0; border-top: 1px solid var(--cb-border); }
+table.facts th { font-size: 11px; font-weight: 800; color: var(--cb-mid); white-space: nowrap; }
+
+/* Findings: the gate, then the reading, the range and the evidence. */
+.findings, .send { display: flex; flex-direction: column; gap: 16px; }
+.your-number .row { align-items: flex-end; }
+.your-number-line { margin: 0; }
+.reading { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.01em; line-height: 1.35; max-width: 60ch; }
+.range-line { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.range-line .range { font-size: 22px; letter-spacing: -.02em; }
+.findings .results { margin: 0; }
+.against { margin: 0; padding: 10px 14px; border-left: 3px solid var(--cb-lavender); border-radius: 0 10px 10px 0; background: var(--cb-bg); font-weight: 800; }
+.counting-group h4 { margin: 10px 0 4px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.counting a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--cb-lavender); }
+.target, .offer-details, .worked-out { border-top: 1px solid var(--cb-border); padding-top: 14px; }
+.offer-details summary, .worked-out summary { cursor: pointer; font-weight: 800; }
+.live-result { font-weight: 800; }
+
+/* Send: the headline first, then the email and its QA line. */
+.headline { display: flex; flex-direction: column; gap: 8px; }
+.headline textarea { font-size: 16px; font-weight: 800; }
+.drafts ul.plain { gap: 6px; }
+.drafts .link { text-align: left; line-height: 1.45; }
+.qa { margin: 12px 0 8px; }
+.qa-line { font-weight: 800; }
+.qa-line::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.qa-line.ready::before { background: var(--cb-lavender); }
+.qa-line.fix::before { background: var(--cb-black); }
+.starter { margin: 0 0 8px; }
+
 @media (max-width: 760px) {
   .results { grid-template-columns: minmax(0, 1fr); }
   .about-cols { grid-template-columns: minmax(0, 1fr); }
-  .rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sort-controls { padding-left: 0; }
+  .comp-details { margin-left: 0; }
   .step { padding: 14px 14px 16px; }
+  /* Below the studio chrome's fixed buttons (assets/studio-header.js), as the drawer is. */
+  .modal-backdrop { padding: 56px 0 0; }
+  .modal { border-radius: 16px 16px 0 0; min-height: calc(100vh - 56px); }
+  .modal-foot { border-radius: 0; }
 }

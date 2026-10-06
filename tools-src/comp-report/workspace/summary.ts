@@ -102,7 +102,8 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
       const why = pr ? [...new Set([...pr.on_facts.not_included_because, ...pr.with_estimates.not_included_because])] : [];
       return {
         comp: names.get(c.id),
-        evidence_status: c.record.status.evidence_class ?? `unknown (“${c.record.status.raw ?? ''}”)`,
+        evidence_status: c.record.status.evidence_class
+          ?? (c.record.status.listing_status === 'off_market' ? 'didn’t sell (came off the market unsold; in no statistic yet)' : `unknown (“${c.record.status.raw ?? ''}”)`),
         tier: c.unsortable ? 'can’t be sorted' : c.judgment?.tier ?? 'not sorted yet',
         reason: c.unsortable ?? c.judgment?.reasons.at(-1)?.reason ?? null,
         reviewed: Boolean(c.judgment?.reviewedAt),

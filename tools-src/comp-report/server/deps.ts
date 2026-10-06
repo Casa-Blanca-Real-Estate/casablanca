@@ -4,6 +4,8 @@
 import { accessConfig } from './access.ts';
 import { databasePool } from './db.ts';
 import { identityUrlFor, netlifyIdentityVerifier, type IdentityVerifier } from './identity.ts';
+import { firecrawlReader } from './links.ts';
+import type { LinkReadDeps } from './api/links.ts';
 import type { AuthDeps } from './session.ts';
 import type { GateDeps } from './identity-events.ts';
 
@@ -24,4 +26,9 @@ export function productionAuthDeps(req: Request): AuthDeps {
 
 export function productionGateDeps(): GateDeps {
   return { access: accessConfig(), pool: databasePool() };
+}
+
+/** The background link read: the API's dependencies and Firecrawl, with the key the carousel tools already use. */
+export function productionLinkReadDeps(req: Request): LinkReadDeps {
+  return { ...productionAuthDeps(req), reader: firecrawlReader({ apiKey: process.env.FIRECRAWL_API_KEY }) };
 }

@@ -1,6 +1,7 @@
-// The assistant (§8), as a panel: in a drawer reachable from every step of the
-// walkthrough, and inline beside the numbers in step 5. CR-1's turn endpoint:
-// one model call per request, the server owns the transcript (§8.3 rule 6).
+// The assistant (§8), in a drawer open from Sort, Findings and Send, with a
+// starter question for the screen it's opened on (`02-screens.md`). CR-1's turn
+// endpoint: one model call per request, the server owns the transcript (§8.3
+// rule 6).
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, ApiError, streamTurn, type ShownMessage } from '../api.ts';
 
@@ -15,13 +16,15 @@ const empty: Live = { text: '', progress: [], tools: [], note: null };
 
 const SUGGESTIONS = ['Which report is this?', 'What do the numbers say so far?', 'Which comps need a closer look?'];
 
-export function Chat({ reportId, readOnly = false, onCount, seed }: {
+export function Chat({ reportId, readOnly = false, onCount, seed, starter }: {
   reportId: string;
   readOnly?: boolean;
-  /** How many messages the agent has sent, after each load: the step rail marks step 5 by it. */
+  /** How many messages the agent has sent, after each load. */
   onCount?: (n: number) => void;
-  /** A question to put in the composer, unsent (the sample fill for step 5). */
+  /** A question to put in the composer, unsent. */
   seed?: { text: string; n: number } | null;
+  /** The screen's starter question, offered while the composer is empty. */
+  starter?: string;
 }) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -118,7 +121,7 @@ export function Chat({ reportId, readOnly = false, onCount, seed }: {
           <p className="muted small">It can read this report and its numbers. It never sees your call or your target.</p>
           {!readOnly && (
             <div className="row wrap">
-              {SUGGESTIONS.map((text) => (
+              {[...(starter ? [starter] : []), ...SUGGESTIONS.filter((t) => t !== starter)].map((text) => (
                 <button key={text} type="button" className="btn" onClick={() => { setDraft(text); input.current?.focus(); }}>{text}</button>
               ))}
             </div>
@@ -150,6 +153,11 @@ export function Chat({ reportId, readOnly = false, onCount, seed }: {
         <div ref={end} />
       </div>
 
+      {!readOnly && starter && messages.length > 0 && !draft && !live && (
+        <p className="small starter">
+          <button type="button" className="link small" onClick={() => { setDraft(starter); input.current?.focus(); }}>Try: {starter}</button>
+        </p>
+      )}
       {readOnly ? <p className="muted small">Only the report's owner can talk to the assistant here.</p> : (
       <form className="composer" onSubmit={send}>
         <textarea

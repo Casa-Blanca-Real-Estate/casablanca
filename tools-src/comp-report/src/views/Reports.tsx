@@ -1,12 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { api, type Me, type Report } from '../api.ts';
 import { Access } from './Access.tsx';
+import { NewCompStart } from './newcomp/NewComp.tsx';
 
-export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }) {
+export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: 'details') => void }) {
   const [reports, setReports] = useState<Report[] | null>(null);
-  const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [starting, setStarting] = useState(false);
   const ready = me.database === 'ready';
 
   useEffect(() => {
@@ -16,22 +16,6 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }
       (e) => setError(e.message),
     );
   }, [ready]);
-
-  async function create(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title } });
-      setReports((prev) => [report, ...(prev ?? [])]);
-      setTitle('');
-      onOpen(report.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create the report.');
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (!ready) {
     return (
@@ -45,26 +29,14 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string) => void }
 
   return (
     <>
-      <div className="scaffold-note">
-        <span className="tag tag-stub">Walkthrough scaffold</span>
-        <p>
-          Every step of a report is here, rough and annotated: the home, the export, sorting the comps, your call and the
-          reveal, the assistant, and a placeholder email. Each step says what’s real and what’s still to come.
-          {me.user.role === 'admin' && ' As an admin you can fill any step with sample data (100 Barclay #17L).'}
-        </p>
+      <div className="card new-comp">
+        <div>
+          <p className="card-title">A new comp</p>
+          <p className="muted">The home — by its StreetEasy link or its address — then its details, then the comps: by link, by StreetEasy’s export, or typed in.</p>
+        </div>
+        <button type="button" className="btn primary" onClick={() => setStarting(true)}>New comp</button>
       </div>
-      <div className="label">New report</div>
-      <form className="card row" onSubmit={create}>
-        <input
-          aria-label="Report title"
-          placeholder="Subject property — e.g. 25 North Moore Street, #9C"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={200}
-          required
-        />
-        <button className="btn primary" disabled={busy || !title.trim()}>Create</button>
-      </form>
+      {starting && <NewCompStart me={me} onCreated={(id) => onOpen(id, 'details')} onClose={() => setStarting(false)} />}
       {error && <p className="notice">{error}</p>}
 
       <div className="label">Your reports</div>
