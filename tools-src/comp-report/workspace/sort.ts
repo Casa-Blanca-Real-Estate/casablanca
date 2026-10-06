@@ -1,7 +1,8 @@
-// Sort's row (`02-screens.md`, Sort): the quick-pick note chips, worded from
-// what the engine compared, and a comp's facts with where each came from.
-// Presentation only: the engine decides every direction; the chips restate it
-// in a few words the agent can take, change or ignore.
+// Sort's row (`02-screens.md`, Sort): the quick-pick note chips, and a comp's
+// facts with where each came from. The chips start with Kara's checks — the
+// engine's flags (§6.10), each label a chip — then add what else the engine
+// compared. Presentation only: the engine decides every direction; the chips
+// restate it in a few words the agent can take, change or ignore.
 import type { CompOut, CompRecord, EngineOutput, PropertyFacts, ResultKind, Sourced } from '../engine/index.ts';
 import { isoDay, sqft, usd } from './format.ts';
 
@@ -52,10 +53,11 @@ const WORD: Record<string, [inferior: string, superior: string]> = {
 };
 
 /**
- * The note chips for one comp: a few words for each way the engine found it
- * differs from the home, most telling first — the same building, the mentors'
- * rules (a first floor, outdoor space on one side, new development, a co-op),
- * then size, layout and floor. What the note already says isn't offered again.
+ * The note chips for one comp, most telling first. Kara's checks lead: each
+ * flag's label is a chip ("Same building", "First floor", "6 floors lower").
+ * Then a few words for each other way the engine found it differs from the
+ * home — size, layout, floor, rooms, views, systems, monthlies — where no check
+ * already said it. What the note already says isn't offered again.
  */
 export function noteChips(comp: CompOut, record: CompRecord, subject: EngineOutput['subject'], note = ''): string[] {
   const lines = compared(comp);
@@ -64,42 +66,52 @@ export function noteChips(comp: CompOut, record: CompRecord, subject: EngineOutp
     if (chip && !chips.includes(chip)) chips.push(chip);
   };
   const cf = record.facts;
+  const flagged = comp.checks.filter((k) => k.status === 'flagged');
+  for (const k of flagged) add(k.label);
+  const checked = new Set(flagged.map((k) => k.code));
 
+  if (comp.flags.same_building_as_subject && !checked.has('same_building')) add('Same building');
   if (comp.flags.same_building_as_subject) {
-    add('Same building');
     const line = lineOf(record.identity.unit.raw);
     if (line && line === lineOf(subject.identity.unit.raw)) add('Same line');
   }
 
   const floor = lines.get('floor');
   const homeFloor = subjectFact<number>(subject, 'floor');
-  if (floor && cf.floor?.value === 1 && homeFloor !== 1) add('First floor');
+  const firstFloor = checked.has('first_floor') || Boolean(floor && cf.floor?.value === 1 && homeFloor !== 1);
+  if (firstFloor && !checked.has('first_floor')) add('First floor');
 
   const outdoor = lines.get('outdoor_space');
-  if (outdoor?.direction === 'comp_superior') add(outdoor.units === null ? 'Has outdoor space' : 'Bigger outdoor space');
-  if (outdoor?.direction === 'comp_inferior') add(outdoor.units === null ? 'No outdoor space' : 'Smaller outdoor space');
+  if (!checked.has('private_outdoor_one_side')) {
+    if (outdoor?.direction === 'comp_superior') add(outdoor.units === null ? 'Has outdoor space' : 'Bigger outdoor space');
+    if (outdoor?.direction === 'comp_inferior') add(outdoor.units === null ? 'No outdoor space' : 'Smaller outdoor space');
+  }
 
   const homeNew = subjectFact<boolean>(subject, 'new_development');
-  if (cf.new_development?.value === true && homeNew === false) add('New development');
-  if (cf.new_development?.value === false && homeNew === true) add('A resale');
+  if (!checked.has('new_development_vs_resale')) {
+    if (cf.new_development?.value === true && homeNew === false) add('New development');
+    if (cf.new_development?.value === false && homeNew === true) add('A resale');
+  }
   const homeType = subjectFact<string>(subject, 'property_type');
-  if (comp.flags.property_type_mismatch || (cf.property_type && homeType && cf.property_type.value !== homeType)) {
+  if (!checked.has('property_type_differs') && (comp.flags.property_type_mismatch || (cf.property_type && homeType && cf.property_type.value !== homeType))) {
     if (cf.property_type?.value === 'coop') add('A co-op');
     else if (cf.property_type?.value === 'condo') add('A condo');
     else if (cf.property_type?.value === 'condop') add('A condop');
   }
-  if (cf.income_restricted?.value) add('Income-restricted (HDFC)');
-  if (cf.sponsor_unit?.value) add('Sponsor sale');
+  if (cf.income_restricted?.value && !checked.has('income_restricted')) add('Income-restricted (HDFC)');
+  if (cf.sponsor_unit?.value && !checked.has('sponsor_unit')) add('Sponsor sale');
 
   const size = lines.get('interior_size');
   const homeArea = subjectFact<number>(subject, 'area_sqft');
   const sameSize = Boolean(size && homeArea && size.units !== null && Math.abs(size.units) / homeArea < SAME_SIZE);
   const beds = lines.get('beds_baths.bedrooms');
   const baths = lines.get('beds_baths.bathrooms');
-  if (size && !sameSize) add(size.direction === 'comp_inferior' ? 'Smaller' : size.direction === 'comp_superior' ? 'Bigger' : null);
-  if (sameSize) add(beds?.direction === 'similar' && baths?.direction === 'similar' ? 'Same layout' : 'About the same size');
+  if (!checked.has('size_far_off')) {
+    if (size && !sameSize) add(size.direction === 'comp_inferior' ? 'Smaller' : size.direction === 'comp_superior' ? 'Bigger' : null);
+    if (sameSize) add(beds?.direction === 'similar' && baths?.direction === 'similar' ? 'Same layout' : 'About the same size');
+  }
 
-  if (floor && !chips.includes('First floor')) {
+  if (floor && !firstFloor && !checked.has('floor_far_off')) {
     add(floor.direction === 'comp_inferior' ? 'Lower floor' : floor.direction === 'comp_superior' ? 'Higher floor' : floor.direction === 'similar' ? 'Same floor' : null);
   }
   for (const line of ['beds_baths.bedrooms', 'beds_baths.bathrooms'] as const) {

@@ -35,8 +35,9 @@ test('one result when estimates don’t change the answer; both when they do, re
   assert.match(neutralReading(estimated, 'on_facts', '17L'), /^The comps don’t give a range yet: /);
 });
 
-test('the agent’s number against the range, in words', () => {
-  assert.equal(numberAgainstIt(run(KNOWN_SIZE, call(3_400_000, 4_200_000)), 'on_facts'), 'Your $3.4M–$4.2M sits below what the sales support.');
+test('the agent’s number against the range, in words, from the engine’s agent_number', () => {
+  assert.equal(numberAgainstIt(run(KNOWN_SIZE, call(3_400_000, 4_200_000)), 'on_facts'), 'Your $3.4M–$4.2M sits below what the sales support, by about $25.4K.');
+  assert.equal(numberAgainstIt(run(KNOWN_SIZE, call(5_000_000, 5_200_000)), 'on_facts'), 'Your $5M–$5.2M sits above what the sales support, by about $84.1K.');
   assert.equal(numberAgainstIt(run(KNOWN_SIZE, call(4_300_000, 4_800_000)), 'on_facts'), 'Your $4.3M–$4.8M sits inside what the sales support.');
   assert.equal(numberAgainstIt(run(KNOWN_SIZE, call(4_000_000, 4_500_000)), 'on_facts'), 'Your $4M–$4.5M starts below what the sales support and ends inside it.');
   assert.equal(numberAgainstIt(run(KNOWN_SIZE, call(4_500_000, 5_200_000)), 'on_facts'), 'Your $4.5M–$5.2M starts inside what the sales support and runs above it.');

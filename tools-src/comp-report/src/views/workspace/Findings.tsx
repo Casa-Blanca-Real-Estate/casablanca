@@ -2,15 +2,16 @@
 // range stays hidden until the agent gives a low and a high, or skips (D-1).
 // Then, top to bottom: what the comps say in one sentence, the range (both
 // results side by side only when the agent's estimates change the answer), the
-// agent's number against it, the evidence by status, the comps that count, and
-// the target and offer details (D-4). How it was worked out is folded. Every
+// agent's number against it, the evidence by status (didn't sell as a ceiling,
+// §6.3), the price table (§6.5), the comps that count, and the target and offer
+// details (D-4). How it was worked out is folded, with the pairs (§6.6). Every
 // figure is the engine's; the sentences only word them (workspace/reading.ts).
 import { useMemo, useState } from 'react';
-import type { CompOut, EngineOutput, Figure, ListingStatus, PriceEvaluation, Result, ResultKind } from '../../../engine/index.ts';
+import { EVIDENCE_CLASSES, type CompOut, type EngineOutput, type Figure, type ListingStatus, type PairOut, type PriceEvaluation, type Result, type ResultKind } from '../../../engine/index.ts';
 import { againstAsk, clientPrice, estimateWords, pct, psf, usd, usdRange } from '../../../workspace/format.ts';
 import { answerResult, estimatesChangeTheAnswer, homeName, neutralReading, numberAgainstIt } from '../../../workspace/reading.ts';
 import type { Entry } from '../../../workspace/state.ts';
-import { BuildNote, DecisionTag, NumberInput, StubTag } from './bits.tsx';
+import { DecisionTag, NumberInput } from './bits.tsx';
 import { compAddress, compPrice, compStatus, listingUrl, rowPsf, STATUS_LABEL, STATUS_ORDER } from './comps.tsx';
 import type { StepProps, Workspace } from './model.ts';
 import { OfferDetails, TargetSection } from './Terms.tsx';
@@ -49,7 +50,7 @@ export function Findings({ ws }: StepProps) {
       {both && <p className="muted small">{divergenceWords(o)}</p>}
       {against && <p className="against">{against}</p>}
       <ByStatus ws={ws} output={o} kind={kind} />
-      <BuildNote><StubTag>CR-2.2 phase 2</StubTag> The price table ($/sq ft steps and the price each implies) comes with Abacus’s price table.</BuildNote>
+      <PriceTable ws={ws} r={o.results[kind]} name={name} />
       <CountingComps ws={ws} output={o} kind={kind} />
       <TargetSection ws={ws} />
       <OfferDetails ws={ws} />
@@ -156,13 +157,21 @@ function divergenceWords(o: EngineOutput): string {
 
 // ─── The evidence ────────────────────────────────────────────────────────────
 
-/** By status: count, median $/sq ft, and sale against last ask for sales. Asks never mix with sales. */
+const BASIS_WORDS = { sold: 'sale prices', in_contract: 'last asks', active: 'asking prices', off_market: 'last asks' } as const;
+const AGAINST_BAND = { below: 'below the sold band', within: 'inside the sold band', above: 'above the sold band' } as const;
+
+/**
+ * By status: count, median $/sq ft, and sale against last ask for sales. Asks
+ * never mix with sales. Didn't sell is its own row, and its lowest ask is a
+ * ceiling on what buyers would pay (§6.3).
+ */
 function ByStatus({ ws, output, kind }: { ws: Workspace; output: EngineOutput; kind: ResultKind }) {
   const r = output.results[kind];
-  const didntSell = ws.comps.filter((c) => compStatus(c) === 'off_market' && c.judgment?.tier === 'primary').length;
   // A status with nothing counted drops out: empty sections disappear.
-  const rows = (['sold', 'in_contract', 'active'] as const).filter((cls) => r.evidence[cls].counts.included > 0);
-  if (!rows.length && !didntSell) return null;
+  const rows = EVIDENCE_CLASSES.filter((cls) => r.evidence[cls].counts.included > 0);
+  if (!rows.length) return null;
+  const ceiling = r.asks_vs_sold.ceiling;
+  const ceilingComp = ceiling ? ws.comps.find((c) => c.id === ceiling.comp_id) : undefined;
   return (
     <section className="by-status" aria-label="By status">
       <div className="table-wrap">
@@ -174,7 +183,7 @@ function ByStatus({ ws, output, kind }: { ws: Workspace; output: EngineOutput; k
               const vsSold = cls === 'sold' ? null : r.asks_vs_sold.class_medians[cls];
               return (
                 <tr key={cls}>
-                  <td>{STATUS_LABEL[cls]}<div className="muted small">{e.basis === 'sale' ? 'sale prices' : 'asking prices'}</div></td>
+                  <td>{STATUS_LABEL[cls]}<div className="muted small">{BASIS_WORDS[cls]}</div></td>
                   <td>{e.counts.included}</td>
                   <td>{e.price_per_sqft ? psf(e.price_per_sqft.median.value) : '—'}</td>
                   <td className="small">
@@ -184,17 +193,44 @@ function ByStatus({ ws, output, kind }: { ws: Workspace; output: EngineOutput; k
                 </tr>
               );
             })}
-            {didntSell > 0 && (
-              <tr>
-                <td>{STATUS_LABEL.off_market}<div className="muted small">last asks</div></td>
-                <td>{didntSell}</td>
-                <td>—</td>
-                <td className="small muted">A ceiling signal; no statistic yet.</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
+      {ceiling && (
+        <p className="small ceiling">
+          The lowest ask that didn’t sell, {psf(ceiling.lowest.value)}/sq ft{ceilingComp ? ` at ${compAddress(ceilingComp)}` : ''}, sits {AGAINST_BAND[ceiling.position]}{' '}
+          ({pct(ceiling.versus_sold_median_percent.value)} against the sold median): a ceiling on what buyers would pay.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** The price table, as in Frankie's email: the home at each $/sq ft step across the range (§6.5). */
+function PriceTable({ ws, r, name }: { ws: Workspace; r: Result; name: string }) {
+  const t = r.price_table;
+  if (!t) return r.price_table_unavailable_because ? <p className="muted small">No price table yet: {r.price_table_unavailable_because}.</p> : null;
+  const byId = new Map(ws.comps.map((c) => [c.id, c]));
+  return (
+    <section className="price-table" aria-label="The price table">
+      <div className="label">Price per sq ft for {name}</div>
+      <div className="table-wrap">
+        <table className="evidence">
+          <thead><tr><th>$/sq ft</th><th>The home at that rate</th><th /></tr></thead>
+          <tbody>
+            {t.rows.map((row) => (
+              <tr key={row.per_sqft.value} className={`row-${row.kind}`}>
+                <td>{psf(row.per_sqft.value)}</td>
+                <td title={usd(row.price.value)}>{clientPrice(row.price.value)}</td>
+                <td className="muted small">
+                  {row.kind === 'comp' ? row.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join(', ') : row.kind === 'range_end' ? 'an end of your range' : ''}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted small">{t.basis}</p>
     </section>
   );
 }
@@ -202,7 +238,7 @@ function ByStatus({ ws, output, kind }: { ws: Workspace; output: EngineOutput; k
 /** The comps that count, with their notes: the lists the email uses. */
 function CountingComps({ ws, output, kind }: { ws: Workspace; output: EngineOutput; kind: ResultKind }) {
   const outById = useMemo(() => new Map<string, CompOut>(output.comps.map((c) => [c.id, c])), [output]);
-  const counted = ws.comps.filter((c) => outById.get(c.id)?.per_result[kind].included || (compStatus(c) === 'off_market' && c.judgment?.tier === 'primary'));
+  const counted = ws.comps.filter((c) => outById.get(c.id)?.per_result[kind].included);
   if (!counted.length) return <p className="muted">No comp counts yet: tier the closest Primary on Sort.</p>;
   return (
     <section className="counting" aria-label="The comps that count">
@@ -272,7 +308,7 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
           </div>
         );
       })}
-      <BuildNote><StubTag>CR-2.2 phase 2</StubTag> How the comps differ from each other — the pairs and their price gaps (§6.6) — comes with Abacus’s pairs.</BuildNote>
+      {kinds.map((k) => <Pairs key={k} ws={ws} r={output.results[k]} label={both ? output.results[k].label : null} />)}
       <div className="sub">
         <div className="about-label">What the tool still needs</div>
         {output.gaps.length === 0 ? <p className="muted small">Nothing.</p> : (
@@ -302,6 +338,42 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
         {output.meta.house_method.all_null ? ' (no adjustment values set: every factor is considered, not calculated)' : ''}.
       </p>
     </details>
+  );
+}
+
+/** How the comps differ from each other (§6.6): what clean pairs show, then every pair. Evidence only: none moves a number. */
+function Pairs({ ws, r, label }: { ws: Workspace; r: Result; label: string | null }) {
+  const p = r.pairs;
+  if (!p.pairs.length) return null;
+  const byId = new Map(ws.comps.map((c) => [c.id, c]));
+  const name = (id: string) => (byId.get(id) ? compAddress(byId.get(id)!) : id);
+  const gaps = (x: PairOut) => {
+    const parts: string[] = [];
+    if (x.price_per_sqft_gap) parts.push(`${psf(x.price_per_sqft_gap.value)}/sq ft more`);
+    const g = x.price_gap.value;
+    parts.push(g === 0 ? 'the same price' : `${usd(Math.abs(g))} ${g > 0 ? 'more' : 'less'} in price`);
+    if (x.months_apart) parts.push(`${x.months_apart} month${x.months_apart === 1 ? '' : 's'} apart`);
+    return parts.join(', ');
+  };
+  return (
+    <div className="sub pairs">
+      <div className="about-label">How the comps differ from each other{label ? ` · ${label}` : ''}</div>
+      {p.clean_pair_evidence.length > 0
+        ? <ul className="plain small">{p.clean_pair_evidence.map((e) => <li key={`${e.evidence_class}:${e.key}`}>{e.summary}</li>)}</ul>
+        : <p className="small">No clean pairs yet: every pair differs in more than one factor, so none shows what one factor is worth here.</p>}
+      <details>
+        <summary className="small">All {p.pairs.length} pair{p.pairs.length === 1 ? '' : 's'}</summary>
+        <ul className="plain small">
+          {p.pairs.map((x) => (
+            <li key={`${x.evidence_class}:${x.higher}:${x.lower}`}>
+              <strong>{name(x.higher)}</strong> over {name(x.lower)} <span className="muted">({STATUS_LABEL[x.evidence_class]})</span>: {gaps(x)}.{' '}
+              <span className="muted">{x.clean && x.isolates ? `Clean: only ${x.isolates.name.toLowerCase()} differs.` : x.not_clean_because ? `${x.not_clean_because}.` : ''}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="muted small">{p.note}</p>
+      </details>
+    </div>
   );
 }
 

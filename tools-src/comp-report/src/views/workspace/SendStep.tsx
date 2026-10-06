@@ -1,13 +1,13 @@
 // Send (`02-screens.md`; §9, §10.2). The headline first: one sentence, the
-// agent's, required before the email can be copied (D-21), with drafts built
-// from the engine's figures. Then the email around it, in Frankie's order —
-// still the fixed template until the writer (CR-5) — in three lengths, with QA
-// as one status line that opens to the checks. The client's name comes from
-// the new-comp modal (D-22).
+// agent's, required before the email can be copied (D-21), with drafts drawn
+// only from the engine's headline facts. Then the email around it, in Frankie's
+// order — still the fixed template until the writer (CR-5) — in three lengths,
+// with QA as one status line that opens to the checks. The client's name comes
+// from the new-comp modal (D-22).
 import { useMemo, useRef, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
 import { buildEmail, emailChecks, headlineDrafts, htmlFromText, qaStatus, type EmailLength } from '../../../workspace/email.ts';
-import { answerResult, estimatesChangeTheAnswer, homeName, neutralReading } from '../../../workspace/reading.ts';
+import { answerResult, estimatesChangeTheAnswer } from '../../../workspace/reading.ts';
 import type { Entry, SendState } from '../../../workspace/state.ts';
 import { BuildNote, entry, Field, StubTag, TextInput } from './bits.tsx';
 import { fingerprint, type StepProps } from './model.ts';
@@ -35,11 +35,7 @@ export function SendStep({ ws }: StepProps) {
 
   const both = o ? estimatesChangeTheAnswer(o) : false;
   const result: ResultKind = o ? (both ? send.result ?? answerResult(o) : answerResult(o)) : 'on_facts';
-  const name = homeName(ws.intake.unit?.value, ws.intake.address?.value.split(',')[0]);
-  const drafts = useMemo(
-    () => (o && ws.revealed ? headlineDrafts(o, result, name, neutralReading(o, result, name)) : []),
-    [o, ws.revealed, result, name],
-  );
+  const drafts = useMemo(() => (o && ws.revealed ? headlineDrafts(o.headline_facts[result]) : []), [o, ws.revealed, result]);
 
   if (!ws.revealed) {
     return (
@@ -124,7 +120,10 @@ export function SendStep({ ws }: StepProps) {
             </ul>
           </div>
         )}
-        <BuildNote><StubTag>CR-2.2 phase 2 · CR-5</StubTag> The assistant’s drafts come from headline_facts; checking every number in the headline against the engine comes with QA.</BuildNote>
+        <BuildNote>
+          The drafts cite only <code>headline_facts</code> and its names, never the agent’s number (§8.4); QA warns on a headline number that matches none of them.{' '}
+          <StubTag>CR-5</StubTag> The assistant’s own drafts, and QA’s full numeric grounding.
+        </BuildNote>
       </section>
 
       <div className="card email">

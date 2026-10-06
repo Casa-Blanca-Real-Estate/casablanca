@@ -88,29 +88,33 @@ link's from its page, a typed-in one from what was typed. The browser and the se
 the same parser (`workspace/engine-input.ts`). **The home** can come from its link the same way; its
 details fill in on the modal's second screen, marked "From StreetEasy" until the agent changes them.
 
-## The three screens (CR-3b phase 2)
+## The three screens (CR-3b)
 
 The workspace is Sort, Findings and Send (`docs/comp-report/02-screens.md`), with the assistant as
-a drawer on all three.
+a drawer on all three. Each reads the engine's output; none computes a figure.
 
 - **Sort** (`SortStep.tsx`): a row per comp. The tier is three choices, and the note is the tier's
   reason. Every tier or changed note appends a reason (`POST /comps`, reason type `property`); a
-  tier with no note waits for one. The chips restate what the engine compared, worded in
-  `workspace/sort.ts`. Opening a row marks it reviewed and shows its facts with their sources.
-  The anchor is the star in an opened row. The rows' saves run one at a time, so each returned
-  workspace lands in order.
-- **Findings** (`Findings.tsx`): the agent's number first (D-1). Then the one-sentence reading and
-  the number against it (`workspace/reading.ts`), the evidence by status, and the comps that
-  count. The target and offer details sit under those (D-4). Both results show only when the
-  agent's estimates change the answer.
-- **Send** (`SendStep.tsx`, `workspace/email.ts`): the headline first, required to copy (D-21),
-  with drafts from the engine's figures. The email is in Frankie's order, in three lengths, with
-  QA as one line.
+  tier with no note waits for one. Kara's checks (`comps[].checks`, §6.10) are the row's flags,
+  marked when one rests on an inferred value or the agent's estimate, and their labels lead the
+  note chips; the other chips word what else the engine compared (`workspace/sort.ts`). Opening
+  a row marks it reviewed and shows the checks with their suggested tiers, and the facts with
+  their sources. The anchor is the star in an opened row. The rows' saves run one at a time, so
+  each returned workspace lands in order.
+- **Findings** (`Findings.tsx`): the agent's number first (D-1). Then the one-sentence reading,
+  from `headline_facts`, and the number against it, from `agent_number`, which only Findings
+  shows (`workspace/reading.ts`). Then the evidence by status, with didn't sell as its own row
+  and its lowest ask as the ceiling line; the price table (`results.*.price_table`); and the
+  comps that count. The target and offer details sit under those (D-4). "How this was worked
+  out" holds the pairs and what clean pairs show (§6.6). Both results show only when the agent's
+  estimates change the answer.
+- **Send** (`SendStep.tsx`, `workspace/email.ts`): the headline first, required to copy (D-21).
+  Its drafts cite only `headline_facts` and its names, never the agent's number;
+  `workspace/grounding.ts` proves it in the tests, and QA warns on a headline number that matches
+  no fact. The email is in Frankie's order, in three lengths (the price table is in the full
+  one), with QA as one line.
 - **Build notes**: the About boxes, stub and decision tags, and the sample fills sit behind one
   switch, admins only and off by default (`buildNotes.tsx`). A sample report shows one banner.
-
-Waiting on Abacus's CR-2.2 phase 2: Kara's checks as flags, the pairs, the price table, and
-drafts from `headline_facts`. Each is marked in the build notes where it will go.
 
 ## How it's wired
 

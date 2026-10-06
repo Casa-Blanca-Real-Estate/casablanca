@@ -11,7 +11,7 @@
 //
 // Figures are as the walkthrough shows them — $/sqft truncated (§6.1) — so the
 // assistant quotes what the agent sees and never computes one (§4.1).
-import type { EngineOutput, Result, ResultKind } from '../engine/index.ts';
+import { EVIDENCE_CLASSES, type EngineOutput, type Result, type ResultKind } from '../engine/index.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { estimateWords } from './format.ts';
 import type { Intake } from './state.ts';
@@ -43,7 +43,7 @@ function result(r: Result, byId: Map<string, string>) {
     lead_indicator: `${r.lead.label}${r.lead.chosen_by === 'default' ? ' (the default)' : ''}`,
     range: r.range ? { low: whole(r.range.low.value), high: whole(r.range.high.value), from: r.range.comp_ids.map((id) => byId.get(id) ?? id) } : null,
     no_range_because: r.range ? null : r.range_unavailable_because,
-    evidence_by_status: Object.fromEntries((['sold', 'in_contract', 'active'] as const).map((cls) => {
+    evidence_by_status: Object.fromEntries(EVIDENCE_CLASSES.map((cls) => {
       const e = r.evidence[cls];
       return [cls, {
         price_basis: e.basis === 'sale' ? 'sale prices' : 'asking prices',
@@ -102,8 +102,9 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
       const why = pr ? [...new Set([...pr.on_facts.not_included_because, ...pr.with_estimates.not_included_because])] : [];
       return {
         comp: names.get(c.id),
-        evidence_status: c.record.status.evidence_class
-          ?? (c.record.status.listing_status === 'off_market' ? 'didn’t sell (came off the market unsold; in no statistic yet)' : `unknown (“${c.record.status.raw ?? ''}”)`),
+        evidence_status: c.record.status.evidence_class === 'off_market' || c.record.status.listing_status === 'off_market'
+          ? 'didn’t sell (came off the market unsold; its last ask is a ceiling signal)'
+          : c.record.status.evidence_class ?? `unknown (“${c.record.status.raw ?? ''}”)`,
         tier: c.unsortable ? 'can’t be sorted' : c.judgment?.tier ?? 'not sorted yet',
         reason: c.unsortable ?? c.judgment?.reasons.at(-1)?.reason ?? null,
         reviewed: Boolean(c.judgment?.reviewedAt),
@@ -117,6 +118,9 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
         baths: f.baths?.value ?? null,
         floor: f.floor?.value ?? null,
         ...(c.record.flags.closing_record ? { public_record_closing: true } : {}),
+        ...(out?.checks.some((k) => k.status === 'flagged')
+          ? { checks: out.checks.filter((k) => k.status === 'flagged').map((k) => `${k.message}${k.suggestion ? ` — suggests ${k.suggestion}` : ''}`) }
+          : {}),
         in_the_numbers: Boolean(pr && (pr.on_facts.included || pr.with_estimates.included)),
         ...(why.length ? { not_in_the_numbers_because: why } : {}),
       };
