@@ -20,28 +20,18 @@
 // version and REGISTRY_VERSION, and the calibration for it starts over.
 
 import { FACTOR_BY_ID } from '../../engine/catalog/factors.ts';
+import { CHECK_CODES, type CheckCode } from '../../engine/compute/output.ts';
 import type { PropertyFacts } from '../../engine/types.ts';
 
 export const REGISTRY_VERSION = 'listing-2026-09-29.1';
-
-/**
- * The §6.10 comparability checks a judgment can feed. The engine doesn't name
- * its checks yet (its only flag so far is same_building_as_subject), so the
- * ids are declared here until Abacus gives them a home in the engine.
- */
-export const CHECK_IDS = [
-  'same_building', 'first_floor', 'outdoor_one_side', 'new_development', 'coop_vs_condo',
-  'sponsor_unit', 'sold_long_ago', 'size_far_off', 'floor_far_off', 'distance',
-] as const;
-export type CheckId = (typeof CHECK_IDS)[number];
 
 export type Lane = 'listing';
 
 export interface Feeds {
   /** Appendix A factor ids (engine/catalog/factors.ts). */
   factors: string[];
-  /** §6.10 checks. */
-  checks: CheckId[];
+  /** §6.10 checks, by the engine's own codes (engine/compute/checks.ts). */
+  checks: CheckCode[];
 }
 
 export interface OptionDef {
@@ -207,7 +197,7 @@ export const OUTDOOR: ChoiceQuestion = {
     },
   ],
   abstain: 'not_stated',
-  feeds: { factors: ['outdoor_space'], checks: ['outdoor_one_side'] },
+  feeds: { factors: ['outdoor_space'], checks: ['private_outdoor_one_side'] },
   askWhen: outdoorOpen,
 };
 
@@ -307,6 +297,7 @@ export function registryProblems(): string[] {
     ids.add(q.id);
     if (!/^[a-z][a-z_]*$/.test(q.id) || q.id.includes('__')) problems.push(`${q.id}: ids are lower_snake_case, without "__"`);
     for (const f of q.feeds.factors) if (!FACTOR_BY_ID.has(f)) problems.push(`${q.id}: feeds unknown factor ${f}`);
+    for (const c of q.feeds.checks) if (!(CHECK_CODES as readonly string[]).includes(c)) problems.push(`${q.id}: feeds unknown check ${c}`);
     if (q.feeds.factors.length + q.feeds.checks.length === 0) problems.push(`${q.id}: feeds nothing`);
     if (q.type === 'choice') {
       const keys = q.options.map((o) => o.key);

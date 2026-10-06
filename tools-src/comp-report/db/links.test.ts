@@ -13,6 +13,8 @@ import { handleLinks, runLinkRead, type LinkReadDeps } from '../server/api/links
 import { handleReports } from '../server/api/reports.ts';
 import { handleWorkspace, type LinkReadView, type WorkspaceData } from '../server/api/workspace.ts';
 import type { PoolLike } from '../server/db.ts';
+import { decideConfig } from '../server/decide/config.ts';
+import { DRAIN_PATH } from '../server/decide/enqueue.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import type { PageRead, PageReader } from '../server/links.ts';
 import type { AuthDeps } from '../server/session.ts';
@@ -323,6 +325,56 @@ describe('StreetEasy links and typed-in comps', { skip: skipWithoutDatabase }, (
     // Someone else's count is their own.
     const ben = await createReport('tok-ben-000000000', 'Ben’s home');
     assert.equal((await links('tok-ben-000000000', 'POST', { reportId: ben, urls: [LINK.chambers] })).body.queued.length, 1);
+  });
+
+  test('a finished read queues its listing for Jev only in watch mode (CR-D); off, it queues nothing', async () => {
+    const decideRows = async () => {
+      const owner = new pg.Client({ connectionString: db.ownerUrl });
+      await owner.connect();
+      try {
+        await owner.query('begin');
+        await owner.query(`select comp_report.enter('user', 'kimani@casa-blanca.com', 'admin', null)`);
+        const { rows } = await owner.query(`select r.observation_id::int as observation_id, r.status, r.drop_reason, r.user_email, r.question_ids,
+            lr.url from comp_report.decide_requests r join comp_report.link_reads lr on lr.observation_id = r.observation_id order by r.id`);
+        await owner.query('commit');
+        return rows;
+      } finally {
+        await owner.end();
+      }
+    };
+    // Every read above ran with CR_JEV_MODE unset: off, the production default.
+    assert.deepEqual(await decideRows(), []);
+
+    const benReport = (await (await handleReports(request('api/comp-report/reports', 'tok-ben-000000000'), deps)).json()).reports[0].id as string;
+    const pending = (await workspace('tok-ben-000000000', benReport)).reads.find((r) => r.url === LINK.chambers)!;
+    const kicks: string[] = [];
+    const fetchImpl = (async (url: URL | string) => { kicks.push(String(url)); return new Response(null, { status: 202 }); }) as unknown as typeof fetch;
+    const watchDeps = (env: Record<string, string>): LinkReadDeps => ({ ...readDeps, decide: { config: decideConfig({ CR_JEV_MODE: 'watch', ...env }), fetchImpl } });
+
+    // Watch, with no Gateway key: recorded at once as dropped (no-key), nothing sent, no drainer started.
+    const noKey = await runLinkRead(request('.netlify/functions/comp-report-links-background', 'tok-ben-000000000', 'POST', { reportId: benReport, readId: pending.id }), watchDeps({}));
+    assert.equal((await noKey.json()).status, 'done');
+    let rows = await decideRows();
+    assert.equal(rows.length, 1);
+    assert.deepEqual([rows[0].url, rows[0].status, rows[0].drop_reason, rows[0].user_email], [LINK.chambers, 'dropped', 'no-key', 'ben@casa-blanca.com']);
+    assert.ok(rows[0].question_ids.includes('condition'));
+    assert.deepEqual(kicks, []);
+
+    // Watch, with a key: a page with no description has nothing to ask, so nothing is queued…
+    const keyed = watchDeps({ AI_GATEWAY_API_KEY: 'test-key-not-real' });
+    const readOne = async (url: string) => {
+      const queued = await links('tok-ben-000000000', 'POST', { reportId: benReport, urls: [url] });
+      const res = await runLinkRead(request('.netlify/functions/comp-report-links-background', 'tok-ben-000000000', 'POST', { reportId: benReport, readId: queued.body.queued[0] }), keyed);
+      assert.equal((await res.json()).status, 'done');
+    };
+    await readOne(LINK.pine);
+    assert.equal((await decideRows()).length, 1);
+    assert.deepEqual(kicks, []);
+    // …and one with a description is queued for the drainer, and the drainer started.
+    await readOne(LINK.fulton315);
+    rows = await decideRows();
+    assert.deepEqual(rows.map((r) => [r.url, r.status]), [[LINK.chambers, 'dropped'], [LINK.fulton315, 'queued']]);
+    assert.deepEqual(kicks, [`https://site${DRAIN_PATH}`]);
   });
 
 });

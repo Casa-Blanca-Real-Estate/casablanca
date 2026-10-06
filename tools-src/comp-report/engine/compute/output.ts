@@ -118,10 +118,13 @@ export interface CompResultOut {
 
 // ─── Comparability checks (§6.10) ────────────────────────────────────────────
 
-export type CheckCode =
-  | 'same_building' | 'first_floor' | 'private_outdoor_one_side' | 'new_development_vs_resale'
-  | 'property_type_differs' | 'income_restricted' | 'sponsor_unit' | 'sale_age' | 'size_far_off'
-  | 'floor_far_off' | 'distance';
+/** Every check's code, as a value, so code outside the engine can name them (the decision layer, CR-D). */
+export const CHECK_CODES = [
+  'same_building', 'first_floor', 'private_outdoor_one_side', 'new_development_vs_resale',
+  'property_type_differs', 'income_restricted', 'sponsor_unit', 'sale_age', 'size_far_off',
+  'floor_far_off', 'distance',
+] as const;
+export type CheckCode = (typeof CHECK_CODES)[number];
 
 /** A fact a check read: which side, which field, its value, and where it came from. */
 export interface CheckEvidence {
