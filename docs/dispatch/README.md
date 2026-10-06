@@ -74,3 +74,4 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
 | 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Phase 1 and follow-ups merged #56, #59. Next: the zero-retention switch; phase 2 when Kimani's key is in |
 | 11 | [Comp report — distance, from coordinates (CR-3c)](11-comp-report-distance.md) | Mason | Ready |
+| 12 | [Profile pics — the roster, the store, and the email signature](12-profile-pic-tracker.md) | unassigned | **Draft** — written at Kimani's direct ask 2026-10-06, awaiting Casanova |

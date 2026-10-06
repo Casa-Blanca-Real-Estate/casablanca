@@ -100,6 +100,7 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](docs/dispatch/09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
 | 10 | [Comp report — the decision provider, Jev first (CR-D)](docs/dispatch/10-comp-report-decision-provider.md) | Arbiter | Phase 1 and follow-ups merged #56, #59. Next: the zero-retention switch; phase 2 when Kimani's key is in |
 | 11 | [Comp report — distance, from coordinates (CR-3c)](docs/dispatch/11-comp-report-distance.md) | Mason | Ready |
+| 12 | [Profile pics — roster, store, email signature](docs/dispatch/12-profile-pic-tracker.md) | unassigned | **Draft** — awaiting Casanova |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and
