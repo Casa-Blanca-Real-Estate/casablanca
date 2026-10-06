@@ -9,6 +9,7 @@ on Kimani: `docs/comp-report/cr1-setup.md`.
 | `src/` | The browser app — sign-in, reports, the new-comp modal (`views/newcomp/`), the workspace, the assistant chat, admins' access list | CR-1 → CR-3 |
 | `engine/` | The calculation engine and parser — pure TS, runs in the browser and in functions | Abacus (CR-2) |
 | `server/` | Everything the functions run: the access rule, the per-request check, database access, the API handlers, the streamed turn | CR-1 → CR-4 |
+| `server/decide/` | The decision layer: the question registry, Jev's transport, the durable paced queue and its drainer, the Haiku fallback, the verdict (Dispatch 10) | Arbiter (CR-D) |
 | `db/` | Database tests (row-level security, the API, the turn) and the test harness | CR-1 |
 | `workspace/` | The workspace's shared model, in the browser and the functions: stored state → the engine's input, comps from every source, the home from its page, which links can be read | CR-3 |
 | `dev/` | Local development only — the dev API server, stub sign-in, a fake Messages API, a fake Firecrawl, the local migrator. **Never imported by a deployed function.** | CR-1 |
@@ -58,6 +59,10 @@ that can create roles and databases, because each test file makes a throwaway da
 | `CR_LINK_READS_PER_DAY` | Netlify, optional | Links a person may have read in any 24 hours; default 60 (admins at least 200). Each read costs Firecrawl credit |
 | `CR_LOCAL_DATABASE_URL` | local only | Ignored wherever `NETLIFY_DB_URL` exists |
 | `CR_TEST_DATABASE_URL` | tests, CI | A server the tests may create databases on |
+| `CR_JEV_MODE` | Netlify | The decision layer (CR-D): `off` (the default; nothing is queued or sent) or `watch` (judgments recorded, never shown) |
+| `AI_GATEWAY_API_KEY` | Netlify | Casa's own Vercel AI Gateway key, for Jev. Without it, every judgment is recorded as dropped `no-key` |
+| `JEV_MIN_INTERVAL_MS` | Netlify | Pacing between Jev requests; default 12,500 (under the Gateway's ~5 a minute) |
+| `CR_DECIDE_FALLBACK` | Netlify | `haiku` turns on the Claude Haiku 4.5 fallback for when Jev can't answer; default off. Uses `ANTHROPIC_API_KEY` |
 
 Nothing reads `DATABASE_URL`: in the Claude Code cloud environment it's another project's database.
 
