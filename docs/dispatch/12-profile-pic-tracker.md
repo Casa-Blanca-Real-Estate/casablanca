@@ -69,7 +69,7 @@ agents with no phone; one missing the Instagram link; phone formats mixed betwee
 
 | Question | His answer |
 |---|---|
-| Where raws live | **In the store**, not just linked in Drive — so the tool can re-cut an original without him re-uploading |
+| Where raws live | **In the store**, not just linked in Drive — so the tool can re-cut an original without him re-uploading. Extended 2026-10-06: **the Nikon NEF camera files too**, if they can be stored. Big files are fine; Casa pays for the storage if it comes to that |
 | Placements to track | **Gmail signature · Gmail profile pic · FileMaker profile pic · StreetEasy profile · business card** |
 | Process | A dispatch first, Casanova approves, then build in phases |
 
@@ -78,29 +78,35 @@ He did **not** pick the agent site or Instagram as tracked placements. Don't add
 *FileMaker* is a destination this session has no context on beyond the name — treat it as a named
 checkbox, not an integration.
 
-## 4. Where the records live — and why not in the CMS
+## 4. Where the records live — extend the agent CMS
 
-The obvious move is to extend Dispatch 03's `cb-agents` records, which already carry `identity`
-(name, title) and `contact` (phone, email, instagram, linkedin) — exactly what a signature needs.
-**Don't.** Three reasons:
+**Kimani's call, 2026-10-06:** extend Dispatch 03's `cb-agents` records rather than stand up a
+second store. His reasoning, and it's the right one: a photo's placement on FileMaker is not
+sensitive data, and two stores means two things to keep in step forever.
 
-1. **That store is nearly empty.** One record exists (`sam-valk`). The real roster of ~110 lives in
-   the sigs doc and Drive. This dispatch would be seeding someone else's store with someone else's
-   schema.
-2. **Those records publish.** They carry a `draft`/`live` split and a build hook, because they
-   render an agent's public web page. Whether a photo reached FileMaker is operations, not site
-   content, and must never be one bad publish away from the open web.
-3. **Rule 8.** The schema belongs to Dispatch 03.
+This session had drafted the opposite — a separate `cb-agent-pics` store — on the grounds that
+`cb-agents` publishes to the public web. **That objection doesn't survive checking the code.** New
+records are created `status: 'draft'` with `live: null`, and publishing is an explicit `publish`
+action that copies draft to live and pings the build hook. So seeding ~110 agents to track their
+photos does *not* publish ~110 agent sites, and nothing in the pic fields reaches the open web until
+someone deliberately publishes that agent. Verified in `agent-store.mjs` (`STATUSES`, the create
+path, and the `action === 'publish'` branch).
 
-**So: a new store, `cb-agent-pics`, keyed by the same slug** (`firstname-lastinitial`, matching
-`assets/agents/agents.json`). Where a `cb-agents` record exists for the same slug, the pic record
-*reads* identity and contact from it and falls back to its own copy. One slug space, two stores, no
-schema in anyone else's lane. If Casanova would rather merge them later, the slug key makes that a
-migration rather than a rewrite.
+So: **a `pic` group and a `placements` row-set added to the existing record**, same slug space
+(`firstname-lastinitial`, matching `assets/agents/agents.json`).
 
-**PII stays out of the repo.** `publish = "."` serves the repo root, so a seeded roster carrying 110
-direct phone numbers and emails must live in Blobs only — never a committed JSON file, even one on
-the forced-404 list. The 180×180 photos are the single exception in §5.3, and they're public-facing
+Two consequences to handle rather than discover:
+
+1. **This is Dispatch 03's schema.** Rule 8 — Casanova approves the addition, or hands it to whoever
+   owns 03. Don't widen `SPEC` unilaterally.
+2. **It populates an almost-empty store.** `cb-agents` holds one record today (`sam-valk`) against a
+   roster of ~110. Seeding is therefore a bigger act than it looks: it creates the agent CMS's
+   roster as a side effect. That's a *good* outcome — one roster, as Kimani wants — but it should be
+   a deliberate, reviewed, one-time import, not a quiet consequence of a photo tool.
+
+**PII still stays out of the repo.** `publish = "."` serves the repo root, so a seed carrying 110
+direct phone numbers and emails lives in Blobs only — never a committed JSON file, even one on the
+forced-404 list. The 180×180 photos are the single exception in §5.3, and they're public-facing
 headshots.
 
 ## 5. What to build
@@ -135,21 +141,31 @@ Phase 1 ships without a single upload and is already useful: it answers "who sti
 
 ### Phase 2 — storage
 
-5. **Uploads have a hard ceiling.** Netlify functions take **6MB buffered per request, ~4.5MB once
-   base64 overhead is counted**, and his raws run 2–7MB. So either:
-   - **(a) cap on the client** — downscale to ~3000px long edge, re-encode, upload. Simple, always
-     fits, and still 3× the 1080 output. Loses the untouched camera file.
-   - **(b) chunk it** — split client-side under 4MB, function reassembles. Keeps true originals,
-     more code and more failure modes.
-
-   **Recommended: (a) now, (b) only if Kimani says "raw" means the untouched file.** This is the one
-   open question in §7.
-6. **Store the ten outputs** against the record when a generate finishes, so a re-download never
+5. **Two classes of file, and they are not the same thing.**
+   - **Archive originals — the Nikon NEF.** Kimani wants these held so he stops managing them by
+     hand. **No browser can decode a NEF**, so it is an opaque archive: stored, listed, re-downloaded,
+     never previewed or cut out. Don't pretend otherwise in the UI — show it as "original, download
+     only", with its size and capture date if the EXIF is readable without a decoder.
+   - **Working files — the JPEG/PNG exports.** These are what the generator actually reads, and his
+     folders already carry them (`James Campanella 01.jpeg` … `04.png`). A record's working file is
+     the one the cutout re-runs against. An agent can have an archive with no working file, and the
+     roster should say so.
+6. **Chunked upload is now mandatory, not an option.** Netlify functions take **6MB buffered per
+   request, ~4.5MB after base64**. His JPEG/PNG raws run 2–7MB and a NEF runs 20–50MB. So: split
+   client-side into parts under 4MB, upload them in sequence, have the function assemble into one
+   blob, and make the whole thing resumable — a 40MB upload that dies at part 7 of 11 must not start
+   over. **Confirm Netlify Blobs' per-object size limit before building this**; this session could
+   not find it in the public docs, and a cap below 50MB changes the design to a multi-part object.
+7. **Store the ten outputs** against the record when a generate finishes, so a re-download never
    means a re-run. Key them by variant id (`SQ1_GrayLogo`), which is also the Drive folder name.
-7. **Watch the spend before bulk-uploading.** ~110 agents × a few images is 1–2GB. Netlify's pricing
-   page lists bandwidth at 20 credits/GB (≈$0.13/GB); this session **could not confirm Blobs storage
-   allowance or overage** from the public docs — two URLs 404'd. Confirm it against the live pricing
-   page and put the number in the PR before anyone uploads in bulk.
+8. **Put a real number on the spend before bulk-uploading.** With NEFs this is no longer 1–2GB: ~110
+   agents × a few originals at 20–50MB is **10–50GB and growing**. Kimani has said he's fine with
+   that and that Casa will pay if it comes to it — which is a reason to tell him the number, not a
+   reason to skip finding it. Netlify's pricing page lists bandwidth at 20 credits/GB (≈$0.13/GB);
+   this session **could not confirm Blobs storage allowance or overage** — two docs URLs 404'd.
+   Confirm against the live pricing page and put it in the PR.
+9. **Deleting has to be real.** At this size, "remove this raw" must actually free the blob, and the
+   roster needs to show what an agent is costing. Storage nobody can see is storage nobody prunes.
 
 ### Phase 3 — the email signature
 
@@ -183,13 +199,17 @@ Phase 1 ships without a single upload and is already useful: it answers "who sti
 
 ## 7. Open questions
 
-1. **For Kimani — does "raw" mean the untouched camera file, or is a 3000px re-encode fine?**
-   Decides §5.5(a) vs (b). The recommendation is (a).
-2. **For Kimani — is the sigs doc the authority for names, titles, emails and phones, or is there a
-   system of record behind it** (FileMaker?) the seed should read instead?
-3. **For Casanova — reuse `CB_CMS_TOKEN` or mint a second one?** Reuse is less to rotate; a separate
-   token keeps the CMS's blast radius smaller if the profile-pic tool is opened to anyone else.
-4. **For Casanova — does this jump the comp report queue, and who takes it?**
+1. ~~Does "raw" mean the untouched camera file?~~ **Answered 2026-10-06: yes — Nikon NEF, and
+   store them. Big files are fine.** Folded into §5.5–5.8.
+2. ~~Separate store or extend the CMS?~~ **Answered 2026-10-06: extend the CMS.** Folded into §4.
+3. **For Kimani — is the sigs doc the authority for names, titles, emails and phones, or is there a
+   system of record behind it** (FileMaker?) the seed should read instead? This decides whether the
+   one-time import is a parse of a Google Doc or a proper export.
+4. **For Casanova — the §4 schema addition is Dispatch 03's lane (rule 8).** Approve it, or hand the
+   schema change to whoever picks 03 back up.
+5. **For Casanova — reuse `CB_CMS_TOKEN` or mint a second one?** Reuse is less to rotate; separate
+   keeps the CMS's blast radius smaller if the profile-pic tool is ever opened to anyone else.
+6. **For Casanova — does this jump the comp report queue, and who takes it?**
 
 ## 8. Definition of done
 
