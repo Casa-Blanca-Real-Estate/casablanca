@@ -177,20 +177,22 @@ test("an active page: the city and state come from the link's slug when the page
   assert.deepEqual(codes(bare), ['partial_address']);
 });
 
-test('an off-market page is "didn\'t sell": kept, with its last ask, and in no statistic yet', () => {
+test('an off-market page is "didn\'t sell": its own evidence status, on ask basis', () => {
   const { record, warnings } = page('off-market-111-fulton-309', 'https://streeteasy.com/building/111-fulton-street-new_york/309');
   assert.deepEqual(codes({ warnings }), ['off_market']);
-  assert.deepEqual(record.status, { raw: 'No longer available', evidence_class: null, listing_status: 'off_market' });
+  assert.deepEqual(record.status, { raw: 'No longer available', evidence_class: 'off_market', listing_status: 'off_market' });
   // Its status date is the day it came off; its ask and listing date stay.
   assert.deepEqual([record.facts.status_date!.value, record.facts.list_date!.value, record.facts.list_price!.value], ['2026-03-02', '2025-12-04', 625_000]);
   assert.equal(record.facts.maintenance_monthly!.value, 1242);
   const out = compute(input({ comps: [...comps(), { id: record.identity.key!, record: confirmListingRecord(record), tier: 'primary' }] }));
   const c = out.comps.find((x) => x.id === record.identity.key)!;
-  assert.deepEqual([c.flags.off_market, c.flags.unrecognised_status], [true, false]);
-  assert.ok(c.per_result.on_facts.not_included_because.includes("didn't sell: it came off the market unsold, which enters no statistic yet"));
+  assert.deepEqual([c.evidence_class, c.basis, c.flags.off_market, c.flags.unrecognised_status], ['off_market', 'ask', true, false]);
   assert.ok(!out.warnings.some((w) => w.code === 'unrecognised_status' && w.comp_ids.includes(c.id)));
-  // Co-op against a condo report: like for like still applies.
-  assert.ok(c.per_result.on_facts.not_included_because.some((r) => /like for like/.test(r)));
+  // Co-op against a condo report: like for like still applies — the only reason it's out — and the check says so.
+  assert.deepEqual(c.per_result.on_facts.not_included_because, ['a co-op, and this is a condo report — like for like only']);
+  assert.ok(c.checks.some((k) => k.code === 'property_type_differs' && k.suggested_tier === 'excluded'));
+  assert.equal(out.results.on_facts.evidence.off_market.counts.total, 1);
+  assert.equal(out.results.on_facts.evidence.off_market.counts.included, 0);
 });
 
 test('junk from a misread page is refused field by field, the way the export refuses it, and nothing stops', () => {
@@ -281,9 +283,10 @@ test("a typed-in comp is the agent's record: exact unless marked an estimate, an
   // In contract, the date is the contract date too; active, the listing date.
   const inContract = compRecordFromManual({ address: '1 Test Street, New York, NY', status: 'in_contract', price: 900_000, date: 'Mar 1, 2026' }, { as_of: READ_ON }).record;
   assert.deepEqual([inContract.facts.list_price!.value, inContract.facts.status_date!.value, inContract.facts.contract_date!.value], [900_000, '2026-03-01', '2026-03-01']);
-  // Didn't sell: kept, in no statistic yet — the same as from a link.
+  // Didn't sell: its own evidence status, its price the last ask — the same as from a link.
   const offMarket = compRecordFromManual({ address: '1 Test Street, New York, NY', status: 'off_market', price: 625_000 }, { as_of: READ_ON });
-  assert.deepEqual([offMarket.record.status.evidence_class, offMarket.record.status.listing_status, codes(offMarket)], [null, 'off_market', ['off_market']]);
+  assert.deepEqual([offMarket.record.status.evidence_class, offMarket.record.status.listing_status, codes(offMarket)], ['off_market', 'off_market', ['off_market']]);
+  assert.equal(offMarket.record.facts.list_price!.value, 625_000);
   // Junk is refused field by field; no address means no key.
   const junk = compRecordFromManual({ address: '', status: 'active', price: 'soon', area_sqft: 0, floor: 'PH' }, { as_of: READ_ON });
   assert.deepEqual(codes(junk).sort(), ['missing_address', 'unreadable_value', 'unreadable_value', 'unreadable_value']);

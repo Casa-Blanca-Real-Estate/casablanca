@@ -234,11 +234,11 @@ export const FACTORS: readonly FactorDefinition[] = [
 
   // ── Transaction and market ──
   { id: 'recency_market', number: 28, group: 'transaction_market', name: 'Recency and market movement',
-    captures: 'Time since the sale, and how the market moved since. Practice measures from the contract date; v1 has only closing dates for sold comps (§6.5)',
-    data_sources: 'Export dates', applies_to: 'Both',
+    captures: "Time since the sale, and how the market moved since — measured from the contract date where a listing's history gives one, else from closing (§6.5)",
+    data_sources: "Export dates; a listing's history", applies_to: 'Both',
     property_types: both, role: 'adjustment', comparison: 'engine',
     lines: single('Recency and market movement', { shape: 'per_unit', unit: 'percent', per: 'month' }), client_visible: true,
-    note: 'Its magnitude is the market’s movement per month — positive in a rising market, which moves older sales up. v1 limitation: a sold comp\'s Status Date is its closing date, so the months run from closing, not contract, and a sale reads fresher than it was by the contract-to-close lag.' },
+    note: 'Its magnitude is the market’s movement per month — positive in a rising market, which moves older sales up. The export gives a sold comp only its closing date, so an export sale reads fresher than it was by the contract-to-close lag; a listing\'s history supplies the contract date (CR-2.2).' },
   { id: 'sale_conditions', number: 29, group: 'transaction_market', name: 'Sale conditions',
     captures: "Estate, distressed, related-party, off-market, bulk, non-arm's-length",
     data_sources: 'Agent, listing; closing-only records flagged', applies_to: 'Both', property_types: both,
@@ -250,7 +250,7 @@ export const FACTORS: readonly FactorDefinition[] = [
     captures: 'Combined apartments, against the sum of their parts', data_sources: 'Agent', applies_to: 'Both',
     property_types: both, role: 'adjustment', comparison: 'assessment', lines: single('Combination units', pct), client_visible: true },
   { id: 'evidence_status', number: 32, group: 'transaction_market', name: 'Evidence status',
-    captures: 'Sold, in contract, active — not an adjustment; kept apart in every statistic (§6.3)', data_sources: 'Export',
+    captures: "Sold, in contract, active and didn't sell — not an adjustment; kept apart in every statistic (§6.3)", data_sources: "Export; a listing's status or history",
     applies_to: 'Both', property_types: both, role: 'evidence_class', comparison: 'none',
     lines: single('Evidence status', { shape: 'none' }), client_visible: true },
   // 37–39 were added in v0.4 (CR-R) and sit with their group, as in Appendix A.

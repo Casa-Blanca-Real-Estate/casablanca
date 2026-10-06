@@ -14,6 +14,7 @@ import type { CompInput, Tier } from './types.ts';
 export { ENGINE_VERSION, PARSER_VERSION, EXPORT_SCHEMA } from './version.ts';
 export * from './types.ts';
 export type * from './compute/output.ts';
+export type { MarketDateBasis } from './compute/market-date.ts';
 export { compute, EngineInputError, type ComputeOptions } from './compute/index.ts';
 export {
   parseExport, parseCsvExport, parseXlsxExport, ParseError,
@@ -31,11 +32,11 @@ export { compRecordFromManual, type ManualCompFields, type ManualReadOptions, ty
 export { FACTORS, FACTOR_BY_ID, allLines, lineId, magnitudeKeys, type FactorDefinition, type FactorLine, type MagnitudeShape } from './catalog/factors.ts';
 export { INTERACTIONS, interactionPairs, type InteractionDefinition, type InteractionMember, type Relationship } from './catalog/interactions.ts';
 export {
-  loadHouseMethod, productionHouseMethod, HouseMethodError, TestConfigRefusedError, type HouseMethod, type LineMagnitudes,
+  loadHouseMethod, productionHouseMethod, HouseMethodError, TestConfigRefusedError, type CheckThresholds, type HouseMethod, type LineMagnitudes,
 } from './house-method/load.ts';
 export { isTestRuntime } from './house-method/runtime.ts';
-/** For building a subject's facts from listing tags exactly as the parser builds a comp's. */
-export { deriveFromAmenities, deriveFromFeatures, normalizeTag, parkingKind, viewKind } from './parser/derive.ts';
+/** For building a subject's facts from listing tags — and a floor from its unit label — exactly as the parser builds a comp's. */
+export { deriveFromAmenities, deriveFromFeatures, floorFromUnitLabel, normalizeTag, parkingKind, viewKind } from './parser/derive.ts';
 export { FACT_CHECKS } from './facts-schema.ts';
 
 /**

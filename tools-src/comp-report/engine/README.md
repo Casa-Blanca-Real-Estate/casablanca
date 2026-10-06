@@ -10,15 +10,24 @@ moves the instant a comp is toggled) and in Netlify functions (so every stored v
 authoritatively), and both get the same answer — checked: an esbuild bundle in headless Chromium and
 one in Node produce the same output hash.
 
-**Version 0.3.0** — design v0.5, CR-2.2 phase 1: comps from StreetEasy links and typed in. Nothing
-here has been piloted yet.
+**Version 0.4.0** — design v0.5, CR-2.2 phase 2: the engine for a buyer's argument. Didn't sell,
+the mentors' checks, the differences between comps, the price table and the headline's facts.
+Nothing here has been piloted yet.
 
 ---
 
 ## For Kimani and Noble — what it guarantees
 
-- **Sold, in contract and active never share a statistic.** Each has its own $/sqft figures. Only
-  sold comps make the base and the range; asks are shown against them, never averaged in.
+- **Sold, in contract, active and didn't sell never share a statistic.** Each has its own $/sqft
+  figures. Only sold comps make the base and the range; asks are shown against them, never averaged
+  in, and an ask that didn't sell is a ceiling signal.
+- **The mentors' checks suggest; the agent decides.** Kara's rules flag each comp (first floor,
+  outdoor space on one side, a sale past six months …) with a suggested tier and the facts behind
+  it. A flag never changes a tier and never moves a number.
+- **The differences between comps are evidence, never values.** Two comps apart in one factor are a
+  clean pair, and their gap is shown as what that factor adds here. No gap is ever applied.
+- **A headline cites only the headline's facts:** each a number with its provenance, for QA to match.
+  The agent's own number is kept apart from what the assistant sees.
 - **It never returns StreetEasy's blended figures.** StreetEasy's report for 100 Barclay #17L
   headlines "Average sale price $4,535,000" (closed sales and asking prices averaged together) and a
   "$2.2M–$6.0M range" (the cheapest home to the dearest, every status). A test rebuilds both from
@@ -47,8 +56,9 @@ here has been piloted yet.
   as having none, so an agent's terrace value can apply to it. But a listing agent types those tags
   and may leave one out, so the comparison and everything it feeds are marked `approx`.
 
-What it does not do: judge comparability, suggest tiers, read listing text (that's Jev and the
-assistant); co-ops beyond switching $/sqft off everywhere; rent credits, deposits over time,
+What it does not do: set a tier (it suggests, from the mentors' rules), judge what only a person
+can — condition, light, layout — or read listing text (that's Jev and the assistant); co-ops beyond
+switching $/sqft off everywhere; rent credits, deposits over time,
 closing timelines (full offer modelling comes later); any rent or yield figure — the export carries
 no rent data, so the engine cannot produce one.
 
@@ -200,7 +210,11 @@ which returns `{ record, warnings }`.
   `confirmListingRecord(record)` returns a new record with each value `exact`, or `approx` where the
   page marks it approximate or lists none of a kind. A guess beyond the page, such as a penthouse
   from a "PH" label, stays pending.
-- **Nothing missing is guessed.** No floor comes from a unit number, and no size from rooms.
+- **Nothing missing is guessed.** No size comes from rooms. A unit label that reads cleanly as a floor
+  (`10A` → 10, `1004` → 10) gives a floor *suggestion* when the page has none: `inferred`, noted "from
+  the unit label", and pending until the agent confirms it, like the "PH" penthouse suggestion. `G`,
+  `R1`, `PHA` and bare letters give none. The export and a typed-in comp get the same suggestion, so
+  101 Leonard #5B's missing floor now comes with a suggested 5 — still in neither result.
 - **The key is the export's.** A comp added by link and by export is one property. The city and
   state come from the page, or failing that from the link's building slug (`…-new_york/10a` means New
   York, NY). Without either, a `partial_address` warning says the key won't match an export's.
@@ -230,19 +244,21 @@ monthly charges. Values are numbers or text as typed.
 - **`date`** is the closing date (sold), the contract date (in contract, and `contract_date` too), the
   listing date (active, and `list_date` too), or the day it came off the market.
 
-**Didn't sell — not counted yet.** A listing that came off the market unsold (`off_market`) is kept.
-Its `status.listing_status` says so, its `evidence_class` stays null, and it enters no statistic
-until "didn't sell" becomes an evidence status in phase 2 of CR-2.2. The output flags it `off_market`
-and says "didn't sell", not "unrecognised".
+**Didn't sell is the fourth evidence status** (D-23). A listing that came off the market unsold has
+`evidence_class: 'off_market'`, read from a link's status or its history, or typed in. Its price is
+its last ask, and its status date the day it came off. The export doesn't carry it: the export's
+statuses stay sold, in contract and active. A record from parser 0.3.0, which kept it only as
+`status.listing_status`, reads the same.
 
 **New facts from links:**
 - `original_list_price`, `list_date` and `contract_date`
 - `rooms`, where halves are allowed
 - `new_development`, `sponsor_unit` and `income_restricted` (HDFC and the like)
 
-The engine records them and doesn't use them yet; phase 2's checks will. Those three flags are
-"yes" or unknown, never "no" by omission, because a page that doesn't mention sponsorship says
-nothing about it.
+The comparability checks read the three flags, and the recency rules read the contract date. Those
+three flags are "yes" or unknown, never "no" by omission, because a page that doesn't mention
+sponsorship says nothing about it. `coordinates` (`{ lat, lng }`) is a fact for the distance check;
+neither the export nor a page gives it.
 
 ---
 
@@ -278,13 +294,13 @@ A `hypothetical` value is used only in `what_if` mode, where the whole output is
 - **`method`** —
   - `lead: { indicator, reason? }` — which indicator makes the base. Default: the median (unit rate
     for condos), labelled as the default, pending Noble.
-  - `recency: { months } | { since }` — sold comps count only if they closed inside the window,
-    in-contract comps only if they went into contract inside it (`Status Date` is each). Active
-    listings are exempt: an ask is current evidence. A method setting, so it applies to both
-    results; a comp with no date to test is left out and says so. **v1 limitation:** practice
-    measures a sale's recency from its contract date, but the export gives sold comps only their
-    closing date, so v1 reads a sale as fresher than it was by the contract-to-close lag (§6.5).
-    Listing history could supply contract dates later.
+  - `recency: { months } | { since }` — each comp counts only if its market date falls inside the
+    window: a sale's contract date where a listing's history gives one (when the price was agreed),
+    else its closing date; an in-contract comp's contract date; a didn't-sell comp's last day on
+    the market. Active listings are exempt: an ask is current evidence. A method setting, so it
+    applies to both results; a comp with no date to test is left out and says so, and one outside
+    says which date it used. The export gives sold comps only their closing date, so an export sale
+    reads fresher than it was by the contract-to-close lag (§6.5); a comp added by link doesn't.
   - `narrowing: { low?, high?, reason, as_of }` — the agent narrowing the range: a low, a high or
     both. It carries a number, so it's the agent's estimate: "with estimates" only, and it must sit
     inside the comps' bracket.
@@ -355,14 +371,18 @@ field, with its provenance.
 ### `comps[]` — every comp, including excluded ones
 
 - `id`, `identity`, `building_name`, `evidence_class` (the evidence status: `sold`, `in_contract`,
-  `active`), `status_raw`, `basis` (`sale` for sold, `ask` otherwise), `tier`, `tier_reason`,
-  `anchor`.
+  `active`, `off_market` — didn't sell), `status_raw`, `basis` (`sale` for sold, `ask` otherwise),
+  `tier`, `tier_reason`, `anchor`.
 - `flags`: `closing_record`, `approx_area`, `area_missing`, `price_missing`, `floor_missing`,
   `same_building_as_subject`, `same_unit_as_subject`, `property_type_mismatch`,
-  `unrecognised_status`, `outside_recency_window`, `off_market` (didn't sell: in no statistic yet),
+  `unrecognised_status`, `outside_recency_window`, `off_market` (didn't sell),
   `unconfirmed` (a link's row the agent hasn't confirmed: it counts in neither result).
 - `status_date`, `age_days` (to the analysis date), `days_on_market`, `sale_to_ask_percent` (sold
   comps with a last ask: sale ÷ last ask − 1), `engagement`.
+- `market_date` — the date its price speaks for, and which date that is (§6.5): `date`, `basis`
+  (`contract_date` — a sale's where a listing's history gives one, or an in-contract comp's;
+  `closing_date`; `list_date`; `off_market_date`) and `age_days`. On the facts.
+- `checks` — the mentors' comparability checks (§6.10); see below. They never change `tier`.
 - `per_result.on_facts` and `per_result.with_estimates`, each:
   - `included`, `not_included_because` — whether it counts toward this result's statistics, and if
     not, why (tier, status, like for like, recency window).
@@ -372,7 +392,7 @@ field, with its provenance.
   - `comparisons` — factor by factor: `line`, `factor`, `facet`, `name`, `status` (`compared`,
     `unknown`, `pending_confirmation`), `direction`, `degree`, `units` (the difference, signed so
     positive means the comp is worse: subject minus comp for sqft, bedrooms, bathrooms and floors;
-    comp minus subject for $ of monthly carry; the comp's age in months for recency), `unit_label`,
+    comp minus subject for $ of monthly carry; for recency, the comp's age in months from its market date), `unit_label`,
     `source` (`engine`, `jev`, `fallback`, `agent`), `confidence`, `basis` (in words), `missing`
     (each `{ side, field, label }` — exactly what to ask for). Tags compare without regard to case or
     spacing. A judgment's direction wins over the arithmetic's sign for every shape.
@@ -387,17 +407,54 @@ field, with its provenance.
     guesstimate for an agent's value. A comp adjusted to zero or below is left out of the indicators
     (`adjusted_value_not_positive`).
   - `monthly_carry`, `carry_per_sqft` (condos only).
-  - `ask_vs_sold` (in contract and active) — `position` against the sold band (`below`, `within`,
-    `above`) and `versus_sold_median_percent`.
+  - `ask_vs_sold` (in contract, active and didn't sell) — `position` against the sold band (`below`,
+    `within`, `above`) and `versus_sold_median_percent`. For didn't sell, it's a ceiling signal: an
+    ask the market didn't meet.
+
+#### `checks[]` — Kara's rules, as flags (§6.10)
+
+Each check is `code`, `status` (`flagged`, or `unknown` when it can't be told yet), `label` (a few
+words for the row, and a seed for the notes' quick-pick chips), `message`, `suggested_tier`
+(`primary`, `secondary`, `excluded` — the words on the screen are Primary, Secondary, Excluded, D-20
+— or null when the rule only notes something), `suggestion` (in words), `evidence` (each fact it read:
+`side`, `field`, `value`, `source`, `confidence`, `note`), `confidence`, `threshold` (`name`, `value`,
+`unit`, and whose rule it is) and `measured`.
+
+| `code` | Flags a comp when | Suggests |
+|---|---|---|
+| `same_building` | it's in the home's building ("the home itself" for an earlier sale of it) | Primary, and a candidate for the closest comp |
+| `first_floor` | it's on floor 1 or below and the home isn't | Excluded, unless nothing else |
+| `private_outdoor_one_side` | one side has private outdoor space and the other doesn't | Excluded: never compare |
+| `new_development_vs_resale` | one side is marked new development and the other isn't | Excluded |
+| `property_type_differs` | it's a co-op in a condo report, or the reverse | Excluded (it's out of every statistic anyway) |
+| `income_restricted` | one side is marked HDFC or income-restricted and the other isn't | Excluded |
+| `sponsor_unit` | it's a sponsor sale and the home isn't | Secondary, with the note |
+| `sale_age` | its market date is over 3 months old (noted), 6 (old for a comp) or 12 (the market has moved); not active listings | Secondary past 6 months |
+| `size_far_off` | it's more than 25% bigger or smaller than the home | Secondary |
+| `floor_far_off` | it's more than 3 floors from the home's (not a first floor, which has its own flag) | Secondary, with the note |
+| `distance` | it's over ¼ mile away (noted) or over ½ mile (far for Manhattan), from coordinates on both sides | Secondary past ½ mile |
+
+- **Checks read the best value there is,** confirmed or not, so a row is flagged as it lands. A flag
+  resting on a value that waits for the agent's confirm is `inferred`, and its message carries that
+  value's note: *"First floor: a different product — the home is on floor 17 (its floor is inferred:
+  from the unit label 1A — confirm the floor)"*.
+- **A side that doesn't say reads as "not marked".** A resale page never says "resale", so a
+  new-development comp against a home with no mark is flagged "the home isn't marked as one", and
+  `approx`. A lack of outdoor space that rests on a listing naming none is `approx` too.
+- **Distance says so without coordinates.** Neither the export nor a page gives them, so today every
+  comp carries a `distance` check with status `unknown` and a message saying what it needs.
+- **A check never changes a tier or moves a number.** The thresholds come from the house method
+  (below); other thresholds change the flags and nothing else.
 
 ### `results.on_facts` and `results.with_estimates`
 
 - `kind`, `label` ("On the facts", "With estimates").
-- `evidence.sold`, `.in_contract`, `.active` — each: `basis`, `counts` (`total`, `primary`,
-  `secondary`, `excluded`, `included`, `with_unit_rate`), `price_per_sqft` (null for co-ops) and
-  `price` statistics over its included comps. **One class per statistic, always.** In "with
-  estimates", a class whose membership an estimate changed (an estimated sale date moving a comp out
-  of the recency window, say) has its figures marked `guesstimate`.
+- `evidence.sold`, `.in_contract`, `.active`, `.off_market` — each: `basis`, `counts` (`total`,
+  `primary`, `secondary`, `excluded`, `included`, `with_unit_rate`), `price_per_sqft` (null for
+  co-ops) and `price` statistics over its included comps. **One class per statistic, always.** Didn't
+  sell is on ask basis: its last ask. In "with estimates", a class whose membership an estimate
+  changed (an estimated sale date moving a comp out of the recency window, say) has its figures
+  marked `guesstimate`.
 - `indicators.unit_rate` and `indicators.adjusted_price` (§6.3) — each family has `status` (`off` for
   co-ops), `reason`, and three indicators — `median`, `mean`, `anchor` — each with `id`, `label`,
   `status`, `reason`, `per_sqft` (unit-rate family), `implied_value`, `n`, `comp_ids`. Unit-rate
@@ -420,12 +477,50 @@ field, with its provenance.
   sure as the lines it rests on) and, for interactions, `interaction` (relationship, why, members).
   With a median, effects needn't add up to the total.
 - `sale_to_ask` — sale-to-last-ask, a statistic over included sold comps. `days_on_market` — per
-  class; closings excluded. `asks_vs_sold` — `sold_band` (low, median, high sold $/sqft) and, for in
-  contract and active, the class median ask $/sqft and how far it sits from the sold median — all
-  null for co-ops.
+  class; closings excluded. `asks_vs_sold` — `sold_band` (low, median, high sold $/sqft); for in
+  contract, active and didn't sell, the class median ask $/sqft and how far it sits from the sold
+  median; and `ceiling` — the lowest ask that didn't sell (`lowest`, `comp_id`, its `position`
+  against the sold band, `versus_sold_median_percent`), the tightest ceiling signal. All null for
+  co-ops.
 - `carry` — `subject`, `subject_per_sqft`, `comp_median`, `comp_median_per_sqft`, `comp_ids`,
   `subject_vs_median_percent`. Carry isn't price evidence, so the median runs across all statuses.
   The per-sqft figures are null for co-ops.
+- `price_table` (§6.5) — the home's price at $/sqft steps across the range, as in Frankie's email:
+  `rows` (each `per_sqft` and `price` as Figures, `kind` — `comp`, `step` or `range_end` — and
+  `comp_ids`), `increment`, `low`, `high`, `subject_area`, `basis`. The steps are the primary sold
+  comps' own $/sqft, which include both ends of the range, and round steps between them. The round
+  step is the largest of $5, $10, $20, $25, $50, $100, $200, $250, $500 … that's no more than 2.5% of
+  the low end ($20 at $880, as Frankie steps). It widens until at most ten steps fall inside, and
+  narrows until at least two do. Each row's price is the home's size × the step, so a comp's row is
+  its implied value, and the first and last rows are the range. With the agent's narrowing ("with
+  estimates"), the table spans the narrowed range and its ends are `range_end` rows. When the lead is
+  an adjusted price, it spans the same comps' $/sqft and says so. `price_table_unavailable_because`
+  when there's none: a co-op, no interior size for the home, fewer than two primary sold comps with a
+  $/sqft, or all at one rate.
+- `pairs` (§6.6) — the differences between comps. Evidence only: nothing here moves a number.
+  - `pairs[]` — every included comp against every other of its status, sold first, then in contract,
+    active and didn't sell. Each: `evidence_class`, `basis`, `higher` and `lower` (by $/sqft where
+    both have one, else by price: `ordered_by`), `price_gap` and `price_per_sqft_gap` (the higher
+    less the lower, as Figures), `same_building`, `months_apart` (between their market dates),
+    `differences` (each `line`, `factor`, `facet`, `name`, `direction` — `higher_better`,
+    `lower_better`, `differs` — `difference` for numeric lines as the higher's value less the
+    lower's, `unit_label`, `confidence`, `basis` naming both comps), `alike`, `unknown` (lines one
+    side lacks the data for, with what's missing), `clean`, `isolates` and `not_clean_because`.
+  - **Clean** means one factor differs, or only the members of one A.5 overlap group — floor and
+    views, say, or a penthouse with its floor, outdoor space and views. Two comps in one building
+    share its building and location factors, so those lines are alike for them however the listings'
+    tags were typed. Sales within the house method's "old for a comp" months (6) of each other aren't
+    counted apart in time; past that, time is a difference. Active asks are never apart in time. A
+    pair where nothing the engine compares differs isn't clean: its gap lies in what it can't
+    compare.
+  - `clean_pair_evidence[]` — per status and per factor or group: `n`, `pairs`, `per_sqft_gap` and
+    `price_gap` (`n`, `median`, `min`, `max`) from the side with more or better of it, `undirected`
+    (pairs where which side is better takes a judgment), and `summary` — *"Outdoor space: about
+    $150/sq ft, from 1 clean pair"*. For time, the gap is the later sale less the earlier: the
+    market's movement.
+  - `not_compared` — the factor lines only a judgment compares (condition, layout, light …): every
+    judgment is of a comp against the home, so pairs can't compare them, and a clean pair is clean
+    on the facts. `note` says all this in a sentence.
 - `estimates_used` — ("with estimates") every agent estimate this result used — stated
   guesstimates, agent adjustment values, rough judgments, the narrowing — each `{ kind, id, target,
   what, note }`. This is what client copy must disclose when it uses this result (§9.5). It lists an
@@ -433,6 +528,38 @@ field, with its provenance.
   figure, and an agent's adjustment value only where it's applied (not superseded by a substitute)
   and counts toward the lead's family — an interior-size value, which a unit-rate lead sets aside,
   isn't listed.
+
+### `headline_facts.on_facts` and `headline_facts.with_estimates` (§10.2)
+
+The only figures a headline may cite, per result. The report builds to one sentence — *"The three
+closest sales put #517 at $880–$925 a square foot — about $640K–$670K"* — and QA's numeric grounding
+(CR-5) matches every number in it against this set.
+- `facts[]` — each one number: `id` (stable, for QA to cite), `label`, `value`, `unit` (a Figure's
+  units, and `count`), `source` (`engine`, or the input's own — the home's size is `agent` or
+  `listing`), `as_of`, `confidence`, `derivation`, `comp_ids`. The ids:
+  - `range.low`, `range.high` (prices) and `range.low_per_sqft`, `range.high_per_sqft` (the end
+    comps' $/sqft, or a narrowed end ÷ the home's size); `range.comps` — the sales the range spans
+  - `base`, `base.per_sqft`
+  - `sold.count` — the primary sales in the numbers
+  - `anchor.price`, `anchor.per_sqft`, `anchor.implied` — the closest comp, when the agent has
+    marked it
+  - by status, for each with comps in the numbers: `<status>.count` (in contract, active, didn't
+    sell), `.median_per_sqft`, `.median_price`, `.median_days_on_market`; `sold.median_sale_to_ask`;
+    `<status>.vs_sold_median` for the asks; and `off_market.lowest_per_sqft`,
+    `off_market.lowest_price` — the lowest ask that didn't sell
+  - `home.area_sqft`, `home.ask` — the home itself, when known
+- `agent_number` — where the agent's number sits, kept apart because the assistant never sees it
+  while it helps with the neutral valuation (§8.4): `position` against the range (`below`,
+  `overlaps_low`, `within`, `overlaps_high`, `above`, `spans`) and `facts` — `agent.low`,
+  `agent.high` (source `agent`, from the named prices of kind `call`) and, outside the range,
+  `agent.below_range_by` or `agent.above_range_by`. Null without a call.
+- `names` — the home and every comp a fact rests on, by `address` and `unit`, so "#517" or "200
+  Chambers" in a headline isn't taken for a figure.
+- `missing` — what a headline can't say yet, and why: no range, no base, no closest comp.
+
+Every engine figure among them (all but the counts) is one the output already carries, so it traces
+to its derivation. Facts hold exact values; a headline shows $/sqft truncated and prices rounded
+("about $640K"), which is presentation (§6.1) and for QA's matching to allow.
 
 ### `divergence`
 
@@ -588,8 +715,24 @@ a null slot for each, and the loader refuses a non-null one rather than ignore i
 `house-method/production.json` — one versioned file for every magnitude, weight, bound and
 threshold: a `lines` entry per factor line (`"floor"`, `"floor.neighbours"`, `"beds_baths.bedrooms"`,
 `"finishes_systems.laundry"` …) with its shape's slots plus `min_percent` / `max_percent`;
-`interactions`; and `decision_thresholds` for Jev (§7.1 — the app's, not the engine's). **In
-production every value is null.**
+`interactions`; `decision_thresholds` for Jev (§7.1 — the app's, not the engine's); and
+`check_thresholds` for the comparability checks. **In production every valuation value is null.**
+
+**The check thresholds are configuration, not valuation magnitudes,** so the no-invented-numbers rule
+doesn't cover them (Dispatch 08). A check decides when a flag shows; it suggests a tier and never
+moves a number or a tier. So they carry defaults, load without Noble's sign-off, and don't count
+against `all_null`. Each says whose rule it is:
+
+| Setting | Default | Basis |
+|---|---|---|
+| `sale_age_months` | noted past 3, old past 6, the market has moved past 12 | Kara's rule, pending Noble |
+| `size_percent` | 25 | Kara's rule, pending Noble |
+| `floor_band_floors` | 3 | Frankie's band (floors 2–8 around a 5th-floor home), pending Noble |
+| `distance_miles` | noted past 0.25, far past 0.5 | Kara's rule, pending Noble |
+
+Kara gave no floor band, so the default is the one Frankie's email uses. The loader refuses a
+threshold that's missing, isn't a positive number (whole for months and floors), is out of order
+(noted < old < market moved; noted < far), or has no basis.
 
 - `loadHouseMethod(json)` validates it against the catalog — every line present, only its shape's
   slots, magnitudes non-negative (the direction of a difference supplies the sign; only the market's
@@ -633,15 +776,16 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
 
 ## Versioning and determinism
 
-- `ENGINE_VERSION` (0.3.0) — bump when any output could change for the same input.
-  `PARSER_VERSION` (0.3.0) — bump when any parsed record could change; every import records it.
+- `ENGINE_VERSION` (0.4.0) — bump when any output could change for the same input.
+  `PARSER_VERSION` (0.4.0) — bump when any parsed record could change; every import records it.
   `PROPERTY_KEY_VERSION` (`pk1`) — bump when key rules change. The house method has its own
   `version`, and its `hash`.
 - **Deterministic**: comps are processed in id order; statistics sum in that order; object keys
   serialise in code-unit order; strings never compare by locale. The engine uses only +, −, ×, ÷,
-  comparisons and rounding — operations IEEE 754 pins exactly. `Math.pow`, `**`, `exp` and `log` are
-  left to each JavaScript engine to approximate, so they're not used (integer powers are by
-  repeated squaring). A purity test reads the engine's source — Node strips the types, a small
+  comparisons, rounding and square roots — operations IEEE 754 pins exactly. `Math.pow`, `**`,
+  `exp`, `log` and the trigonometric functions are left to each JavaScript engine to approximate, so
+  they're not used: integer powers are by repeated squaring, and the distance check's cosine is its
+  Taylor series. A purity test reads the engine's source — Node strips the types, a small
   lexer sets comments, strings and regular expressions aside — and fails on any clock, network, DOM,
   randomness, locale or engine-dependent maths, or any import from outside this folder.
 - Money rounds half away from zero, once per line or figure.
@@ -711,9 +855,13 @@ answers, every percentage is of the comp's own sale price and the lines add.
    with private storage. The amenities side is its general line, because shared outdoor space has its
    own row.
 
-### New in CR-2.2 (phase 1) — for Casanova to confirm or change
+### New in CR-2.2 (phase 1) — confirmed on #55
 
-1. **"Didn't sell" waits for phase 2 to become an evidence status.** An evidence status comes with
+Casanova confirmed all five as built. His answers to the two questions are built in phase 2: a floor
+from a unit label (6, below), and recency from the contract date. Item 1 is superseded by D-23 (A):
+didn't sell is now the fourth evidence status.
+
+1. **"Didn't sell" waited for phase 2 to become an evidence status.** An evidence status comes with
    its own statistics and its place against the sold band. Until then a link's or a typed-in
    `off_market` comp keeps `evidence_class` null, carries `status.listing_status: 'off_market'`, and
    the output says "didn't sell". This keeps phase 1 additive for Mason: no new key in any
@@ -731,9 +879,92 @@ answers, every percentage is of the comp's own sale price and the lines add.
    - city, state, ZIP and neighborhood, which the key needs
    - sponsor-unit and income-restricted flags, which phase 2's checks need
    - a separate "size approximate" flag, since a page's "~" can be an icon
-6. **No floor from a unit label.** "10A" is often the tenth floor, but the page must say so.
-   Suggesting it as an inferred value for the agent to confirm, like "PH", would give phase 2's floor
-   checks more to work on. Your call.
+6. **A floor from a unit label: yes, as a suggestion** (answered on #55, built in phase 2).
+
+### New in CR-2.2 (phase 2) — for Casanova to confirm or change
+
+**Didn't sell**
+1. **It's `evidence_class: 'off_market'`,** the design's field for the evidence status, on ask basis
+   (its last ask). It has its own statistics, days on market and class median against the sold
+   median, and never enters the base or the range.
+2. **The ceiling signal is the lowest ask that didn't sell,** set against the sold band
+   (`asks_vs_sold.ceiling`). Each didn't-sell comp's `ask_vs_sold` places it too. The lowest is the
+   tightest ceiling: even at that ask, the market didn't pay.
+3. **A recency window covers didn't sell, by the day it came off the market.** An active ask is
+   current evidence; one that came off a year ago isn't. The sale-age check reads the same date.
+4. **The export still has three statuses.** "Temporarily Off Market" stays unrecognised: a
+   listing paused isn't one that didn't sell. A record from parser 0.3.0 that kept didn't sell as its
+   listing status only reads as didn't sell.
+
+**The checks**
+5. **Checks read the best value of each fact, whatever its confidence,** and aren't per result. A
+   flag should show as a row lands, before the agent confirms anything, so a flag resting on an
+   inferred value (a floor from "1A", a link's unconfirmed row) is `inferred` and carries its note,
+   as you asked for "1A".
+6. **"Not marked" counts as not.** New development and HDFC are flagged when one side is marked and
+   the other isn't, since a resale page never says "resale". Resting on an unmarked side, the flag is
+   `approx` and says "isn't marked as one". A new-development home flags every unmarked comp for the
+   agent to check.
+7. **Co-op against condo reads the report's type,** the same like-for-like rule that keeps such a comp
+   out of every statistic.
+8. **The floor band's default is Frankie's ±3 floors** (his 2–8 around #517's fifth). Kara gave no
+   number; the dispatch gave none either. It's labelled as his.
+9. **A first floor is the floor at 1 or below,** and it isn't also flagged "floor far off".
+10. **A sale's age is in calendar months from its market date**: sold, in contract and didn't sell,
+    never active. "Noted" (past 3 months) suggests no tier; past 6 and 12, Secondary.
+11. **Distance needs a `coordinates` fact on both sides,** new in this phase and supplied by neither
+    source today, so every comp carries a `distance` check with status `unknown` that says so. With
+    coordinates, it's a flat-earth distance whose cosine is a Taylor series, so every runtime agrees.
+12. **The suggested tiers are the table's, in D-20's words:** Counts → Primary, Context → Secondary,
+    Leave out → Excluded.
+
+**Pairs**
+13. **Pairs are per result,** since which comps are included, and their facts, can differ.
+14. **Only facts are compared.** Every judgment is of a comp against the home, so condition, layout,
+    light and the other judgment factors aren't compared between comps; `not_compared` lists them.
+    Deriving comp-against-comp from two judgments against the home is possible later.
+15. **Two comps in one building share its building and location factors.** Without this, a pair
+    of units in one building would never be clean, because listing agents type the building's tags
+    differently and charges differ from floor to floor.
+16. **Time counts past "old for a comp."** Two sales more than 6 months apart (Kara's threshold,
+    reused) differ in time; within it, `months_apart` is shown and not counted. Otherwise every pair
+    would differ in time. Active asks are never apart in time.
+17. **What a clean pair isolates:** one catalog factor (its lines together: bedrooms and bathrooms
+    are one factor), or a subset of one overlap row. A hub's subset must include the hub factor:
+    floor with outdoor space isn't the penthouse bundle unless unit type differs too.
+18. **Unknown lines don't break a clean pair;** each pair lists them. A pair where nothing compared
+    differs isn't clean: its gap lies in what the engine can't compare.
+19. **A pair is ordered by $/sqft where both comps have one,** else by price. The clean-pair
+    evidence is signed from the side with more or better of the factor, or, for time, later less
+    earlier. A difference without a direction ("differs") counts as undirected.
+
+**The price table and the headline**
+20. **The price table's round step is presentation, not a house-method setting.** It's the largest
+    of $5, $10, $20, $25, $50, $100 … up to 2.5% of the low end, with between two and ten steps.
+    That reproduces Frankie's $20 steps at $880, and a test rebuilds his five rows for #517 exactly.
+21. **The table spans the range in $/sqft.** A comp's row is its implied value, so the first and last
+    rows are the range. It follows the agent's narrowing in "with estimates".
+22. **Headline facts are a flat list of numbers with stable ids,** per result, plus the names a
+    headline may use. Counts have the unit `count`, and a fact taken from an input (the home's size
+    or ask, the anchor's sale price) keeps that input's source.
+23. **The agent's number sits apart from the facts** (`agent_number`), because §8.4 keeps it from the
+    assistant while it drafts. QA can still match it, since it's agent-stated.
+24. **The closest comp is the one the agent marks.** The engine never picks an anchor; without one,
+    `missing` says so.
+
+**Recency from the contract date** (your answer on #55)
+25. **A sale is dated from its contract where a listing's history gives one,** else from closing.
+    That covers the recency window, the market-movement comparison, the sale-age check and pairs.
+    `market_date` says which date each comp used. Hannah's export has no contract dates for sales, so
+    her figures don't move.
+
+**Mason's side**
+26. **Two one-line type fixes in Mason's code:** `EVIDENCE_LABEL` gains `off_market: "Didn't sell"`,
+    and Sort's order puts didn't sell fourth. Without them his type check fails once `EvidenceClass`
+    has four members. His Reveal screen still shows three statuses until his Dispatch 09 phase 2.
+27. **His database needs a migration** before his link import stores a didn't-sell comp:
+    `report_comps.evidence_class` is checked against `sold`, `in_contract` and `active`. The export
+    never yields `off_market`, so nothing breaks today.
 
 ---
 
@@ -763,12 +994,18 @@ engine/
     index.ts            compute(): both results, assembled
     validate.ts         input validation
     facts.ts            which value each result uses
-    compare.ts          comp against subject, factor by factor
+    compare.ts          comp against subject (or comp against comp), factor by factor
     adjust.ts           comparisons into dollars; interactions
     results.ts          indicators, base, range, bridge, market signals
+    checks.ts           the mentors' comparability checks (§6.10)
+    pairs.ts            the differences between comps, and clean pairs (§6.6)
+    price-table.ts      the home's price at $/sqft steps (§6.5)
+    headline.ts         the headline's facts (§10.2)
+    market-date.ts      the date a comp's price speaks for — contract, else closing
     money.ts            carry, price evaluation, monthly cost, deal terms
+    figure.ts, labels.ts  figures with provenance; how a property is named
     output.ts           the output's types
   util/                 dates without Date, canonical JSON, SHA-256, UTF-8, arithmetic
-  test/                 144 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
+  test/                 166 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
                         six listing extracts (listings/), and the test-only house method
 ```

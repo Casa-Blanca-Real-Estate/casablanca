@@ -3,9 +3,11 @@
 // browser and in a Netlify function.
 //
 // It runs the analysis twice — "on the facts" and "with estimates" (§6.4) —
-// and assembles every comp, both results, where they diverge, the price
-// evaluations, the monthly cost estimate and the deal terms, with every gap,
-// warning and pending confirmation called out rather than assumed.
+// and assembles every comp with its comparability checks, both results with
+// their price tables and pairs, the headline's facts, where the results
+// diverge, the price evaluations, the monthly cost estimate and the deal terms,
+// with every gap, warning and pending confirmation called out rather than
+// assumed.
 
 import { FACTOR_BY_ID } from '../catalog/factors.ts';
 import { assertUsable, productionHouseMethod, type HouseMethod } from '../house-method/load.ts';
@@ -15,10 +17,14 @@ import { addMonths, daysBetween, type IsoDate } from '../util/dates.ts';
 import { compareStrings, roundHalfAway } from '../util/numbers.ts';
 import { sha256Tag } from '../util/sha256.ts';
 import { ENGINE_VERSION } from '../version.ts';
-import type { CompInput, EngineInput, EvidenceClass, PropertyFacts, PropertyType, Sourced, StatedFact } from '../types.ts';
+import type { CompInput, CompRecord, EngineInput, EvidenceClass, PropertyFacts, PropertyType, Sourced, StatedFact } from '../types.ts';
 import { adjustmentLines, resolveLines } from './adjust.ts';
+import { compChecks } from './checks.ts';
 import { compareComp, monthlyCarry } from './compare.ts';
-import { resolveFacts, weakest, type ResolvedFacts } from './facts.ts';
+import { bestFacts, resolveFacts, weakest, type ResolvedFacts } from './facts.ts';
+import { headlineFacts } from './headline.ts';
+import { propertyLabel } from './labels.ts';
+import { describeMarketDate, marketDate } from './market-date.ts';
 import { dealTerms, evaluatePrices, monthlyCosts } from './money.ts';
 import { adjustmentConfidence, buildResult, figure, type CompState } from './results.ts';
 import { EngineInputError, validateInput } from './validate.ts';
@@ -42,9 +48,15 @@ const TYPE_WORDS: Record<PropertyType, string> = {
 };
 
 function label(c: CompInput): string {
-  const street = c.record.identity.address.street;
-  const unit = c.record.identity.unit.raw;
-  return street ? `${street}${unit ? ` ${unit.startsWith('#') ? unit : `#${unit}`}` : ''}` : c.id;
+  return propertyLabel(c.record.identity, c.id);
+}
+
+/**
+ * A record's evidence status. Parser 0.3.0 read "didn't sell" before it was
+ * one, and recorded it only as the listing status; such a record reads the same.
+ */
+function evidenceOf(record: CompRecord): EvidenceClass | null {
+  return record.status.evidence_class ?? (record.status.listing_status === 'off_market' ? 'off_market' : null);
 }
 
 function statedFor(stated: readonly StatedFact[], target: 'subject' | string): StatedFact[] {
@@ -108,24 +120,21 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       const resolved = resolveFacts(c.id, c.record.facts, statedFor(stated, c.id), ctx, c.record.suggestions ?? []);
       compResolved[kind].set(c.id, resolved);
       const facts = resolved.facts as Partial<PropertyFacts>;
-      const cls = c.record.status.evidence_class;
+      const cls = evidenceOf(c.record);
       const reasons: string[] = [];
       if (c.tier !== 'primary') reasons.push(c.tier === 'secondary' ? 'tiered secondary' : `excluded${c.tier_reason ? `: ${c.tier_reason}` : ''}`);
       if (c.record.listing && !c.record.listing.confirmed) reasons.push('read from its StreetEasy page, and waits for the agent to confirm it');
-      if (!cls) {
-        reasons.push(c.record.status.listing_status === 'off_market'
-          ? "didn't sell: it came off the market unsold, which enters no statistic yet"
-          : `status "${c.record.status.raw ?? ''}" isn't sold, in contract or active`);
-      }
+      if (!cls) reasons.push(`status "${c.record.status.raw ?? ''}" isn't one the engine reads: sold, in contract, active or didn't sell`);
       const type = facts.property_type?.value;
       if (type && type !== reportType) reasons.push(`a ${TYPE_WORDS[type]}, and this is a ${TYPE_WORDS[reportType]} report — like for like only`);
-      // A recency window covers sold comps by their closing date and in-contract comps by their
-      // contract date (Status Date is each). Active listings are exempt: an ask is current evidence.
-      if ((cls === 'sold' || cls === 'in_contract') && windowStart) {
-        const date = facts.status_date?.value as string | undefined;
-        const what = cls === 'sold' ? { date: 'sale date', did: 'sold' } : { date: 'contract date', did: 'went into contract' };
-        if (!date) reasons.push(`no ${what.date} to test against the recency window`);
-        else if (date < windowStart) reasons.push(`${what.did} ${date}, before the recency window opens (${windowStart})`);
+      // A recency window covers each comp by the date its price speaks for: a sale's contract date where
+      // a listing's history gives one, else its closing date; an in-contract comp's contract date; a
+      // didn't-sell comp's last day on the market. Active listings are exempt: an ask is current evidence.
+      if (cls && cls !== 'active' && windowStart) {
+        const when = marketDate(facts, cls);
+        const none = { sold: 'sale date', in_contract: 'contract date', off_market: 'date it came off the market' }[cls];
+        if (!when) reasons.push(`no ${none} to test against the recency window`);
+        else if (when.date < windowStart) reasons.push(`${describeMarketDate(when)}, before the recency window opens (${windowStart})`);
       }
       const price = (cls === 'sold' ? facts.sale_price : facts.list_price) as Sourced<number> | undefined;
       const area = facts.area_sqft as Sourced<number> | undefined;
@@ -180,8 +189,14 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
         if (s.evidence_class && s.included !== statesByKind.on_facts[idx]!.included) estimateAffected.add(s.evidence_class);
       });
     }
-    results[kind] = buildResult(states, { kind, asOf, reportType, method, subjectFacts: subjectFacts[kind], estimates, estimateAffected }, warnings);
+    results[kind] = buildResult(states, {
+      kind, mode, asOf, reportType, method, thresholds: houseMethod.check_thresholds, subjectFacts: subjectFacts[kind], estimates, estimateAffected,
+    }, warnings);
   }
+
+  // The best value of every fact, confirmed or not, for the comparability checks (§6.10): a flag
+  // shows as a row lands, and says when it rests on a value awaiting the agent's confirm.
+  const subjectBest = bestFacts(input.subject.facts, statedFor(stated, 'subject'), mode) as Partial<PropertyFacts>;
 
   // ── Comps ──
   const compsOut: CompOut[] = comps.map((c, i) => {
@@ -235,13 +250,20 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
     const sale = facts.sale_price as Sourced<number> | undefined;
     const ask = facts.list_price as Sourced<number> | undefined;
     const type = facts.property_type?.value;
+    const cls = evidenceOf(c.record);
+    const when = marketDate(facts, cls);
+    const checks = compChecks(
+      { identity: input.subject.identity, facts: subjectBest },
+      { identity: c.record.identity, facts: bestFacts(c.record.facts, statedFor(stated, c.id), mode, c.record.suggestions ?? []) as Partial<PropertyFacts> },
+      { reportType, asOf, thresholds: houseMethod.check_thresholds, evidenceClass: cls },
+    );
     return {
       id: c.id,
       identity: c.record.identity,
       building_name: c.record.building_name,
-      evidence_class: c.record.status.evidence_class,
+      evidence_class: cls,
       status_raw: c.record.status.raw,
-      basis: c.record.status.evidence_class === null ? null : c.record.status.evidence_class === 'sold' ? 'sale' : 'ask',
+      basis: cls === null ? null : cls === 'sold' ? 'sale' : 'ask',
       tier: c.tier,
       tier_reason: c.tier_reason ?? null,
       anchor: c.anchor ?? false,
@@ -254,15 +276,17 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
         same_building_as_subject: sameBuilding(input.subject.identity, c.record.identity),
         same_unit_as_subject: sameUnit(input.subject.identity, c.record.identity),
         property_type_mismatch: Boolean(type && type !== reportType),
-        unrecognised_status: c.record.status.evidence_class === null && c.record.status.listing_status !== 'off_market',
+        unrecognised_status: cls === null,
         outside_recency_window: onFacts.not_included_because.some((r) => r.includes('recency window')),
-        off_market: c.record.status.listing_status === 'off_market',
+        off_market: cls === 'off_market',
         unconfirmed: Boolean(c.record.listing && !c.record.listing.confirmed),
       },
       status_date: statusDate ?? null,
       age_days: statusDate ? daysBetween(statusDate, asOf) : null,
+      market_date: when ? { date: when.date, basis: when.basis, age_days: daysBetween(when.date, asOf) } : null,
+      checks,
       days_on_market: (facts.days_on_market?.value as number | undefined) ?? null,
-      sale_to_ask_percent: sale && ask && c.record.status.evidence_class === 'sold'
+      sale_to_ask_percent: sale && ask && cls === 'sold'
         ? figure((sale.value / ask.value - 1) * 100, 'percent', weakest(sale.confidence, ask.confidence), '(sale price ÷ last asking price − 1) × 100', asOf)
         : null,
       engagement: c.record.engagement,
@@ -288,7 +312,7 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       warnings.push({ code: 'property_type_mismatch', message: `${name} isn't a ${reportType === 'coop' ? 'co-op' : 'condo'}, so it's kept out of every statistic — like for like only`, comp_ids: [c.id], results: [...KINDS] });
     }
     if (c.flags.unrecognised_status) {
-      warnings.push({ code: 'unrecognised_status', message: `${name}'s status "${c.status_raw ?? ''}" isn't sold, in contract or active, so it can't enter any statistic`, comp_ids: [c.id], results: [...KINDS] });
+      warnings.push({ code: 'unrecognised_status', message: `${name}'s status "${c.status_raw ?? ''}" isn't one the engine reads (sold, in contract, active or didn't sell), so it can't enter any statistic`, comp_ids: [c.id], results: [...KINDS] });
     }
     if (c.anchor && c.evidence_class !== 'sold') {
       warnings.push({ code: 'anchor_not_sold', message: `${name} is marked the anchor, but the anchor must be a sold comp`, comp_ids: [c.id], results: [...KINDS] });
@@ -434,6 +458,10 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
     },
     comps: compsOut,
     results,
+    headline_facts: {
+      on_facts: headlineFacts(results.on_facts, { kind: 'on_facts', asOf, reportType, subject: { identity: input.subject.identity, facts: subjectFacts.on_facts }, comps: compsOut, prices: input.prices ?? [] }),
+      with_estimates: headlineFacts(results.with_estimates, { kind: 'with_estimates', asOf, reportType, subject: { identity: input.subject.identity, facts: subjectFacts.with_estimates }, comps: compsOut, prices: input.prices ?? [] }),
+    },
     divergence,
     prices,
     monthly_cost: input.financing ? monthlyCosts(input.financing, input.prices ?? [], results, subjectFacts, reportType) : null,

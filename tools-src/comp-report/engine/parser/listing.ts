@@ -19,11 +19,11 @@ import { isIsoDate, parseMonthNameDate, type IsoDate } from '../util/dates.ts';
 import { compareStrings } from '../util/numbers.ts';
 import { PARSER_VERSION } from '../version.ts';
 import type {
-  CompRecord, Confidence, EvidenceClass, FactField, ListingEvent, ListingStatus, PropertyFacts, Sourced,
+  CompRecord, Confidence, FactField, ListingEvent, ListingStatus, PropertyFacts, Sourced,
 } from '../types.ts';
 import { ParseError, type ParseWarning } from './errors.ts';
 import { identify, normalizeCity, parseAddressLine, parseStreetEasyUrl } from './property-key.ts';
-import { LISTING_TAG_NAMES, penthouseSuggestion, tagFacts } from './tag-facts.ts';
+import { LISTING_TAG_NAMES, tagFacts, unitLabelSuggestions } from './tag-facts.ts';
 import {
   isBlank, readArea, readCount, readDate, readFloor, readHalfCount, readMoney, readPropertyType, readTags, type Read,
 } from './values.ts';
@@ -205,11 +205,8 @@ function statusFromHistory(history: readonly ListingEvent[]): ListingStatus | nu
   return status;
 }
 
-const EVIDENCE: Record<ListingStatus, EvidenceClass | null> = {
-  sold: 'sold', in_contract: 'in_contract', active: 'active',
-  // "Didn't sell" isn't an evidence status yet (§6.3; CR-2.2 phase 2), so it enters no statistic.
-  off_market: null,
-};
+/** What a "didn't sell" comp is, said the same way wherever a parser meets one (§6.3). */
+export const DIDNT_SELL = 'a "didn\'t sell" comp — its last ask is evidence on ask basis, kept apart from sales, and a ceiling signal';
 
 const STATUS_WORDS: Record<ListingStatus, string> = {
   sold: 'sold', in_contract: 'in contract', active: 'active', off_market: 'off the market unsold',
@@ -326,7 +323,7 @@ export function compRecordFromListing(extract: unknown, options: ListingReadOpti
     warnings.push({ code: 'unrecognised_status', column: 'status', message: label ? `status "${label}" isn't sold, in contract, active or off the market` : 'the page gave no status, and its history doesn\'t settle one' });
   }
   if (status === 'off_market') {
-    warnings.push({ code: 'off_market', message: 'it came off the market without selling: kept as a "didn\'t sell" comp, which enters no statistic yet' });
+    warnings.push({ code: 'off_market', message: `it came off the market without selling: ${DIDNT_SELL}` });
   }
 
   // ── Facts: inferred until the agent confirms ──
@@ -441,21 +438,15 @@ export function compRecordFromListing(extract: unknown, options: ListingReadOpti
   if (closing) {
     warnings.push({ code: 'closing_record', message: 'a public-record closing: no asking price, days on market, features or amenities' });
   }
-  const suggestions: CompRecord['suggestions'] = [];
-  const penthouse = penthouseSuggestion(identity.unit.raw, facts.unit_type?.value);
-  if (penthouse) {
-    suggestions.push({
-      field: 'unit_type',
-      value: { value: penthouse, source: 'listing', as_of: asOf, confidence: 'inferred', note: `the unit label ${identity.unit.raw} suggests a penthouse — confirm` },
-    });
-  }
+  // Guesses beyond the page — a penthouse from "PH", a floor from "10A" — wait for their own confirm.
+  const suggestions = unitLabelSuggestions(identity.unit.raw, facts, 'listing', asOf);
 
   const description = typeof ex['description'] === 'string' ? ex['description'].trim() : '';
   const record: CompRecord = {
     identity,
     status: {
       raw: label || (status ? `(from the listing's history) ${STATUS_WORDS[status]}` : null),
-      evidence_class: status ? EVIDENCE[status] : null,
+      evidence_class: status,
       listing_status: status,
     },
     facts,

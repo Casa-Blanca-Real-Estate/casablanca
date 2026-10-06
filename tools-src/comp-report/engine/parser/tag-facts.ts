@@ -6,8 +6,8 @@
 // agent types the tags and may leave one out, so the caller records it as
 // approximate.
 
-import type { FactField, UnitTypeTag } from '../types.ts';
-import { deriveFromAmenities, deriveFromFeatures, unitLabelSuggestsPenthouse } from './derive.ts';
+import type { CompRecord, FactField, IsoDate, PropertyFacts, Source, UnitTypeTag } from '../types.ts';
+import { deriveFromAmenities, deriveFromFeatures, floorFromUnitLabel, unitLabelSuggestsPenthouse } from './derive.ts';
 
 export interface TagFact {
   field: FactField;
@@ -102,4 +102,31 @@ export function tagFacts(
 export function penthouseSuggestion(unitLabel: string | null, unitTypes: readonly UnitTypeTag[] | undefined): UnitTypeTag[] | null {
   if (!unitLabelSuggestsPenthouse(unitLabel) || unitTypes?.includes('penthouse')) return null;
   return [...(unitTypes ?? []), 'penthouse'].sort() as UnitTypeTag[];
+}
+
+/**
+ * What a unit label suggests the parser couldn't read from its source: a
+ * penthouse from "PH", and a floor from a label like "10A" when the record has
+ * none (CR-2.2). Each is inferred, so it waits for the agent's confirm and
+ * enters neither result until then; the record's own facts stand meanwhile.
+ */
+export function unitLabelSuggestions(
+  unitLabel: string | null, facts: PropertyFacts, source: Source, asOf: IsoDate,
+): NonNullable<CompRecord['suggestions']> {
+  const out: NonNullable<CompRecord['suggestions']> = [];
+  const penthouse = penthouseSuggestion(unitLabel, facts.unit_type?.value);
+  if (penthouse) {
+    out.push({
+      field: 'unit_type',
+      value: { value: penthouse, source, as_of: asOf, confidence: 'inferred', note: `the unit label ${unitLabel} suggests a penthouse — confirm` },
+    });
+  }
+  const floor = facts.floor ? null : floorFromUnitLabel(unitLabel);
+  if (floor !== null) {
+    out.push({
+      field: 'floor',
+      value: { value: floor, source, as_of: asOf, confidence: 'inferred', note: `from the unit label ${unitLabel} — confirm the floor` },
+    });
+  }
+  return out;
 }

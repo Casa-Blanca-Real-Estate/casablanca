@@ -39,8 +39,12 @@ export interface Sourced<T> {
 
 // ─── Evidence ────────────────────────────────────────────────────────────────
 
-/** Sold, in contract and active are different evidence; they never share a statistic (§4.3). */
-export const EVIDENCE_CLASSES = ['sold', 'in_contract', 'active'] as const;
+/**
+ * Sold, in contract, active and didn't sell are different evidence; they never
+ * share a statistic (§4.3, §6.3). `off_market` is "didn't sell": a listing that
+ * came off the market unsold, whose last ask is a ceiling signal.
+ */
+export const EVIDENCE_CLASSES = ['sold', 'in_contract', 'active', 'off_market'] as const;
 export type EvidenceClass = (typeof EVIDENCE_CLASSES)[number];
 
 /** What a price per square foot divides: the sale price (sold) or the asking price. */
@@ -149,6 +153,11 @@ export interface PropertyFacts {
   sponsor_unit?: Sourced<boolean>;
   /** Income-restricted — HDFC and the like: the price and the buyer's income are capped. */
   income_restricted?: Sourced<boolean>;
+  /**
+   * Where the building stands, in degrees — for the distance check (§6.10).
+   * Neither the export nor a listing page gives it; a geocoder or the agent can.
+   */
+  coordinates?: Sourced<{ lat: number; lng: number }>;
   /** Private outdoor space (balcony, terrace, private roof…). */
   outdoor_private?: Sourced<boolean>;
   outdoor_kinds?: Sourced<OutdoorKind[]>;
@@ -221,11 +230,7 @@ export interface CompRecord {
     /** "SOLD", "IN CONTRACT", "ACTIVE" — as written. */
     raw: string | null;
     evidence_class: EvidenceClass | null;
-    /**
-     * For a comp from a link or typed in: its status as read, including
-     * `off_market` — "didn't sell", which isn't an evidence status yet, so it
-     * enters no statistic (§6.3, CR-2.2 phase 2).
-     */
+    /** For a comp from a link or typed in: its status as read. */
     listing_status?: ListingStatus | null;
   };
   facts: PropertyFacts;

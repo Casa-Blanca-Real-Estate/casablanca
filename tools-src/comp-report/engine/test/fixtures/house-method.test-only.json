@@ -2,7 +2,7 @@
   "about": "TEST ONLY. Made-up round numbers that exercise the engine's arithmetic. None of them is a real magnitude, and the engine refuses to load this file outside a test runner.",
   "id": "casa-blanca-house-method-test-values",
   "kind": "test",
-  "version": "test-2",
+  "version": "test-3",
   "approval": null,
   "lines": {
     "interior_size": {
@@ -337,5 +337,27 @@
   "decision_thresholds": {
     "apply_at_or_above": 0.9,
     "ask_below": 0.6
+  },
+  "check_thresholds": {
+    "about": "When a comparability check flags a comp (§6.10). Configuration, not valuation magnitudes: a check suggests a tier and never moves a number or a tier, so these load without Noble's sign-off and don't count against all_null. The defaults are the mentors' rules, pending Noble.",
+    "sale_age_months": {
+      "noted": 3,
+      "old": 6,
+      "market_moved": 12,
+      "basis": "Kara's rule, pending Noble"
+    },
+    "size_percent": {
+      "value": 25,
+      "basis": "Kara's rule, pending Noble"
+    },
+    "floor_band_floors": {
+      "value": 3,
+      "basis": "Frankie's band (floors 2–8 around a 5th-floor home), pending Noble"
+    },
+    "distance_miles": {
+      "noted": 0.25,
+      "far": 0.5,
+      "basis": "Kara's rule, pending Noble"
+    }
   }
 }

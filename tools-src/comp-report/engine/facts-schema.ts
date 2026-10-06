@@ -15,6 +15,7 @@ export const bool: Check = (v) => typeof v === 'boolean';
 const strings: Check = (v) => Array.isArray(v) && v.every((s) => typeof s === 'string');
 export const oneOf = (...xs: string[]): Check => (v) => typeof v === 'string' && xs.includes(v);
 const listOf = (...xs: string[]): Check => (v) => Array.isArray(v) && v.every((s) => typeof s === 'string' && xs.includes(s));
+const latLng = (v: unknown, limit: number) => typeof v === 'number' && Number.isFinite(v) && v >= -limit && v <= limit;
 
 /** What each fact field must hold. Money is whole dollars; areas whole square feet. */
 export const FACT_CHECKS: Record<FactField, { check: Check; expects: string }> = {
@@ -40,6 +41,10 @@ export const FACT_CHECKS: Record<FactField, { check: Check; expects: string }> =
   new_development: { check: bool, expects: 'true or false' },
   sponsor_unit: { check: bool, expects: 'true or false' },
   income_restricted: { check: bool, expects: 'true or false' },
+  coordinates: {
+    check: (v) => isObj(v) && Object.keys(v).length === 2 && latLng(v['lat'], 90) && latLng(v['lng'], 180),
+    expects: '{ lat, lng } in degrees',
+  },
   outdoor_private: { check: bool, expects: 'true or false' },
   outdoor_kinds: { check: listOf('balcony', 'terrace', 'roof_deck', 'garden', 'patio', 'outdoor_space'), expects: 'outdoor kinds' },
   outdoor_area_sqft: { check: nonNegInt, expects: 'whole square feet' },

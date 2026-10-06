@@ -115,6 +115,38 @@ export function resolveFacts(
   return out;
 }
 
+/**
+ * The best value there is for each of a property's facts, whatever its
+ * confidence: the newest statement, else the record's own value, else the
+ * parser's newest suggestion (hypotheticals only in what-ifs). The
+ * comparability checks read these (§6.10): a flag should show as a row lands,
+ * before the agent confirms anything, and say what it rests on. No result
+ * reads them.
+ */
+export function bestFacts(
+  record: PropertyFacts, stated: readonly StatedFact[], mode: FactContext['mode'],
+  suggestions: readonly { field: FactField; value: Sourced<unknown> }[] = [],
+): Partial<Record<FactField, Sourced<unknown>>> {
+  const allowed = (v: Sourced<unknown>) => v.source !== 'hypothetical' || mode === 'what_if';
+  const out: Partial<Record<FactField, Sourced<unknown>>> = {};
+  const fields = new Set<FactField>([
+    ...(Object.keys(record) as FactField[]), ...stated.map((s) => s.field), ...suggestions.map((s) => s.field),
+  ]);
+  for (const field of [...fields].sort()) {
+    const statements = stated
+      .map((s, index) => ({ s, index }))
+      .filter(({ s }) => s.field === field && allowed(s.value))
+      .sort((a, b) => (a.s.value.as_of < b.s.value.as_of ? -1 : a.s.value.as_of > b.s.value.as_of ? 1 : a.index - b.index));
+    const recordValue = record[field] as Sourced<unknown> | undefined;
+    const suggested = suggestions.filter((x) => x.field === field && allowed(x.value));
+    const best = statements.length > 0 ? statements[statements.length - 1]!.s.value
+      : recordValue && allowed(recordValue) ? recordValue
+        : suggested.length > 0 ? suggested[suggested.length - 1]!.value : undefined;
+    if (best) out[field] = best;
+  }
+  return out;
+}
+
 /** The weakest of several confidences: exact < approx < guesstimate < inferred. */
 export function weakest(...confidences: (Confidence | null | undefined)[]): Confidence {
   const order: Confidence[] = ['exact', 'approx', 'guesstimate', 'inferred'];

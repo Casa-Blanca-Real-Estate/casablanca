@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compute, loadHouseMethod, type EngineInput, type EngineOutput } from '../index.ts';
+import { compRecordFromManual, compute, loadHouseMethod, type CompInput, type EngineInput, type EngineOutput } from '../index.ts';
 import testValues from './fixtures/house-method.test-only.json' with { type: 'json' };
 import { agentFact, allNumbers, allPairs, comps, fixtureText, HANNAH_CSV, input, KEY, subjectFacts } from './helpers.ts';
 
@@ -66,6 +66,11 @@ function configurations(): [string, EngineInput, Parameters<typeof compute>[1]][
     method: { narrowing: { low: 3_900_000, reason: 'the ground-floor sales are a different product', as_of: '2026-09-24' } },
   });
   const testHm = loadHouseMethod(testValues);
+  // Two listings that didn't sell — a fourth evidence status, on ask basis.
+  const unsold: CompInput[] = [[4_400_000, '#20A'], [5_200_000, '#21A']].map(([price, unit]) => {
+    const { record } = compRecordFromManual({ address: '120 Test Street, New York, NY', unit: unit as string, status: 'off_market', price, date: '6/15/2026', area_sqft: 2000 }, { as_of: '2026-09-24' });
+    return { id: `unsold ${unit}`, record, tier: 'primary' };
+  });
   return [
     ['everything primary, no subject area', noArea, undefined],
     ['everything primary, subject area known', withArea, undefined],
@@ -75,6 +80,8 @@ function configurations(): [string, EngineInput, Parameters<typeof compute>[1]][
     ['with estimates and a narrowing', estimates, undefined],
     ['test house method', withArea, { houseMethod: testHm }],
     ['test house method with estimates', estimates, { houseMethod: testHm }],
+    ["with didn't sell", input({ comps: [...comps(), ...unsold] }), undefined],
+    ["with didn't sell, test house method", input({ comps: [...comps(), ...unsold] }), { houseMethod: testHm }],
   ];
 }
 
