@@ -2,8 +2,8 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { EngineOutput } from '../../../engine/index.ts';
-import type { LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
-import type { ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
+import type { GeocodeView, LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
+import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
 } from '../../../workspace/state.ts';
@@ -45,6 +45,10 @@ export interface Workspace {
   reads: LinkReadView[];
   /** After a link is added, cleared or confirmed, and on each poll while reads are in flight. */
   applyLinks: (next: LinksState) => void;
+  /** Each building's lookup, the home's and the comps' (Dispatch 11). */
+  geocodes: GeocodeView[];
+  /** The located ones, by building key: what distance reads. */
+  locations: ReadonlyMap<string, Location>;
   /** Opens the new-comp modal on one of its screens: the home, its details, or adding comps. */
   openStart: (screen: StartScreen) => void;
 

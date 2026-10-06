@@ -10,8 +10,8 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, workspaceApi, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
-import { engineInput, namedPrices, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
+import { ApiError, geocodeApi, workspaceApi, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { engineInput, locationsFrom, namedPrices, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
   isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type SendState, type TargetState, type WorkspaceState,
@@ -235,16 +235,18 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const recordCache = useRef<RecordCache>(new Map());
   const comps = useMemo(() => workspaceComps(parsed, data?.comps ?? [], recordCache.current), [parsed, data?.comps]);
   const prices = useMemo(() => namedPrices(call, target), [call, target]);
+  // Each building's mapped location, for distance (Dispatch 11).
+  const locations = useMemo(() => locationsFrom(data?.geocodes ?? []), [data?.geocodes]);
 
   // The engine, in the browser: instant, and the same code the functions run (§5).
   const { output, engineError } = useMemo((): { output: EngineOutput | null; engineError: string | null } => {
     try {
-      return { output: compute(engineInput({ asOf: today, intake, dealTerms, comps, prices })), engineError: null };
+      return { output: compute(engineInput({ asOf: today, intake, dealTerms, comps, prices, locations })), engineError: null };
     } catch (e) {
       const message = e instanceof EngineInputError ? e.issues.join('; ') : e instanceof Error ? e.message : String(e);
       return { output: null, engineError: message };
     }
-  }, [today, intake, dealTerms, comps, prices]);
+  }, [today, intake, dealTerms, comps, prices, locations]);
 
   const readOnly = Boolean(data && data.report.ownerEmail.toLowerCase() !== me.user.email.toLowerCase());
 
@@ -253,6 +255,36 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     setData((prev) => (prev ? { ...prev, reads: next.reads, comps: next.comps } : prev));
   }, []);
   useLinkReads(reportId, data?.reads ?? NO_READS, applyLinks, readOnly);
+
+  // Locations for distance (Dispatch 11): the server looks each building up after a save, and
+  // when a report opens for anything saved before. A lookup never holds up a row; the row
+  // updates when the location lands. Asked again while some are still due (a few per call),
+  // or a little later while another tab's lookup is under way.
+  const buildingsSeen = useMemo(
+    () => [intake.address?.value ?? '', intake.unit?.value ?? '', ...(data?.comps ?? []).map((c) => c.propertyKey).sort()].join('|'),
+    [intake.address?.value, intake.unit?.value, data?.comps],
+  );
+  const loaded = Boolean(data);
+  const flushSaves = save.flush;
+  useEffect(() => {
+    if (!loaded || readOnly) return undefined;
+    let stopped = false;
+    let timer = 0;
+    const lookUp = async (round: number) => {
+      // What's typed reaches the server first; a failed save says so itself, and the rest is still looked up.
+      await flushSaves().catch(() => undefined);
+      const r = await geocodeApi.run(reportId).catch(() => null);
+      if (stopped || !r) return;
+      setData((prev) => (prev ? { ...prev, geocodes: r.geocodes } : prev));
+      const underWay = r.geocodes.some((g) => g.status === 'pending');
+      if (r.more || (underWay && round < 3)) timer = window.setTimeout(() => void lookUp(round + 1), r.more ? 0 : 8000);
+    };
+    timer = window.setTimeout(() => void lookUp(0), 1000);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [reportId, readOnly, loaded, buildingsSeen, flushSaves]);
 
   // What the dev notebook records with a note written here: the report, by name as well as id.
   const reportTitle = data?.report.title;
@@ -335,8 +367,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     parsed,
     unreadable,
     comps,
-    applyServer: (d) => setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads } : d)),
+    applyServer: (d) => setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads, geocodes: d.geocodes } : d)),
     reads: data.reads,
+    geocodes: data.geocodes,
+    locations,
     applyLinks,
     openStart,
     output,

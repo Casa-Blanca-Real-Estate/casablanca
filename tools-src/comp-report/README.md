@@ -38,8 +38,10 @@ createdb comp_report_dev                                           # as a NON-su
 CR_LOCAL_DATABASE_URL=postgres://you@localhost/comp_report_dev npm run db:local
 node tools-src/comp-report/dev/fake-anthropic.ts 8791              # optional: no key, no cost
 node tools-src/comp-report/dev/fake-firecrawl.ts 8792              # optional: StreetEasy links, no credit
+node tools-src/comp-report/dev/fake-geosearch.ts 8793              # optional: distance, offline
 CR_LOCAL_DATABASE_URL=… CR_DEV_ANTHROPIC_BASE_URL=http://127.0.0.1:8791 \
-  CR_DEV_FIRECRAWL_BASE_URL=http://127.0.0.1:8792 npm run dev:comp-report
+  CR_DEV_FIRECRAWL_BASE_URL=http://127.0.0.1:8792 CR_DEV_GEOSEARCH_BASE_URL=http://127.0.0.1:8793 \
+  npm run dev:comp-report
 # → http://localhost:5173/tools/comp-report/ — "Dev sign-in" takes any email; the access rule still applies
 ```
 
@@ -115,6 +117,41 @@ a drawer on all three. Each reads the engine's output; none computes a figure.
   one), with QA as one line.
 - **Build notes**: the About boxes, stub and decision tags, and the sample fills sit behind one
   switch, admins only and off by default (`buildNotes.tsx`). A sample report shows one banner.
+
+## Distance (CR-3c)
+
+Kara's first rule: same building first, then within a quarter mile. The engine's `distance` check
+needs `coordinates` for the home and the comp (§6.10), and neither the export nor a listing page has
+them, so the server looks each building up (Dispatch 11).
+
+- **When.** Once the workspace has saved, the browser calls `POST /api/comp-report/geocode`
+  (signed in, the report's owner). The server looks up the report's buildings that have no location
+  yet: the home's, from its address, and each comp's. So reports from before this fill in the next
+  time they open. Three lookups a call, one at a time, ¼ second apart; the browser calls again while
+  there are more, and the rows update as locations land. A lookup never holds up a save.
+- **One lookup per building**, shared by every report and agent: `comp_report.geocodes`, keyed by
+  the engine's building key and readable by any signed-in request. It can't live on the property
+  record: `properties` has no facts and the app can't update it, and a property's observations are
+  private to whoever recorded them. Each lookup is still recorded as an observation (§12) on every
+  property in the report it located, the home's included: source `geocoder`, with the geocoder,
+  what was sent and what it matched in `raw`.
+- **The geocoder** is NYC Planning's GeoSearch (`server/geocode.ts`): free, no key, built on the
+  city's own address file. Only the street address goes out. A match counts only when its house
+  number, street and borough all agree with ours; anything else is refused with the reason, never
+  guessed. GeoSearch always answers with something, and its nearest match can be another street or
+  another borough (for "20 Pine Street" it lists Brooklyn's first). A home typed without a city has
+  no borough to check, so it's refused and says so. A lookup times out at 4 seconds; a failure is
+  tried again 15 minutes later, three tries in all. A refusal is an answer and isn't asked again.
+- **The fact**: `coordinates`, `Sourced<{lat, lng}>`, source `geocoder`, `approx` (the building's
+  point, not the unit's), its note naming GeoSearch and the matched address
+  (`workspace/engine-input.ts`).
+- **On Sort**: the row shows the distance ("0.3 mi"), from the engine's own `distanceMiles`, so the
+  row and the flag agree. A comp in the home's building has its "Same building" flag, never "0.0
+  mi". A building that couldn't be mapped is "— mi", with why on hover. The opened row says where
+  the distance came from, or why there's none (`workspace/distance.ts`).
+- **Locally**, `dev/fake-geosearch.ts` answers with GeoSearch's real answers for the sample's and the
+  link fixtures' streets, recorded 2026-10-06. Without `CR_DEV_GEOSEARCH_BASE_URL`, the dev server
+  asks the real GeoSearch. Nothing to set on Netlify.
 
 ## How it's wired
 
