@@ -52,7 +52,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
 | **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
-| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b), 11 (CR-3c) | 05: merged #48, #52; CR-1.1 item 3 merged in #57; the step-6 proof is Kimani's (Netlify's function log). 07: done, merged #53. 09: done, merged #57, #60. 11: ready. Dev notebook and the Feedback list closed: merged #54 |
+| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b), 11 (CR-3c) | 05: merged #48, #52; CR-1.1 item 3 merged in #57; the step-6 proof is Kimani's (Netlify's function log). 07: done, merged #53. 09: done, merged #57, #60. 11: in PR #62. Dev notebook and the Feedback list closed: merged #54 |
 | **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: done, merged #55, #58 |
 | **Arbiter** | The comp report's decision provider: Jev, with a Haiku fallback | 10 (CR-D) | 10: phase 1 and follow-ups merged #56, #59. Next: the zero-retention switch; phase 2 when Kimani's key is in |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pic cutout and outpainting | 01 | Parked — PR stack #41–#45 open |
@@ -73,4 +73,4 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 08 | [Comp report — the engine for a buyer's argument (CR-2.2)](08-comp-report-buyers-argument-engine.md) | Abacus | Done — merged #55, #58 |
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
 | 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Phase 1 and follow-ups merged #56, #59. Next: the zero-retention switch; phase 2 when Kimani's key is in |
-| 11 | [Comp report — distance, from coordinates (CR-3c)](11-comp-report-distance.md) | Mason | Ready |
+| 11 | [Comp report — distance, from coordinates (CR-3c)](11-comp-report-distance.md) | Mason | In PR #62 |
