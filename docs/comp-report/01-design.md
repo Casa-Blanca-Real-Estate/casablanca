@@ -961,7 +961,7 @@ flow, is merged, and Kimani has walked it.
 - **CR-4 — Assistant.** §8: turns in a background function (§8.3 rule 6), the tools, two-keyed capture, trust-but-verify, Path to target, coaching
   level, intent disambiguation, the glossary check, context notes, events, progress display, fallbacks,
   effort policy.
-- **CR-5 — Writer and QA.** §9, §10.2, client profile (§8.6) and agent voice (§8.7).
+- **CR-5 — Writer and QA** (Dispatch 13). §9, §10.2, client profile (§8.6) and agent voice (§8.7).
 - **CR-6 — Client report and PDF.** §10.1 and §10.3. **Waits on Kimani's design.**
 - **CR-7 — Pilot readiness.** Usage logging, per-user caps, admin (users, allowlist, grants, reports,
   spend), feedback capture, the Opus 5.5 vs. Sonnet 5 eval. Then the pilot.

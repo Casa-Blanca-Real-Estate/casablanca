@@ -10,15 +10,17 @@ track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
 Last updated 2026-09-29 by Casanova.
 
-**What blocks the next builds:** nothing. Dispatches 08 (phase 2), 09 and 10 can run now. Two
-actions of yours unlock live work: a Casa Vercel AI Gateway key for Jev (Dispatch 10, phase 2), and
-the dev notebook setup (#54).
+**What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
+pic roster) can run now. Two settings of yours unlock more:
+- `DEV_NOTEBOOK_KEY` in the Casa cloud environment, so sessions can read your notes and the Feedback list;
+- the Jev key, which unlocks Dispatch 10's phase 2.
 
 ## Index — open
 
 | ID | Decision | Urgency | Size | Blocks |
 |---|---|---|---|---|
 | D-17 | Two questions for counsel | Later | Quick (counsel) | the pilot; factor 18 |
+| D-24 | Where agents' contact details come from | Soon — Dispatch 12, phase 1 | Quick | the roster's one-time import |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
 each was applied.
@@ -62,10 +64,35 @@ each was applied.
   key, and add it as `DEV_NOTEBOOK_KEY` in the Claude Code cloud environment.
 - [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
+- [ ] **Now — two settings, both quick:**
+  1. **`DEV_NOTEBOOK_KEY` in the Casa Claude Code cloud environment.** It's still missing, so no
+     session can read your notes or the Feedback list. That includes the Cowork session's feedback,
+     which is unread until this is in.
+  2. **Jev:** the zero-retention switch is merged (#61). Make a new AI Gateway key on your existing
+     Vercel account. In Netlify (Functions scope), set `AI_GATEWAY_API_KEY` to it and `CR_JEV_ZDR=off`,
+     then redeploy. Leave `CR_JEV_MODE` alone.
+- [ ] **Soon — change the credential in the email-signatures doc.** The profile-pic session flagged it
+  to you directly.
+- [ ] **Later — for Noble, the thresholds that flag most comps:**
+  - the floor band (±3, from Frankie's email) flags 8 of Hannah's 11 comps;
+  - Kara's ½ mile flags 6 of the sample's 11, five of them Primary.
+
+  Noble sets them, or confirms them.
 - [ ] **Later — show Noble the "differences between comps" approach** (design §6.6). It replaces
   house adjustment values with what the comps themselves show, and it builds on his point that prices
   already carry their features.
-- [ ] **Parked — agent sites:** Sam Valk's bio and neighborhoods; confirm the production origin.
+- [ ] **Queued behind the comp report — when you want them back:**
+  - **The Stories motion-graphic generator,** for Instagram Stories: parked on
+    `claude/motion-graphic-stories-hlpirk` (`docs/parked/`). It's a Vite-built React prototype to port
+    into the studio.
+  - **The agent CMS and agent sites:**
+    - Slice 5 (SEO and Google reviews) is ready to dispatch.
+    - Slices 2–3 (the visual port) wait on your Wix capture.
+    - The CMS holds 1 agent of about 110; Dispatch 12 seeds the roster.
+    - Yours: Sam Valk's bio and neighborhoods, and confirming the production origin.
+  - **The QR generator:** merge it when there's a gap (D-16).
+  - **Your caption tracker** (a Claude artifact, linked from the carousel builders): it may become part
+    of the studio later.
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---
@@ -87,6 +114,18 @@ CR-R (Surveyor) found two legal questions research can't settle. Both are in
    ever computes the sponsor arithmetic (factor 18).
 
 **Answer →** _type here — who it went to, or their answer_
+
+---
+
+### D-24 · Where agents' contact details come from
+`Soon — before Dispatch 12 seeds the roster` · `Quick`
+
+Dispatch 12 imports the roster once: about 110 agents, with names, titles, emails and phones. Is the
+email-signatures Google Doc the authority for those, or is there a system of record behind it, such
+as FileMaker, that the import should read instead? The session found duplicates, likely typos and
+gaps in the doc, so the answer decides between parsing a doc and doing a proper export.
+
+**Answer →** _type here — the doc, FileMaker, or something else_
 
 ---
 

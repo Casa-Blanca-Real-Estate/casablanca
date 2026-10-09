@@ -305,7 +305,7 @@ export function compChecks(subject: CheckSide, comp: CheckSide, ctx: CheckContex
     out.push({
       code: 'distance', status: 'unknown',
       label: 'Distance not known',
-      message: `Distance can't be checked yet: it needs coordinates for ${lacking}, which neither the export nor a listing page gives`,
+      message: `Distance can't be checked yet: it needs coordinates for ${lacking}, from each building's mapped location`,
       suggested_tier: null, suggestion: null,
       evidence: [evidence('comp', 'coordinates', cc), evidence('subject', 'coordinates', sc)],
       confidence: null, threshold: null, measured: null,
