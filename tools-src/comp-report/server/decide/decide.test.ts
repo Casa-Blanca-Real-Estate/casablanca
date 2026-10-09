@@ -11,12 +11,13 @@ import { fileURLToPath } from 'node:url';
 import type { PropertyFacts, Sourced } from '../../engine/types.ts';
 import { decideConfig, configSummary } from './config.ts';
 import { costUsd, HAIKU_MODEL, priceFor } from './cost.ts';
+import { zdrRefusal } from './drain.ts';
 import { listingRequest } from './enqueue.ts';
 import { haikuCall } from './haiku.ts';
 import {
-  buildJevRequestBody, JEV_ENDPOINT, JEV_MODEL, JEV_PROVIDER_OPTIONS, jevAttempt, parseJevResponse, type JevQuestionWire,
+  buildJevRequestBody, JEV_ENDPOINT, JEV_MODEL, JEV_PROVIDER_OPTIONS, JEV_PROVIDER_OPTIONS_NO_ZDR, jevAttempt, parseJevResponse, type JevQuestionWire,
 } from './jev.ts';
-import { CONDITION, listingQuestionsFor, QUESTIONS, registryProblems, SPONSOR_UNIT, type ScoreQuestion } from './registry.ts';
+import { CONDITION, LANE_TEXT, listingQuestionsFor, QUESTIONS, registryProblems, SPONSOR_UNIT, type ScoreQuestion } from './registry.ts';
 import { optionOrderHash, renderRequest, stateHash, wireCount } from './render.ts';
 import { scrubListingText } from './scrub.ts';
 import { bandOf, barFor, barProblems, landingOf, scoreLevel, verdictFor, type Bar } from './verdict.ts';
@@ -75,15 +76,19 @@ describe('the strict parser', () => {
   });
 });
 
-describe('privacy: both flags, on every request, with no way to turn either off', () => {
-  test('the bytes on the wire carry disallowPromptTraining and zeroDataRetention', async () => {
+describe('privacy: no training always; zero retention unless CR_JEV_ZDR is off', () => {
+  const sendOnce = async (zdr: boolean) => {
     let seen: { url: string; init: RequestInit } | null = null;
     await jevAttempt({
-      key: 'test-key-not-real', state: { listing: '[listing] x' }, questions: renderRequest(['condition']), attempt: 1,
+      key: 'test-key-not-real', state: { listing: '[listing] x' }, questions: renderRequest(['condition']), zdr, attempt: 1,
       nowMs: () => 0,
       fetchImpl: (async (url: string, init: RequestInit) => { seen = { url, init }; return new Response('{"answers":{}}'); }) as unknown as typeof fetch,
     });
-    const sent = seen as unknown as { url: string; init: RequestInit & { headers: Record<string, string> } };
+    return seen as unknown as { url: string; init: RequestInit & { headers: Record<string, string> } };
+  };
+
+  test('with zero retention on, the bytes on the wire carry both flags', async () => {
+    const sent = await sendOnce(true);
     assert.equal(sent.url, JEV_ENDPOINT);
     assert.equal(sent.init.method, 'POST');
     assert.equal(sent.init.headers.Authorization, 'Bearer test-key-not-real');
@@ -92,10 +97,26 @@ describe('privacy: both flags, on every request, with no way to turn either off'
     assert.equal(body.model, JEV_MODEL);
   });
 
-  test('the options are frozen, and every body is built with them', () => {
-    assert.ok(Object.isFrozen(JEV_PROVIDER_OPTIONS) && Object.isFrozen(JEV_PROVIDER_OPTIONS.gateway));
+  test('with it off, no training is still on the wire, and zero retention is left out — never sent false', async () => {
+    const body = JSON.parse(String((await sendOnce(false)).init.body));
+    assert.deepEqual(body.providerOptions, { gateway: { disallowPromptTraining: true } });
+  });
+
+  test('CR_JEV_ZDR is on by default: only the literal "off" turns it off', () => {
+    assert.equal(decideConfig({}).zdr, true);
+    for (const v of ['on', 'true', 'false', '0', 'no', '']) assert.equal(decideConfig({ CR_JEV_ZDR: v }).zdr, true, v);
+    assert.equal(decideConfig({ CR_JEV_ZDR: ' OFF ' }).zdr, false);
+    assert.equal(configSummary(decideConfig({ CR_JEV_ZDR: 'off' })).zdr, false);
+  });
+
+  test('both shapes are frozen; the body takes one or the other, and needs to be told which', () => {
+    for (const o of [JEV_PROVIDER_OPTIONS, JEV_PROVIDER_OPTIONS_NO_ZDR]) assert.ok(Object.isFrozen(o) && Object.isFrozen(o.gateway));
     assert.throws(() => { (JEV_PROVIDER_OPTIONS.gateway as { zeroDataRetention: boolean }).zeroDataRetention = false; });
-    assert.equal(buildJevRequestBody({}, {}).providerOptions, JEV_PROVIDER_OPTIONS);
+    assert.throws(() => { (JEV_PROVIDER_OPTIONS_NO_ZDR.gateway as { disallowPromptTraining: boolean }).disallowPromptTraining = false; });
+    assert.equal(buildJevRequestBody({}, {}, { zdr: true }).providerOptions, JEV_PROVIDER_OPTIONS);
+    assert.equal(buildJevRequestBody({}, {}, { zdr: false }).providerOptions, JEV_PROVIDER_OPTIONS_NO_ZDR);
+    // Anything but a literal true is no zero retention — and the drainer then refuses private text.
+    assert.equal(buildJevRequestBody({}, {}, { zdr: 'yes' as unknown as boolean }).providerOptions, JEV_PROVIDER_OPTIONS_NO_ZDR);
   });
 
   test('no code path sets either flag false, drops one, or builds providerOptions any other way', () => {
@@ -105,10 +126,24 @@ describe('privacy: both flags, on every request, with no way to turn either off'
       assert.doesNotMatch(src, /zeroDataRetention\s*:\s*(?!\s|true\b)/, `${f}: zeroDataRetention is only ever true`);
       assert.doesNotMatch(src, /delete\s+[^;]*(?:providerOptions|zeroDataRetention|disallowPromptTraining)/, f);
       const uses = src.match(/providerOptions\s*:/g) ?? [];
-      if (f === 'jev.ts') assert.equal(uses.length, 1, 'jev.ts sets providerOptions once, from the frozen constant');
+      if (f === 'jev.ts') assert.equal(uses.length, 1, 'jev.ts sets providerOptions once');
       else assert.equal(uses.length, 0, `${f} never builds providerOptions`);
+      if (f !== 'jev.ts') assert.doesNotMatch(src, /disallowPromptTraining|zeroDataRetention/, `${f} never names a flag`);
     }
-    assert.match(code(join(here, 'jev.ts')), /providerOptions: JEV_PROVIDER_OPTIONS \}/);
+    const jev = code(join(here, 'jev.ts'));
+    assert.match(jev, /providerOptions: jevProviderOptions\(opts\.zdr === true\) \}/);
+    assert.match(jev, /return zdr \? JEV_PROVIDER_OPTIONS : JEV_PROVIDER_OPTIONS_NO_ZDR;/);
+    assert.equal((jev.match(/disallowPromptTraining: true as const/g) ?? []).length, 2, 'no training is in both shapes');
+  });
+
+  test('a lane declares its text; the listing lane is public', () => {
+    assert.deepEqual(LANE_TEXT, { listing: 'public' });
+    assert.ok(Object.isFrozen(LANE_TEXT));
+    for (const q of QUESTIONS) assert.ok(q.lane in LANE_TEXT, `${q.id}'s lane declares its text`);
+    assert.equal(zdrRefusal('listing', { zdr: false }), false, 'public text goes without zero retention');
+    assert.equal(zdrRefusal('notes', { zdr: false }, { notes: 'private' }), true, 'private text doesn\'t');
+    assert.equal(zdrRefusal('unknown', { zdr: false }, {}), true, 'a lane that declares nothing is treated as private');
+    assert.equal(zdrRefusal('notes', { zdr: true }, { notes: 'private' }), false, 'with zero retention on, it goes');
   });
 
   test('nothing in the decision layer reads DATABASE_URL', () => {
@@ -154,7 +189,7 @@ describe('the registry', () => {
     const b = renderRequest(QUESTIONS.map((q) => q.id));
     assert.deepEqual(a, b);
     assert.doesNotMatch(JSON.stringify(a), /Ignore previous/);
-    const body = buildJevRequestBody({ listing: `[listing] ${hostile}` }, a);
+    const body = buildJevRequestBody({ listing: `[listing] ${hostile}` }, a, { zdr: true });
     assert.equal(JSON.stringify(body.questions).includes(hostile), false);
     // The fallback's prompt puts the state after every question, as data.
     const call = haikuCall({ listing: `[listing] ${hostile}` }, QUESTIONS.map((q) => q.id), 'fwd');

@@ -27,6 +27,15 @@ export const REGISTRY_VERSION = 'listing-2026-09-29.1';
 
 export type Lane = 'listing';
 
+/**
+ * What a lane's state carries (Dispatch 10, "Where Casa differs" 3): `public`
+ * text — a listing's own words — or `private` text, anything an agent or a
+ * client wrote. A private lane is sent only with zero retention on
+ * (CR_JEV_ZDR); with it off, its requests are refused before they're sent.
+ */
+export type LaneText = 'public' | 'private';
+export const LANE_TEXT: Readonly<Record<Lane, LaneText>> = Object.freeze({ listing: 'public' });
+
 export interface Feeds {
   /** Appendix A factor ids (engine/catalog/factors.ts). */
   factors: string[];

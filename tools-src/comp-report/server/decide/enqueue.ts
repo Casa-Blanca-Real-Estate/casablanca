@@ -14,6 +14,7 @@
 import type { CompRecord } from '../../engine/types.ts';
 import { withActor, type PoolLike } from '../db.ts';
 import { decideConfig, fallbackReady, type DecideConfig } from './config.ts';
+import { zdrRefusal } from './drain.ts';
 import { listingQuestionsFor, REGISTRY_VERSION } from './registry.ts';
 import { stateHash, wireCount } from './render.ts';
 import { listingState, scrubListingText } from './scrub.ts';
@@ -104,9 +105,11 @@ export async function enqueueListingJudgments(obs: ListingObservation, deps: Enq
     const names = [...(await casaNames(deps.pool)), ...(deps.extraNames ?? [])];
     const req = listingRequest(obs, names);
     if ('skip' in req) return { queued: false, why: req.skip };
-    const answerable = config.jevKey !== null || fallbackReady(config);
-    if (!answerable) {
-      const { id } = await store.enqueueDropped(req, now, 'no-key');
+    // Refused before it's queued, as the drainer would refuse it before it's sent.
+    const refusal = zdrRefusal(req.lane, config) ? 'zdr-required' as const
+      : config.jevKey === null && !fallbackReady(config) ? 'no-key' as const : null;
+    if (refusal) {
+      const { id } = await store.enqueueDropped(req, now, refusal);
       return { queued: true, requestId: id, status: 'dropped', questions: req.questionIds, kicked: false };
     }
     const { id, status } = await store.enqueue(req, now, MAX_QUEUE);

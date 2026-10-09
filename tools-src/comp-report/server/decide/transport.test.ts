@@ -358,3 +358,45 @@ describe('the fallback', () => {
     assert.equal(store.judgments.length, 0);
   });
 });
+
+describe('zero retention as a switch (CR_JEV_ZDR)', () => {
+  test('off, a public lane is sent with no training only, and the ledger says so', async () => {
+    const clock = fakeClock();
+    const store = new MemoryStore();
+    await fill(store, clock, 1);
+    const bodies: Array<{ providerOptions: unknown }> = [];
+    const config = decideConfig({ CR_JEV_MODE: 'watch', AI_GATEWAY_API_KEY: 'k', CR_JEV_ZDR: 'off' });
+    await run(store, clock, (async (_u: unknown, init: RequestInit) => { bodies.push(JSON.parse(String(init.body))); return new Response(answerBody()); }) as unknown as typeof fetch, { config });
+    assert.deepEqual(bodies.map((b) => b.providerOptions), [{ gateway: { disallowPromptTraining: true } }]);
+    assert.equal(store.rows[0]!.status, 'answered');
+    assert.equal(store.rows[0]!.detail.zdr, false);
+    assert.equal(store.usage[0]!.detail.zdr, false);
+  });
+
+  test('off, a private lane is refused before it is sent — by Jev and by the fallback — as zdr-required', async () => {
+    const clock = fakeClock();
+    const store = new MemoryStore();
+    await fill(store, clock, 2);
+    const haikuCalls: unknown[] = [];
+    const haiku: HaikuClient = { messages: { create: async (p) => { haikuCalls.push(p); throw new Error('must not be called'); } } };
+    const config = decideConfig({ CR_JEV_MODE: 'watch', AI_GATEWAY_API_KEY: 'k', CR_JEV_ZDR: 'off', CR_DECIDE_FALLBACK: 'haiku', ANTHROPIC_API_KEY: 'x' });
+    const report = await run(store, clock, (async () => { throw new Error('must not be called'); }) as unknown as typeof fetch,
+      { config, haiku, lanes: { listing: 'private' } });
+    assert.equal(report.dropped, 2);
+    assert.deepEqual(report.byReason, { 'zdr-required': 2 });
+    assert.ok(store.rows.every((r) => r.status === 'dropped' && r.dropReason === 'zdr-required'));
+    assert.deepEqual(haikuCalls, []);
+    assert.equal(store.usage.length, 0);
+  });
+
+  test('on (the default), a private lane is sent, with both flags', async () => {
+    const clock = fakeClock();
+    const store = new MemoryStore();
+    await fill(store, clock, 1);
+    const bodies: Array<{ providerOptions: unknown }> = [];
+    await run(store, clock, (async (_u: unknown, init: RequestInit) => { bodies.push(JSON.parse(String(init.body))); return new Response(answerBody()); }) as unknown as typeof fetch,
+      { lanes: { listing: 'private' } });
+    assert.deepEqual(bodies.map((b) => b.providerOptions), [{ gateway: { disallowPromptTraining: true, zeroDataRetention: true } }]);
+    assert.equal(store.rows[0]!.status, 'answered');
+  });
+});
