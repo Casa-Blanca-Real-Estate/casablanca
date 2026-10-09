@@ -6,9 +6,10 @@
 // says whether one exists (the range is revealed), not what it is. The target
 // and the deal terms aren't read at all (§8.4).
 import { compute, parseExport } from '../engine/index.ts';
-import { engineInput, workspaceComps, type ParsedImport } from '../workspace/engine-input.ts';
+import { engineInput, locationsFrom, workspaceComps, type ParsedImport } from '../workspace/engine-input.ts';
 import type { WorkspaceState } from '../workspace/state.ts';
 import { numbersSummary } from '../workspace/summary.ts';
+import { loadGeocodes, reportBuildings } from './buildings.ts';
 import type { Queryable } from './db.ts';
 import { loadJudgments } from './api/workspace.ts';
 import { newYorkToday } from './links.ts';
@@ -40,7 +41,9 @@ export async function numbersFor(tx: Queryable, reportId: string, asOf = newYork
   }
   const comps = workspaceComps(parsed, await loadJudgments(tx, reportId));
   const intake = report.state?.intake;
+  // The buildings' locations, as the screens have them, so distance reads the same here.
+  const locations = locationsFrom(await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)));
   // No prices, no deal terms: nothing here can carry the call or a target.
-  const output = compute(engineInput({ asOf, intake, comps }));
+  const output = compute(engineInput({ asOf, intake, comps, locations }));
   return numbersSummary({ output, comps, intake, revealed: report.revealed });
 }

@@ -407,6 +407,11 @@ table.facts th { font-size: 11px; font-weight: 800; color: var(--cb-mid); white-
 .pairs details { margin-top: 6px; }
 .pairs summary { cursor: pointer; }
 
+/* Distance (CR-3c): the row's miles, and the opened row's line on where they came from. */
+.distance { font-size: 12px; font-weight: 800; white-space: nowrap; }
+.distance.muted { font-weight: 400; }
+.distance-line p { margin: 2px 0 0; }
+
 @media (max-width: 760px) {
   .results { grid-template-columns: minmax(0, 1fr); }
   .about-cols { grid-template-columns: minmax(0, 1fr); }

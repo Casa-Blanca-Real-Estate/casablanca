@@ -1,6 +1,7 @@
 // Calls to the comp report's functions. Same origin; the session token rides
 // in the Authorization header on every request.
 import type { LinkReadView, WorkspaceData } from '../server/api/workspace.ts';
+import type { GeocodeView } from '../server/buildings.ts';
 import type { Brief, CallState, DealTermsState, Intake, ReasonType, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
 import { session } from './session.ts';
 
@@ -119,6 +120,7 @@ export async function* streamTurn(reportId: string, message?: string): AsyncGene
 // ─── The walkthrough (CR-3a) ────────────────────────────────────────────────
 
 export type { LinkReadView, WorkspaceData, WorkspaceImport } from '../server/api/workspace.ts';
+export type { GeocodeView } from '../server/buildings.ts';
 
 export interface SampleWalkthrough {
   intake: Intake;
@@ -157,6 +159,13 @@ export const workspaceApi = {
   /** A comp typed in: address, status, price, size, floor, date. */
   addManual: (reportId: string, manual: Record<string, unknown>) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, manual } }),
+};
+
+// ─── Locations for distance (CR-3c) ──────────────────────────────────────────
+
+export const geocodeApi = {
+  /** Looks up the report's buildings that have no location yet, a few at a time; `more` when some are left. */
+  run: (reportId: string) => api<{ geocodes: GeocodeView[]; more: boolean }>('/api/comp-report/geocode', { method: 'POST', body: { reportId } }),
 };
 
 // ─── StreetEasy links, read in the background (CR-3b) ────────────────────────

@@ -11,6 +11,8 @@
 //   CR_DEV_ANTHROPIC_BASE_URL   point turns at a fake Messages API instead
 //   FIRECRAWL_API_KEY           to read real StreetEasy links (costs credit)
 //   CR_DEV_FIRECRAWL_BASE_URL   read them from the fake instead (dev/fake-firecrawl.ts)
+//   CR_DEV_GEOSEARCH_BASE_URL   look buildings up in the fake GeoSearch (dev/fake-geosearch.ts)
+//                               instead of NYC Planning's own, which needs no key
 //
 // Nothing under dev/ is imported by a deployed function.
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -27,6 +29,7 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/comps': { module: '/server/api/comps.ts', handler: 'handleComps' },
   '/api/comp-report/sample': { module: '/server/api/sample.ts', handler: 'handleSample' },
   '/api/comp-report/links': { module: '/server/api/links.ts', handler: 'handleLinks' },
+  '/api/comp-report/geocode': { module: '/server/api/geocode.ts', handler: 'handleGeocode' },
 };
 
 /** Background functions: Netlify answers 202 at once and runs them on; so does this. */
@@ -65,6 +68,7 @@ async function deps(server: ViteDevServer) {
   const { databasePool } = await load('/server/db.ts');
   const { devVerifier } = await load('/dev/stub-identity.ts');
   const { firecrawlReader } = await load('/server/links.ts');
+  const { nycGeoSearch } = await load('/server/geocode.ts');
   const { default: Anthropic } = await import('@comp-report/anthropic-sdk');
   const fake = process.env.CR_DEV_FIRECRAWL_BASE_URL;
   return {
@@ -73,6 +77,7 @@ async function deps(server: ViteDevServer) {
     pool: databasePool(process.env),
     env: process.env,
     reader: firecrawlReader(fake ? { apiKey: 'dev-fake', baseUrl: fake, backoffMs: [500] } : { apiKey: process.env.FIRECRAWL_API_KEY }),
+    geocoder: nycGeoSearch({ baseUrl: process.env.CR_DEV_GEOSEARCH_BASE_URL || undefined }),
     anthropic: () =>
       new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY ?? 'dev-no-key',

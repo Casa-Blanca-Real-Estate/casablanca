@@ -98,8 +98,8 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 07 | [Comp report — the walkthrough scaffold (CR-3a)](docs/dispatch/07-comp-report-walkthrough-scaffold.md) | Mason | Done — merged #53 |
 | 08 | [Comp report — the engine for a buyer's argument (CR-2.2)](docs/dispatch/08-comp-report-buyers-argument-engine.md) | Abacus | Done — merged #55, #58 |
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](docs/dispatch/09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
-| 10 | [Comp report — the decision provider, Jev first (CR-D)](docs/dispatch/10-comp-report-decision-provider.md) | Arbiter | Phase 1 and follow-ups merged #56, #59. The zero-retention switch in review; phase 2 when Kimani's key is in |
-| 11 | [Comp report — distance, from coordinates (CR-3c)](docs/dispatch/11-comp-report-distance.md) | Mason | Ready |
+| 10 | [Comp report — the decision provider, Jev first (CR-D)](docs/dispatch/10-comp-report-decision-provider.md) | Arbiter | Phase 1 and follow-ups merged #56, #59. Next: the zero-retention switch; phase 2 when Kimani's key is in |
+| 11 | [Comp report — distance, from coordinates (CR-3c)](docs/dispatch/11-comp-report-distance.md) | Mason | In PR #62 |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and

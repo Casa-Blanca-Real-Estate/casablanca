@@ -4,13 +4,16 @@
 // tier's reason (§3). Reasons are append-only (§12): a tier or a changed note
 // records a new one. Opening a row counts as reviewing it; it shows every fact
 // with where it came from, the import's notes, the history, and the star for
-// the closest comp (the anchor). The range stays hidden until the agent's
+// the closest comp (the anchor). Each row has its distance from the home, from
+// each building's mapped location (Dispatch 11); the opened row says where it
+// came from, or why there's none yet. The range stays hidden until the agent's
 // number (D-1). Comps are added from the bar at the top, the same three ways as
 // the new-comp modal.
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { CompOut, ListingStatus, ParseWarning, Tier } from '../../../engine/index.ts';
 import { workspaceApi, type WorkspaceData } from '../../api.ts';
-import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
+import { compDistance, type Distance } from '../../../workspace/distance.ts';
+import { MAPPED_BY, type WorkspaceComp } from '../../../workspace/engine-input.ts';
 import { isoDay, TIER_LABEL } from '../../../workspace/format.ts';
 import { addToNote, factLines, noteChips, usualSource } from '../../../workspace/sort.ts';
 import { AddComps, ConfirmButton, ReadRows } from './AddComps.tsx';
@@ -159,6 +162,11 @@ function CompRow({ ws, c, out, save }: { ws: Workspace; c: WorkspaceComp; out: C
     () => (out && ws.output ? noteChips(out, c.record, ws.output.subject, draft) : []),
     [out, ws.output, c.record, draft],
   );
+  const home = ws.output?.subject.identity;
+  const distance = useMemo(
+    () => (home && !c.unsortable ? compDistance(home, c.record.identity, ws.locations, ws.geocodes) : null),
+    [home, c.unsortable, c.record.identity, ws.locations, ws.geocodes],
+  );
 
   function setDraft(v: string) {
     draftRef.current = v;
@@ -287,6 +295,7 @@ function CompRow({ ws, c, out, save }: { ws: Workspace; c: WorkspaceComp; out: C
             {url
               ? <a className="comp-address" href={url} target="_blank" rel="noreferrer noopener">{address} <span aria-hidden="true">↗</span></a>
               : <strong className="comp-address">{address}</strong>}
+            <RowDistance d={distance} />
             {j?.anchor && <span className="star on" title="The closest comp (the anchor)">★ Closest</span>}
             {c.unconfirmed && <span className="tag tag-estimate" title="Read from its StreetEasy page: confirm it to count it">To confirm</span>}
             {ws.readOnly && <span className={`pill tier ${j?.tier ?? 'none'}`}>{j?.tier ? TIER_LABEL[j.tier] : 'Not sorted'}</span>}
@@ -356,7 +365,7 @@ function CompRow({ ws, c, out, save }: { ws: Workspace; c: WorkspaceComp; out: C
       )}
       {j && ws.readOnly && latest && <p className="reason">{latest.reason}</p>}
 
-      {open && <CompDetails ws={ws} c={c} out={out} id={detailsId} canAnchor={canAnchor} off={off} onStar={() => void star()} />}
+      {open && <CompDetails ws={ws} c={c} out={out} distance={distance} id={detailsId} canAnchor={canAnchor} off={off} onStar={() => void star()} />}
     </li>
   );
 }
@@ -366,11 +375,12 @@ function CompRow({ ws, c, out, save }: { ws: Workspace; c: WorkspaceComp; out: C
  * the tier it suggests. A suggestion, never a decision: the agent sorts. A
  * check that can't be told yet says what it needs.
  */
-function Checks({ out }: { out: CompOut | undefined }) {
+function Checks({ out, distanceShown }: { out: CompOut | undefined; distanceShown: boolean }) {
   const checks = out?.checks ?? [];
   if (!checks.length) return null;
   const flagged = checks.filter((k) => k.status === 'flagged');
-  const unknown = checks.filter((k) => k.status === 'unknown');
+  // A distance that can't be checked yet: the distance line above says why, more exactly.
+  const unknown = checks.filter((k) => k.status === 'unknown' && !(distanceShown && k.code === 'distance'));
   return (
     <div className="checks-list">
       <span className="about-label">Kara’s checks</span>
@@ -387,6 +397,35 @@ function Checks({ out }: { out: CompOut | undefined }) {
   );
 }
 
+/**
+ * The row's distance: "0.3 mi". A comp in the home's building has its flag
+ * ("Same building"), never "0.0 mi". A building that couldn't be mapped is a
+ * dash, with why on hover and in the opened row; one still being looked up
+ * shows nothing yet.
+ */
+function RowDistance({ d }: { d: Distance | null }) {
+  if (d?.kind === 'miles') return <span className="distance" title="From each building’s mapped location">{d.label}</span>;
+  if (d?.kind === 'unknown' && !d.waiting) return <span className="distance muted" title={d.why}>— mi</span>;
+  return null;
+}
+
+/** The opened row's distance and where it came from, or why there's none yet (Dispatch 11). */
+function DistanceLine({ d }: { d: Distance }) {
+  return (
+    <div className="distance-line small">
+      <span className="about-label">Distance</span>
+      {d.kind === 'same_building' && <p>Same building.</p>}
+      {d.kind === 'miles' && (
+        <>
+          <p>{d.label}, from each building’s mapped location.</p>
+          {d.home && d.comp && <p className="muted">Mapped by {MAPPED_BY}: the home as {d.home}; this comp as {d.comp}.</p>}
+        </>
+      )}
+      {d.kind === 'unknown' && <p className="muted">{d.why}</p>}
+    </div>
+  );
+}
+
 /** Where the comp came from, in a line. */
 function originLine(c: WorkspaceComp): string {
   const o = c.record.origin;
@@ -396,8 +435,8 @@ function originLine(c: WorkspaceComp): string {
   return `From StreetEasy’s export${o?.row ? `, row ${o.row}` : ''}${on ? `, pulled ${on}` : ''}.`;
 }
 
-function CompDetails({ ws, c, out, id, canAnchor, off, onStar }: {
-  ws: Workspace; c: WorkspaceComp; out: CompOut | undefined; id: string; canAnchor: boolean; off: boolean; onStar: () => void;
+function CompDetails({ ws, c, out, distance, id, canAnchor, off, onStar }: {
+  ws: Workspace; c: WorkspaceComp; out: CompOut | undefined; distance: Distance | null; id: string; canAnchor: boolean; off: boolean; onStar: () => void;
 }) {
   const j = c.judgment;
   const facts = useMemo(() => factLines(c.record), [c.record]);
@@ -419,7 +458,8 @@ function CompDetails({ ws, c, out, id, canAnchor, off, onStar }: {
       {j && !ws.readOnly && !canAnchor && compStatus(c) === 'sold' && (
         <p className="muted small">A primary sale can be starred as the closest comp.</p>
       )}
-      <Checks out={out} />
+      {distance && <DistanceLine d={distance} />}
+      <Checks out={out} distanceShown={Boolean(distance)} />
       <p className="muted small">{originLine(c)}</p>
       <div className="table-wrap">
         <table className="facts">

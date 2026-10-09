@@ -13,8 +13,12 @@ export type Dollars = number;
 /** Whole square feet. */
 export type SquareFeet = number;
 
-/** Where a value came from (§6.1). */
-export const SOURCES = ['se_export', 'se_pdf', 'listing', 'agent', 'hypothetical', 'engine'] as const;
+/**
+ * Where a value came from (§6.1). `geocoder` is a building's mapped location,
+ * looked up from its street address (Dispatch 11): only `coordinates` comes
+ * from it.
+ */
+export const SOURCES = ['se_export', 'se_pdf', 'listing', 'agent', 'hypothetical', 'engine', 'geocoder'] as const;
 export type Source = (typeof SOURCES)[number];
 
 /**

@@ -224,9 +224,48 @@ export function namedPrices(call: CallState | null | undefined, target: TargetSt
   return prices;
 }
 
+/** Who maps the buildings (Dispatch 11). */
+export const MAPPED_BY = 'NYC Planning GeoSearch';
+
+/** A building's mapped location (Dispatch 11): the geocoder's point for its street address. */
+export interface Location {
+  lat: number;
+  lng: number;
+  /** The day it was looked up. */
+  asOf: IsoDate;
+  /** The geocoder's own address for it. */
+  matched: string | null;
+}
+
+/** The located buildings, by building key, from the server's geocodes: only a match is a location. */
+export function locationsFrom(geocodes: readonly { buildingKey: string; status: string; lat: number | null; lng: number | null; matched: string | null; lookedUpAt: string | null }[]): Map<string, Location> {
+  const out = new Map<string, Location>();
+  for (const g of geocodes) {
+    if (g.status !== 'matched' || g.lat === null || g.lng === null || !g.lookedUpAt) continue;
+    out.set(g.buildingKey, { lat: g.lat, lng: g.lng, asOf: g.lookedUpAt.slice(0, 10), matched: g.matched });
+  }
+  return out;
+}
+
+/** The coordinates fact: a building's point, not the unit's, so approximate. */
+export function coordinatesFact(l: Location): Sourced<{ lat: number; lng: number }> {
+  return {
+    value: { lat: l.lat, lng: l.lng }, source: 'geocoder', as_of: l.asOf, confidence: 'approx',
+    note: `the building’s mapped location (${MAPPED_BY})${l.matched ? `: ${l.matched}` : ''}`,
+  };
+}
+
+/** A record with its building's location, where it has none of its own. A copy: records are cached. */
+function located(record: CompRecord, locations: ReadonlyMap<string, Location> | undefined): CompRecord {
+  const l = record.identity.building_key ? locations?.get(record.identity.building_key) : undefined;
+  if (!l || record.facts.coordinates) return record;
+  return { ...record, facts: { ...record.facts, coordinates: coordinatesFact(l) } };
+}
+
 /**
  * The engine's input. An unsorted comp counts toward nothing: the agent's
  * judgment is structural (§4.6), so the scaffold never tiers a comp for them.
+ * `locations` are the buildings' mapped locations, for distance (§6.10).
  */
 export function engineInput(args: {
   asOf: IsoDate;
@@ -234,6 +273,7 @@ export function engineInput(args: {
   dealTerms?: DealTermsState | null;
   comps: WorkspaceComp[];
   prices?: NamedPrice[];
+  locations?: ReadonlyMap<string, Location>;
 }): EngineInput {
   const i = args.intake ?? {};
   const comps: CompInput[] = args.comps.map((c) => {
@@ -242,20 +282,21 @@ export function engineInput(args: {
     const reason = c.unsortable ?? (c.judgment?.tier ? latest?.reason : 'Not sorted yet');
     return {
       id: c.id,
-      record: c.record,
+      record: located(c.record, args.locations),
       tier,
       ...(reason ? { tier_reason: reason } : {}),
       ...(c.judgment?.anchor && tier === 'primary' ? { anchor: true } : {}),
     };
   });
   const deal = dealTermsInput(args.dealTerms);
+  const identity = identify({ address: i.address?.value ?? null, unit: i.unit?.value ?? null });
+  const facts = subjectFacts(args.intake, args.asOf);
+  const home = identity.building_key ? args.locations?.get(identity.building_key) : undefined;
+  if (home) facts.coordinates = coordinatesFact(home);
   return {
     as_of: args.asOf,
     property_type: 'condo',
-    subject: {
-      identity: identify({ address: i.address?.value ?? null, unit: i.unit?.value ?? null }),
-      facts: subjectFacts(args.intake, args.asOf),
-    },
+    subject: { identity, facts },
     comps,
     ...(args.prices && args.prices.length ? { prices: args.prices } : {}),
     ...(deal ? { deal_terms: deal } : {}),

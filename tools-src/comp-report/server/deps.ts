@@ -5,6 +5,8 @@ import { accessConfig } from './access.ts';
 import { databasePool } from './db.ts';
 import { identityUrlFor, netlifyIdentityVerifier, type IdentityVerifier } from './identity.ts';
 import { firecrawlReader } from './links.ts';
+import { nycGeoSearch } from './geocode.ts';
+import type { GeocodeDeps } from './api/geocode.ts';
 import type { LinkReadDeps } from './api/links.ts';
 import type { AuthDeps } from './session.ts';
 import type { GateDeps } from './identity-events.ts';
@@ -31,4 +33,9 @@ export function productionGateDeps(): GateDeps {
 /** The background link read: the API's dependencies and Firecrawl, with the key the carousel tools already use. */
 export function productionLinkReadDeps(req: Request): LinkReadDeps {
   return { ...productionAuthDeps(req), reader: firecrawlReader({ apiKey: process.env.FIRECRAWL_API_KEY }) };
+}
+
+/** Locations for distance: NYC Planning's GeoSearch, which needs no key. */
+export function productionGeocodeDeps(req: Request): GeocodeDeps {
+  return { ...productionAuthDeps(req), geocoder: nycGeoSearch() };
 }

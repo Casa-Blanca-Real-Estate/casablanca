@@ -1,0 +1,1022 @@
+{
+ "100 Barclay Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.012935,
+     40.713783
+    ]
+   },
+   "properties": {
+    "housenumber": "100",
+    "street": "BARCLAY STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "100 BARCLAY STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001228"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.012935,
+     40.713783
+    ]
+   },
+   "properties": {
+    "housenumber": "96",
+    "street": "BARCLAY STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "96 BARCLAY STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001228"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.012935,
+     40.713783
+    ]
+   },
+   "properties": {
+    "housenumber": "98",
+    "street": "BARCLAY STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "98 BARCLAY STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001228"
+     }
+    }
+   }
+  }
+ ],
+ "200 Chambers Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.012595,
+     40.716572
+    ]
+   },
+   "properties": {
+    "housenumber": "200",
+    "street": "CHAMBERS STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "200 CHAMBERS STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1087716"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.012595,
+     40.716572
+    ]
+   },
+   "properties": {
+    "housenumber": "200B",
+    "street": "CHAMBERS STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "200B CHAMBERS STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1087716"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.012595,
+     40.716572
+    ]
+   },
+   "properties": {
+    "housenumber": "200C",
+    "street": "CHAMBERS STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "200C CHAMBERS STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1087716"
+     }
+    }
+   }
+  }
+ ],
+ "79 Laight Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.011108,
+     40.722086
+    ]
+   },
+   "properties": {
+    "housenumber": "79",
+    "street": "LAIGHT STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "79 LAIGHT STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1002815"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.00561,
+     40.721423
+    ]
+   },
+   "properties": {
+    "housenumber": "5",
+    "street": "LAIGHT STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "5 LAIGHT STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1002736"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.00561,
+     40.721423
+    ]
+   },
+   "properties": {
+    "housenumber": "7",
+    "street": "LAIGHT STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "7 LAIGHT STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1002736"
+     }
+    }
+   }
+  }
+ ],
+ "181 Hudson Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.008464,
+     40.722852
+    ]
+   },
+   "properties": {
+    "housenumber": "181",
+    "street": "HUDSON STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "181 HUDSON STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1002859"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.009245,
+     40.718132
+    ]
+   },
+   "properties": {
+    "housenumber": "69",
+    "street": "HUDSON STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "69 HUDSON STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1002045"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.009014,
+     40.719532
+    ]
+   },
+   "properties": {
+    "housenumber": "105",
+    "street": "HUDSON STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "105 HUDSON STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1083366"
+     }
+    }
+   }
+  }
+ ],
+ "5 Franklin Place": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.003692,
+     40.717853
+    ]
+   },
+   "properties": {
+    "housenumber": "5",
+    "street": "FRANKLIN PLACE",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "5 FRANKLIN PLACE, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001937"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.004118,
+     40.71796
+    ]
+   },
+   "properties": {
+    "housenumber": "2",
+    "street": "FRANKLIN PLACE",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "2 FRANKLIN PLACE, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001916"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.003789,
+     40.717737
+    ]
+   },
+   "properties": {
+    "housenumber": "1",
+    "street": "FRANKLIN PLACE",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "1 FRANKLIN PLACE, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001939"
+     }
+    }
+   }
+  }
+ ],
+ "66 Leonard Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.005628,
+     40.717372
+    ]
+   },
+   "properties": {
+    "housenumber": "66",
+    "street": "LEONARD STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "66 LEONARD STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001877"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.005141,
+     40.714734
+    ]
+   },
+   "properties": {
+    "housenumber": "66",
+    "street": "LEONARD HATTON STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "66 LEONARD HATTON STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1083094"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.005141,
+     40.714734
+    ]
+   },
+   "properties": {
+    "housenumber": "66",
+    "street": "LEONARD HATTON JR STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "66 LEONARD HATTON JR STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1083094"
+     }
+    }
+   }
+  }
+ ],
+ "108 Leonard Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.003385,
+     40.71637
+    ]
+   },
+   "properties": {
+    "housenumber": "108",
+    "street": "LEONARD STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "108 LEONARD STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001835"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.983019,
+     40.772826
+    ]
+   },
+   "properties": {
+    "housenumber": "108",
+    "street": "LEONARD BERNSTEIN PLACE",
+    "borough": "Manhattan",
+    "postalcode": "10023",
+    "label": "108 LEONARD BERNSTEIN PLACE, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1081023"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.001237,
+     40.71515
+    ]
+   },
+   "properties": {
+    "housenumber": "156",
+    "street": "LEONARD STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "156 LEONARD STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001830"
+     }
+    }
+   }
+  }
+ ],
+ "101 Leonard Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.003569,
+     40.716817
+    ]
+   },
+   "properties": {
+    "housenumber": "101",
+    "street": "LEONARD STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "101 LEONARD STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001838"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.947175,
+     40.705859
+    ]
+   },
+   "properties": {
+    "housenumber": "101",
+    "street": "LEONARD STREET",
+    "borough": "Brooklyn",
+    "postalcode": "11206",
+    "label": "101 LEONARD STREET, Brooklyn, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "3256439"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.98315,
+     40.773823
+    ]
+   },
+   "properties": {
+    "housenumber": "101",
+    "street": "LEONARD BERNSTEIN PLACE",
+    "borough": "Manhattan",
+    "postalcode": "10023",
+    "label": "101 LEONARD BERNSTEIN PLACE, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1028834"
+     }
+    }
+   }
+  }
+ ],
+ "25 North Moore Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.007141,
+     40.720011
+    ]
+   },
+   "properties": {
+    "housenumber": "25",
+    "street": "NORTH MOORE STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "25 NORTH MOORE STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1002160"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.007141,
+     40.720011
+    ]
+   },
+   "properties": {
+    "housenumber": "25",
+    "street": "NO MOORE STREET",
+    "borough": "Manhattan",
+    "postalcode": "10013",
+    "label": "25 NO MOORE STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1002160"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.788667,
+     40.669127
+    ]
+   },
+   "properties": {
+    "housenumber": "130-25",
+    "street": "S N MOORE STREET",
+    "borough": "Queens",
+    "postalcode": "11436",
+    "label": "130-25 S N MOORE STREET, Jamaica, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "4586369"
+     }
+    }
+   }
+  }
+ ],
+ "111 Murray Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.012727,
+     40.715447
+    ]
+   },
+   "properties": {
+    "housenumber": "111",
+    "street": "MURRAY STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "111 MURRAY STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1089698"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.016636,
+     40.716704
+    ]
+   },
+   "properties": {
+    "housenumber": "201",
+    "street": "MURRAY STREET",
+    "borough": "Manhattan",
+    "postalcode": "10282",
+    "label": "201 MURRAY STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1088316"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.014462,
+     40.714746
+    ]
+   },
+   "properties": {
+    "housenumber": "218",
+    "street": "MURRAY STREET",
+    "borough": "Manhattan",
+    "postalcode": "10282",
+    "label": "218 MURRAY STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1087239"
+     }
+    }
+   }
+  }
+ ],
+ "77 Reade Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.007264,
+     40.714958
+    ]
+   },
+   "properties": {
+    "housenumber": "77",
+    "street": "READE STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "77 READE STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001629"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.007264,
+     40.714958
+    ]
+   },
+   "properties": {
+    "housenumber": "77A",
+    "street": "READE STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "77A READE STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001629"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.006717,
+     40.714781
+    ]
+   },
+   "properties": {
+    "housenumber": "63",
+    "street": "READE STREET",
+    "borough": "Manhattan",
+    "postalcode": "10007",
+    "label": "63 READE STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001625"
+     }
+    }
+   }
+  }
+ ],
+ "111 Fulton Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.00661,
+     40.709942
+    ]
+   },
+   "properties": {
+    "housenumber": "111",
+    "street": "FULTON STREET",
+    "borough": "Manhattan",
+    "postalcode": "10038",
+    "label": "111 FULTON STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001263"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.876611,
+     40.803876
+    ]
+   },
+   "properties": {
+    "housenumber": "111",
+    "street": "NEW FULTON FISH MARKET",
+    "borough": "Bronx",
+    "postalcode": "10474",
+    "label": "111 NEW FULTON FISH MARKET, Bronx, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "2088215"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.919994,
+     40.679028
+    ]
+   },
+   "properties": {
+    "housenumber": "1917",
+    "street": "FULTON STREET",
+    "borough": "Brooklyn",
+    "postalcode": "11233",
+    "label": "1917 FULTON STREET, Brooklyn, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "3041574"
+     }
+    }
+   }
+  }
+ ],
+ "20 Pine Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.874065,
+     40.686158
+    ]
+   },
+   "properties": {
+    "housenumber": "20",
+    "street": "PINE STREET",
+    "borough": "Brooklyn",
+    "postalcode": "11208",
+    "label": "20 PINE STREET, Brooklyn, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "3091625"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.00972,
+     40.707737
+    ]
+   },
+   "properties": {
+    "housenumber": "20",
+    "street": "PINE STREET",
+    "borough": "Manhattan",
+    "postalcode": "10005",
+    "label": "20 PINE STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1001022"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.745983,
+     40.767307
+    ]
+   },
+   "properties": {
+    "housenumber": "240-20",
+    "street": "PINE STREET",
+    "borough": "Queens",
+    "postalcode": "11363",
+    "label": "240-20 PINE STREET, Douglaston, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "4168846"
+     }
+    }
+   }
+  }
+ ],
+ "99 John Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.006,
+     40.708324
+    ]
+   },
+   "properties": {
+    "housenumber": "99",
+    "street": "JOHN STREET",
+    "borough": "Manhattan",
+    "postalcode": "10038",
+    "label": "99 JOHN STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1087867"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.975973,
+     40.677378
+    ]
+   },
+   "properties": {
+    "housenumber": "99",
+    "street": "ST JOHN PLACE",
+    "borough": "Brooklyn",
+    "postalcode": "11217",
+    "label": "99 ST JOHN PLACE, Brooklyn, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "3019312"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.936481,
+     40.827722
+    ]
+   },
+   "properties": {
+    "housenumber": "99",
+    "street": "JOHN SASS PLACE",
+    "borough": "Manhattan",
+    "postalcode": "10039",
+    "label": "99 JOHN SASS PLACE, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1060622"
+     }
+    }
+   }
+  }
+ ],
+ "88 Greenwich Street": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.014092,
+     40.70788
+    ]
+   },
+   "properties": {
+    "housenumber": "88",
+    "street": "GREENWICH STREET",
+    "borough": "Manhattan",
+    "postalcode": "10006",
+    "label": "88 GREENWICH STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1000794"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.00118,
+     40.7372
+    ]
+   },
+   "properties": {
+    "housenumber": "88",
+    "street": "GREENWICH AVENUE",
+    "borough": "Manhattan",
+    "postalcode": "10011",
+    "label": "88 GREENWICH AVENUE, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1000000"
+     }
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.013961,
+     40.705786
+    ]
+   },
+   "properties": {
+    "housenumber": "37",
+    "street": "GREENWICH STREET",
+    "borough": "Manhattan",
+    "postalcode": "10004",
+    "label": "37 GREENWICH STREET, New York, NY, USA",
+    "addendum": {
+     "pad": {
+      "bin": "1000045"
+     }
+    }
+   }
+  }
+ ]
+}

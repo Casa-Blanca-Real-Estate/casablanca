@@ -11,6 +11,7 @@
 // The owner or an admin can read a report; only its owner can change it.
 // Every query is scoped by owner as well as by row-level security (§12).
 import type { ParseWarning } from '../../engine/index.ts';
+import { loadGeocodes, reportBuildings, type GeocodeView } from '../buildings.ts';
 import type { CompJudgment, CompSource } from '../../workspace/state.ts';
 import { withActor, type Queryable } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
@@ -62,6 +63,8 @@ export interface WorkspaceData {
   comps: CompJudgment[];
   /** Every link read not cleared away: the home's, and the comps' (§6.2). */
   reads: LinkReadView[];
+  /** Where the home and each comp's building stand, for distance (Dispatch 11). */
+  geocodes: GeocodeView[];
   /** The assistant's transcript so far, as a count: the step rail marks step 5 by it. */
   messageCount: number;
 }
@@ -198,6 +201,7 @@ export async function loadWorkspace(tx: Queryable, user: SessionUser, reportId: 
     })),
     comps: await loadJudgments(tx, reportId),
     reads: await loadReads(tx, reportId),
+    geocodes: await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)),
     messageCount,
   };
 }
