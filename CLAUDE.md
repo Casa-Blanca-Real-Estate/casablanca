@@ -83,6 +83,9 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 
 - **Casanova** — overseer. Holds the whole picture, plans, writes dispatches, reviews and merges
   PRs, keeps repo context current. Does not take on the large builds itself.
+- **The Dispatch Ledger** (https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq#casa) tracks every kickoff from queued to landed. It's one
+  artifact shared with MindBinder, and Casa's lines are on its Casa Blanca tab. Sessions mark their own
+  lines with the `ArtifactData` tool (rule 11 in `docs/dispatch/README.md`).
 - **Dispatched sessions** — own one brief from `docs/dispatch/` end to end, open a PR to
   `claude/main` when done, and sign their work with their session name.
   **They never merge. Only Casanova or Kimani merges**, unless Kimani tells a session otherwise.

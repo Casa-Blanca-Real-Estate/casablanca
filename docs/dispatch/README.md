@@ -24,6 +24,15 @@ this folder is authoritative; Kimani pastes a short kickoff into the new session
 9. **Anything internal-only at a new path goes on the forced-404 list** in `netlify.toml` —
    `publish = "."` serves the whole repo root to the public web (`/CLAUDE.md`).
 10. **Keep your roster entry current** through your PR — never by pushing to `claude/main` directly.
+11. **Mark your line on the Dispatch Ledger.** Kimani's ledger (https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq, the Casa Blanca tab) has
+    one line per kickoff, and your kickoff names its id (`casa-r6-1`, say). When your PR opens, use the
+    `ArtifactData` tool:
+    1. `get` the line from collection `dispatches`;
+    2. `update` it with the version you read as `if_version`, and data
+       `{"status": "delivered", "pr": <n>, "updatedBy": "<your name>"}`.
+
+    If your session has no `ArtifactData` tool, say so in the PR and Casanova marks it. Casanova marks
+    lines landed when it merges.
 
 ## Restarting a track in a new session
 
@@ -41,6 +50,13 @@ Casanova restarts the same way, reading `docs/decisions.md` and the open PRs as 
 Each dispatch opens with: its number and title, **dispatched by** (session name and date), **to**
 (session name), the design sections it builds from, and what it depends on. It ends with a definition of
 done. It carries the rules above by reference, and restates rules 3–5 so no kickoff can drop them.
+
+**Every kickoff goes on the Dispatch Ledger** (https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq#casa) as a line on the Casa Blanca tab, in
+the round it goes out with. The kickoff names the line's id, and the line holds the kickoff text to
+copy.
+- **The ledger is shared with MindBinder's overseer, Big Kahuna.** Casa lines carry `"project": "casa"`
+  and ids that start `casa-`; round notes are `casa-r<n>` in `rounds`.
+- **Never write or change a line without those,** and never touch a MindBinder line.
 
 ## Session roster
 
