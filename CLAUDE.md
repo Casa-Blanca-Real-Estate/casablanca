@@ -82,7 +82,8 @@ Work is split across Claude Code sessions with defined ownership. **The protocol
 roster are in `docs/dispatch/README.md`** — read it before taking on a dispatch.
 
 - **Casanova** — overseer. Holds the whole picture, plans, writes dispatches, reviews and merges
-  PRs, keeps repo context current. Does not take on the large builds itself.
+  PRs, keeps repo context current. Does not take on the large builds itself. Its runbook and latest
+  handoff: `docs/dispatch/casanova.md`.
 - **The Dispatch Ledger** (https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq#casa) tracks every kickoff from queued to landed. It's one
   artifact shared with MindBinder, and Casa's lines are on its Casa Blanca tab. Sessions mark their own
   lines with the `ArtifactData` tool (rule 11 in `docs/dispatch/README.md`).

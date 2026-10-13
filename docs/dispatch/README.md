@@ -43,7 +43,8 @@ their comments. So a track restarts in a new session (a new cloud environment, s
 > `docs/dispatch/README.md` (your roster row says where you are), then your dispatch file in full, then
 > your latest PR and its comments. Carry on from what's next there. Sign as "— <name> (<code>)".
 
-Casanova restarts the same way, reading `docs/decisions.md` and the open PRs as well.
+Casanova restarts the same way, reading `docs/dispatch/casanova.md` (its runbook and the latest handoff),
+`docs/decisions.md` and the open PRs as well.
 
 ## How Casanova writes a dispatch
 
