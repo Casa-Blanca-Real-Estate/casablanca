@@ -8,12 +8,10 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-09-29 by Casanova.
+Last updated 2026-10-13 by Casanova.
 
 **What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
-pic roster) can run now. Two settings of yours unlock more:
-- `DEV_NOTEBOOK_KEY` in the Casa cloud environment, so sessions can read your notes and the Feedback list;
-- the Jev key, which unlocks Dispatch 10's phase 2.
+pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dispatch 10's phase 2.
 
 ## Index — open
 
@@ -47,8 +45,8 @@ each was applied.
   ID and secret into Netlify → **Identity → Registration → External providers → Google**, not into
   environment variables.
 - [x] ~~Delete the 11 merged branches.~~ Done. **Still to delete: `samplepics`** (D-16).
-- [ ] **Soon — give Casa sessions their own cloud environment**, or take `DATABASE_URL` out of this
-  one. It holds MindBinder's database address, and every Casa session carries it.
+- [x] ~~Give Casa sessions their own cloud environment.~~ Done 2026-10-13: no `DATABASE_URL` in it.
+  The old one still carries it, for any track still running there. It holds MindBinder's database address, and every Casa session carries it.
 - [ ] **Soon — a Jev key for Casa, from your existing Vercel account.** Dispatch 10's phase 2 waits on it.
   1. **After Arbiter's zero-retention switch merges,** create a new AI Gateway API key on the account
      MindBinder uses. It draws on the same $25 of credits, which at Jev's price is effectively forever.
@@ -59,18 +57,16 @@ each was applied.
     for now. And zero retention needs Pro, before Jev reads anything an agent or client wrote.
 - [ ] **Later — label about 30 listings for Jev's calibration** (Dispatch 10 phase 2). Arbiter commits
   the sheet; filling it in takes about 20 minutes. Hannah could do it instead.
-- [ ] **Now — set up the dev notebook** (#54): add `creative@email.casa-blanca.com` to
-  `CR_ADMIN_EMAILS` (keep `casacalliste@gmail.com`), redeploy, sign in at `/tools/dev-notebook/`, make a
-  key, and add it as `DEV_NOTEBOOK_KEY` in the Claude Code cloud environment.
+- [x] ~~Set up the dev notebook (#54).~~ Done: `DEV_NOTEBOOK_KEY` is in the Casa cloud environment and
+  works (2026-10-13).
+- [ ] **Now — read the team Feedback list yourself, on the notebook page** (*Team feedback*). A key
+  can't read it, by design (it carries names and emails), so no session can. That includes the Cowork
+  session's feedback. Turn anything worth acting on into a note (Ctrl+.), and Casanova sorts it.
 - [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
-- [ ] **Now — two settings, both quick:**
-  1. **`DEV_NOTEBOOK_KEY` in the Casa Claude Code cloud environment.** It's still missing, so no
-     session can read your notes or the Feedback list. That includes the Cowork session's feedback,
-     which is unread until this is in.
-  2. **Jev:** the zero-retention switch is merged (#61). Make a new AI Gateway key on your existing
-     Vercel account. In Netlify (Functions scope), set `AI_GATEWAY_API_KEY` to it and `CR_JEV_ZDR=off`,
-     then redeploy. Leave `CR_JEV_MODE` alone.
+- [ ] **Now — the Jev key:** the zero-retention switch is merged (#61). Make a new AI Gateway key on your existing
+  Vercel account. In Netlify (Functions scope), set `AI_GATEWAY_API_KEY` to it and `CR_JEV_ZDR=off`,
+  then redeploy. Leave `CR_JEV_MODE` alone.
 - [ ] **Soon — change the credential in the email-signatures doc.** The profile-pic session flagged it
   to you directly.
 - [ ] **Later — for Noble, the thresholds that flag most comps:**
