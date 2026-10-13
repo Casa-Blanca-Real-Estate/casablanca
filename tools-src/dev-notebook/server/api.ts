@@ -6,7 +6,8 @@
 //   POST /session with an Identity token   a dev email signs in; the browser
 //                                          gets a notebook session (30 days)
 //   a notebook session (dns_…)             Kimani, in a browser: everything
-//   a key (dnk_…)                          a Claude Code session: read,
+//   a key (dnk_…)                          a Claude Code session: read
+//                                          notes and feedback (no emails),
 //                                          re-status and comment — never
 //                                          write a note, delete one, or
 //                                          manage keys
@@ -14,7 +15,7 @@
 // Same-origin and token-authenticated: no cookies are read, so there's
 // nothing to forge cross-site, and no CORS headers.
 import { bearerToken, IdentityUnavailable, type IdentityVerifier } from '../../comp-report/server/identity.ts';
-import type { FeedbackItem } from '../../feedback/feedback.ts';
+import { feedbackId, type FeedbackItem } from '../../feedback/feedback.ts';
 import { describeOpen, devEmails, PARAMS, STATUSES, TAGS } from '../vocab.ts';
 import { FRESH_SIGN_IN_MS, MAX_SHOT_BYTES, NotebookError, type NotebookStore } from './store.ts';
 
@@ -190,9 +191,45 @@ export const ROUTES: Route[] = [
     },
   },
   {
-    // The team Feedback button's submissions carry names and emails: the developers read them, a key can't.
-    method: 'GET', path: /^\/feedback$/, who: ['session'],
-    run: async ({ deps }) => json({ feedback: await deps.feedback() }),
+    // The team Feedback button's submissions. Signed in, a developer reads them whole; a key reads them
+    // without the sender's email, so a Claude Code session can sort them. Each shows the note made from it.
+    method: 'GET', path: /^\/feedback$/, who: ['session', 'key'],
+    run: async ({ deps, who }) => {
+      const [items, made] = await Promise.all([deps.feedback(), notesFromFeedback(deps.store)]);
+      return json({
+        feedback: items.map(({ email, ...rest }) => {
+          const id = feedbackId(rest);
+          return { id, ...rest, ...(who.kind === 'session' ? { email } : {}), note: made.get(id) ?? null };
+        }),
+      });
+    },
+  },
+  {
+    // Feedback worth acting on becomes a note, once. The note carries the message and the sender's
+    // name, never the email: notes are what keys read.
+    method: 'POST', path: /^\/feedback\/(fb_[0-9a-f]{12})\/note$/, who: ['session'],
+    run: async ({ req, deps, params, who }) => {
+      const body = await readJson(req);
+      const item = (await deps.feedback()).find((f) => feedbackId(f) === params[0]);
+      if (!item) return fail(404, 'not_found', 'No such feedback.');
+      const existing = (await notesFromFeedback(deps.store)).get(params[0]!);
+      if (existing) return json({ error: 'already_a_note', message: `That's already ${existing.id}.`, note: existing }, 409);
+      const note = await deps.store.create(
+        {
+          body: `${item.message}\n\n— ${item.name || 'Someone'}, with the Feedback button${item.tool ? ` on ${item.tool}` : ''}, ${item.ts.slice(0, 10)}`,
+          tags: body.tags,
+          title: item.tool || null,
+          context: { feedback: params[0], from: item.name || null },
+        },
+        {
+          author: who.kind === 'session' ? who.email : 'unknown',
+          userAgent: req.headers.get('user-agent'),
+          commit: await deps.commit().catch(() => null),
+          deployId: deps.deployId,
+        },
+      );
+      return json({ note }, 201);
+    },
   },
   {
     method: 'GET', path: /^\/keys$/, who: ['session'],
@@ -219,6 +256,16 @@ export const ROUTES: Route[] = [
     },
   },
 ];
+
+/** Which feedback has become a note: feedback id → the note made from it. */
+async function notesFromFeedback(store: NotebookStore): Promise<Map<string, { id: string; status: string }>> {
+  const made = new Map<string, { id: string; status: string }>();
+  for (const n of (await store.list({ status: 'all', limit: 500 })).notes) {
+    const from = n.context?.feedback;
+    if (typeof from === 'string') made.set(from, { id: n.id, status: n.status });
+  }
+  return made;
+}
 
 async function authenticate(req: Request, store: NotebookStore): Promise<Principal | null> {
   const token = bearerToken(req);

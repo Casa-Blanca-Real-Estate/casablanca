@@ -93,6 +93,16 @@ describe('the dev notebook CLI', () => {
     assert.equal(out[0], '1 open dev note, 1 tagged uiux.');
   });
 
+  test('--feedback lists the team Feedback in full, without emails, each with its note or none', async () => {
+    await fetch(`${server.url}/.netlify/functions/feedback`, {
+      method: 'POST', body: JSON.stringify({ name: 'Ana', email: 'ana@casa-blanca.com', message: 'Sort is slow.\nEspecially on a phone.', tool: 'Comp Report' }),
+    });
+    assert.equal(await run('--feedback'), 0);
+    assert.equal(out[0], '1 piece of team feedback, 1 not yet a note.');
+    assert.match(out[1]!, /^fb_[0-9a-f]{12}  \d{4}-\d{2}-\d{2}  Comp Report  Ana  no note yet\n    Sort is slow\.\n    Especially on a phone\.$/);
+    assert.ok(!out.join('\n').includes('ana@casa-blanca.com'));
+  });
+
   test('without a key it says how to get one; the key itself is never printed', async () => {
     await assert.rejects(main([], { DEV_NOTEBOOK_URL: server.url }, () => undefined), /DEV_NOTEBOOK_KEY/);
     await assert.rejects(main([], { DEV_NOTEBOOK_KEY: env.DEV_NOTEBOOK_KEY!.slice(0, -2) + 'xx', DEV_NOTEBOOK_URL: server.url }, () => undefined), /refused the key/);

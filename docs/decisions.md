@@ -59,9 +59,9 @@ each was applied.
   the sheet; filling it in takes about 20 minutes. Hannah could do it instead.
 - [x] ~~Set up the dev notebook (#54).~~ Done: `DEV_NOTEBOOK_KEY` is in the Casa cloud environment and
   works (2026-10-13).
-- [ ] **Now — read the team Feedback list yourself, on the notebook page** (*Team feedback*). A key
-  can't read it, by design (it carries names and emails), so no session can. That includes the Cowork
-  session's feedback. Turn anything worth acting on into a note (Ctrl+.), and Casanova sorts it.
+- [ ] **Now — sort the team Feedback list** on the notebook page (*Team feedback*): **Make a note** on
+  anything worth acting on. Sessions now read the list too (`--feedback`, without emails), so Casanova
+  can propose the sort; the button is yours, because notes are.
 - [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
 - [ ] **Now — the Jev key:** the zero-retention switch is merged (#61). Make a new AI Gateway key on your existing

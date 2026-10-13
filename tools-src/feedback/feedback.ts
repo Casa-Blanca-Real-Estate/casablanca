@@ -4,15 +4,16 @@
 // Posting is open to everyone on the site: agents have no accounts, and tools
 // served from GitHub Pages post cross-origin (localStorage.cb_backend), so the
 // POST keeps open CORS. Reading is not open: submissions carry names and
-// emails, so only the dev notebook's signed-in developers read them
-// (GET /api/dev/notebook/feedback). Until 2026-09-29 this function also
-// answered GET with the whole list — to anyone, from any site.
+// emails, so only the dev notebook reads them (GET /api/dev/notebook/feedback):
+// whole for its signed-in developers, without emails for a session's key.
+// Until 2026-09-29 this function also answered GET with the whole list — to
+// anyone, from any site.
 //
 // Netlify Blobs store `cb-feedback`:
 //   list               the old single list (newest 200): read, no longer written
 //   items/<ts>-<rand>  one blob per submission since, so two sent at once can't
 //                      overwrite each other (the old read-modify-write could)
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 export const FEEDBACK_STORE = 'cb-feedback';
 export const MAX_MESSAGE = 4000;
@@ -81,6 +82,14 @@ export async function handleFeedback(
     console.error('feedback: could not save', error);
     return reply({ error: 'internal', message: 'Couldn’t save that. Try again.' }, 500, true);
   }
+}
+
+/**
+ * A submission's id: derived from what it holds, so the old single list and
+ * the one-per-submission blobs both have one, and it never changes.
+ */
+export function feedbackId(item: Pick<FeedbackItem, 'ts' | 'message'>): string {
+  return `fb_${createHash('sha256').update(`${item.ts}\n${item.message}`).digest('hex').slice(0, 12)}`;
 }
 
 function asItem(v: unknown): FeedbackItem | null {

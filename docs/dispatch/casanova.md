@@ -126,9 +126,9 @@ overseer (Big Kahuna). Casa's lines are on the Casa Blanca tab.
 | `casa-r6-3` | Arbiter | 10, phase 2 (Jev live) | held, until Kimani's Jev key |
 
 **Kimani's open items:** all in `docs/decisions.md`. The ones that unblock work:
-- ~~`DEV_NOTEBOOK_KEY` in the new environment.~~ In and working (2026-10-13). **A key reads notes,
-  never the team Feedback list** (names and emails; `docs/dev-notebook/README.md`). Kimani reads
-  Feedback on the notebook page and turns what matters into notes.
+- ~~`DEV_NOTEBOOK_KEY` in the new environment.~~ In and working (2026-10-13). A key reads the team
+  Feedback list without emails (`npm run -s notebook -- --feedback`); Kimani turns what matters into
+  notes with **Make a note** on the notebook page.
 - The Jev key: a new AI Gateway key on his existing Vercel account, set as `AI_GATEWAY_API_KEY` with
   `CR_JEV_ZDR=off` in Netlify.
 - D-24: the email-signatures doc, or FileMaker, for agents' details.

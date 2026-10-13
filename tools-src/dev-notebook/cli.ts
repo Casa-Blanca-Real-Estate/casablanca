@@ -12,6 +12,8 @@
 //   npm run notebook -- --id=dn_… --set=read --by=Mason
 //   npm run notebook -- --id=dn_… --note="Reproduced on Safari." --by=Mason
 //   npm run notebook -- --id=dn_… --set=resolved --pr=57 --note="…" --by=Mason
+//   npm run notebook -- --feedback                     the team Feedback list, no emails,
+//                                                       each with the note made from it
 //
 // It has no delete, by design: deleting happens only on the notebook page.
 // Use --set=wontfix or --set=duplicate with a --note instead.
@@ -40,6 +42,7 @@ function usage(): string {
     'Usage: npm run notebook -- [--status=open|active|all|read|resolved|answered|deferred|wontfix|duplicate] [--tag=] [--surface=] [--limit=]',
     '       npm run notebook -- --id=dn_… [--shots] [--shots-dir=<dir>]',
     '       npm run notebook -- --id=dn_… [--set=<status>] [--note="…"] [--pr=<n>] --by=<your session name>',
+    '       npm run notebook -- --feedback [--limit=]',
   ].join('\n');
 }
 
@@ -77,6 +80,15 @@ function line(n: NoteOut): string {
   return `${n.id}  ${day(n.createdAt)}  ${status}${tags}  ${n.surface}  ${n.route ?? '—'}  "${oneLine(n.body, 100)}"`;
 }
 
+interface FeedbackOut { id: string; name: string; message: string; tool: string; ts: string; note: { id: string; status: string } | null }
+
+/** One piece of team feedback, message in full: it's what a session sorts. */
+function feedbackLines(f: FeedbackOut): string {
+  const made = f.note ? `→ ${f.note.id} (${f.note.status})` : 'no note yet';
+  const head = `${f.id}  ${day(f.ts)}  ${f.tool || '—'}  ${f.name || 'no name'}  ${made}`;
+  return [head, ...f.message.trim().split('\n').map((l) => `    ${l}`)].join('\n');
+}
+
 function details(n: NoteOut): string {
   const out = [
     `${n.id}  ${statusWord(n)} since ${minute(n.statusAt)}`,
@@ -105,7 +117,7 @@ export async function main(argv: string[], env: Record<string, string | undefine
     options: {
       status: { type: 'string' }, tag: { type: 'string' }, surface: { type: 'string' }, limit: { type: 'string' },
       id: { type: 'string' }, shots: { type: 'boolean' }, 'shots-dir': { type: 'string' }, set: { type: 'string' }, note: { type: 'string' },
-      pr: { type: 'string' }, by: { type: 'string' }, help: { type: 'boolean' },
+      pr: { type: 'string' }, by: { type: 'string' }, feedback: { type: 'boolean' }, help: { type: 'boolean' },
     },
     allowPositionals: false,
     strict: true,
@@ -123,6 +135,15 @@ export async function main(argv: string[], env: Record<string, string | undefine
   }
   const base = (env.DEV_NOTEBOOK_URL?.trim() || PRODUCTION).replace(/\/+$/, '');
   if (!/^https?:\/\/[^/]+$/.test(base)) throw new CliError('DEV_NOTEBOOK_URL is a site origin, like https://example.netlify.app');
+
+  if (values.feedback) {
+    const { feedback } = await api<{ feedback: FeedbackOut[] }>(base, key, 'GET', '/feedback');
+    const limit = values.limit ? Math.max(1, Number(values.limit) || 0) : feedback.length;
+    const unmade = feedback.filter((f) => !f.note).length;
+    print(`${feedback.length} piece${feedback.length === 1 ? '' : 's'} of team feedback, ${unmade} not yet a note.`);
+    for (const f of feedback.slice(0, limit)) print(feedbackLines(f));
+    return 0;
+  }
 
   const changing = values.set !== undefined || values.note !== undefined || values.pr !== undefined;
   if (changing) {

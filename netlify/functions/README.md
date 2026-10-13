@@ -78,7 +78,8 @@ blocks in `index.html` if the backend is unreachable. Signed-in devs edit both i
 | Method | Path | Notes |
 |--------|------|-------|
 | `POST` | `/.netlify/functions/feedback` | `{name?, email?, message, tool?}` → `{ok:true}`. Open to anyone, CORS `*` (the tray posts cross-origin from GitHub Pages). Message up to 4,000 characters; the other fields are clipped to 200 |
-| `GET`  | `/api/dev/notebook/feedback` | **Signed-in developers only**, on the dev notebook page: every submission, newest first. A notebook key can't read it |
+| `GET`  | `/api/dev/notebook/feedback` | The dev notebook: every submission, newest first, each with an `id` and the `note` made from it (or `null`). A signed-in developer gets the emails; a notebook key never does |
+| `POST` | `/api/dev/notebook/feedback/<id>/note` | **Signed-in developers only:** turns one submission into a dev note, once (409 with the note after that). The note carries the name, not the email |
 
 The function itself answers nothing but `POST` (and its preflight): until 2026-09-29 a `GET` on it
 returned the whole list, names and emails included, to anyone. Code in `tools-src/feedback/`. Stored

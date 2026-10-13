@@ -12,7 +12,7 @@ import { after, before, describe, test } from 'node:test';
 import { getStore } from '@netlify/blobs';
 import { BlobsServer } from '@netlify/blobs/server';
 import type { IdentityUser } from '../../comp-report/server/identity.ts';
-import { FEEDBACK_STORE, handleFeedback, readFeedback, type FeedbackBlobs } from '../../feedback/feedback.ts';
+import { FEEDBACK_STORE, feedbackId, handleFeedback, readFeedback, type FeedbackBlobs } from '../../feedback/feedback.ts';
 import { BASE, handleNotebook, ROUTES, type NotebookDeps } from './api.ts';
 import { notebookStore, SESSION_DAYS, type BlobStore } from './store.ts';
 
@@ -73,7 +73,7 @@ describe('the dev notebook API', () => {
   test('every route is gated: nothing answers without a notebook token (sign-in needs an Identity one)', async () => {
     for (const r of ROUTES) {
       const path = r.path.source.replace(/^\^\\?/, '').replace(/\$$/, '').replace(/\\\//g, '/')
-        .replace('(dn_[0-9a-z]{12})', 'dn_000000000000').replace('(sh_[0-9a-z]{10})', 'sh_0000000000').replace('([0-9a-z]{12})', '000000000000');
+        .replace('(dn_[0-9a-z]{12})', 'dn_000000000000').replace('(sh_[0-9a-z]{10})', 'sh_0000000000').replace('(fb_[0-9a-f]{12})', 'fb_000000000000').replace('([0-9a-z]{12})', '000000000000');
       const res = await call(r.method, path);
       assert.equal(res.status, 401, `${r.method} ${path} answered ${res.status} without a token`);
       assert.ok(r.who === 'identity' || r.who.length > 0, `${r.method} ${path} names who may call it`);
@@ -165,23 +165,47 @@ describe('the dev notebook API', () => {
     assert.equal((await call('POST', `/notes/${id}/shots`, key, undefined, PNG)).body.error, 'not_with_a_key');
   });
 
-  test('the team Feedback list is read here, by a signed-in developer — never with a key', async () => {
+  test('the team Feedback list: whole for a developer, without emails for a key, and one note per piece', async () => {
     const post = (message: string) => handleFeedback(new Request('https://studio.test/.netlify/functions/feedback', {
       method: 'POST', body: JSON.stringify({ name: 'Ana', email: 'ana@casa-blanca.com', message, tool: 'Comp Report' }),
     }), feedback, { now: () => now, random: (n) => randomBytes(n) });
     assert.equal((await post('The sort step is slow.')).status, 200);
     now += 1000;
     assert.equal((await post('Love the reveal.')).status, 200);
+    const ts = new Date(now).toISOString();
+    const fid = feedbackId({ ts, message: 'Love the reveal.' });
 
-    assert.equal((await call('GET', '/feedback', key)).body.error, 'not_with_a_key', 'names and emails stay off the keys');
     const read = await call('GET', '/feedback', session);
     assert.equal(read.status, 200);
     assert.deepEqual(read.body.feedback.map((f: { message: string }) => f.message), ['Love the reveal.', 'The sort step is slow.']);
-    assert.deepEqual(read.body.feedback[0], { name: 'Ana', email: 'ana@casa-blanca.com', message: 'Love the reveal.', tool: 'Comp Report', ts: new Date(now).toISOString() });
+    assert.deepEqual(read.body.feedback[0], { id: fid, name: 'Ana', email: 'ana@casa-blanca.com', message: 'Love the reveal.', tool: 'Comp Report', ts, note: null });
+
+    const byKey = await call('GET', '/feedback', key);
+    assert.equal(byKey.status, 200);
+    assert.deepEqual(byKey.body.feedback[0], { id: fid, name: 'Ana', message: 'Love the reveal.', tool: 'Comp Report', ts, note: null });
+    assert.ok(!JSON.stringify(byKey.body).includes('ana@casa-blanca.com'), 'no email reaches a key');
+
+    assert.equal((await call('POST', `/feedback/${fid}/note`, key, {})).body.error, 'not_with_a_key', 'notes are Kimani\'s to write');
+    assert.equal((await call('POST', '/feedback/fb_000000000000/note', session, {})).status, 404);
+    const made = await call('POST', `/feedback/${fid}/note`, session, { tags: ['critique'] });
+    assert.equal(made.status, 201);
+    const note = made.body.note;
+    assert.match(note.body, /^Love the reveal\.\n\n— Ana, with the Feedback button on Comp Report, /);
+    assert.ok(!JSON.stringify(note).includes('ana@casa-blanca.com'), 'the note carries the name, never the email');
+    assert.deepEqual(note.tags, ['critique']);
+    assert.deepEqual(note.context, { feedback: fid, from: 'Ana' });
+
+    const again = await call('POST', `/feedback/${fid}/note`, session, {});
+    assert.equal(again.status, 409);
+    assert.equal(again.body.note.id, note.id, 'once only: the second ask points at the first note');
+    const after = (await call('GET', '/feedback', key)).body.feedback;
+    assert.deepEqual(after.map((f: { note: unknown }) => f.note), [{ id: note.id, status: 'open' }, null]);
+    const { notes } = (await call('GET', '/notes?status=all', key)).body;
+    assert.ok(notes.some((n: { id: string }) => n.id === note.id), 'the sessions see it as a note');
   });
 
   test('resolved needs its PR; closing any other way needs a why', async () => {
-    const { id } = (await call('GET', '/notes?status=all', key)).body.notes[0];
+    const { id } = (await call('GET', '/notes?status=all', key)).body.notes.find((n: { context: { feedback?: string } }) => !n.context.feedback);
     assert.equal((await call('PATCH', `/notes/${id}`, key, { status: 'resolved' })).body.error, 'pr_required');
     assert.equal((await call('PATCH', `/notes/${id}`, key, { status: 'wontfix' })).body.error, 'note_required');
     assert.equal((await call('PATCH', `/notes/${id}`, key, { status: 'read', pr: 5 })).body.error, 'pr_without_resolved');

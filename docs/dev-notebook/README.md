@@ -19,6 +19,7 @@ npm run -s notebook -- --id=dn_… --shots     # …and save the screenshots to 
 npm run -s notebook -- --id=dn_… --set=read --by=Mason                 # picking it up
 npm run -s notebook -- --id=dn_… --note="Reproduced on Safari." --by=Mason   # a note on it
 npm run -s notebook -- --id=dn_… --set=resolved --pr=61 --note="…" --by=Mason
+npm run -s notebook -- --feedback            # the team Feedback list, no emails, each with its note
 ```
 
 - It reads the live site's API with a key in the environment, `DEV_NOTEBOOK_KEY`, so it works from a
@@ -101,9 +102,11 @@ context is 4 KB.
 
 **Team feedback.** The page also shows what people send with the **Feedback** button on every studio
 page (open *Team feedback*). That's a different thing from notes: anyone can send it, and it carries
-names and emails, so only a notebook session reads it. A key can't, and the Feedback function no
-longer answers a read at all. It is not triaged here; nothing marks it off. Details in
-`netlify/functions/README.md`.
+names and emails. Signed in, the page shows it whole, and **Make a note** turns one piece into a note
+(once: after that it links to the note). A key reads it with `--feedback`: the messages, names and
+tools, never the emails, each with the note made from it, if any. A note made from feedback carries
+the message and the sender's name, never the email, and `context.feedback` names its source.
+Details in `netlify/functions/README.md`.
 
 ## Tests
 

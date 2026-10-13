@@ -76,6 +76,7 @@
   .fbitem{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
   .fbitem .meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;color:var(--muted);margin:0 0 4px}
   .fbitem .text{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+  .fbitem .fbact{margin:8px 0 0}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#ebe9e3;border-radius:5px;padding:1px 5px}
 </style>
 </head>
@@ -127,8 +128,8 @@
     </div>
 
     <h2>Team feedback</h2>
-    <p class="muted">What people send with the <b>Feedback</b> button on every studio page. It carries names and emails, so it's read
-      only here, signed in: not with a key, and no longer at the button's own address.</p>
+    <p class="muted">What people send with the <b>Feedback</b> button on every studio page. Emails show only here, signed in: a key reads
+      the messages and names, never the emails. <b>Make a note</b> turns one into a note for the sessions to pick up.</p>
     <details class="fbwrap" id="fbWrap">
       <summary>Show team feedback</summary>
       <div class="fb" id="fbList"></div>
@@ -449,9 +450,31 @@
             h('span', { text: new Date(f.ts).toLocaleString() }),
             f.tool ? h('span', { class: 'tagpill', text: f.tool }) : null,
             h('span', { text: [f.name, f.email].filter(Boolean).join(' · ') || 'No name given' })),
-          h('p', { class: 'text', text: f.message })));
+          h('p', { class: 'text', text: f.message }),
+          h('div', { class: 'fbact' }, feedbackAction(f))));
       });
     }).catch(function (e) { wrap.textContent = ''; wrap.appendChild(h('p', { class: 'muted small', text: e.message })); });
+  }
+  // One note per piece of feedback: once made, the button becomes a link to it.
+  function feedbackAction(f) {
+    if (f.note) {
+      return h('button', { type: 'button', class: 'link', text: 'Note ' + f.note.id + ' · ' + f.note.status,
+        onclick: function () { select(f.note.id); $('detail').scrollIntoView({ behavior: 'smooth' }); } });
+    }
+    var btn = h('button', { type: 'button', text: 'Make a note' });
+    btn.onclick = function () {
+      btn.disabled = true; btn.textContent = 'Making…';
+      api('POST', '/feedback/' + f.id + '/note', {}).then(function (data) {
+        f.note = { id: data.note.id, status: data.note.status };
+        btn.replaceWith(feedbackAction(f));
+        loadList();
+      }).catch(function (e) {
+        if (e.code === 'already_a_note') return loadFeedback();
+        btn.disabled = false; btn.textContent = 'Make a note';
+        btn.after(h('span', { class: 'muted small', text: ' ' + e.message }));
+      });
+    };
+    return btn;
   }
   $('fbWrap').addEventListener('toggle', function () { if ($('fbWrap').open) loadFeedback(); });
 

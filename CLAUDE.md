@@ -18,6 +18,7 @@ any studio page). Read them at the start of open-ended work, or when asked what'
 ```sh
 npm run -s notebook                          # open notes; the first line counts them
 npm run -s notebook -- --id=<id> --shots     # one note: its context, history and screenshots
+npm run -s notebook -- --feedback            # the team Feedback list (no emails); Kimani makes notes of it
 ```
 
 Picking one up: `--set=read --by=<session>`. A note on it: `--note="…" --by=<session>`. Fixed in your
