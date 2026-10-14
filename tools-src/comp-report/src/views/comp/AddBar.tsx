@@ -51,7 +51,7 @@ async function addExport(ws: Workspace, file: File): Promise<string | null> {
   return null;
 }
 
-export const SCREENSHOTS_LATER = 'Reading listing screenshots isn’t in this version yet. Paste the link, or type it in.';
+export const SCREENSHOTS_LATER = 'Screenshots aren’t read yet: paste the listing’s link, or type it in for now.';
 
 /**
  * Drop anywhere on the screen that holds the bar: the export (CSV or XLSX), a

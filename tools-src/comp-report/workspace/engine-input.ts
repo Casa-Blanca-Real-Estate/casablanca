@@ -6,7 +6,7 @@ import {
   type CompInput, type CompRecord, type DealTerms, type EngineInput, type FactField, type IsoDate,
   type ManualCompFields, type NamedPrice, type OutdoorKind, type ParsedExport, type PropertyFacts, type ReportPropertyType, type Sourced,
 } from '../engine/index.ts';
-import type { CallState, CompJudgment, CompSource, DealTermsState, Entry, Intake, TargetState } from './state.ts';
+import { noteOf, type CallState, type CompJudgment, type CompSource, type DealTermsState, type Entry, type Intake, type TargetState } from './state.ts';
 
 /** An import, parsed: the browser and the server parse the stored file with the same parser. */
 export interface ParsedImport {
@@ -286,7 +286,8 @@ export function engineInput(args: {
   const comps: CompInput[] = args.comps.map((c) => {
     const tier = c.judgment?.tier ?? 'excluded';
     const latest = c.judgment?.reasons.at(-1);
-    const reason = c.unsortable ?? (c.judgment?.tier ? latest?.reason : 'Not sorted yet');
+    // The agent's note is the tier's reason once it's in (a tier given first records "(no note yet)").
+    const reason = c.unsortable ?? (c.judgment?.tier ? noteOf(c.judgment) ?? latest?.reason : 'Not sorted yet');
     return {
       id: c.id,
       record: located(c.record, args.locations),

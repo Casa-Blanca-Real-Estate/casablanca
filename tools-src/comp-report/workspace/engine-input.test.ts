@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { compute, parseExport } from '../engine/index.ts';
 import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
 import { SAMPLE_CALL, SAMPLE_DEAL_TERMS, SAMPLE_INTAKE, SAMPLE_TARGET, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
-import { dealTermsInput, engineInput, namedPrices, subjectFacts, workspaceComps, type ParsedImport } from './engine-input.ts';
+import { dealTermsInput, engineInput, namedPrices, removedExportComps, subjectFacts, workspaceComps, type ParsedImport } from './engine-input.ts';
 import type { CompJudgment } from './state.ts';
 
 const AS_OF = '2026-09-29';
@@ -101,4 +101,42 @@ test('a newer import of the same property replaces its record; comps with no add
   const keyless = { ...parsed.comps[0]!, identity: { ...parsed.comps[0]!.identity, key: null } };
   const withKeyless = workspaceComps([{ importId: 'imp-3', createdAt: '2026-10-01T00:00:00.000Z', parsed: { ...parsed, comps: [keyless] } }], []);
   assert.match(withKeyless[0]!.unsortable!, /No address/);
+});
+
+test('the Co-op/Condo toggle reaches the engine: like for like, and a co-op with no size computes without per-SF', () => {
+  const comps = workspaceComps(imports, sampleJudgments());
+  const { areaSqft: _size, ...noSize } = SAMPLE_INTAKE;
+  // The sample building is a condo: in a co-op report its comps count in nothing, and say why.
+  const input = engineInput({ asOf: AS_OF, intake: noSize, comps, propertyType: 'coop' });
+  assert.equal(input.property_type, 'coop');
+  assert.equal(input.subject.facts.property_type?.value, 'coop');
+  const mixed = compute(input);
+  assert.equal(mixed.results.with_estimates.base, null);
+  assert.ok(mixed.warnings.some((w) => w.code === 'property_type_mismatch'));
+  // The same comps as co-ops, without sizes (most co-op listings have none): a result, on adjusted prices, no $/sq ft.
+  const coops = comps.map((c) => {
+    const { area_sqft: _a, ...facts } = c.record.facts;
+    return { ...c, record: { ...c.record, facts: { ...facts, property_type: { ...c.record.facts.property_type!, value: 'coop' as const } } } };
+  });
+  const out = compute(engineInput({ asOf: AS_OF, intake: noSize, comps: coops, propertyType: 'coop' }));
+  const est = out.results.with_estimates;
+  assert.ok(est.base && est.range, 'a co-op with no size still has a base and a range');
+  assert.equal(est.bridge.family, 'adjusted_price');
+  assert.ok(out.comps.every((c) => c.per_result.with_estimates.price_per_sqft === null || c.per_result.with_estimates.price_per_sqft === undefined));
+  // Condo stays the default when a report doesn't say.
+  assert.equal(engineInput({ asOf: AS_OF, intake: SAMPLE_INTAKE, comps }).property_type, 'condo');
+});
+
+test('removed comps count in nothing; an export’s removed rows are what Hubert may point back to', () => {
+  const judgments = sampleJudgments();
+  const removed = { ...judgments[0]!, removedAt: '2026-10-15T10:00:00.000Z', anchor: false };
+  const comps = workspaceComps(imports, [removed, ...judgments.slice(1)]);
+  assert.ok(!comps.some((c) => c.id === removed.propertyKey), 'a removed comp leaves the list');
+  assert.equal(comps.length, parsed.comps.length - 1, 'and its export row doesn’t come back unsorted');
+  const back = removedExportComps(imports, [removed, ...judgments.slice(1)]);
+  assert.deepEqual(back.map((b) => b.judgment.propertyKey), [removed.propertyKey]);
+  assert.equal(back[0]!.record.identity.key, removed.propertyKey);
+  // A typed-in comp taken out isn't suggested back: only an export's rows are data Hubert can name.
+  const typed = { ...removed, source: { kind: 'manual' as const, fields: { address: '1 Main Street, New York, NY', status: 'sold' }, asOf: AS_OF } };
+  assert.deepEqual(removedExportComps(imports, [typed]), []);
 });
