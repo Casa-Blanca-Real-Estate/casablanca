@@ -26,6 +26,8 @@ environment. Keep it current: it's how the next one starts.
   big files, summaries over dumps.
 - **Decisions are his.** Put each one in `docs/decisions.md` with its context and options; never guess
   at an open one. A reversible engineering call is yours: make it and log it.
+- **The Casa Answer Sheet** (https://claude.ai/artifact/R57ZAZVbGDRP69o7gGG4Ry) is where he answers.
+  Everything waiting on him goes on it, and you record his answers each block: `docs/answer-sheet/README.md`.
 - **Agents (the brokerage's) rarely respond.** Never design a workflow that depends on them.
 
 ## Merging PRs — the procedure

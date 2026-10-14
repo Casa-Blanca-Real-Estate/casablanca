@@ -1,6 +1,8 @@
 # Pending decisions
 
-Everything waiting on Kimani, across every track. **Answer inline:** open this file on GitHub, click
+Everything waiting on Kimani, across every track. **The quickest way to answer is the Casa Answer Sheet**
+(https://claude.ai/artifact/R57ZAZVbGDRP69o7gGG4Ry), which carries all of this plus PR questions and team
+feedback; Casanova records what you pick here. **Or answer inline:** open this file on GitHub, click
 the pencil, replace a *type here* placeholder with your answer (a letter is enough where there are
 options), and commit. Casanova folds each answer into the right design doc, logs it there, and moves
 it to **Resolved** at the bottom.
@@ -8,7 +10,7 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-10-13 by Casanova.
+Last updated 2026-10-14 by Casanova.
 
 **What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
 pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dispatch 10's phase 2.
@@ -49,29 +51,22 @@ each was applied.
 - [x] ~~Delete the 11 merged branches.~~ Done. **Still to delete: `samplepics`** (D-16).
 - [x] ~~Give Casa sessions their own cloud environment.~~ Done 2026-10-13: no `DATABASE_URL` in it.
   The old one still carries it, for any track still running there. It holds MindBinder's database address, and every Casa session carries it.
-- [ ] **Soon — a Jev key for Casa, from your existing Vercel account.** Dispatch 10's phase 2 waits on it.
-  1. **After Arbiter's zero-retention switch merges,** create a new AI Gateway API key on the account
-     MindBinder uses. It draws on the same $25 of credits, which at Jev's price is effectively forever.
-  2. **In Netlify, add `AI_GATEWAY_API_KEY`** (Functions scope) **and `CR_JEV_ZDR=off`**, then redeploy.
-     Leave `CR_JEV_MODE` alone: Arbiter turns it on after the go/no-go call.
-  3. **Tell Arbiter it's in.** Don't paste the key into a chat.
-  - **Pro later, for two reasons.** Vercel's free plan is for non-commercial use, which is your call
-    for now. And zero retention needs Pro, before Jev reads anything an agent or client wrote.
 - [ ] **Soon — label 30 listings for Jev's calibration** (Dispatch 10 phase 2), once Arbiter's phase 2 PR
   merges. The sheet is `docs/comp-report/jev-labels.csv`, and how to fill it in is in
   `docs/comp-report/jev-calibration.md`. It takes about 20 minutes, and Hannah could do it instead. It
   doesn't need the key: do it before any Jev output exists.
 - [x] ~~Set up the dev notebook (#54).~~ Done: `DEV_NOTEBOOK_KEY` is in the Casa cloud environment and
   works (2026-10-13).
-- [ ] **Now — sort the team Feedback list** on the notebook page (*Team feedback*): **Make a note** on
+- [ ] **Now — sort the team Feedback list:** route each piece on the answer sheet (FB-1 to FB-6), and
+  on the notebook page (*Team feedback*) **Make a note** on
   anything worth acting on. Sessions now read the list too (`--feedback`, without emails), so Casanova
   can propose the sort; the button is yours, because notes are.
 - [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
-- [ ] **Now — the Jev key:** the zero-retention switch is merged (#61). Make a new AI Gateway key on your existing
-  Vercel account, then:
+- [ ] **Now — the Jev keys** (#75 is merged). Make the AI Gateway key on **a Casa-owned Vercel account**, not
+  MindBinder's (D-26: no rotating it later; Vercel's free plan is non-commercial, and zero retention needs Pro), then:
   1. **In Netlify (Functions scope),** set `AI_GATEWAY_API_KEY` to it and `CR_JEV_ZDR=off`.
-  2. **Also set `CR_DECIDE_KEY`,** once Arbiter's phase 2 PR merges, to any random string of 32 characters or more
+  2. **Also set `CR_DECIDE_KEY`** to any random string of 32 characters or more
      (a password manager's will do). Put the same value in the Claude Code environment as `CR_DECIDE_KEY`. It lets
      Arbiter run the go/no-go call and the labelled batch, and read the results, without a sign-in.
   3. **Redeploy.** Leave `CR_JEV_MODE` alone: you turn it to `watch` after Arbiter's go/no-go call passes.
@@ -97,6 +92,9 @@ each was applied.
   - **The QR generator:** merge it when there's a gap (D-16).
   - **Your caption tracker** (a Claude artifact, linked from the carousel builders): it may become part
     of the studio later.
+- [ ] **Soon — `CB_PICS_TOKEN` for the profile-pic roster** (#71 is merged). Make it with `openssl rand -hex 32`
+  (not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it
+  isn't configured.
 - [ ] **Soon — read the writer's house voice and its eval drafts** (Dispatch 13, phase 1's PR). The
   style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. **The eval's real
   drafts need an Anthropic key in the Casa cloud environment:** in the session's title bar, open the

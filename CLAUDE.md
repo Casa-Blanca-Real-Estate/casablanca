@@ -10,7 +10,9 @@ holds the research and sources behind it. Everything that was in flight before i
 is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`.
 
 **Pending decisions for Kimani, across every track, are in `docs/decisions.md`** — each with its
-context and a field to answer in. Don't guess at an open decision; check there first.
+context and a field to answer in. Don't guess at an open decision; check there first. Kimani answers them, and
+everything else waiting on him, on the **Casa Answer Sheet** (https://claude.ai/artifact/R57ZAZVbGDRP69o7gGG4Ry),
+which Casanova keeps current: `docs/answer-sheet/README.md`.
 
 **Kimani's notes on the site are in the dev notebook** — he writes them while using it (Ctrl+. / ⌘. on
 any studio page). Read them at the start of open-ended work, or when asked what's on the list:

@@ -1,0 +1,1019 @@
+<title>Casa Answer Sheet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: the KJ sheet's two-column reader (topics rail + question cards), in Casa's palette and type.
+   Color: Casa's neutrals, lavender the only accent (deepened for text in light mode). */
+:root {
+  --bg: #f4f3f0;
+  --surface: #ffffff;
+  --surface-2: #ecebe6;
+  --ink: #0f0f0f;
+  --muted: #6c6a65;
+  --rule: #dddbd5;
+  --accent: #574f8f;
+  --accent-ink: #ffffff;
+  --accent-soft: #e9e7f4;
+  --warn: #9a4f17;
+  --warn-soft: #f6e7d8;
+  --ok: #2e6a3b;
+  --ok-soft: #e1eedf;
+  --flag: #574f8f;
+  --flag-soft: #ece9f7;
+  --focus: #7a71b5;
+  --shadow: 0 1px 2px rgba(15, 15, 15, .05), 0 2px 8px rgba(15, 15, 15, .04);
+  --display: Figtree, "Helvetica Neue", Arial, sans-serif;
+  --body: Figtree, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", var(--mono);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f0f0f;
+    --surface: #191918;
+    --surface-2: #242422;
+    --ink: #e4e3df;
+    --muted: #a3a19b;
+    --rule: #2f2e2b;
+    --accent: #aaa3cf;
+    --accent-ink: #0f0f0f;
+    --accent-soft: #2a2836;
+    --warn: #e7a46a;
+    --warn-soft: #3a2a1b;
+    --ok: #8fcb94;
+    --ok-soft: #22331f;
+    --flag: #c3bbe8;
+    --flag-soft: #2c2740;
+    --focus: #aaa3cf;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f0f0f;
+  --surface: #191918;
+  --surface-2: #242422;
+  --ink: #e4e3df;
+  --muted: #a3a19b;
+  --rule: #2f2e2b;
+  --accent: #aaa3cf;
+  --accent-ink: #0f0f0f;
+  --accent-soft: #2a2836;
+  --warn: #e7a46a;
+  --warn-soft: #3a2a1b;
+  --ok: #8fcb94;
+  --ok-soft: #22331f;
+  --flag: #c3bbe8;
+  --flag-soft: #2c2740;
+  --focus: #aaa3cf;
+  --shadow: none;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 132px; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.55 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+code { font: 0.86em/1.3 var(--mono); background: var(--surface-2); padding: 1px 4px; border-radius: 4px; overflow-wrap: anywhere; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Header */
+header.top { max-width: 1180px; margin: 0 auto; padding-top: 28px; padding-bottom: 8px; }
+h1 { font: 800 clamp(30px, 6vw, 48px)/.95 var(--display); margin: 0 0 10px; letter-spacing: -.045em; text-transform: uppercase; text-wrap: balance; }
+.eyebrow { font: 800 10px/1 var(--body); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin: 18px 0 10px; }
+.lede { color: var(--muted); margin: 0; max-width: 62ch; }
+
+/* Sticky bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
+.bar-in { max-width: 1180px; margin: 0 auto; padding-top: 10px; padding-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+.prog { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.meter { flex: 1 1 160px; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; display: flex; min-width: 120px; }
+.meter i { display: block; height: 100%; }
+.meter .m-ans { background: var(--ok); }
+.meter .m-def { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; }
+.legend b { color: var(--ink); font-weight: 600; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.seg { display: flex; gap: 2px; background: var(--surface-2); border-radius: 9px; padding: 3px; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.seg::-webkit-scrollbar { display: none; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 7px; font-size: 13px; white-space: nowrap; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); font-weight: 500; }
+.more { display: contents; }
+.morebtn { display: none; padding: 5px 10px; }
+.search { flex: 1 1 160px; min-width: 0; border: 1px solid var(--rule); background: var(--surface); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 14px; color: var(--ink); }
+.tog { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; }
+.tog input { accent-color: var(--accent); }
+select.topicjump { display: none; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); border-radius: 9px; padding: 6px 8px; font: inherit; font-size: 14px; max-width: 100%; }
+
+/* Layout */
+.layout { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 32px; padding-top: 20px; padding-bottom: 80px; }
+nav.side { position: sticky; top: 128px; align-self: start; max-height: calc(100vh - 140px); overflow: auto; font-size: 14px; }
+nav.side a { display: flex; justify-content: space-between; gap: 8px; text-decoration: none; color: var(--ink); padding: 6px 8px; border-radius: 7px; }
+nav.side a:hover { background: var(--surface-2); }
+nav.side a.cur { background: var(--accent-soft); }
+nav.side .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+nav.side .n .w { color: var(--warn); }
+nav.side .tools { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; }
+main { min-width: 0; max-width: 780px; }
+
+.btn { border: 1px solid var(--rule); background: var(--surface); border-radius: 9px; padding: 7px 12px; font-size: 13px; cursor: pointer; text-align: left; }
+.btn:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--rule)); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.banner { border-radius: 10px; padding: 10px 14px; font-size: 14px; margin-bottom: 16px; background: var(--warn-soft); color: var(--ink); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+.banner[hidden] { display: none; }
+
+/* Topic */
+section.topic { margin-bottom: 44px; }
+section.topic[hidden] { display: none; }
+.topic-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 2px solid var(--ink); padding-bottom: 6px; margin-bottom: 12px; }
+.topic-h h2 { font: 800 22px/1.15 var(--display); margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+.topic-h h2 .num { color: var(--muted); font-weight: 500; margin-right: 6px; }
+.topic-h .meta { font-size: 13px; color: var(--muted); }
+.topic-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; align-items: center; }
+details.about, details.settled { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
+details.about summary, details.settled summary { cursor: pointer; font-weight: 500; color: var(--muted); }
+details.about[open] summary, details.settled[open] summary { margin-bottom: 6px; }
+details.settled ul { padding-left: 18px; margin: 6px 0 0; }
+details.settled li { margin-bottom: 6px; }
+
+/* Question card */
+article.q { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
+article.q[hidden] { display: none; }
+article.q.st-answered { border-left: 4px solid var(--ok); }
+article.q.st-needs { border-left: 4px solid var(--warn); }
+article.q.st-default { border-left: 4px solid color-mix(in srgb, var(--accent) 40%, var(--rule)); }
+.q-top { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; margin-bottom: 6px; }
+.qid { font: 600 12px/1 var(--mono); color: var(--muted); text-decoration: none; }
+.pill { border-radius: 99px; padding: 2px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; }
+.p-type { background: var(--surface-2); color: var(--muted); }
+.p-flag { background: var(--flag-soft); color: var(--flag); }
+.p-new { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+.since { margin: 10px 0 0; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; max-width: 72ch; }
+.p-status { margin-left: auto; font-weight: 500; }
+.st-answered .p-status { background: var(--ok-soft); color: var(--ok); }
+.st-needs .p-status { background: var(--warn-soft); color: var(--warn); }
+.st-default .p-status { background: var(--accent-soft); color: var(--accent); }
+h3.qt { font: 700 18px/1.35 var(--display); margin: 0 0 8px; text-wrap: balance; }
+.defline { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+.defline b { color: var(--ink); font-weight: 600; }
+details.ctx { margin: 0 0 12px; font-size: 14.5px; }
+details.ctx > summary { cursor: pointer; color: var(--muted); font-size: 13px; list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+details.ctx > summary::-webkit-details-marker { display: none; }
+details.ctx > summary::before { content: "▸"; font-size: 11px; transition: transform .15s; }
+details.ctx[open] > summary::before { transform: rotate(90deg); }
+details.ctx[open] > summary { margin-bottom: 4px; }
+.ctx-body p { margin: 0 0 8px; }
+.ctx-body ul, .ctx-body ol { margin: 0 0 8px; padding-left: 20px; }
+.ctx-body .full-default { margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--rule); }
+.tbl { overflow-x: auto; margin: 0 0 10px; }
+table { border-collapse: collapse; font-size: 13px; width: 100%; min-width: 520px; }
+th, td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); padding: 6px 8px; }
+th { font-weight: 600; color: var(--muted); }
+
+.opts { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+.opt { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; width: 100%; text-align: left; background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 9px 12px; cursor: pointer; font-size: 14.5px; }
+.opt:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--rule)); }
+.opt .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); margin-top: 2px; display: grid; place-items: center; }
+.opt[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.opt[aria-checked="true"] .radio { border-color: var(--accent); }
+.opt[aria-checked="true"] .radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.opt .ol { font-weight: 600; }
+.opt .ok { display: inline-block; min-width: 20px; font: 600 12px/18px var(--mono); color: var(--muted); margin-right: 4px; }
+.opt .od { color: var(--muted); display: block; font-size: 13.5px; margin-top: 1px; }
+.opt .tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 0 7px; vertical-align: 1px; }
+.opt[aria-checked="true"] .tag { background: var(--surface); }
+.opt[aria-disabled="true"] { cursor: default; opacity: .7; }
+.writein { font-size: 13.5px; color: var(--muted); margin: 0 0 6px; }
+
+.note-wrap { margin: 0 0 8px; }
+.note-wrap label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+textarea.note { width: 100%; min-height: 40px; resize: vertical; border: 1px solid var(--rule); border-radius: 9px; background: var(--bg); color: var(--ink); padding: 8px 10px; font: inherit; font-size: 14px; line-height: 1.45; }
+textarea.note.want { border-color: color-mix(in srgb, var(--warn) 60%, var(--rule)); }
+.q-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.q-foot .src { min-width: 0; }
+.q-foot .src a { overflow-wrap: anywhere; }
+.saved { white-space: nowrap; }
+.saved.err { color: var(--warn); }
+.linkbtn { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12.5px; text-decoration: underline; }
+a.xref { font: 600 0.9em var(--mono); }
+
+.empty { color: var(--muted); padding: 30px 0; text-align: center; }
+
+/* Copy dialog */
+dialog { border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 18px; width: min(680px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(0, 0, 0, .35); }
+dialog textarea { width: 100%; height: 50vh; font: 13px/1.45 var(--mono); border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--ink); padding: 10px; }
+dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; flex-wrap: wrap; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 9px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
+.toast.on { opacity: 1; }
+
+@media (max-width: 920px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 14px; }
+  nav.side { display: none; }
+  select.topicjump { display: block; flex: 1 1 auto; min-width: 0; }
+  main { max-width: none; }
+}
+@media (max-width: 920px) {
+  .controls { flex-wrap: nowrap; }
+  .seg { flex: 1 1 auto; min-width: 0; }
+  .morebtn { display: inline-block; flex: 0 0 auto; }
+  .more { display: none; }
+  .bar.open .controls { flex-wrap: wrap; }
+  .bar.open .more { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 100%; }
+  .bar.open .search { flex: 1 1 100%; }
+  html { scroll-padding-top: 110px; }
+  .legend { gap: 10px; font-size: 12px; }
+  .legend .long { display: none; }
+}
+@media (max-width: 520px) {
+  article.q { padding: 14px 14px 12px; }
+  h3.qt { font-size: 18px; }
+  .p-status { margin-left: 0; }
+  table { min-width: 460px; }
+}
+/* The Reading list tab: the documents Kimani reads before he decides, newest first; an item is done when its questions are. */
+.bar[hidden], .layout[hidden], .reading[hidden], .since[hidden] { display: none !important; }
+.tabs { margin: 0 0 14px; align-self: flex-start; width: max-content; max-width: 100%; }
+.tabs button { font-size: 14px; padding: 6px 14px; }
+.tabs .tabn { margin-left: 6px; font-variant-numeric: tabular-nums; color: var(--warn); font-weight: 600; }
+.tabs .tabn:empty { display: none; }
+.reading { max-width: 880px; margin: 0 auto; padding-top: 8px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 12px; }
+.reading .rnote { color: var(--muted); font-size: 14px; margin: 0 0 4px; max-width: 70ch; }
+.ri { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; box-shadow: var(--shadow); }
+.ri .rmain { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ri .rid { font: 500 12px/1.4 var(--mono); color: var(--muted); letter-spacing: 0.03em; font-variant-numeric: tabular-nums; }
+.ri .rt { font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
+.ri .rt a { color: var(--ink); font-weight: 600; text-underline-offset: 2px; }
+.ri .rs { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.ri .qchips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.qchip { font: 500 12px/18px var(--mono); padding: 1px 8px; border-radius: 99px; border: 1px solid var(--rule); background: var(--surface-2); color: var(--ink); text-decoration: none; white-space: nowrap; }
+a.qchip:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--rule)); }
+.qchip.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.qchip.settled { background: transparent; color: var(--muted); border-style: dashed; }
+.rpill { border-radius: 99px; padding: 2px 10px; font-size: 12.5px; line-height: 20px; white-space: nowrap; font-weight: 500; }
+.rpill.ok { background: var(--ok-soft); color: var(--ok); }
+.rpill.part { background: var(--warn-soft); color: var(--warn); }
+.rpill.none { background: var(--surface-2); color: var(--muted); }
+.ri.done { box-shadow: none; background: var(--surface-2); }
+.ri.done .rt a { font-weight: 500; }
+details.donegrp { border-top: 1px solid var(--rule); padding-top: 10px; }
+details.donegrp > summary { cursor: pointer; font-size: 14px; color: var(--muted); padding: 4px 0 10px; }
+details.donegrp .ri { margin-bottom: 10px; }
+@media (max-width: 640px) {
+  .ri { grid-template-columns: 1fr; }
+  .ri .rs { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+}
+</style>
+
+<header class="top gutter">
+  <div class="seg tabs" role="group" aria-label="View" id="tabs">
+    <button type="button" data-tab="questions" aria-pressed="true">Questions</button>
+    <button type="button" data-tab="reading" aria-pressed="false">Reading list<span class="tabn" id="readingN"></span></button>
+  </div>
+  <p class="eyebrow">Casa Blanca · Creative Studio</p>
+  <h1 id="pageTitle">Your open questions</h1>
+  <p class="lede" id="lede">Pick an answer and it saves as you go. A question you leave alone keeps its default. When you're done, tell me in chat and I'll read your answers back and record them.</p>
+  <p class="since" id="since" hidden></p>
+</header>
+
+<div class="bar">
+  <div class="bar-in gutter">
+    <div class="prog">
+      <div class="meter" aria-hidden="true"><i class="m-ans" id="mAns"></i><i class="m-def" id="mDef"></i></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Show" id="filters">
+        <button data-f="all" aria-pressed="true">All</button>
+        <button data-f="quick" aria-pressed="false">Quick</button>
+        <button data-f="needs" aria-pressed="false">Needs you</button>
+        <button data-f="open" aria-pressed="false">Not answered yet</button>
+        <button data-f="answered" aria-pressed="false">Answered</button>
+      </div>
+      <button class="btn morebtn" id="moreBtn" type="button" aria-expanded="false" aria-controls="more">Search ▾</button>
+      <div class="more" id="more">
+        <input class="search" id="search" type="search" placeholder="Search questions or ids (e.g. CR-1)" aria-label="Search">
+        <label class="tog"><input type="checkbox" id="compact"> Hide context</label>
+        <select class="topicjump" id="topicjump" aria-label="Jump to a topic"></select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layout gutter">
+  <nav class="side" id="side" aria-label="Topics"></nav>
+  <main id="main">
+    <div class="banner" id="banner" hidden></div>
+    <div id="topics"></div>
+    <p class="empty" id="empty" hidden>Nothing matches. Try another filter.</p>
+  </main>
+</div>
+
+<section class="reading gutter" id="readingView" hidden aria-label="Reading list"></section>
+
+<dialog id="copyDlg">
+  <strong>Your answers, as text</strong>
+  <p style="margin:6px 0 10px;font-size:13px;color:var(--muted)">Copy this and paste it into chat if you'd rather send it that way.</p>
+  <textarea id="copyText" readonly></textarea>
+  <div class="row"><button class="btn" id="copyAgain">Copy</button><button class="btn primary" id="copyClose">Done</button></div>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="application/json" id="qdata">__QDATA__</script>
+<script>
+(() => {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("qdata").textContent);
+  DATA.topics = DATA.topics.filter((t) => t.questions.length); // a topic with nothing left to answer isn't shown
+  // Questions added since the last sitting, tagged "new" on the sheet.
+  const NEW_IDS = new Set(DATA.newIds || []);
+  const IDS_RE = new RegExp("\\b(" + (DATA.prefixes || ["XX"]).join("|") + ")-\\d+\\b", "g");
+  const LS_KEY = "casa-answer-sheet-local-v1";
+  const SYNTH = new Set(["default", "other", "accept-all", "accept-except"]); // keys this page adds itself
+  const PREF_KEY = "casa-answer-sheet-prefs-v1";
+
+  // ---------- model ----------
+  const all = [];
+  const byId = new Map();
+  for (const t of DATA.topics) {
+    for (const q of t.questions) {
+      // Options the page adds: a default the source states without naming an option, and "Other".
+      const opts = q.options.filter((o) => !o.key.startsWith("opt"));
+      q.writeIn = q.options.filter((o) => o.key.startsWith("opt")).map((o) => o.labelHtml);
+      if (!q.needsYou && !opts.some((o) => o.isDefault)) {
+        opts.unshift({ key: "default", label: "The default", labelHtml: "The default", descHtml: q.defaultHtml, isDefault: true });
+      }
+      if (opts.length) opts.push({ key: "other", label: "Something else (say what in the note)", labelHtml: "Something else", descHtml: "say what in the note", isDefault: false, wantsNote: true });
+      for (const o of opts) {
+        if (o.wantsNote === undefined) o.wantsNote = /…|\bwrite\b|\bname them\b|\bsay which\b/i.test(o.label + " " + o.descHtml);
+        o.fullLabel = o.key !== o.label && !SYNTH.has(o.key) ? `${o.key} · ${o.label}` : o.label;
+      }
+      q.opts = opts;
+      q.defaultOpt = opts.find((o) => o.isDefault) || null;
+      q.topicTitle = t.title;
+      all.push(q);
+      byId.set(q.id, q);
+    }
+  }
+
+  const READING = DATA.reading || [];
+  const READ_LS = "casa-answer-sheet-reading-v1";
+  const readMarks = new Map(); // RL id -> { read: true, at }
+
+  const answers = new Map(); // id -> stored doc body
+  let db = null;
+  let readOnly = false;
+  let mode = "loading"; // loading | db | local
+
+  // ---------- small helpers ----------
+  const $ = (s, r = document) => r.querySelector(s);
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  const toast = (msg) => { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 1800); };
+  const loadJSON = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
+  const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const stripHtml = (h) => { const d = document.createElement("div"); d.innerHTML = h; return d.textContent.replace(/\s+/g, " ").trim(); };
+
+  function statusOf(q) {
+    const a = answers.get(q.id);
+    if (a && (a.choice || (a.note || "").trim())) return "answered";
+    return q.needsYou ? "needs" : "default";
+  }
+
+  // Cross-reference ids inside text become in-page links.
+  function linkIds(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!IDS_RE.test(n.nodeValue)) return NodeFilter.FILTER_REJECT;
+        IDS_RE.lastIndex = 0;
+        for (let p = n.parentNode; p && p !== root; p = p.parentNode) if (p.nodeName === "A" || p.nodeName === "CODE") return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const n of nodes) {
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      const s = n.nodeValue;
+      s.replace(IDS_RE, (m, _p, off) => {
+        if (!byId.has(m)) return m;
+        frag.append(s.slice(last, off));
+        const a = el("a", "xref", m);
+        a.href = "#q-" + m;
+        frag.append(a);
+        last = off + m.length;
+        return m;
+      });
+      frag.append(s.slice(last));
+      n.replaceWith(frag);
+    }
+  }
+
+  // ---------- render ----------
+  const cards = new Map(); // id -> {art, optBtns, note, saved, status}
+  function renderCard(q) {
+    const art = el("article", "q");
+    art.id = "q-" + q.id;
+    const top = el("div", "q-top");
+    const idLink = el("a", "qid", q.id); idLink.href = "#q-" + q.id;
+    top.append(idLink, el("span", "pill p-type", q.quick ? "quick" : "think"));
+    if (NEW_IDS.has(q.id)) top.append(el("span", "pill p-new", "new"));
+    if (q.flag) top.append(el("span", "pill p-flag", q.flag === "being built" ? "being built on the default — answer only to object" : "already works this way — answer only to object"));
+    const pill = el("span", "pill p-status");
+    top.append(pill);
+    art.append(top);
+    art.append(el("h3", "qt", q.questionHtml));
+    const defline = el("p", "defline");
+    defline.innerHTML = q.needsYou ? "<b>No default:</b> this one waits for you." : `<b>Default:</b> ${q.defaultShortHtml}`;
+    art.append(defline);
+
+    const ctx = el("details", "ctx");
+    ctx.open = !prefs.compact;
+    ctx.append(el("summary", "", "Context, and why it needs you"));
+    const body = el("div", "ctx-body", q.contextHtml);
+    body.append(el("p", "full-default", `<strong>If you skip it:</strong> ${q.defaultHtml}`));
+    ctx.append(body);
+    art.append(ctx);
+
+    const optBtns = [];
+    if (q.opts.length) {
+      const box = el("div", "opts");
+      box.setAttribute("role", "radiogroup");
+      box.setAttribute("aria-label", "Your answer to " + q.id);
+      for (const o of q.opts) {
+        const b = el("div", "opt");
+        b.tabIndex = 0;
+        b.setAttribute("role", "radio");
+        b.dataset.key = o.key;
+        const letter = /^[A-Z]$/.test(o.key);
+        const keyChip = letter ? `<span class="ok">${escapeText(o.key)}</span>` : "";
+        const lab = !letter && o.key !== o.label && !SYNTH.has(o.key) ? `${escapeText(o.key)} · ${o.labelHtml}` : o.labelHtml;
+        b.innerHTML = `<span class="radio" aria-hidden="true"></span><span>${keyChip}<span class="ol">${lab}</span>${o.isDefault ? '<span class="tag">default</span>' : ""}${o.descHtml ? `<span class="od">${o.descHtml}</span>` : ""}</span>`;
+        b.addEventListener("click", (e) => { if (e.target.closest("a")) return; choose(q, o); });
+        b.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(q, o); } });
+        box.append(b);
+        optBtns.push(b);
+      }
+      art.append(box);
+    }
+    const nw = el("div", "note-wrap");
+    const nid = "note-" + q.id;
+    const writeIn = !q.opts.length;
+    if (q.writeIn.length && writeIn) nw.append(el("p", "writein", q.writeIn.join(" ")));
+    const lab = el("label", "", writeIn ? "Your answer" : "Anything to add? (optional)");
+    lab.htmlFor = nid;
+    const note = el("textarea", "note");
+    note.id = nid;
+    note.rows = writeIn ? 2 : 1;
+    note.placeholder = writeIn ? "Type your answer" : "A note, a different number, the ones you'd change…";
+    note.addEventListener("input", () => { autoGrow(note); noteChanged(q, note.value); });
+    nw.append(lab, note);
+    art.append(nw);
+
+    const foot = el("div", "q-foot");
+    const src = el("div", "src", `Source: ${q.sourceHtml}`);
+    const right = el("div", "");
+    const saved = el("span", "saved", "");
+    const clear = el("button", "linkbtn", "Undo my answer");
+    clear.type = "button";
+    clear.hidden = true;
+    clear.addEventListener("click", () => clearAnswer(q));
+    right.append(saved, document.createTextNode(" "), clear);
+    foot.append(src, right);
+    art.append(foot);
+    linkIds(art);
+    cards.set(q.id, { art, optBtns, note, saved, pill, clear, ctx });
+    paintCard(q);
+    return art;
+  }
+  function escapeText(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+  function autoGrow(t) { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, 320) + "px"; }
+
+  function paintCard(q) {
+    const c = cards.get(q.id);
+    if (!c) return;
+    const a = answers.get(q.id);
+    const st = statusOf(q);
+    c.art.classList.remove("st-answered", "st-needs", "st-default");
+    c.art.classList.add("st-" + st);
+    const chosen = a && a.choice ? a.choice : (st === "default" && q.defaultOpt ? q.defaultOpt.key : null);
+    for (const b of c.optBtns) {
+      b.setAttribute("aria-checked", String(b.dataset.key === chosen));
+      b.setAttribute("aria-disabled", String(readOnly));
+      b.tabIndex = readOnly ? -1 : 0;
+    }
+    if (document.activeElement !== c.note) {
+      const v = a ? a.note || "" : "";
+      if (c.note.value !== v) { c.note.value = v; autoGrow(c.note); }
+    }
+    c.note.disabled = readOnly;
+    const o = a && a.choice ? q.opts.find((x) => x.key === a.choice) : null;
+    c.note.classList.toggle("want", !!(o && o.wantsNote && !(a.note || "").trim()));
+    if (st === "answered") c.pill.textContent = o && o.isDefault ? "Default, confirmed" : "Answered";
+    else if (st === "needs") c.pill.textContent = "Needs you";
+    else c.pill.textContent = "Default stands";
+    c.clear.hidden = !a || readOnly;
+  }
+
+  function renderAll() {
+    const host = $("#topics");
+    const side = $("#side");
+    const jump = $("#topicjump");
+    jump.append(new Option("Jump to a topic…", ""));
+    for (const t of DATA.topics) {
+      const sec = el("section", "topic");
+      sec.id = "t-" + t.num;
+      const h = el("div", "topic-h");
+      h.append(el("h2", "", `<span class="num">${t.num}</span>${escapeText(t.title)}`));
+      const meta = el("span", "meta");
+      h.append(meta);
+      sec.append(h);
+      if (t.introHtml) {
+        const d = el("details", "about");
+        d.append(el("summary", "", "About this topic"));
+        d.append(el("div", "ctx-body", t.introHtml));
+        linkIds(d);
+        sec.append(d);
+      }
+      const tools = el("div", "topic-tools");
+      const acc = el("button", "btn", "Accept every default on this page");
+      acc.type = "button";
+      acc.addEventListener("click", () => acceptDefaults(t, acc));
+      const page = el("a", "", t.linkLabel || "Open the source");
+      if (t.url) { page.href = t.url; page.target = "_blank"; page.rel = "noopener"; } else page.hidden = true;
+      page.style.fontSize = "13px";
+      tools.append(acc, page);
+      sec.append(tools);
+      for (const q of t.questions) sec.append(renderCard(q));
+      for (const x of t.extraSections || []) {
+        const d = el("details", "settled");
+        d.append(el("summary", "", escapeText(x.title)));
+        d.append(el("div", "ctx-body", x.html));
+        linkIds(d);
+        sec.append(d);
+      }
+      if (t.settledHtml) {
+        const d = el("details", "settled");
+        d.append(el("summary", "", "Already settled on this page — nothing to answer"));
+        d.append(el("div", "ctx-body", t.settledHtml));
+        linkIds(d);
+        sec.append(d);
+      }
+      host.append(sec);
+      t._sec = sec; t._meta = meta; t._acc = acc;
+
+      const a = el("a", "");
+      a.href = "#t-" + t.num;
+      a.innerHTML = `<span>${escapeText(t.title)}</span><span class="n"></span>`;
+      side.append(a);
+      t._nav = a;
+      jump.append(new Option(`${t.num} · ${t.title}`, t.num));
+    }
+    const sideTools = el("div", "tools");
+    const copy = el("button", "btn", "Copy my answers as text");
+    copy.type = "button";
+    copy.addEventListener("click", openCopy);
+    const theme = el("button", "btn", "Light / dark");
+    theme.type = "button";
+    theme.addEventListener("click", () => {
+      const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = dark ? "light" : "dark";
+      prefs.theme = document.documentElement.dataset.theme; saveJSON(PREF_KEY, prefs);
+    });
+    sideTools.append(copy, theme);
+    side.append(sideTools);
+    jump.addEventListener("change", () => { if (jump.value) { location.hash = "t-" + jump.value; jump.value = ""; } });
+    // Phone: the copy button lives at the end of the list too.
+    const endCopy = el("div", "", "");
+    endCopy.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px";
+    const c2 = el("button", "btn primary", "Copy my answers as text");
+    c2.type = "button";
+    c2.addEventListener("click", openCopy);
+    endCopy.append(c2);
+    host.append(endCopy);
+  }
+
+  function paintTotals() {
+    queueMicrotask(paintReading);
+    let ans = 0, def = 0, needs = 0;
+    for (const q of all) {
+      const s = statusOf(q);
+      if (s === "answered") ans++; else if (s === "default") def++; else needs++;
+    }
+    const n = all.length;
+    $("#mAns").style.width = (ans / n * 100) + "%";
+    $("#mDef").style.width = (def / n * 100) + "%";
+    $("#legend").innerHTML =
+      `<span><i class="dot" style="background:var(--ok)"></i><b>${ans}</b> answered</span>` +
+      `<span><i class="dot" style="background:color-mix(in srgb,var(--accent) 35%,var(--surface-2))"></i><b>${def}</b> default<span class="long">s standing</span></span>` +
+      `<span><i class="dot" style="background:var(--warn)"></i><b>${needs}</b> <span class="long">still </span>need you</span>`;
+    for (const t of DATA.topics) {
+      let a = 0, nd = 0, untouchedDefaults = 0;
+      for (const q of t.questions) { const s = statusOf(q); if (s === "answered") a++; if (s === "needs") nd++; if (s === "default") untouchedDefaults++; }
+      const total = t.questions.length;
+      t._meta.textContent = `${a} of ${total} answered${nd ? ` · ${nd} still need you` : ""}`;
+      t._nav.querySelector(".n").innerHTML = `${a}/${total}${nd ? ` · <span class="w">${nd}</span>` : ""}`;
+      t._acc.disabled = readOnly || untouchedDefaults === 0;
+      t._acc.textContent = untouchedDefaults ? `Accept the ${untouchedDefaults} untouched default${untouchedDefaults > 1 ? "s" : ""} on this page` : "Every default here is answered";
+    }
+  }
+
+  // ---------- filtering ----------
+  const prefs = Object.assign({ filter: "all", compact: false, theme: "" }, loadJSON(PREF_KEY) || {});
+  if (prefs.theme) document.documentElement.dataset.theme = prefs.theme;
+  function applyFilter() {
+    const f = prefs.filter;
+    const term = $("#search").value.trim().toLowerCase();
+    let shown = 0;
+    for (const t of DATA.topics) {
+      let any = false;
+      for (const q of t.questions) {
+        const s = statusOf(q);
+        let ok = f === "all" || (f === "quick" && q.quick) || (f === "needs" && q.needsYou && s !== "answered") || (f === "open" && s !== "answered") || (f === "answered" && s === "answered");
+        if (ok && term) ok = (q.id.toLowerCase() + " " + q.question.toLowerCase() + " " + q.short.toLowerCase()).includes(term);
+        cards.get(q.id).art.hidden = !ok;
+        if (ok) { any = true; shown++; }
+      }
+      t._sec.hidden = !any;
+    }
+    $("#empty").hidden = shown > 0;
+    for (const b of $("#filters").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.f === f));
+  }
+  $("#filters").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    prefs.filter = b.dataset.f; saveJSON(PREF_KEY, prefs); applyFilter();
+  });
+  let searchT;
+  $("#search").addEventListener("input", () => { clearTimeout(searchT); searchT = setTimeout(applyFilter, 120); });
+  $("#compact").addEventListener("change", (e) => {
+    prefs.compact = e.target.checked; saveJSON(PREF_KEY, prefs);
+    for (const c of cards.values()) c.ctx.open = !prefs.compact;
+  });
+  // An in-page link to a hidden card clears the filter first.
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest('a[href^="#q-"]'); if (!a) return;
+    const id = a.getAttribute("href").slice(3);
+    const c = cards.get(id); if (!c) return;
+    if (c.art.hidden) { prefs.filter = "all"; $("#search").value = ""; applyFilter(); }
+  });
+
+  // Highlight the topic in view.
+  const io = "IntersectionObserver" in window ? new IntersectionObserver((ents) => {
+    for (const en of ents) if (en.isIntersecting) {
+      for (const t of DATA.topics) t._nav.classList.toggle("cur", t._sec === en.target);
+    }
+  }, { rootMargin: "-140px 0px -60% 0px" }) : null;
+
+  // ---------- saving ----------
+  const queues = new Map(); // id -> promise chain (one write at a time per doc)
+  const pendingNote = new Map();
+  function enqueue(id, fn) {
+    const prev = queues.get(id) || Promise.resolve();
+    const next = prev.catch(() => {}).then(fn);
+    queues.set(id, next);
+    return next;
+  }
+  function bodyFor(q, choiceKey, note) {
+    const o = choiceKey ? q.opts.find((x) => x.key === choiceKey) : null;
+    return {
+      id: q.id,
+      topic: q.topicTitle,
+      question: q.question,
+      choice: choiceKey || "",
+      choiceLabel: o ? o.fullLabel : "",
+      choiceIsDefault: !!(o && o.isDefault),
+      note: note || "",
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  async function persist(q, body) {
+    const c = cards.get(q.id);
+    if (mode === "local") { saveJSON(LS_KEY, Object.fromEntries(answers)); c.saved.textContent = "Kept in this browser"; c.saved.classList.remove("err"); return; }
+    if (mode !== "db" || readOnly) return;
+    c.saved.textContent = "Saving…"; c.saved.classList.remove("err");
+    const write = () => body ? db.collection("answers").doc(q.id).set(body) : db.collection("answers").doc(q.id).delete();
+    try {
+      try { await write(); }
+      catch (e) {
+        if (e && e.code === "unavailable") { await new Promise((r) => setTimeout(r, 600 + Math.random() * 600)); await write(); }
+        else throw e;
+      }
+      c.saved.textContent = body ? "Saved" : "Cleared";
+    } catch (e) {
+      c.saved.classList.add("err");
+      if (e && (e.code === "invalid_argument" || e.code === "not_granted" || e.code === "revoked")) {
+        setReadOnly("This view can't save answers. Use “Copy my answers as text” and paste them into chat instead.");
+        c.saved.textContent = "Not saved";
+      } else if (e && e.code === "quota_exceeded") {
+        c.saved.textContent = "Not saved: the page's storage is full";
+      } else {
+        c.saved.textContent = "Not saved, try again";
+      }
+    }
+  }
+  function choose(q, o) {
+    if (readOnly) return;
+    const note = cards.get(q.id).note.value;
+    const body = bodyFor(q, o.key, note);
+    answers.set(q.id, body);
+    paintCard(q); paintTotals();
+    if (o.wantsNote && !note.trim()) cards.get(q.id).note.focus();
+    pendingNote.delete(q.id);
+    enqueue(q.id, () => persist(q, body));
+  }
+  function noteChanged(q, value) {
+    if (readOnly) return;
+    clearTimeout(pendingNote.get(q.id));
+    const c = cards.get(q.id);
+    c.saved.textContent = "…"; c.saved.classList.remove("err");
+    pendingNote.set(q.id, setTimeout(() => {
+      pendingNote.delete(q.id);
+      const a = answers.get(q.id);
+      // A note alone on a question with a default keeps the default as the choice.
+      const choice = a && a.choice ? a.choice : (q.defaultOpt && !q.needsYou ? q.defaultOpt.key : "");
+      if (!value.trim() && !(a && a.choice)) {
+        if (a) { answers.delete(q.id); paintCard(q); paintTotals(); enqueue(q.id, () => persist(q, null)); }
+        else c.saved.textContent = "";
+        return;
+      }
+      const body = bodyFor(q, choice, value);
+      answers.set(q.id, body);
+      paintCard(q); paintTotals();
+      enqueue(q.id, () => persist(q, body));
+    }, 700));
+  }
+  function clearAnswer(q) {
+    if (readOnly) return;
+    clearTimeout(pendingNote.get(q.id)); pendingNote.delete(q.id);
+    answers.delete(q.id);
+    cards.get(q.id).note.value = "";
+    paintCard(q); paintTotals();
+    enqueue(q.id, () => persist(q, null));
+  }
+  async function acceptDefaults(t, btn) {
+    if (readOnly) return;
+    const todo = t.questions.filter((q) => statusOf(q) === "default" && q.defaultOpt);
+    if (!todo.length) return;
+    btn.disabled = true;
+    let done = 0;
+    for (const q of todo) {
+      const body = bodyFor(q, q.defaultOpt.key, "");
+      answers.set(q.id, body);
+      paintCard(q);
+      btn.textContent = `Saving ${++done} of ${todo.length}…`;
+      await enqueue(q.id, () => persist(q, body));
+    }
+    paintTotals();
+    toast(`${todo.length} default${todo.length > 1 ? "s" : ""} accepted`);
+  }
+  function setReadOnly(msg) {
+    readOnly = true;
+    const b = $("#banner"); b.textContent = msg; b.hidden = false;
+    for (const q of all) paintCard(q);
+    paintTotals();
+    paintReading();
+  }
+
+  // ---------- copy as text ----------
+  function answersText() {
+    const lines = [];
+    let answered = 0;
+    for (const t of DATA.topics) {
+      const rows = [];
+      for (const q of t.questions) {
+        const a = answers.get(q.id);
+        if (!a) continue;
+        answered++;
+        const o = a.choice ? q.opts.find((x) => x.key === a.choice) : null;
+        const note = (a.note || "").trim().replace(/\s+/g, " ");
+        let s = `${q.id}: ${o ? o.fullLabel : note}`;
+        if (o && o.isDefault) s += " (default)";
+        if (o && note) s += ` — ${note}`;
+        rows.push(s);
+      }
+      if (rows.length) lines.push(`${t.num} ${t.title}`, ...rows, "");
+    }
+    const stillNeeds = all.filter((q) => statusOf(q) === "needs").map((q) => q.id);
+    const head = [`My answers (${answered} of ${all.length}). Every other question with a default: the default.`];
+    if (stillNeeds.length) head.push(`Not answered yet, no default (${stillNeeds.length}): ${stillNeeds.join(", ")}`);
+    return head.join("\n") + "\n\n" + lines.join("\n");
+  }
+  async function openCopy() {
+    const text = answersText();
+    $("#copyText").value = text;
+    const d = $("#copyDlg");
+    if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
+    $("#copyText").select();
+  }
+  $("#copyAgain").addEventListener("click", async () => {
+    const ta = $("#copyText");
+    try { await navigator.clipboard.writeText(ta.value); toast("Copied"); }
+    catch { ta.select(); try { document.execCommand("copy"); toast("Copied"); } catch { toast("Select the text and copy it"); } }
+  });
+  $("#copyClose").addEventListener("click", () => { const d = $("#copyDlg"); if (d.close) d.close(); else d.removeAttribute("open"); });
+
+  $("#moreBtn").addEventListener("click", () => {
+    const bar = document.querySelector(".bar");
+    const open = bar.classList.toggle("open");
+    $("#moreBtn").setAttribute("aria-expanded", String(open));
+    $("#moreBtn").textContent = open ? "Close ▴" : "Search ▾";
+  });
+
+
+  // ---------- the reading list ----------
+  // An item is done when the reader marked it, or when every question it raised is answered (recorded ones count).
+  function itemState(it) {
+    const qs = it.qids.filter((id) => byId.has(id));
+    const settled = it.settledIds.length + it.qids.length - qs.length;
+    let ans = 0;
+    for (const id of qs) if (statusOf(byId.get(id)) === "answered") ans++;
+    const total = qs.length + settled, answered = ans + settled;
+    const marked = !!(readMarks.get(it.id) || {}).read;
+    const allAnswered = total > 0 && answered === total;
+    return { qs, total, answered, marked, allAnswered, done: marked || allAnswered };
+  }
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fmtDate = (d) => { const [y, m, day] = d.split("-").map(Number); return `${day} ${MONTHS[m - 1]}`; };
+
+  function readingItem(it) {
+    const st = itemState(it);
+    const art = el("article", "ri" + (st.done ? " done" : ""));
+    art.id = "rl-" + it.id;
+    const main = el("div", "rmain");
+    main.append(el("div", "rid", `${it.id} · ${fmtDate(it.date)}`));
+    main.append(el("div", "rt", it.html));
+    const side = el("div", "rs");
+    let pill;
+    if (st.allAnswered) pill = el("span", "rpill ok", st.total === 1 ? "Read · its question answered" : `Read · all ${st.total} answered`);
+    else if (st.marked) pill = el("span", "rpill ok", "Read");
+    else if (st.total) pill = el("span", "rpill part", `${st.answered} of ${st.total} answered`);
+    else pill = el("span", "rpill none", "Nothing to answer");
+    side.append(pill);
+    if (!st.allAnswered) {
+      const b = el("button", "btn", st.marked ? "Mark unread" : "Mark read");
+      b.type = "button";
+      b.disabled = readOnly;
+      b.addEventListener("click", () => setMark(it.id, !st.marked));
+      side.append(b);
+    }
+    art.append(main, side);
+    if (it.qids.length || it.settledIds.length) {
+      const chips = el("div", "qchips");
+      for (const id of it.qids) {
+        if (byId.has(id)) {
+          const a = el("a", "qchip" + (statusOf(byId.get(id)) === "answered" ? " ok" : ""), id);
+          a.href = "#q-" + id;
+          a.title = byId.get(id).short;
+          chips.append(a);
+        } else chips.append(el("span", "qchip settled", id));
+      }
+      for (const id of it.settledIds) { const s = el("span", "qchip settled", id); s.title = "Recorded earlier"; chips.append(s); }
+      art.append(chips);
+    }
+    return art;
+  }
+
+  function paintReading() {
+    const host = $("#readingView");
+    if (!host) return;
+    const open = [], done = [];
+    for (const it of READING) (itemState(it).done ? done : open).push(it);
+    $("#readingN").textContent = open.length ? String(open.length) : "";
+    if (host.hidden) return;
+    const focusId = document.activeElement && document.activeElement.closest && document.activeElement.closest(".ri") ? document.activeElement.closest(".ri").id : null;
+    const wasOpen = !!(host.querySelector("details.donegrp") || {}).open;
+    host.textContent = "";
+    host.append(el("p", "rnote", "Newest first. An item is read once every question it raised is answered on the Questions tab; a tap on a question id opens it there. An item that raised none has a <strong>Mark read</strong> button."));
+    if (!open.length) host.append(el("p", "rnote", "Everything here is read."));
+    for (const it of open) host.append(readingItem(it));
+    if (done.length) {
+      const d = el("details", "donegrp");
+      d.open = wasOpen;
+      d.append(el("summary", "", `Read (${done.length})`));
+      for (const it of done) d.append(readingItem(it));
+      host.append(d);
+    }
+    if (focusId) { const b = document.querySelector(`#${CSS.escape(focusId)} button`); if (b) b.focus(); }
+  }
+
+  async function setMark(id, read) {
+    if (readOnly) return;
+    if (read) readMarks.set(id, { read: true, at: new Date().toISOString() }); else readMarks.delete(id);
+    paintReading();
+    if (mode === "db") {
+      try {
+        const ref = db.collection("reading").doc(id);
+        await (read ? ref.set(readMarks.get(id)) : ref.delete());
+        toast(read ? "Marked read" : "Marked unread");
+      } catch (e) {
+        if (read) readMarks.delete(id); else readMarks.set(id, { read: true, at: new Date().toISOString() });
+        paintReading();
+        toast("That didn't save. Try again in a moment.");
+      }
+    } else {
+      saveJSON(READ_LS, Object.fromEntries(readMarks));
+      toast(read ? "Marked read (in this browser)" : "Marked unread");
+    }
+  }
+
+  // ---------- tabs ----------
+  const LEDES = {
+    questions: { title: "Your open questions", lede: document.getElementById("lede").innerHTML },
+    reading: { title: "Your reading list", lede: "The documents that ask you something, newest first. Each one is read when you've answered its questions here." },
+  };
+  function setTab(tab, fromHash) {
+    if (tab !== "reading") tab = "questions";
+    prefs.tab = tab; saveJSON(PREF_KEY, prefs);
+    const reading = tab === "reading";
+    document.querySelector(".bar").hidden = reading;
+    document.querySelector(".layout").hidden = reading;
+    $("#readingView").hidden = !reading;
+    $("#since").hidden = reading || !DATA.sinceHtml;
+    $("#pageTitle").textContent = LEDES[tab].title;
+    $("#lede").innerHTML = LEDES[tab].lede;
+    for (const b of $("#tabs").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
+    if (!fromHash) { try { history.replaceState(null, "", reading ? "#reading" : location.pathname + location.search); } catch {} }
+    if (reading) paintReading();
+  }
+  $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
+  // A question id on the reading list opens the Questions tab at that question.
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest('#readingView a[href^="#q-"]'); if (!a) return;
+    setTab("questions", true);
+  }, true);
+
+  // ---------- boot ----------
+  if (DATA.sinceHtml) { $("#since").innerHTML = DATA.sinceHtml; $("#since").hidden = false; }
+  renderAll();
+  setTab(location.hash === "#reading" ? "reading" : (location.hash ? "questions" : prefs.tab || "questions"), true);
+  $("#compact").checked = !!prefs.compact;
+  paintTotals();
+  applyFilter();
+  if (io) for (const t of DATA.topics) io.observe(t._sec);
+  if (location.hash) { const target = document.getElementById(location.hash.slice(1)); if (target) target.scrollIntoView(); }
+
+  function useLocal(msg) {
+    mode = "local";
+    for (const [k, v] of Object.entries(loadJSON(READ_LS) || {})) if (v && v.read) readMarks.set(k, v);
+    const saved = loadJSON(LS_KEY) || {};
+    for (const [k, v] of Object.entries(saved)) if (byId.has(k)) answers.set(k, v);
+    for (const q of all) paintCard(q);
+    paintTotals();
+    const b = $("#banner"); b.textContent = msg; b.hidden = false;
+  }
+
+  (async () => {
+    const claude = window.claude;
+    if (!claude || typeof claude.use !== "function") {
+      useLocal("Saving to your account isn't available here, so your picks are kept in this browser only. When you're done, use “Copy my answers as text” and paste it into chat.");
+      return;
+    }
+    const [dbNs, user] = await Promise.all([claude.use("db"), claude.use("user").catch(() => null)]);
+    if (!dbNs) {
+      useLocal("Saving to your account isn't available in this view, so your picks are kept in this browser only. When you're done, use “Copy my answers as text” and paste it into chat.");
+      return;
+    }
+    db = dbNs;
+    mode = "db";
+    if (user) {
+      try { if ((await user.canEdit()) === false) setReadOnly("You can read these questions, but only Kimani's answers are saved here."); } catch {}
+    }
+    db.collection("reading").limit(1000).onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        if (ch.type === "removed") readMarks.delete(ch.doc.id);
+        else { const v = ch.doc.data(); if (v && v.read) readMarks.set(ch.doc.id, v); else readMarks.delete(ch.doc.id); }
+      }
+      paintReading();
+    }, () => {});
+    let first = true;
+    db.collection("answers").limit(1000).onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        const id = ch.doc.id;
+        if (!byId.has(id)) continue;
+        if (pendingNote.has(id)) continue; // a note being typed wins until it saves
+        if (ch.type === "removed") answers.delete(id);
+        else answers.set(id, ch.doc.data());
+        paintCard(byId.get(id));
+      }
+      paintTotals();
+      if (first) { first = false; applyFilter(); }
+    }, (e) => {
+      const b = $("#banner");
+      b.textContent = "Lost the connection to your saved answers. Reload the page; anything already saved is safe.";
+      b.hidden = false;
+    });
+  })();
+})();
+</script>
