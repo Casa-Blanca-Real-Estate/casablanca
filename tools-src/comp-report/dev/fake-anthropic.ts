@@ -10,6 +10,11 @@
 // asks which report this is, a get_numbers call when it mentions the numbers,
 // and the tool's result once it comes back; and a refusal when the message
 // starts with "refuse".
+//
+// A writer request (CR-5: structured output, the report as JSON) gets a draft
+// in the writer's shape, citing only the report's own figures — unless the
+// agent's next step starts with "refuse" (a refusal) or "invent" (a draft
+// with a number the report doesn't have, for QA to catch).
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -58,7 +63,53 @@ export function sseEvents(script: Script): string[] {
 
 let toolCalls = 0;
 
+/** A writer draft (CR-5) from the report in the request, citing only what the report gives. */
+export function fakeWriterDraft(body: Block): Script {
+  const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;
+  const text = messages[0]?.content.map((b) => String(b.text ?? '')).join('') ?? '';
+  const report = JSON.parse(/<report>\n([\s\S]*)\n<\/report>/.exec(text)?.[1] ?? '{}') as {
+    home?: { name?: string };
+    headline_facts?: Array<{ id: string; value: string }>;
+    comps?: Array<{ id: string; facts?: Record<string, string>; against_the_home?: string[]; agent_note?: string | null }>;
+    agent_stated?: { how_the_comps_were_chosen?: string; next_step?: string };
+    length?: string;
+  };
+  const fact = (id: string) => report.headline_facts?.find((f) => f.id === id)?.value;
+  const home = report.home?.name ?? 'the home';
+  const next = report.agent_stated?.next_step ?? '';
+  if (/^\s*refuse\b/i.test(next)) {
+    return { content: [], stopReason: 'refusal', stopDetails: { type: 'refusal', category: null, explanation: null }, delayMs: 5 };
+  }
+  const headlines = [
+    fact('range.low') && fact('range.high')
+      ? `The closest sales put ${home} at ${fact('range.low_per_sqft')} to ${fact('range.high_per_sqft')}, ${fact('range.low')} to ${fact('range.high')}.`
+      : `The closest sales have a median of ${fact('sold.median_per_sqft') ?? 'a price per foot we can’t give yet'}.`,
+    fact('anchor.per_sqft') ? `The closest comp sold at ${fact('anchor.per_sqft')}.` : `Here’s what the comps show for ${home}.`,
+  ];
+  if (/^\s*invent\b/i.test(next)) headlines[0] = `${home} is worth about $9.87M.`;
+  const full = report.length === 'full';
+  const draft = {
+    headlines,
+    chosen: full ? report.agent_stated?.how_the_comps_were_chosen ?? 'I kept to the comps closest to the home.' : '',
+    comps: report.length === 'text' ? [] : (report.comps ?? []).map((c) => ({
+      id: c.id,
+      lines: [
+        c.facts?.days_on_the_market ? `Took ${c.facts.days_on_the_market} days to get a deal.` : 'A close match.',
+        ...(full && c.against_the_home?.[0] ? [`${c.against_the_home[0][0]!.toUpperCase()}${c.against_the_home[0].slice(1)}.`] : []),
+      ],
+    })),
+    consider: [],
+    next_step: next || 'Let me know when you’d like to talk it through.',
+  };
+  return {
+    content: [{ type: 'text', text: JSON.stringify(draft) }],
+    stopReason: 'end_turn',
+    delayMs: 5,
+  };
+}
+
 function echo(body: Block): Script {
+  if ((body.output_config as Block | undefined)?.format) return fakeWriterDraft(body);
   const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;
   const last = [...messages].reverse().find((m) => m.role === 'user');
   const result = last?.content.find((b) => b.type === 'tool_result');

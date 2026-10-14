@@ -7,6 +7,7 @@
 // brief in reports.brief, the call in reports.agent_call and the target in
 // reports.target. The call and the target never reach the assistant (§8.4).
 import type { IsoDate, LaundryState, ListingStatus, OutdoorKind, ResultKind, Tier } from '../engine/index.ts';
+import type { Acknowledgment } from './qa.ts';
 
 /**
  * One value the agent entered: when, whether it's their estimate (input
@@ -113,11 +114,13 @@ export interface CallState {
 }
 
 /**
- * Send: who the placeholder email is from, and which result it uses. The
- * client's name is on the brief now (D-22); `clientName` here is CR-3a's.
- * The agent's edits to the draft are kept until they go back to the template;
- * `basedOn` fingerprints the template they edited, so a draft whose numbers
- * have since moved says so (§3: "numbers changed since this draft").
+ * Send: who the email is from, and which result it uses. The client's name is
+ * on the brief now (D-22); `clientName` here is CR-3a's. The agent's edits to
+ * the email are kept until they go back to the draft; `basedOn` fingerprints
+ * the email they edited, so one whose numbers have since moved says so (§3:
+ * "numbers changed since this draft"), and `parentId` names the writer's
+ * draft it came from (CR-5). `acks` are the agent's answers to QA's findings
+ * (§9.1), logged with the email when it's copied.
  */
 export interface SendState {
   result?: ResultKind;
@@ -132,7 +135,10 @@ export interface SendState {
   length?: 'full' | 'short' | 'text';
   clientName?: Entry<string>;
   signOff?: Entry<string>;
-  draft?: { subject: string; body: string; basedOn: string; at: string };
+  draft?: { subject: string; body: string; basedOn: string; at: string; parentId?: string | null };
+  /** The agent chose the template over the writer's drafts (CR-5). */
+  useTemplate?: boolean;
+  acks?: Acknowledgment[];
   copiedAt?: string;
 }
 

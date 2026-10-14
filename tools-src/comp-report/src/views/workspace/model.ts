@@ -33,6 +33,8 @@ export interface Workspace {
   setCall: (next: CallState | null) => void;
   send: SendState;
   setSend: (next: SendState) => void;
+  /** Saves what's outstanding now, so the server reads what the agent sees (the writer's input, CR-5). */
+  flush: () => Promise<void>;
 
   imports: WorkspaceData['imports'];
   parsed: ParsedImport[];

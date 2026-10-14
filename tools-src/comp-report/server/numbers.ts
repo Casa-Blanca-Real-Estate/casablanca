@@ -5,9 +5,9 @@
 // It reads only what it needs. The call itself is never selected: the database
 // says whether one exists (the range is revealed), not what it is. The target
 // and the deal terms aren't read at all (§8.4).
-import { compute, parseExport } from '../engine/index.ts';
-import { engineInput, locationsFrom, workspaceComps, type ParsedImport } from '../workspace/engine-input.ts';
-import type { WorkspaceState } from '../workspace/state.ts';
+import { compute, parseExport, type EngineOutput } from '../engine/index.ts';
+import { engineInput, locationsFrom, workspaceComps, type ParsedImport, type WorkspaceComp } from '../workspace/engine-input.ts';
+import type { Brief, WorkspaceState } from '../workspace/state.ts';
 import { numbersSummary } from '../workspace/summary.ts';
 import { loadGeocodes, reportBuildings } from './buildings.ts';
 import type { Queryable } from './db.ts';
@@ -17,9 +17,23 @@ import { newYorkToday } from './links.ts';
 /** Today in New York, the analysis date — the engine has no clock. */
 export { newYorkToday };
 
-export async function numbersFor(tx: Queryable, reportId: string, asOf = newYorkToday()) {
-  const report = (await tx.query<{ state: WorkspaceState | null; revealed: boolean }>(
-    'select state, agent_call is not null as revealed from comp_report.reports where id = $1',
+export interface NeutralNumbers {
+  output: EngineOutput;
+  comps: WorkspaceComp[];
+  state: WorkspaceState;
+  brief: Brief;
+  /** Whether the agent has given their call or skipped it — never what it is. */
+  revealed: boolean;
+}
+
+/**
+ * The engine run on the server from what's stored, with no named prices and no
+ * deal terms: the numbers a model may see (§8.4). The call is never selected —
+ * only whether there is one — and the target isn't read at all.
+ */
+export async function neutralNumbers(tx: Queryable, reportId: string, asOf = newYorkToday()): Promise<NeutralNumbers | null> {
+  const report = (await tx.query<{ state: WorkspaceState | null; brief: Brief | null; revealed: boolean }>(
+    'select state, brief, agent_call is not null as revealed from comp_report.reports where id = $1',
     [reportId],
   )).rows[0];
   if (!report) return null;
@@ -36,14 +50,20 @@ export async function numbersFor(tx: Queryable, reportId: string, asOf = newYork
         parsed: parseExport(new Uint8Array(i.content), { as_of: i.as_of, ...(i.filename ? { filename: i.filename } : {}) }),
       });
     } catch {
-      // Stored only after the same parser read it; if it can't now, it's left out rather than failing the turn.
+      // Stored only after the same parser read it; if it can't now, it's left out rather than failing the request.
     }
   }
   const comps = workspaceComps(parsed, await loadJudgments(tx, reportId));
-  const intake = report.state?.intake;
+  const state = report.state ?? {};
   // The buildings' locations, as the screens have them, so distance reads the same here.
   const locations = locationsFrom(await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)));
   // No prices, no deal terms: nothing here can carry the call or a target.
-  const output = compute(engineInput({ asOf, intake, comps, locations }));
-  return numbersSummary({ output, comps, intake, revealed: report.revealed });
+  const output = compute(engineInput({ asOf, intake: state.intake, comps, locations }));
+  return { output, comps, state, brief: report.brief ?? {}, revealed: report.revealed };
+}
+
+export async function numbersFor(tx: Queryable, reportId: string, asOf = newYorkToday()) {
+  const n = await neutralNumbers(tx, reportId, asOf);
+  if (!n) return null;
+  return numbersSummary({ output: n.output, comps: n.comps, intake: n.state.intake, revealed: n.revealed });
 }

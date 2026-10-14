@@ -7,8 +7,8 @@
 //   CR_LOCAL_DATABASE_URL       a local PostgreSQL with the migrations applied
 //                               (npm run db:local — dev/migrate-local.ts)
 //   CR_ADMIN_EMAILS, CR_ALLOWED_DOMAINS   as in production
-//   ANTHROPIC_API_KEY           for real assistant turns
-//   CR_DEV_ANTHROPIC_BASE_URL   point turns at a fake Messages API instead
+//   ANTHROPIC_API_KEY           for real assistant turns and writer drafts
+//   CR_DEV_ANTHROPIC_BASE_URL   point turns and drafts at a fake Messages API instead
 //   FIRECRAWL_API_KEY           to read real StreetEasy links (costs credit)
 //   CR_DEV_FIRECRAWL_BASE_URL   read them from the fake instead (dev/fake-firecrawl.ts)
 //   CR_DEV_GEOSEARCH_BASE_URL   look buildings up in the fake GeoSearch (dev/fake-geosearch.ts)
@@ -30,11 +30,13 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/sample': { module: '/server/api/sample.ts', handler: 'handleSample' },
   '/api/comp-report/links': { module: '/server/api/links.ts', handler: 'handleLinks' },
   '/api/comp-report/geocode': { module: '/server/api/geocode.ts', handler: 'handleGeocode' },
+  '/api/comp-report/narratives': { module: '/server/api/narratives.ts', handler: 'handleNarratives' },
 };
 
 /** Background functions: Netlify answers 202 at once and runs them on; so does this. */
 const BACKGROUND: Record<string, { module: string; handler: string }> = {
   '/.netlify/functions/comp-report-links-background': { module: '/server/api/links.ts', handler: 'runLinkRead' },
+  '/.netlify/functions/comp-report-write-background': { module: '/server/api/narratives.ts', handler: 'runWrite' },
 };
 
 async function toRequest(req: IncomingMessage): Promise<Request> {

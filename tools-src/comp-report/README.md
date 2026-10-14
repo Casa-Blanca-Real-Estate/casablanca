@@ -19,8 +19,9 @@ on Kimani: `docs/comp-report/cr1-setup.md`.
 Outside this folder:
 
 - `netlify/functions/comp-report-*.mts`: thin entry points (`/api/comp-report/…`). Each passes
-  production dependencies to a handler in `server/api/`. `comp-report-links-background.mts` is a
-  background function (up to 15 minutes): it reads one StreetEasy page.
+  production dependencies to a handler in `server/api/`. Two are background functions (up to 15
+  minutes): `comp-report-links-background.mts` reads one StreetEasy page, and
+  `comp-report-write-background.mts` writes one draft of the email (CR-5).
 - `netlify/functions/identity-{validate,signup,login}.mts`: the sign-up and log-in gate.
 - `netlify/database/migrations/`: the schema. Netlify applies it on deploy. **Never edit a
   migration once it has shipped**, previews included; add a new one.
@@ -56,7 +57,8 @@ that can create roles and databases, because each test file makes a throwaway da
 | `NETLIFY_DB_URL` | set by Netlify | The database — production, or the deploy preview's branch |
 | `CR_ADMIN_EMAILS` | Netlify | Admins, comma-separated: the only way to be one (an allowlist grant can't make an admin). Redeploy after changing it |
 | `CR_ALLOWED_DOMAINS` | Netlify | Casa's sign-in domains; default `casa-blanca.com`, matched exactly |
-| `ANTHROPIC_API_KEY` | Netlify | The assistant. Never reaches the browser |
+| `ANTHROPIC_API_KEY` | Netlify | The assistant and the writer. Never reaches the browser |
+| `CR_WRITES_PER_DAY` | Netlify, optional | Drafts a person may have the writer make in any 24 hours; default 40 (admins at least 200). Each is a model call, an estimated $0.05–0.10 until real usage says |
 | `FIRECRAWL_API_KEY` | Netlify | Reading StreetEasy links (already set for the carousel tools). Never reaches the browser |
 | `CR_LINK_READS_PER_DAY` | Netlify, optional | Links a person may have read in any 24 hours; default 60 (admins at least 200). Each read costs Firecrawl credit |
 | `CR_LOCAL_DATABASE_URL` | local only | Ignored wherever `NETLIFY_DB_URL` exists |
@@ -112,10 +114,10 @@ a drawer on all three. Each reads the engine's output; none computes a figure.
   out" holds the pairs and what clean pairs show (§6.6). Both results show only when the agent's
   estimates change the answer.
 - **Send** (`SendStep.tsx`, `workspace/email.ts`): the headline first, required to copy (D-21).
-  Its drafts cite only `headline_facts` and its names, never the agent's number;
-  `workspace/grounding.ts` proves it in the tests, and QA warns on a headline number that matches
-  no fact. The email is in Frankie's order, in three lengths (the price table is in the full
-  one), with QA as one line.
+  "Write it" has Claude draft the headlines and the email (CR-5, below); without a draft, the
+  fixed template stands in, with drafts that cite only `headline_facts` and its names. The email
+  is in Frankie's order, in three lengths (the price table is in the full one), with QA as one
+  line.
 - **Build notes**: the About boxes, stub and decision tags, and the sample fills sit behind one
   switch, admins only and off by default (`buildNotes.tsx`). A sample report shows one banner.
 
@@ -153,6 +155,57 @@ them, so the server looks each building up (Dispatch 11).
 - **Locally**, `dev/fake-geosearch.ts` answers with GeoSearch's real answers for the sample's and the
   link fixtures' streets, recorded 2026-10-06. Without `CR_DEV_GEOSEARCH_BASE_URL`, the dev server
   asks the real GeoSearch. Nothing to set on Netlify.
+
+## The writer and QA (CR-5)
+
+Dispatch 13, phase 1: Claude writes the headlines and the email in Casa's house voice, in Frankie's
+order, and every number is checked before anything is copied.
+
+- **What the writer gets** (`workspace/writer-input.ts`), and nothing else: the result's headline
+  facts and names; the comps that count, with their status, price, $/sq ft, link, their own public
+  facts (floor, size, rooms, days on the market, sale against ask, date), how each differs from the
+  home as the engine measured it, and the agent's note on it; the price table; buyer or seller and
+  the client's first name; the length; and the agent's own lines for the email (how they chose the
+  comps, things to consider, the next step), marked agent-stated. **Never** the agent's number, a
+  target, deal terms or the client note (§8.4): the server builds the input itself, from an engine
+  run with no named prices and no deal terms (`neutralNumbers`, `server/numbers.ts`), and the
+  builder never reads `agent_number`. The base, one number, isn't given either: the house speaks
+  in ranges (§9.2). The browser sends only the length and the result.
+- **The call** (`server/writer.ts`): Opus 5.5, adaptive thinking, effort `medium` set explicitly,
+  structured output (a JSON schema), server-side fallbacks (`"default"`), streamed, stop reason
+  checked before the content is read. One call per draft, stateless. Prompts are versioned
+  (`WRITER_PROMPTS`), and each carries a house voice (`server/house-voice.ts`): never edit a version
+  that has shipped; add one.
+- **In the background** (`server/api/narratives.ts`): `POST /api/comp-report/narratives
+  {action: 'write'}` pins the draft's numbers and input in a queued row; the browser starts
+  `comp-report-write-background`, which claims it exactly once, calls the writer, checks the
+  draft against what the writer was given, and records it and its `usage` (purpose `writer`). The
+  browser polls, showing progress as the draft streams. One write at a time per report; a daily
+  limit per person (`CR_WRITES_PER_DAY`).
+- **Stored, pinned to its numbers** (`narratives`, §12): the engine version, the house method, the
+  inputs hash, the headline facts, the writer's whole input, the model, the prompt version and QA's
+  results. A finished draft never changes (a trigger refuses it). The agent's email is its own row,
+  forked from the draft it came from: when they copy it (with QA's results and their answers), or
+  when an edited email is replaced by a new draft.
+- **Fallback.** A refusal, a cut-off draft, an unreadable one or a failed call fails the draft with
+  the reason, and Send shows the template and says why.
+- **QA** (`workspace/qa.ts`), the same in the browser and on the server:
+  - **numbers** (`grounding.ts`): every number and date in the email against the ledger: the
+    result's headline facts, the comps' own figures and dates, the price table, the home's facts,
+    the engine's measured differences, and what the agent stated (their lines, their notes, their
+    number, a target, an offer). An unmatched one waits for an answer: edit it, attribute it ("it's
+    mine or the client's") or keep it. The answer is logged with the copy.
+  - **range language**: a point value ("worth $3.5M") warns; list and offer language doesn't.
+  - **compliance**, the only hard block: "appraisal" and "appraised value", the fair-housing list's
+    terms (`fair-housing.ts`, a fixed list, versioned, pending review), the headline and the
+    disclaimer. A word near a fair-housing term warns and waits for an answer. The server checks
+    compliance again on what's copied and refuses a hard failure.
+  - **estimates**: an email using "with estimates" says so.
+- **Locally**, the fake Messages API answers a writer request with a draft from the report it's
+  given; a next step starting "refuse" gets a refusal, and "invent" a number QA catches.
+- **The eval** (`dev/writer-eval.ts`): the 100 Barclay sample and Frankie's #517 rebuilt as a report,
+  drafted and checked, printed as Markdown. With `CR_EVAL_ANTHROPIC_API_KEY` it calls Claude (well
+  under a dollar); without it, it runs on the fake and says so.
 
 ## How it's wired
 
