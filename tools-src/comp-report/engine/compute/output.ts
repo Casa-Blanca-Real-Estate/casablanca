@@ -341,6 +341,12 @@ export interface CompOut {
   market_date: { date: IsoDate; basis: MarketDateBasis; age_days: number } | null;
   /** The mentors' comparability checks (§6.10). They never change the tier: the agent decides. */
   checks: CompCheck[];
+  /**
+   * Miles from the home's building to the comp's, from each building's mapped location: null
+   * without coordinates on both sides. Unrounded, and the very number the `distance` check
+   * measures. A comp in the home's building is 0.
+   */
+  distance_miles: number | null;
   days_on_market: number | null;
   /** Sold comps with a last ask: (sale ÷ last ask − 1) × 100. */
   sale_to_ask_percent: Figure | null;

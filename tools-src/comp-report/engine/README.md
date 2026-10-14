@@ -10,9 +10,9 @@ moves the instant a comp is toggled) and in Netlify functions (so every stored v
 authoritatively), and both get the same answer — checked: an esbuild bundle in headless Chromium and
 one in Node produce the same output hash.
 
-**Version 0.4.0** — design v0.5, CR-2.2 phase 2: the engine for a buyer's argument. Didn't sell,
+**Version 0.4.1** — design v0.5, CR-2.2 phase 2: the engine for a buyer's argument. Didn't sell,
 the mentors' checks, the differences between comps, the price table and the headline's facts.
-Nothing here has been piloted yet.
+0.4.1 adds each comp's `distance_miles`. Nothing here has been piloted yet.
 
 ---
 
@@ -383,6 +383,10 @@ field, with its provenance.
   (`contract_date` — a sale's where a listing's history gives one, or an in-contract comp's;
   `closing_date`; `list_date`; `off_market_date`) and `age_days`. On the facts.
 - `checks` — the mentors' comparability checks (§6.10); see below. They never change `tier`.
+- `distance_miles` — miles from the home's building to the comp's, from the `coordinates` on both
+  sides (each building's mapped location); null without both. It's there for every comp, flagged or
+  not, unrounded, and it's the very number the `distance` check measures, so a row and its flag
+  never disagree. A comp in the home's building is 0.
 - `per_result.on_facts` and `per_result.with_estimates`, each:
   - `included`, `not_included_because` — whether it counts toward this result's statistics, and if
     not, why (tier, status, like for like, recency window).
@@ -441,8 +445,10 @@ words for the row, and a seed for the notes' quick-pick chips), `message`, `sugg
 - **A side that doesn't say reads as "not marked".** A resale page never says "resale", so a
   new-development comp against a home with no mark is flagged "the home isn't marked as one", and
   `approx`. A lack of outdoor space that rests on a listing naming none is `approx` too.
-- **Distance says so without coordinates.** Neither the export nor a page gives them, so today every
-  comp carries a `distance` check with status `unknown` and a message saying what it needs.
+- **Distance says so without coordinates.** Neither the export nor a page gives them; the workspace
+  adds each building's mapped location (Dispatch 11). A comp without coordinates on both sides
+  carries a `distance` check with status `unknown`, saying which side lacks them, and a null
+  `distance_miles`.
 - **A check never changes a tier or moves a number.** The thresholds come from the house method
   (below); other thresholds change the flags and nothing else.
 
@@ -776,7 +782,7 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
 
 ## Versioning and determinism
 
-- `ENGINE_VERSION` (0.4.0) — bump when any output could change for the same input.
+- `ENGINE_VERSION` (0.4.1) — bump when any output could change for the same input.
   `PARSER_VERSION` (0.4.0) — bump when any parsed record could change; every import records it.
   `PROPERTY_KEY_VERSION` (`pk1`) — bump when key rules change. The house method has its own
   `version`, and its `hash`.
@@ -881,7 +887,7 @@ didn't sell is now the fourth evidence status.
    - a separate "size approximate" flag, since a page's "~" can be an icon
 6. **A floor from a unit label: yes, as a suggestion** (answered on #55, built in phase 2).
 
-### New in CR-2.2 (phase 2) — for Casanova to confirm or change
+### New in CR-2.2 (phase 2) — confirmed on #58
 
 **Didn't sell**
 1. **It's `evidence_class: 'off_market'`,** the design's field for the evidence status, on ask basis
@@ -965,6 +971,27 @@ didn't sell is now the fourth evidence status.
 27. **His database needs a migration** before his link import stores a didn't-sell comp:
     `report_comps.evidence_class` is checked against `sold`, `in_contract` and `active`. The export
     never yields `off_market`, so nothing breaks today.
+
+### New in 0.4.1 — `distance_miles`, for Casanova to confirm or change
+
+From Mason's note on #62: the screens worked out a row's miles by importing `distanceMiles` from
+`compute/checks.ts`, because the engine adds no check under ¼ mile.
+
+28. **`distance_miles` is a plain number, not a `Figure`.** It sits with `age_days` and
+    `days_on_market`, and the `distance` check's `measured`. A `Figure` would need a `miles` unit,
+    and Findings' `fig()` switch covers every unit, so it would break the screens' type check for a
+    number they don't show there. The flag's `confidence` still says how sure it is (`approx`: a
+    building's point, not the unit's).
+29. **Unrounded,** because the flag compares the unrounded miles with its thresholds. Rounding is the
+    screen's: "0.3 mi" on the row, "0.31 miles away" on the flag.
+30. **A comp in the home's building gets its miles (0), not null.** Null means "not known". The
+    screens show "Same building" there.
+31. **It reads the best value of each side's coordinates, whatever its confidence,** as the checks
+    do, and isn't per result.
+32. **One line in Mason's code, and his helper's signature.** `compDistance` in
+    `workspace/distance.ts` now takes the comp's `distance_miles`, and Sort passes it. It no longer
+    imports from `compute/`. With both buildings mapped and no engine output for the comp, the row
+    waits ("The distance isn't worked out yet") rather than guess.
 
 ---
 

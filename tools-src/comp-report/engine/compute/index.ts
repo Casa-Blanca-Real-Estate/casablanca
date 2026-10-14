@@ -19,7 +19,7 @@ import { sha256Tag } from '../util/sha256.ts';
 import { ENGINE_VERSION } from '../version.ts';
 import type { CompInput, CompRecord, EngineInput, EvidenceClass, PropertyFacts, PropertyType, Sourced, StatedFact } from '../types.ts';
 import { adjustmentLines, resolveLines } from './adjust.ts';
-import { compChecks } from './checks.ts';
+import { compChecks, compDistanceMiles } from './checks.ts';
 import { compareComp, monthlyCarry } from './compare.ts';
 import { bestFacts, resolveFacts, weakest, type ResolvedFacts } from './facts.ts';
 import { headlineFacts } from './headline.ts';
@@ -252,9 +252,10 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
     const type = facts.property_type?.value;
     const cls = evidenceOf(c.record);
     const when = marketDate(facts, cls);
+    const compBest = bestFacts(c.record.facts, statedFor(stated, c.id), mode, c.record.suggestions ?? []) as Partial<PropertyFacts>;
     const checks = compChecks(
       { identity: input.subject.identity, facts: subjectBest },
-      { identity: c.record.identity, facts: bestFacts(c.record.facts, statedFor(stated, c.id), mode, c.record.suggestions ?? []) as Partial<PropertyFacts> },
+      { identity: c.record.identity, facts: compBest },
       { reportType, asOf, thresholds: houseMethod.check_thresholds, evidenceClass: cls },
     );
     return {
@@ -285,6 +286,7 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
       age_days: statusDate ? daysBetween(statusDate, asOf) : null,
       market_date: when ? { date: when.date, basis: when.basis, age_days: daysBetween(when.date, asOf) } : null,
       checks,
+      distance_miles: compDistanceMiles(subjectBest, compBest),
       days_on_market: (facts.days_on_market?.value as number | undefined) ?? null,
       sale_to_ask_percent: sale && ask && cls === 'sold'
         ? figure((sale.value / ask.value - 1) * 100, 'percent', weakest(sale.confidence, ask.confidence), '(sale price ÷ last asking price − 1) × 100', asOf)

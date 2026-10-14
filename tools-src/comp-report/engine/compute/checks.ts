@@ -73,6 +73,18 @@ export function distanceMiles(a: { lat: number; lng: number }, b: { lat: number;
   return Math.sqrt(dLat * dLat + dLng * dLng) * EARTH_RADIUS_MILES;
 }
 
+/**
+ * Miles from the home's building to the comp's, from the `coordinates` on both
+ * sides (best values); null without both. The `distance` check measures this
+ * same number, and `CompOut.distance_miles` carries it, so a row and its flag
+ * never disagree.
+ */
+export function compDistanceMiles(subject: Facts, comp: Facts): number | null {
+  const sc = subject.coordinates as Sourced<{ lat: number; lng: number }> | undefined;
+  const cc = comp.coordinates as Sourced<{ lat: number; lng: number }> | undefined;
+  return sc && cc ? distanceMiles(sc.value, cc.value) : null;
+}
+
 function evidence(side: 'subject' | 'comp', field: string, fact: Sourced<unknown> | undefined): CheckEvidence {
   return fact
     ? { side, field, value: fact.value, source: fact.source, confidence: fact.confidence, note: fact.note ?? null }
@@ -311,7 +323,7 @@ export function compChecks(subject: CheckSide, comp: CheckSide, ctx: CheckContex
       confidence: null, threshold: null, measured: null,
     });
   } else {
-    const miles = distanceMiles(sc.value, cc.value);
+    const miles = compDistanceMiles(s, c)!;
     const level = miles > d.far ? 'far' : miles > d.noted ? 'noted' : null;
     if (level) {
       out.push(flagged({
