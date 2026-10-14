@@ -21,6 +21,7 @@ import type { EngineOutput, HeadlineFacts, ResultKind } from '../engine/index.ts
 import type { WorkspaceComp } from './engine-input.ts';
 import { againstAsk, clientPrice, countWord, estimateWords, psf, usd } from './format.ts';
 import { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER } from './frame.ts';
+import { noteOf } from './state.ts';
 import { fact, homeName, readingFromFacts } from './reading.ts';
 
 export { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER };
@@ -162,7 +163,7 @@ function blocks(input: EmailInput): Block[] {
       let notes: string[];
       if (w) notes = (writtenLines.get(comp.id) ?? []).slice(0, input.length === 'full' ? 3 : 1);
       else {
-        const note = input.length === 'full' ? comp.judgment?.reasons.at(-1)?.reason?.trim() : null;
+        const note = input.length === 'full' ? noteOf(comp.judgment) : null;
         notes = note ? [note] : [];
       }
       out.push({ kind: 'comp', name: addressOf(comp), url: urlOf(comp), line, notes });

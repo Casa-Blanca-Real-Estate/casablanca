@@ -14,7 +14,7 @@
 import { EVIDENCE_CLASSES, type EngineOutput, type Result, type ResultKind } from '../engine/index.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { estimateWords } from './format.ts';
-import type { Intake } from './state.ts';
+import { noteOf, type Intake } from './state.ts';
 
 const KINDS: ResultKind[] = ['on_facts', 'with_estimates'];
 
@@ -106,7 +106,8 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
           ? 'didn’t sell (came off the market unsold; its last ask is a ceiling signal)'
           : c.record.status.evidence_class ?? `unknown (“${c.record.status.raw ?? ''}”)`,
         tier: c.unsortable ? 'can’t be sorted' : c.judgment?.tier ?? 'not sorted yet',
-        reason: c.unsortable ?? c.judgment?.reasons.at(-1)?.reason ?? null,
+        reason: c.unsortable ?? noteOf(c.judgment),
+        ...(c.judgment?.tags?.length ? { tags: c.judgment.tags } : {}),
         reviewed: Boolean(c.judgment?.reviewedAt),
         ...(c.judgment?.anchor ? { anchor: true } : {}),
         [sold ? 'sale_price' : c.record.status.evidence_class === 'in_contract' ? 'last_asking_price' : 'asking_price']: price ?? null,

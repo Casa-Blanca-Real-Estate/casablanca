@@ -12,7 +12,7 @@ import { ApiError, narrativesApi, type NarrativeView } from '../../api.ts';
 import { buildEmail, headlineDrafts, htmlFromText, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
 import { draftChecks, ledgerFor, qaRecord, qaStatus, type Acknowledgment, type QaItem } from '../../../workspace/qa.ts';
 import { answerResult, estimatesChangeTheAnswer } from '../../../workspace/reading.ts';
-import type { Entry, SendState } from '../../../workspace/state.ts';
+import { noteOf, type Entry, type SendState } from '../../../workspace/state.ts';
 import { writerInputFrom, writerInputKey } from '../../../workspace/writer-input.ts';
 import { BuildNote, entry, Field, StubTag, TextInput } from './bits.tsx';
 import { fingerprint, type StepProps } from './model.ts';
@@ -133,7 +133,7 @@ export function SendStep({ ws }: StepProps) {
   const agentNumber = o.headline_facts[result].agent_number?.facts.map((f) => f.value) ?? [];
   const ledger = ledgerFor({
     output: o, result, comps: ws.comps, intake: ws.intake,
-    agentText: [send.chosen?.value, send.consider?.value, send.nextStep?.value, signedAs, ws.brief.clientName?.value, ...ws.comps.map((c) => c.judgment?.reasons.at(-1)?.reason)],
+    agentText: [send.chosen?.value, send.consider?.value, send.nextStep?.value, signedAs, ws.brief.clientName?.value, ...ws.comps.map((c) => noteOf(c.judgment))],
     agentFigures: [...agentNumber, ws.target?.price.value, ws.dealTerms?.price?.value, ws.dealTerms?.sellerTarget?.value].filter((v): v is number => typeof v === 'number'),
   });
   const acks = send.acks ?? [];

@@ -70,6 +70,10 @@ export interface SampleTier {
   reasonType: ReasonType;
   reason: string;
   anchor?: boolean;
+  /** The handoff's tags (workspace/features.ts), so the sample reaches Findings (Dispatch 14). */
+  tags: string[];
+  /** The comp's features, as the agent would pick them. */
+  features?: Record<string, string[]>;
 }
 
 /**
@@ -78,17 +82,17 @@ export interface SampleTier {
  * keys; sample.test.ts checks every one is in the export.
  */
 export const SAMPLE_TIERS: SampleTier[] = [
-  { propertyKey: 'pk1|ny|new york|200 chambers st|10A', tier: 'primary', reasonType: 'property', anchor: true, reason: 'Full-service Tribeca condo, high floor, water views, close in size — the closest match.' },
-  { propertyKey: 'pk1|ny|new york|79 laight st|1A', tier: 'excluded', reasonType: 'property', reason: 'Public-record closing: ground floor, no listing data, condition can’t be checked.' },
-  { propertyKey: 'pk1|ny|new york|181 hudson st|1A', tier: 'secondary', reasonType: 'property', reason: 'Ground-floor loft in a small building with no doorman — a different product. Sold 12% over ask.' },
-  { propertyKey: 'pk1|ny|new york|5 franklin pl|14A', tier: 'primary', reasonType: 'property', reason: 'High floor, full service, similar size. Its square footage is approximate.' },
-  { propertyKey: 'pk1|ny|new york|66 leonard st|12A', tier: 'primary', reasonType: 'property', reason: 'Similar floor and size in a full-service building.' },
-  { propertyKey: 'pk1|ny|new york|108 leonard st|7G', tier: 'primary', reasonType: 'property', reason: 'Similar size, full service: current ask evidence.' },
-  { propertyKey: 'pk1|ny|new york|101 leonard st|5B', tier: 'secondary', reasonType: 'property', reason: 'No floor in the export, and the ask per foot is far below the rest. Context only.' },
-  { propertyKey: 'pk1|ny|new york|25 n moore st|9C', tier: 'primary', reasonType: 'property', reason: 'Similar size and floor: current ask evidence.' },
-  { propertyKey: 'pk1|ny|new york|111 murray st|35A', tier: 'secondary', reasonType: 'property', reason: 'Far higher floor in new development; the ask sits well above the sold band.' },
-  { propertyKey: 'pk1|ny|new york|100 barclay st|11F', tier: 'primary', reasonType: 'property', reason: 'Same building. No square footage in the export, so it can’t give a $/sqft.' },
-  { propertyKey: 'pk1|ny|new york|77 reade st|PHA', tier: 'secondary', reasonType: 'property', reason: 'A penthouse — a different product from a 17th-floor unit.' },
+  { propertyKey: 'pk1|ny|new york|200 chambers st|10A', tier: 'primary', reasonType: 'property', anchor: true, reason: 'Full-service Tribeca condo, high floor, water views, close in size — the closest match.' , tags: ['Same area', 'Similar size', 'Full service', 'Water views'], features: { outdoor: ['None'], views: ['Water', 'City'], exposure: ['South'], condition: ['Renovated'], building: ['Doorman', 'Gym', 'Pool'] } },
+  { propertyKey: 'pk1|ny|new york|79 laight st|1A', tier: 'excluded', reasonType: 'property', reason: 'Public-record closing: ground floor, no listing data, condition can’t be checked.' , tags: ['First floor', '6+ months'] },
+  { propertyKey: 'pk1|ny|new york|181 hudson st|1A', tier: 'secondary', reasonType: 'property', reason: 'Ground-floor loft in a small building with no doorman — a different product. Sold 12% over ask.' , tags: ['First floor', 'Much smaller'] },
+  { propertyKey: 'pk1|ny|new york|5 franklin pl|14A', tier: 'primary', reasonType: 'property', reason: 'High floor, full service, similar size. Its square footage is approximate.' , tags: ['Similar size', 'Full service'], features: { outdoor: ['None'], views: ['City'], exposure: ['East'], condition: ['Mint'], building: ['Doorman', 'Gym', 'Pool', 'Storage'] } },
+  { propertyKey: 'pk1|ny|new york|66 leonard st|12A', tier: 'primary', reasonType: 'property', reason: 'Similar floor and size in a full-service building.' , tags: ['Similar floor', 'Similar size', 'Full service'] },
+  { propertyKey: 'pk1|ny|new york|108 leonard st|7G', tier: 'primary', reasonType: 'property', reason: 'Similar size, full service: current ask evidence.' , tags: ['Similar size', 'Full service'] },
+  { propertyKey: 'pk1|ny|new york|101 leonard st|5B', tier: 'secondary', reasonType: 'property', reason: 'No floor in the export, and the ask per foot is far below the rest. Context only.' , tags: ['Same area'] },
+  { propertyKey: 'pk1|ny|new york|25 n moore st|9C', tier: 'primary', reasonType: 'property', reason: 'Similar size and floor: current ask evidence.' , tags: ['Similar size', 'Similar floor'] },
+  { propertyKey: 'pk1|ny|new york|111 murray st|35A', tier: 'secondary', reasonType: 'property', reason: 'Far higher floor in new development; the ask sits well above the sold band.' , tags: ['New development', 'Higher floor'] },
+  { propertyKey: 'pk1|ny|new york|100 barclay st|11F', tier: 'primary', reasonType: 'property', reason: 'Same building. No square footage in the export, so it can’t give a $/sqft.' , tags: ['Same building', 'Same layout', 'Lower floor'] },
+  { propertyKey: 'pk1|ny|new york|77 reade st|PHA', tier: 'secondary', reasonType: 'property', reason: 'A penthouse — a different product from a 17th-floor unit.' , tags: ['Much bigger'] },
 ];
 
 /** What /api/comp-report/sample serves: everything but the export, which the sample import stores. */

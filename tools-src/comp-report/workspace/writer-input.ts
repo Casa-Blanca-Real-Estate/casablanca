@@ -27,7 +27,7 @@ import { addressOf, countedComps, urlOf, type EmailLength } from './email.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { againstAsk, clientPrice, estimateWords, psf, sqft, usd } from './format.ts';
 import { homeName } from './reading.ts';
-import type { Audience, Brief, Intake, SendState } from './state.ts';
+import { noteOf, type Audience, type Brief, type Intake, type SendState } from './state.ts';
 
 export interface WriterComp {
   /** The engine's comp id: the writer returns each comp's lines by it. */
@@ -44,6 +44,8 @@ export interface WriterComp {
   against_the_home: string[];
   /** The agent's own note on it: agent-stated, their words. */
   agent_note: string | null;
+  /** The agent's tags on it, from the house list (Dispatch 14). */
+  agent_tags: string[];
 }
 
 export interface WriterInput {
@@ -133,7 +135,7 @@ export function writerInput(args: {
     if (f.status_date) facts[status === 'sold' ? 'sale_date' : 'date'] = f.status_date.value;
     const pr = out.per_result[result];
     if (pr.monthly_carry) facts.monthly_carry = `${usd(pr.monthly_carry.value)} a month`;
-    const note = comp.judgment?.reasons.at(-1)?.reason?.trim() || null;
+    const note = noteOf(comp.judgment);
     return {
       id: comp.id,
       name: addressOf(comp),
@@ -145,6 +147,7 @@ export function writerInput(args: {
       facts,
       against_the_home: pr.comparisons.map(againstHome).filter((x): x is string => Boolean(x)),
       agent_note: note,
+      agent_tags: comp.judgment?.tags ?? [],
     };
   });
 

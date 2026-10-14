@@ -32,8 +32,8 @@ export interface NeutralNumbers {
  * only whether there is one — and the target isn't read at all.
  */
 export async function neutralNumbers(tx: Queryable, reportId: string, asOf = newYorkToday()): Promise<NeutralNumbers | null> {
-  const report = (await tx.query<{ state: WorkspaceState | null; brief: Brief | null; revealed: boolean }>(
-    'select state, brief, agent_call is not null as revealed from comp_report.reports where id = $1',
+  const report = (await tx.query<{ state: WorkspaceState | null; brief: Brief | null; revealed: boolean; property_type: 'condo' | 'coop' }>(
+    'select state, brief, property_type, agent_call is not null as revealed from comp_report.reports where id = $1',
     [reportId],
   )).rows[0];
   if (!report) return null;
@@ -58,7 +58,7 @@ export async function neutralNumbers(tx: Queryable, reportId: string, asOf = new
   // The buildings' locations, as the screens have them, so distance reads the same here.
   const locations = locationsFrom(await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)));
   // No prices, no deal terms: nothing here can carry the call or a target.
-  const output = compute(engineInput({ asOf, intake: state.intake, comps, locations }));
+  const output = compute(engineInput({ asOf, intake: state.intake, comps, locations, propertyType: report.property_type }));
   return { output, comps, state, brief: report.brief ?? {}, revealed: report.revealed };
 }
 

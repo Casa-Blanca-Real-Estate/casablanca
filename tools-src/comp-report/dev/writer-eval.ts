@@ -25,7 +25,7 @@ import { usageTotals } from '../server/assistant.ts';
 import { buildEmail, type EmailLength } from '../workspace/email.ts';
 import { engineInput, workspaceComps, type WorkspaceComp } from '../workspace/engine-input.ts';
 import { draftChecks, ledgerFor, qaStatus } from '../workspace/qa.ts';
-import type { Brief, CompJudgment, Intake, SendState } from '../workspace/state.ts';
+import { noteOf, type Brief, type CompJudgment, type Intake, type SendState } from '../workspace/state.ts';
 import { writerInputFrom } from '../workspace/writer-input.ts';
 import { startFakeAnthropic } from './fake-anthropic.ts';
 
@@ -135,7 +135,7 @@ for (const c of [barclay(), fulton517()]) {
     });
     const ledger = ledgerFor({
       output: c.output, result, comps: c.comps, intake: c.intake,
-      agentText: [c.send.chosen?.value, c.send.consider?.value, c.send.nextStep?.value, c.agentName, ...c.comps.map((x) => x.judgment?.reasons.at(-1)?.reason)],
+      agentText: [c.send.chosen?.value, c.send.consider?.value, c.send.nextStep?.value, c.agentName, ...c.comps.map((x) => noteOf(x.judgment))],
     });
     const checks = draftChecks({ text: `${email.subject}\n${email.text}`, headline, ledger, result, output: c.output, sample: false });
     const status = qaStatus(checks);

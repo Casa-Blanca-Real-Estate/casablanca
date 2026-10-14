@@ -58,6 +58,11 @@ export interface Report {
   sampleData: boolean;
   createdAt: string;
   updatedAt: string;
+  /** The reports list (Dispatch 14). */
+  client?: string | null;
+  side?: 'buyer' | 'seller' | null;
+  stage?: 'sort' | 'findings' | 'send' | 'sent';
+  unsorted?: number;
 }
 
 export interface AllowlistEntry {
@@ -141,6 +146,21 @@ export interface WorkspacePatch {
   target?: TargetState | null;
   state?: WorkspaceState;
   sampleData?: true;
+  /** The Co-op/Condo toggle (Dispatch 14): the engine computes with it. */
+  propertyType?: 'condo' | 'coop';
+}
+
+/** One comp's edits (Dispatch 14): any of them, saved together; the server appends a reason for a tier or a changed note. */
+export interface CompEdit {
+  tier?: 'primary' | 'secondary' | 'excluded';
+  note?: string | null;
+  tags?: string[];
+  features?: Record<string, string[]>;
+  anchor?: boolean;
+  reviewed?: boolean;
+  confirmed?: true;
+  /** Take it out of the report (true), or put it back (false). */
+  removed?: boolean;
 }
 
 export const workspaceApi = {
@@ -159,9 +179,12 @@ export const workspaceApi = {
   /** A comp read from its StreetEasy page, confirmed in one tap (§6.2). */
   confirm: (reportId: string, reportCompId: string) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, confirmed: true } }),
-  /** A comp typed in: address, status, price, size, floor, date. */
-  addManual: (reportId: string, manual: Record<string, unknown>) =>
-    api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, manual } }),
+  /** A comp typed in: address, status, price, size, floor, date — with its note, tags and features (Dispatch 14). */
+  addManual: (reportId: string, manual: Record<string, unknown>, extra: { note?: string; tags?: string[]; features?: Record<string, string[]> } = {}) =>
+    api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, manual, ...extra } }),
+  /** A comp's tier, note, tags, features, anchor, confirmation or removal, together (Dispatch 14). */
+  editComp: (reportId: string, reportCompId: string, edit: CompEdit) =>
+    api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, ...edit } }),
 };
 
 // ─── Locations for distance (CR-3c) ──────────────────────────────────────────

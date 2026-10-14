@@ -8,11 +8,16 @@
 //   POST  {reportId, sample: true}
 //         admins: sort every comp the sample knows, with its sample reason,
 //         mark them reviewed and set the sample's anchor (Dispatch 07)
-//   PATCH {reportId, reportCompId, reviewed?, anchor?, confirmed?}
-//         mark a comp reviewed, make it the anchor — the single most
-//         comparable sold comp (§6.3), at most one per report — or confirm a
-//         comp read from its StreetEasy page, in one tap: until then it counts
-//         in neither result (§6.2)
+//   PATCH {reportId, reportCompId, reviewed?, anchor?, confirmed?, tier?, note?, tags?, features?, removed?}
+//         mark a comp reviewed; make it the anchor (★, one per report, any
+//         status: starring another moves it); confirm a comp read from its
+//         StreetEasy page (until then it counts in neither result, §6.2); and
+//         (Dispatch 14) its tier, its note ("Why it's a comp"), its tags from
+//         the handoff's list, its features, or take it out of the report or
+//         put it back. A tier, or a changed note on a tiered comp, still
+//         appends a reason (§12): before a note exists, its text is
+//         "(no note yet)"
+//   POST  {reportId, manual, note?, tags?, features?}: a typed-in comp saves its note, tags and features with it
 // Each returns the whole workspace. Only the report's owner can change it.
 import { compRecordFromManual, ParseError, PARSER_VERSION, type ManualCompFields } from '../../engine/index.ts';
 import { withActor, type Queryable } from '../db.ts';
@@ -20,12 +25,44 @@ import { newYorkToday } from '../links.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { SAMPLE_TIERS } from '../sample/barclay-17l.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
+import { cleanFeatures, isTag } from '../../workspace/features.ts';
+import { NO_NOTE_YET } from '../../workspace/state.ts';
 import { asUser, requirePool } from './reports.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
 
 const TIERS = ['primary', 'secondary', 'excluded'];
 const REASON_TYPES = ['property', 'client', 'method'];
 const MAX_REASON = 1000;
+const MAX_NOTE = 2000;
+
+/** The agent's edits to a comp, validated: undefined where not given. */
+function compEdits(body: Record<string, unknown>) {
+  const out: { note?: string | null; tags?: string[]; features?: Record<string, string[]> } = {};
+  if (body.note !== undefined) {
+    if (body.note !== null && typeof body.note !== 'string') throw new HttpError(400, 'bad_note', 'The note is text.');
+    const note = typeof body.note === 'string' ? body.note.trim() : '';
+    if (note.length > MAX_NOTE) throw new HttpError(400, 'bad_note', `Keep the note under ${MAX_NOTE} characters.`);
+    out.note = note || null;
+  }
+  if (body.tags !== undefined) {
+    if (!Array.isArray(body.tags) || !body.tags.every(isTag)) throw new HttpError(400, 'bad_tags', 'Tags come from the list.');
+    out.tags = [...new Set(body.tags as string[])];
+  }
+  if (body.features !== undefined) {
+    if (!body.features || typeof body.features !== 'object' || Array.isArray(body.features)) throw new HttpError(400, 'bad_features', 'Send the features as an object.');
+    out.features = cleanFeatures(body.features) as Record<string, string[]>;
+  }
+  return out;
+}
+
+async function saveEdits(tx: Queryable, reportId: string, reportCompId: string, edits: ReturnType<typeof compEdits>) {
+  const sets: string[] = [];
+  const values: unknown[] = [reportId, reportCompId];
+  if (edits.note !== undefined) { values.push(edits.note); sets.push(`note = $${values.length}`); }
+  if (edits.tags !== undefined) { values.push(edits.tags); sets.push(`tags = $${values.length}::text[]`); }
+  if (edits.features !== undefined) { values.push(JSON.stringify(edits.features)); sets.push(`features = $${values.length}::jsonb`); }
+  if (sets.length) await tx.query(`update comp_report.report_comps set ${sets.join(', ')} where report_id = $1 and id = $2`, values);
+}
 
 async function recordReason(
   tx: Queryable, reportId: string, reportCompId: string, tier: string, reason: string, reasonType: string, sample: boolean,
@@ -64,7 +101,7 @@ const MANUAL_FIELDS = [
 ] as const;
 
 /** A comp typed in: read by the engine, recorded once as a property, kept as the agent's observation, and joined to the report. */
-async function addManualComp(tx: Queryable, reportId: string, manual: unknown, asOf: string): Promise<void> {
+async function addManualComp(tx: Queryable, reportId: string, manual: unknown, asOf: string): Promise<string> {
   if (!manual || typeof manual !== 'object' || Array.isArray(manual)) throw new HttpError(400, 'bad_comp', 'Send the comp as an object.');
   if (JSON.stringify(manual).length > 4096) throw new HttpError(413, 'too_large', 'That comp is too large.');
   // Only the fields a typed-in comp has: nothing else is kept.
@@ -95,13 +132,15 @@ async function addManualComp(tx: Queryable, reportId: string, manual: unknown, a
      values ($1, $2, 'agent', $3, $4::jsonb, $5, $6::jsonb, $7) returning id`,
     [property.id, reportId, asOf, JSON.stringify(record.facts), se?.url ? [se.url] : [], JSON.stringify(fields), record.origin?.parser_version ?? PARSER_VERSION],
   )).rows[0]!;
-  await tx.query(
+  // Typed in again after it was taken out: it's back.
+  return (await tx.query<{ id: string }>(
     `insert into comp_report.report_comps (report_id, property_id, observation_id, evidence_class)
      values ($1, $2, $3, $4)
      on conflict (report_id, property_id)
-     do update set observation_id = excluded.observation_id, evidence_class = excluded.evidence_class`,
+     do update set observation_id = excluded.observation_id, evidence_class = excluded.evidence_class, removed_at = null, removed_by = null
+     returning id`,
     [reportId, property.id, observation.id, record.status.listing_status],
-  );
+  )).rows[0]!.id;
 }
 
 export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
@@ -128,6 +167,7 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
           if (!comp) continue;
           matched++;
           if (comp.tier !== sample.tier) await recordReason(tx, reportId, comp.id, sample.tier, sample.reason, sample.reasonType, true);
+          await saveEdits(tx, reportId, comp.id, { note: sample.reason, tags: sample.tags, ...(sample.features ? { features: sample.features } : {}) });
           await setReviewed(tx, reportId, comp.id, true);
           if (sample.anchor) await setAnchor(tx, reportId, comp.id, true);
         }
@@ -138,9 +178,11 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
     }
 
     if (req.method === 'POST' && body.manual !== undefined) {
+      const edits = compEdits(body);
       return json(await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
-        await addManualComp(tx, reportId, body.manual, newYorkToday());
+        const id = await addManualComp(tx, reportId, body.manual, newYorkToday());
+        await saveEdits(tx, reportId, id, edits);
         return loadWorkspace(tx, user, reportId);
       }), 201);
     }
@@ -166,14 +208,35 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
     const reviewed = body.reviewed;
     const anchor = body.anchor;
     const confirmed = body.confirmed;
+    const removed = body.removed;
     if (reviewed !== undefined && typeof reviewed !== 'boolean') throw new HttpError(400, 'bad_reviewed', 'reviewed is true or false.');
     if (anchor !== undefined && typeof anchor !== 'boolean') throw new HttpError(400, 'bad_anchor', 'anchor is true or false.');
     if (confirmed !== undefined && confirmed !== true) throw new HttpError(400, 'bad_confirmed', 'A confirmation can only be given.');
-    if (reviewed === undefined && anchor === undefined && confirmed === undefined) throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
+    if (removed !== undefined && typeof removed !== 'boolean') throw new HttpError(400, 'bad_removed', 'removed is true or false.');
+    if (body.tier !== undefined && (typeof body.tier !== 'string' || !TIERS.includes(body.tier))) throw new HttpError(400, 'bad_tier', 'The tier is primary, secondary or excluded.');
+    const tier = body.tier as string | undefined;
+    const edits = compEdits(body);
+    if (reviewed === undefined && anchor === undefined && confirmed === undefined && removed === undefined && tier === undefined
+      && edits.note === undefined && edits.tags === undefined && edits.features === undefined) {
+      throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
+    }
     return json(await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
-      const exists = await tx.query('select 1 from comp_report.report_comps where report_id = $1 and id = $2', [reportId, reportCompId]);
-      if (!exists.rowCount) throw new HttpError(404, 'not_found', 'No such comp in this report.');
+      const current = (await tx.query<{ tier: string | null; note: string | null; removed_at: Date | null }>(
+        'select tier, note, removed_at from comp_report.report_comps where report_id = $1 and id = $2', [reportId, reportCompId],
+      )).rows[0];
+      if (!current) throw new HttpError(404, 'not_found', 'No such comp in this report.');
+      if (removed === true) {
+        await tx.query(
+          `update comp_report.report_comps set removed_at = now(), removed_by = comp_report.actor(), is_anchor = false
+            where report_id = $1 and id = $2 and removed_at is null`,
+          [reportId, reportCompId],
+        );
+      } else if (removed === false) {
+        await tx.query('update comp_report.report_comps set removed_at = null, removed_by = null where report_id = $1 and id = $2', [reportId, reportCompId]);
+      } else if (current.removed_at) {
+        throw new HttpError(409, 'removed', 'That comp was taken out of the report. Add it back first.');
+      }
       if (confirmed) {
         // The read behind the comp's current observation: what the agent is looking at.
         const done = await tx.query(
@@ -186,6 +249,14 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
           [reportId, reportCompId],
         );
         if (!done.rowCount) throw new HttpError(409, 'nothing_to_confirm', 'That comp isn’t waiting for a confirmation.');
+      }
+      await saveEdits(tx, reportId, reportCompId, edits);
+      // A tier, or a changed note on a tiered comp, appends a reason (§12): the history keeps every version.
+      const note = edits.note !== undefined ? edits.note : current.note;
+      const nextTier = tier ?? current.tier;
+      const noteChanged = edits.note !== undefined && (edits.note ?? null) !== (current.note ?? null);
+      if (nextTier && (nextTier !== current.tier || noteChanged)) {
+        await recordReason(tx, reportId, reportCompId, nextTier, (note ?? '').slice(0, MAX_REASON) || NO_NOTE_YET, 'property', false);
       }
       if (reviewed !== undefined) await setReviewed(tx, reportId, reportCompId, reviewed);
       if (anchor !== undefined) await setAnchor(tx, reportId, reportCompId, anchor);
