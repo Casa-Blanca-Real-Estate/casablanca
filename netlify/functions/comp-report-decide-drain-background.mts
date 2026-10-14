@@ -10,11 +10,12 @@ import type { HaikuClient } from '../../tools-src/comp-report/server/decide/haik
 
 export default (req: Request) => {
   const config = decideConfig();
+  const client = (apiKey: string | null) => (apiKey ? new Anthropic({ apiKey, maxRetries: 2 }) as unknown as HaikuClient : null);
   return handleDecideDrain(req, {
     pool: databasePool(),
     config,
-    haiku: () => (fallbackReady(config)
-      ? new Anthropic({ apiKey: config.anthropicKey!, maxRetries: 2 }) as unknown as HaikuClient
-      : null),
+    haiku: () => (fallbackReady(config) ? client(config.anthropicKey) : null),
+    // The labelled batch's second judge needs only the key, not the fallback's switch.
+    secondJudge: () => client(config.anthropicKey),
   });
 };

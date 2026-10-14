@@ -60,6 +60,11 @@ async function casaNames(pool: PoolLike): Promise<string[]> {
   });
 }
 
+/** A StreetEasy page as the ledger keeps it — https, no query or fragment — or null. Never fails an enqueue. */
+export function canonicalSourceUrl(url: string | null | undefined): string | null {
+  return typeof url === 'string' && url.length <= 500 && /^https:\/\/streeteasy\.com\/[^?#\s]+$/.test(url) ? url : null;
+}
+
 /** PURE: the request for one listing, or why there isn't one. */
 export function listingRequest(obs: ListingObservation, names: readonly string[]): NewRequest | { skip: 'no-text' | 'nothing-open' } {
   const scrubbed = scrubListingText(obs.record.listing?.description ?? null, { names });
@@ -76,6 +81,7 @@ export function listingRequest(obs: ListingObservation, names: readonly string[]
     state,
     stateHash: stateHash(state),
     userEmail: obs.userEmail ?? null,
+    sourceUrl: canonicalSourceUrl(obs.record.listing?.url),
   };
 }
 

@@ -49,6 +49,8 @@ export const JEV_ATTEMPT_TIMEOUT_MS = 30_000;
 export const JEV_MAX_RETRY_WAIT_MS = 180_000;
 /** Under five requests a minute, which gave MindBinder zero refusals. */
 export const JEV_DEFAULT_MIN_INTERVAL_MS = 12_500;
+/** A raw body kept for the record (the go/no-go call) is cut here: 64 KiB. */
+export const RAW_MAX_CHARS = 65_536;
 
 export type JevQuestionWire =
   | { type: 'choice'; instructions: string; criteria: Record<string, string> }
@@ -156,11 +158,12 @@ export type DropReason =
   /** A private lane's request with zero retention off: refused before it's sent. */
   | 'zdr-required';
 
+/** `raw`: the body as it came back, cut at RAW_MAX_CHARS — only when the caller asked to keep it. */
 export type AttemptOutcome =
-  | { kind: 'answered'; response: ParsedResponse; status: number }
+  | { kind: 'answered'; response: ParsedResponse; status: number; raw?: string }
   /** `shared`: the wait holds every request (the Gateway is busy), not just this one (a network error). */
-  | { kind: 'retry'; waitMs: number; shared: boolean; status: number | null; note: string }
-  | { kind: 'drop'; reason: DropReason; status: number | null; note: string };
+  | { kind: 'retry'; waitMs: number; shared: boolean; status: number | null; note: string; raw?: string }
+  | { kind: 'drop'; reason: DropReason; status: number | null; note: string; raw?: string };
 
 /**
  * One attempt. Never throws. The key is read by the caller and passed in, so
@@ -176,6 +179,8 @@ export async function jevAttempt(opts: {
   fetchImpl: typeof fetch;
   nowMs: () => number;
   timeoutMs?: number;
+  /** Keep the raw body on the outcome (the go/no-go call). */
+  keepRaw?: boolean;
 }): Promise<AttemptOutcome> {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), opts.timeoutMs ?? JEV_ATTEMPT_TIMEOUT_MS);
@@ -186,19 +191,26 @@ export async function jevAttempt(opts: {
       body: JSON.stringify(buildJevRequestBody(opts.state, opts.questions, { zdr: opts.zdr })),
       signal: ctl.signal,
     });
+    const text = await res.text().catch(() => '');
+    const kept = opts.keepRaw ? { raw: text.slice(0, RAW_MAX_CHARS) } : {};
     if (!res.ok) {
-      const note = (await res.text().catch(() => '')).slice(0, 300);
+      const note = text.slice(0, 300);
       if (JEV_RETRY_STATUSES.has(res.status)) {
-        return { kind: 'retry', waitMs: jevRetryDelayMs(opts.attempt, res.headers.get('retry-after'), opts.nowMs()), shared: true, status: res.status, note };
+        return { kind: 'retry', waitMs: jevRetryDelayMs(opts.attempt, res.headers.get('retry-after'), opts.nowMs()), shared: true, status: res.status, note, ...kept };
       }
       // Any other 4xx, including the fail-closed privacy refusal and the 403
       // account gates: asking again gets the same answer.
-      return { kind: 'drop', reason: `http-${res.status}`, status: res.status, note };
+      return { kind: 'drop', reason: `http-${res.status}`, status: res.status, note, ...kept };
     }
-    const body = await res.json().catch(() => null);
+    let body: unknown = null;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
     const parsed = parseJevResponse(body, opts.questions);
-    if (!parsed) return { kind: 'drop', reason: 'malformed', status: res.status, note: 'the body is not an evaluate response' };
-    return { kind: 'answered', response: parsed, status: res.status };
+    if (!parsed) return { kind: 'drop', reason: 'malformed', status: res.status, note: 'the body is not an evaluate response', ...kept };
+    return { kind: 'answered', response: parsed, status: res.status, ...kept };
   } catch (error) {
     // A timeout or a dropped connection says nothing about the Gateway's window:
     // back off for this request only.

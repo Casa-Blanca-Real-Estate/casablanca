@@ -56,8 +56,10 @@ each was applied.
   3. **Tell Arbiter it's in.** Don't paste the key into a chat.
   - **Pro later, for two reasons.** Vercel's free plan is for non-commercial use, which is your call
     for now. And zero retention needs Pro, before Jev reads anything an agent or client wrote.
-- [ ] **Later — label about 30 listings for Jev's calibration** (Dispatch 10 phase 2). Arbiter commits
-  the sheet; filling it in takes about 20 minutes. Hannah could do it instead.
+- [ ] **Soon — label 30 listings for Jev's calibration** (Dispatch 10 phase 2), once Arbiter's phase 2 PR
+  merges. The sheet is `docs/comp-report/jev-labels.csv`, and how to fill it in is in
+  `docs/comp-report/jev-calibration.md`. It takes about 20 minutes, and Hannah could do it instead. It
+  doesn't need the key: do it before any Jev output exists.
 - [x] ~~Set up the dev notebook (#54).~~ Done: `DEV_NOTEBOOK_KEY` is in the Casa cloud environment and
   works (2026-10-13).
 - [ ] **Now — sort the team Feedback list** on the notebook page (*Team feedback*): **Make a note** on
@@ -66,8 +68,12 @@ each was applied.
 - [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
 - [ ] **Now — the Jev key:** the zero-retention switch is merged (#61). Make a new AI Gateway key on your existing
-  Vercel account. In Netlify (Functions scope), set `AI_GATEWAY_API_KEY` to it and `CR_JEV_ZDR=off`,
-  then redeploy. Leave `CR_JEV_MODE` alone.
+  Vercel account, then:
+  1. **In Netlify (Functions scope),** set `AI_GATEWAY_API_KEY` to it and `CR_JEV_ZDR=off`.
+  2. **Also set `CR_DECIDE_KEY`,** once Arbiter's phase 2 PR merges, to any random string of 32 characters or more
+     (a password manager's will do). Put the same value in the Claude Code environment as `CR_DECIDE_KEY`. It lets
+     Arbiter run the go/no-go call and the labelled batch, and read the results, without a sign-in.
+  3. **Redeploy.** Leave `CR_JEV_MODE` alone: you turn it to `watch` after Arbiter's go/no-go call passes.
 - [ ] **Soon — change the credential in the email-signatures doc.** The profile-pic session flagged it
   to you directly.
 - [ ] **Later — for Noble, the thresholds that flag most comps:**

@@ -16,6 +16,11 @@
 //   network exhausted — and the fallback's switch is on, Haiku 4.5 is asked.
 //   A question neither answers is recorded as dropped, and goes to the agent
 //   once anything is shown to agents; it's never guessed.
+// - A request the labelled batch marks for a second judge is also put to
+//   Haiku 4.5, whatever Jev did, so the calibration has both providers on the
+//   same text. Its answers are judgments of their own (provider "haiku"). It
+//   isn't the fallback: it needs no switch, only the Anthropic key, and it
+//   never changes how the request itself ends.
 // - Nothing throws into a caller: every request ends answered or dropped with
 //   a named reason, and the drainer reports what it did.
 
@@ -51,6 +56,8 @@ export interface DrainDeps {
   fetchImpl: typeof fetch;
   /** The Haiku client, when the fallback can run. */
   haiku: HaikuClient | null;
+  /** The Haiku client for a second judge (the labelled batch), when the Anthropic key is set. */
+  secondJudge?: HaikuClient | null;
   holder: string;
   budgetMs?: number;
   leaseMs?: number;
@@ -118,6 +125,22 @@ export function judge(
     });
   }
   return { judgments, unanswered };
+}
+
+/**
+ * The second judge, for a request that asks for one: Haiku 4.5 on the same
+ * state and questions. Its judgments and usage, or nothing. Never throws.
+ */
+async function secondOpinion(
+  deps: DrainDeps, item: QueueItem, questionIds: readonly string[], usageFor: (m: string, i: number, o: number, d: Record<string, unknown>) => UsageRecord,
+): Promise<{ judgments: JudgmentRecord[]; usage: UsageRecord[]; note: Record<string, unknown> }> {
+  if (!item.secondJudge) return { judgments: [], usage: [], note: {} };
+  if (!deps.secondJudge) return { judgments: [], usage: [], note: { secondJudge: { reason: 'no-key' } } };
+  const h = await askHaiku(deps.secondJudge, item.state, questionIds);
+  const usage = h.calls > 0 ? [usageFor(h.ok ? h.model : HAIKU_MODEL, h.inputTokens, h.outputTokens, { secondJudge: true, calls: h.calls })] : [];
+  if (!h.ok) return { judgments: [], usage, note: { secondJudge: { reason: h.reason } } };
+  const { judgments, unanswered } = judge(item, questionIds, h.answers, 'haiku', h.model);
+  return { judgments, usage, note: { secondJudge: { answered: judgments.length, unanswered } } };
 }
 
 export async function drain(deps: DrainDeps): Promise<DrainReport> {
@@ -200,6 +223,7 @@ async function runItem(
     userEmail: item.userEmail ?? 'system:decide', provider, model, purpose, inputTokens, outputTokens,
     costUsd: costUsd(model, inputTokens, outputTokens), detail: { request: item.id, zdr: config.zdr, ...detail },
   });
+  const second = () => secondOpinion(deps, item, questionIds, (m, i, o, d) => usageFor('anthropic', m, i, o, d));
 
   if (zdrRefusal(item.lane, config, deps.lanes)) {
     // Neither Jev nor the fallback may see private text without zero retention.
@@ -256,16 +280,20 @@ async function runItem(
       if (out.kind === 'answered') {
         const model = out.response.model ?? JEV_MODEL;
         const { judgments, unanswered } = judge(item, questionIds, out.response.answers, 'jev', out.response.model);
-        const usage = [usageFor('jev', model, out.response.inputTokens, 0, { ms: clock.now() - startedAt, attempts })];
-        const detail = { zdr: config.zdr, waitedMs: clock.now() - item.enqueuedAt };
+        const ms = clock.now() - startedAt;
+        const usage = [usageFor('jev', model, out.response.inputTokens, 0, { ms, attempts })];
+        const detail: Record<string, unknown> = { zdr: config.zdr, waitedMs: clock.now() - item.enqueuedAt, ms };
+        const s2 = await second();
+        usage.push(...s2.usage);
+        Object.assign(detail, s2.note);
         if (judgments.length === 0) {
           // A 200 that answered none of it: every question is unanswered.
-          const ok = await store.finishDropped(holder, item.id, clock.now(), { reason: 'unanswered', attempts, lastStatus, usage, detail });
+          const ok = await store.finishDropped(holder, item.id, clock.now(), { reason: 'unanswered', attempts, lastStatus, usage, detail, judgments: s2.judgments });
           if (ok) count('dropped', 'unanswered');
           return ok ? 'dropped' : 'lost';
         }
         const ok = await store.finishAnswered(holder, item.id, clock.now(), {
-          provider: 'jev', model: out.response.model, attempts, lastStatus, unanswered, judgments, usage, detail,
+          provider: 'jev', model: out.response.model, attempts, lastStatus, unanswered, judgments: [...judgments, ...s2.judgments], usage, detail,
         });
         if (!ok) return 'lost';
         count('answered', unanswered.length ? 'unanswered' : undefined);
@@ -311,7 +339,14 @@ async function runItem(
     }
     detail.fallback = { reason: h.ok ? 'unanswered' : h.reason };
   }
-  const ok = await store.finishDropped(holder, item.id, clock.now(), { reason: jevDrop!.reason, attempts, lastStatus, usage, detail });
+  // Jev didn't answer, and the fallback didn't either: a second judge's answers
+  // still count for calibration — unless the fallback already asked Haiku.
+  const s2 = detail.fallback ? { judgments: [], usage: [], note: {} } : await second();
+  usage.push(...s2.usage);
+  Object.assign(detail, s2.note);
+  const ok = await store.finishDropped(holder, item.id, clock.now(), {
+    reason: jevDrop!.reason, attempts, lastStatus, usage, detail, judgments: s2.judgments,
+  });
   if (!ok) return 'lost';
   count('dropped', jevDrop!.reason);
   log('dropped', { request: item.id, reason: jevDrop!.reason, attempts });
