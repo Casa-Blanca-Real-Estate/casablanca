@@ -69,7 +69,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 |---|---|---|---|
 | **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
 | **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
-| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b), 11 (CR-3c), 13 (CR-5) | 05: merged #48, #52; CR-1.1 item 3 merged in #57; the step-6 proof is Kimani's (Netlify's function log). 07: done, merged #53. 09: done, merged #57, #60. 11: done, merged #62. 13: phase 1 in review (PR to follow). Dev notebook and the Feedback list closed: merged #54 |
+| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b), 11 (CR-3c), 13 (CR-5) | 05: merged #48, #52; CR-1.1 item 3 merged in #57; the step-6 proof is Kimani's (Netlify's function log). 07: done, merged #53. 09: done, merged #57, #60. 11: done, merged #62. 13: phase 1 in #76. Dev notebook and the Feedback list closed: merged #54 |
 | **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: done, merged #55, #58 |
 | **Arbiter** | The comp report's decision provider: Jev, with a Haiku fallback | 10 (CR-D) | 10: phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Phase 2 when Kimani's key is in |
 | *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pics: the cutout, outpainting, and the roster and store | 01, 12 | 01: parked; #41's fixes await Casanova's re-review. 12: approved 2026-10-09, ready |
@@ -92,4 +92,4 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Phase 2 when Kimani's key is in |
 | 11 | [Comp report — distance, from coordinates (CR-3c)](11-comp-report-distance.md) | Mason | Done — merged #62 |
 | 12 | [Profile pics — the roster, the store and the email signature](12-profile-pic-tracker.md) | the Dispatch 01 session | Approved 2026-10-09 (#63); ready |
-| 13 | [Comp report — the writer and QA (CR-5)](13-comp-report-writer-and-qa.md) | Mason | Phase 1 in review (PR to follow) |
+| 13 | [Comp report — the writer and QA (CR-5)](13-comp-report-writer-and-qa.md) | Mason | Phase 1 in #76 |
