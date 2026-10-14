@@ -12,6 +12,12 @@
 //                         retention. Needs a Vercel Pro team; off for Kimani's
 //                         existing account. Only the literal "off" turns it off.
 //                         With it off, only a lane whose text is public is sent.
+//   CR_DECIDE_KEY         a secret that opens /api/comp-report/decide, and
+//                         nothing else, to a Claude Code session (Arbiter) with
+//                         no sign-in: the readout, the go/no-go call, the
+//                         labelled batch and the drift check. Sent in the
+//                         X-Decide-Key header. Unset, or under 32 characters,
+//                         and no key is accepted. Never logged or returned.
 //
 // The database is db.ts's business: NETLIFY_DB_URL, or CR_LOCAL_DATABASE_URL
 // locally. Nothing in the decision layer reads DATABASE_URL.
@@ -29,7 +35,12 @@ export interface DecideConfig {
   anthropicKey: string | null;
   /** Ask for zero data retention. On unless CR_JEV_ZDR is literally "off". */
   zdr: boolean;
+  /** The session key for the decide endpoint, or null when none is set (or it's too short to trust). */
+  decideKey: string | null;
 }
+
+/** A session key shorter than this is refused: it could be guessed. */
+export const MIN_DECIDE_KEY_CHARS = 32;
 
 export function decideConfig(env: Env = process.env): DecideConfig {
   const interval = (env.JEV_MIN_INTERVAL_MS ?? '').trim();
@@ -45,6 +56,10 @@ export function decideConfig(env: Env = process.env): DecideConfig {
     fallback: (env.CR_DECIDE_FALLBACK ?? '').trim().toLowerCase() === 'haiku' ? 'haiku' : 'off',
     anthropicKey: key('ANTHROPIC_API_KEY'),
     zdr: (env.CR_JEV_ZDR ?? '').trim().toLowerCase() !== 'off',
+    decideKey: (() => {
+      const k = key('CR_DECIDE_KEY');
+      return k !== null && k.length >= MIN_DECIDE_KEY_CHARS ? k : null;
+    })(),
   };
 }
 
@@ -62,5 +77,6 @@ export function configSummary(c: DecideConfig) {
     fallback: c.fallback,
     fallbackReady: fallbackReady(c),
     zdr: c.zdr,
+    sessionKey: c.decideKey !== null,
   };
 }

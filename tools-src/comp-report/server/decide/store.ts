@@ -14,10 +14,10 @@ import type { Band, Landing, ProviderId } from './verdict.ts';
 
 export type RequestStatus = 'queued' | 'running' | 'answered' | 'dropped';
 
-export interface Target {
-  kind: 'property_observation';
-  observationId: number;
-}
+/** What a judgment is about: a stored listing read, or a fixed fixture written in code (fixtures.ts). */
+export type Target =
+  | { kind: 'property_observation'; observationId: number }
+  | { kind: 'fixture'; fixtureId: string };
 
 export interface QueueItem {
   id: number;
@@ -33,6 +33,10 @@ export interface QueueItem {
   enqueuedAt: number;
   /** Who the request is for (the importing agent), for the usage row. */
   userEmail: string | null;
+  /** Ask Haiku 4.5 too, as a second judge (the labelled batch only). */
+  secondJudge: boolean;
+  /** The admin batch it belongs to ("labels-v1", "drift-2026-w42"), or null for an import's. */
+  batch: string | null;
 }
 
 export interface NewRequest {
@@ -45,6 +49,18 @@ export interface NewRequest {
   state: unknown;
   stateHash: string;
   userEmail: string | null;
+  secondJudge?: boolean;
+  batch?: string | null;
+  /** The StreetEasy page the text came from, canonical; null for a fixture. */
+  sourceUrl?: string | null;
+}
+
+/** The text a listing's earlier request carried: what the labelled batch re-asks. */
+export interface StoredListingState {
+  observationId: number;
+  state: unknown;
+  stateHash: string;
+  requestId: number;
 }
 
 export interface JudgmentRecord {
@@ -98,6 +114,25 @@ export interface DroppedRecord {
   lastStatus: number | null;
   usage: UsageRecord[];
   detail: Record<string, unknown>;
+  /** A second judge's answers, when Jev dropped the request but Haiku answered it. */
+  judgments?: JudgmentRecord[];
+}
+
+/** One go/no-go call (probe.ts): sent once, its raw body kept. */
+export interface ProbeRecord {
+  ok: boolean;
+  outcome: string;
+  status: number | null;
+  ms: number | null;
+  model: string | null;
+  zdr: boolean;
+  registryVersion: string;
+  fixtureId: string;
+  wireIds: string[];
+  unanswered: string[];
+  /** The response body as it came back, cut at RAW_MAX_CHARS. */
+  raw: string | null;
+  answers: Record<string, unknown>;
 }
 
 export interface DecideStore {
@@ -134,6 +169,13 @@ export interface DecideStore {
   finishAnswered(holder: string, id: number, nowMs: number, rec: AnsweredRecord): Promise<boolean>;
   finishDropped(holder: string, id: number, nowMs: number, rec: DroppedRecord): Promise<boolean>;
 
+  /** Whether any request already belongs to this batch. */
+  batchExists(batch: string): Promise<boolean>;
+  /** The latest import request's state for a StreetEasy page, or null when it was never read in watch mode. */
+  latestListingState(sourceUrl: string): Promise<StoredListingState | null>;
+  /** Records a go/no-go call and its usage; returns the probe's id. */
+  recordProbe(probe: ProbeRecord, usage: UsageRecord[]): Promise<number>;
+
   /** A one-use token that lets the background drainer run, for `ttlMs`. Replaces any earlier one. */
   issueKick(nowMs: number, ttlMs: number): Promise<string>;
   /** True once for a live token; it's spent. */
@@ -154,12 +196,14 @@ export interface MemoryRow {
   unanswered: string[];
   finishedAt: number | null;
   detail: Record<string, unknown>;
+  sourceUrl: string | null;
 }
 
 export class MemoryStore implements DecideStore {
   rows: MemoryRow[] = [];
   judgments: JudgmentRecord[] = [];
   usage: UsageRecord[] = [];
+  probes: ProbeRecord[] = [];
   lease: { holder: string | null; until: number } = { holder: null, until: 0 };
   nextStartAt = 0;
   coolUntil = 0;
@@ -168,11 +212,15 @@ export class MemoryStore implements DecideStore {
   private seq = 0;
 
   private add(req: NewRequest, nowMs: number, status: RequestStatus, dropReason: DropReason | null): MemoryRow {
-    const { wireQuestions, ...fields } = req;
+    const { wireQuestions, secondJudge, batch, sourceUrl, ...fields } = req;
     const row: MemoryRow = {
-      item: { ...fields, id: ++this.seq, attempts: 0, requeues: 0, notBefore: nowMs, enqueuedAt: nowMs },
+      item: {
+        ...fields, secondJudge: secondJudge ?? false, batch: batch ?? null,
+        id: ++this.seq, attempts: 0, requeues: 0, notBefore: nowMs, enqueuedAt: nowMs,
+      },
       status, claimedBy: null, wireQuestions, dropReason, lastStatus: null,
       provider: null, model: null, unanswered: [], finishedAt: status === 'dropped' ? nowMs : null, detail: {},
+      sourceUrl: sourceUrl ?? null,
     };
     this.rows.push(row);
     return row;
@@ -293,8 +341,26 @@ export class MemoryStore implements DecideStore {
     if (!row) return false;
     Object.assign(row, { status: 'dropped', claimedBy: null, finishedAt: nowMs, dropReason: rec.reason, lastStatus: rec.lastStatus, detail: rec.detail });
     row.item.attempts = rec.attempts;
+    this.judgments.push(...(rec.judgments ?? []));
     this.usage.push(...rec.usage);
     return true;
+  }
+
+  async batchExists(batch: string) {
+    return this.rows.some((r) => r.item.batch === batch);
+  }
+
+  async latestListingState(sourceUrl: string) {
+    const row = this.rows.filter((r) => r.sourceUrl === sourceUrl && r.item.batch === null && r.item.target.kind === 'property_observation')
+      .sort((a, b) => b.item.id - a.item.id)[0];
+    if (!row || row.item.target.kind !== 'property_observation') return null;
+    return { observationId: row.item.target.observationId, state: structuredClone(row.item.state), stateHash: row.item.stateHash, requestId: row.item.id };
+  }
+
+  async recordProbe(probe: ProbeRecord, usage: UsageRecord[]) {
+    this.probes.push(structuredClone(probe));
+    this.usage.push(...usage);
+    return this.probes.length;
   }
 
   async issueKick(nowMs: number, ttlMs: number) {

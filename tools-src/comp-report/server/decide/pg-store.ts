@@ -12,7 +12,7 @@ import { withActor, type PoolLike, type Queryable } from '../db.ts';
 import type { DropReason } from './jev.ts';
 import { sha256Hex } from './render.ts';
 import type {
-  AnsweredRecord, DecideStore, DroppedRecord, NewRequest, QueueItem, RequestStatus, UsageRecord,
+  AnsweredRecord, DecideStore, DroppedRecord, JudgmentRecord, NewRequest, ProbeRecord, QueueItem, RequestStatus, Target, UsageRecord,
 } from './store.ts';
 
 const SYSTEM = { kind: 'system', does: 'decide' } as const;
@@ -24,8 +24,9 @@ const TS = (param: string) => `to_timestamp(${param}::float8 / 1000.0)`;
 interface ItemRow {
   id: string | number;
   lane: 'listing';
-  target_kind: 'property_observation';
-  observation_id: string | number;
+  target_kind: 'property_observation' | 'fixture';
+  observation_id: string | number | null;
+  fixture_id: string | null;
   question_ids: string[];
   registry_version: string;
   state: unknown;
@@ -35,16 +36,26 @@ interface ItemRow {
   not_before_ms: number | string;
   enqueued_at_ms: number | string;
   user_email: string | null;
+  second_judge: boolean;
+  batch: string | null;
 }
 
-const ITEM_COLUMNS = `id, lane, target_kind, observation_id, question_ids, registry_version, state, state_hash,
-  attempts, requeues, ${MS('not_before')} as not_before_ms, ${MS('enqueued_at')} as enqueued_at_ms, user_email`;
+const ITEM_COLUMNS = `id, lane, target_kind, observation_id, fixture_id, question_ids, registry_version, state, state_hash,
+  attempts, requeues, ${MS('not_before')} as not_before_ms, ${MS('enqueued_at')} as enqueued_at_ms, user_email,
+  second_judge, batch`;
+
+/** A target's two columns: exactly one is set. */
+function targetColumns(t: Target): [number | null, string | null] {
+  return t.kind === 'fixture' ? [null, t.fixtureId] : [t.observationId, null];
+}
 
 function item(r: ItemRow): QueueItem {
   return {
     id: Number(r.id),
     lane: r.lane,
-    target: { kind: r.target_kind, observationId: Number(r.observation_id) },
+    target: r.target_kind === 'fixture'
+      ? { kind: 'fixture', fixtureId: r.fixture_id! }
+      : { kind: 'property_observation', observationId: Number(r.observation_id) },
     questionIds: r.question_ids,
     registryVersion: r.registry_version,
     state: r.state,
@@ -54,7 +65,25 @@ function item(r: ItemRow): QueueItem {
     notBefore: Number(r.not_before_ms),
     enqueuedAt: Number(r.enqueued_at_ms),
     userEmail: r.user_email,
+    secondJudge: r.second_judge,
+    batch: r.batch,
   };
+}
+
+async function insertJudgments(tx: Queryable, requestId: number, rows: readonly JudgmentRecord[]) {
+  for (const j of rows) {
+    const [observationId, fixtureId] = targetColumns(j.target);
+    await tx.query(
+      `insert into comp_report.judgments
+         (request_id, target_kind, observation_id, fixture_id, lane, question_id, question_version, question_type, registry_version,
+          provider, model, answer, probability, order_stable, probabilities, vendor_confidence, band, landed, bar,
+          state_hash, option_order_hash)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+      [requestId, j.target.kind, observationId, fixtureId, j.lane, j.questionId, j.questionVersion, j.questionType, j.registryVersion,
+        j.provider, j.model, j.answer, j.probability, j.orderStable, JSON.stringify(j.probabilities),
+        JSON.stringify(j.vendorConfidence), j.band, j.landed, j.bar, j.stateHash, j.optionOrderHash],
+    );
+  }
 }
 
 async function insertUsage(tx: Queryable, rows: readonly UsageRecord[]) {
@@ -79,14 +108,17 @@ export class PgStore implements DecideStore {
   }
 
   private async insert(tx: Queryable, req: NewRequest, nowMs: number, status: RequestStatus, reason: DropReason | null) {
+    const [observationId, fixtureId] = targetColumns(req.target);
     const { rows } = await tx.query<{ id: string }>(
       `insert into comp_report.decide_requests
-         (lane, target_kind, observation_id, question_ids, wire_questions, registry_version, state, state_hash, user_email,
-          status, drop_reason, not_before, enqueued_at, finished_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, ${TS('$12')}, ${TS('$12')}, case when $10 = 'dropped' then ${TS('$12')} end)
+         (lane, target_kind, observation_id, fixture_id, question_ids, wire_questions, registry_version, state, state_hash, user_email,
+          status, drop_reason, not_before, enqueued_at, finished_at, second_judge, batch, source_url)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, ${TS('$13')}, ${TS('$13')}, case when $11 = 'dropped' then ${TS('$13')} end,
+               $14, $15, $16)
        returning id`,
-      [req.lane, req.target.kind, req.target.observationId, req.questionIds, req.wireQuestions, req.registryVersion,
-        JSON.stringify(req.state), req.stateHash, req.userEmail, status, reason, nowMs],
+      [req.lane, req.target.kind, observationId, fixtureId, req.questionIds, req.wireQuestions, req.registryVersion,
+        JSON.stringify(req.state), req.stateHash, req.userEmail, status, reason, nowMs, req.secondJudge ?? false, req.batch ?? null,
+        req.sourceUrl ?? null],
     );
     return Number(rows[0]!.id);
   }
@@ -234,18 +266,7 @@ export class PgStore implements DecideStore {
         [holder, id, nowMs, rec.provider, rec.model, rec.attempts, rec.lastStatus, rec.unanswered, JSON.stringify(rec.detail)],
       );
       if (done.rowCount !== 1) return false;
-      for (const j of rec.judgments) {
-        await tx.query(
-          `insert into comp_report.judgments
-             (request_id, target_kind, observation_id, lane, question_id, question_version, question_type, registry_version,
-              provider, model, answer, probability, order_stable, probabilities, vendor_confidence, band, landed, bar,
-              state_hash, option_order_hash)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
-          [id, j.target.kind, j.target.observationId, j.lane, j.questionId, j.questionVersion, j.questionType, j.registryVersion,
-            j.provider, j.model, j.answer, j.probability, j.orderStable, JSON.stringify(j.probabilities),
-            JSON.stringify(j.vendorConfidence), j.band, j.landed, j.bar, j.stateHash, j.optionOrderHash],
-        );
-      }
+      await insertJudgments(tx, id, rec.judgments);
       await insertUsage(tx, rec.usage);
       return true;
     });
@@ -261,8 +282,43 @@ export class PgStore implements DecideStore {
         [holder, id, nowMs, rec.reason, rec.attempts, rec.lastStatus, JSON.stringify(rec.detail)],
       );
       if (done.rowCount !== 1) return false;
+      await insertJudgments(tx, id, rec.judgments ?? []);
       await insertUsage(tx, rec.usage);
       return true;
+    });
+  }
+
+  batchExists(batch: string) {
+    return this.run(async (tx) => {
+      const { rows } = await tx.query('select 1 from comp_report.decide_requests where batch = $1 limit 1', [batch]);
+      return rows.length > 0;
+    });
+  }
+
+  latestListingState(sourceUrl: string) {
+    return this.run(async (tx) => {
+      const { rows } = await tx.query<{ id: string; observation_id: string; state: unknown; state_hash: string }>(
+        `select id, observation_id, state, state_hash from comp_report.decide_requests
+          where source_url = $1 and batch is null and target_kind = 'property_observation'
+          order by id desc limit 1`,
+        [sourceUrl],
+      );
+      const r = rows[0];
+      return r ? { observationId: Number(r.observation_id), state: r.state, stateHash: r.state_hash, requestId: Number(r.id) } : null;
+    });
+  }
+
+  recordProbe(p: ProbeRecord, usage: UsageRecord[]) {
+    return this.run(async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        `insert into comp_report.decide_probes
+           (ok, outcome, status, ms, model, zdr, registry_version, fixture_id, wire_ids, unanswered, raw, answers)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning id`,
+        [p.ok, p.outcome, p.status, p.ms, p.model, p.zdr, p.registryVersion, p.fixtureId, p.wireIds, p.unanswered, p.raw,
+          JSON.stringify(p.answers)],
+      );
+      await insertUsage(tx, usage);
+      return Number(rows[0]!.id);
     });
   }
 

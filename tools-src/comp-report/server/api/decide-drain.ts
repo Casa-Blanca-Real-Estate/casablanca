@@ -24,6 +24,8 @@ export interface DrainHandlerDeps {
   fetchImpl?: typeof fetch;
   /** Built only when the fallback can run. */
   haiku?: () => HaikuClient | null;
+  /** Built only when the Anthropic key is set: the labelled batch's second judge. */
+  secondJudge?: () => HaikuClient | null;
   budgetMs?: number;
 }
 
@@ -49,6 +51,7 @@ export async function handleDecideDrain(req: Request, deps: DrainHandlerDeps): P
       store, clock, config,
       fetchImpl: deps.fetchImpl ?? fetch,
       haiku: deps.haiku?.() ?? null,
+      secondJudge: deps.secondJudge?.() ?? null,
       holder: `drain-${randomUUID()}`,
       budgetMs: deps.budgetMs,
       log: (event, data) => console.log(JSON.stringify({ at: 'comp-report-decide', event, ...data })),

@@ -151,6 +151,7 @@ describe('privacy: no training always; zero retention unless CR_JEV_ZDR is off',
       ...readdirSync(here).filter((n) => n.endsWith('.ts')).map((n) => join(here, n)),
       join(here, '../api/decide.ts'), join(here, '../api/decide-drain.ts'),
       join(repo, 'netlify/functions/comp-report-decide.mts'), join(repo, 'netlify/functions/comp-report-decide-drain-background.mts'),
+      join(repo, 'netlify/functions/comp-report-decide-drift.mts'), join(here, '../../dev/jev.ts'),
     ];
     for (const f of files) {
       if (f.endsWith('decide.test.ts')) continue;

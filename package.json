@@ -22,6 +22,7 @@
     "test:comp-report": "node --test --test-concurrency=1 \"tools-src/comp-report/server/**/*.test.ts\" \"tools-src/comp-report/src/**/*.test.ts\" \"tools-src/comp-report/workspace/**/*.test.ts\" \"tools-src/comp-report/db/**/*.test.ts\"",
     "db:local": "node tools-src/comp-report/dev/migrate-local.ts",
     "notebook": "node tools-src/dev-notebook/cli.ts",
+    "jev": "node tools-src/comp-report/dev/jev.ts",
     "dev:notebook": "node tools-src/dev-notebook/dev/serve.ts",
     "test:dev-notebook": "node --test --test-concurrency=1 \"tools-src/dev-notebook/**/*.test.ts\"",
     "test:feedback": "node --test \"tools-src/feedback/**/*.test.ts\"",
