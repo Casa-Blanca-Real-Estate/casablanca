@@ -130,18 +130,20 @@ gaps in the doc, so the answer decides between parsing a doc and doing a proper 
 `Later — after the comp report settles (question 1 sooner)` · `Think — some are Erez's`
 
 Erez asked for a Casa Claude account, and for the repo and services to move to Casa accounts. The plan,
-inventory and problems are in `docs/casa-accounts-transfer.md`. What it needs from you, or from Erez:
+inventory and problems are in `docs/casa-accounts-transfer.md`, with the claude.ai side added from the Casa
+Blanca Project. Settled so far: `casacalliste@gmail.com` **stays** Casa's identity, made Casa-held
+(Kimani, 2026-10-14); the Post Log **is** the caption tracker (Casanova). Still open, for you or Erez:
 
 1. **Move the API keys first?** Anthropic, the AI Gateway (Jev) and Firecrawl process comp report data.
    Moving them to Casa accounts before the pilot widens is independent of GitHub and Claude. And make
    every new key (Jev, the writer's eval key) on a Casa account from now on.
-2. **Which Claude plan Casa buys,** with enough Claude Code headroom for the tracks.
+2. **Which Claude plan Casa buys, and who's the second admin,** with enough headroom for parallel tracks.
 3. **Erez's line on the two accounts:** status and planning readable from your personal Claude (through
    the repo), with client data, agents' details and comp reports kept in Casa's?
-4. **`casacalliste@gmail.com`:** keep it, or move to `creative@email.casa-blanca.com`? Connecting
-   creative@ to the Casa account also unblocks the closings pipeline.
-5. **A second owner** on the GitHub organization and each service account: who?
-6. **Is the GitHub Pages copy still used?** If not, it's turned off before the move.
+4. **The Casa desk:** move it, or keep it personal and free of work data?
+5. **What stays yours** (reusable patterns, anything your contractor agreement covers)?
+6. **A second owner** on the GitHub organization and each service account: who?
+7. **Is the GitHub Pages copy still used?** If not, it's turned off before the move.
 
 **Answer →** _type here_
 
