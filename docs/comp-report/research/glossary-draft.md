@@ -1,9 +1,9 @@
 # House glossary — DRAFT
 
-**CR-R · Dispatch 04 · Surveyor · 2026-09-24.** A draft for Noble and the mentors to make official
-(`../01-design.md` §6.9). **Every entry is DRAFT** until they do. Once adopted, one definition per term is
-used by the tool's field names, the assistant, the writer and every agent — so that "monthly carry" and
-"mortgage payment" can't drift into meaning the same thing.
+**CR-R · Dispatch 04 · Surveyor · 2026-09-24; revised 2026-10-14 against design v0.5.1.** A draft for
+Noble and the mentors to make official (`../01-design.md` §6.9). **Every entry is DRAFT** until they do.
+Once adopted, one definition per term is used by the tool's field names, the assistant, the writer and
+every agent — so that "monthly carry" and "mortgage payment" can't drift into meaning the same thing.
 
 **How an entry is built.** A plain-English house definition first — the proposal for Noble to accept or
 change. Then:
@@ -19,6 +19,10 @@ settings) are left out — this glossary is for agents and for what the tool say
 ## Open questions for Noble
 
 The research turned up these conflicts; each entry has the detail.
+
+*Since the draft (2026-10-14):* design v0.4 adopted the proposals in 9 and 12, so those two are settled
+in the design and left here for the record; 6 is the design's working default, still Noble's to
+confirm; 11 is D-17, with counsel. The rest are open.
 
 1. **"Carry" means three things.** The tool's carry excludes the mortgage; NYC brokers' and attorneys'
    "carrying costs" include it; the audit's "ownership carrying cost" adds interest and insurance.
@@ -38,13 +42,15 @@ The research turned up these conflicts; each entry has the detail.
 8. **Price per square foot and outdoor space:** no NYC residential measurement standard was found.
    Proposed: interior only in the house figure (§3).
 9. **421-a is an exemption, not an abatement**, and StreetEasy's "35 years" is the affordability term, not
-   the tax benefit (§2).
+   the tax benefit (§2). *Settled in the design: Appendix A (v0.4) treats 421-a as an exemption.*
 10. **Condop has two meanings** in StreetEasy's own usage (§2).
 11. **CMA and New York's broad definition of appraisal** — a question for counsel before the disclaimer is
-    final (§3; D-13).
+    final (§3; D-13). *Now D-17 (1) in `docs/decisions.md`, for Kimani to route to counsel.*
 12. **In the design itself:** "confidence" names both input confidence (exact / approx / inferred /
     guesstimate) and Jev's judgment confidence; "evidence class" (§6.3) and "evidence status" (Appendix A,
-    32) name one thing; "sale-to-ask" and "sale-to-last-ask" name one ratio (§6).
+    32) name one thing; "sale-to-ask" and "sale-to-last-ask" name one ratio (§6). *Settled in v0.4:* the
+    design now says **input confidence** and **judgment confidence**, **evidence status** (the engine's field
+    stays `evidence_class`), and **sale-to-last-ask**. The entries below follow it.
 
 ## Contents
 
@@ -690,23 +696,32 @@ normally pay. Casa says "concessions"; "IPC" only when talking about mortgage li
   funds are used to cover costs that are typically the buyer's responsibility" [FNMA-B3-4.1-02].
 - **Source:** [FNMA-B3-4.1-02].
 
-#### Sold, in contract, active (evidence status) · DRAFT
+#### Evidence status — sold, in contract, active, didn't sell · DRAFT
+What kind of evidence a comp is. The four never mix inside one statistic. The engine's field is
+`evidence_class`; the term is *evidence status*.
 - **Sold (recorded):** closed, with the price from the city record (ACRIS/DOF) — the strongest evidence.
   **Sold (unrecorded):** closed per the broker, not yet recorded — provisional.
 - **In contract:** a contract signed by buyer and seller; the final price usually isn't public. Evidence of
   demand near the last ask.
 - **Active:** on the market at an asking price — evidence of competition, not of value.
+- **Didn't sell:** a listing that came off the market unsold, at its last ask — a ceiling signal ("on the
+  market in 12/25 for $625K and never sold", Frankie). It comes from a listing's history; the StreetEasy
+  export doesn't carry it.
 - **Authoritative (industry):** "In contract (sales): A sales listing with an accepted offer and contract
   signed by the buyer and the seller"; "Sold: … StreetEasy will automatically start looking for sale
   records on ACRIS" [SE-Help-Status]; recorded sales "take anywhere from 6 days to up to 90 days to be
   reported" [SE-Help-Diff]; "most sales get recorded within 2-8 weeks of the closing" [SE-Help-Closing].
   Fannie Mae: "Contract offerings and current listings can be used as supporting data" [FNMA-B4-1.3-08].
-- **Synonyms:** closed; pending, under contract; on market.
-- **Not to be confused with:** a broker-marked "sold" and a recorded sale; an accepted offer (not yet in
-  contract); REBNY's ban on describing an exclusive listing as "Off-Market" [REBNY-UCBA-rules-2026].
+- **Synonyms:** closed; pending, under contract; on market. For *didn't sell*: "never sold" (Frankie's
+  words); REBNY's listing statuses "withdrawn" and "cancelled" [REBNY-UCBA-rules-2026]. *Evidence class*
+  was the design's earlier name (§6.3, before v0.4).
+- **Not to be confused with:** *tier* (how much a comp counts, not what kind of evidence it is); a
+  broker-marked "sold" and a recorded sale; an accepted offer (not yet in contract); REBNY's ban on
+  describing an exclusive listing as "Off-Market" [REBNY-UCBA-rules-2026].
 - **Note:** Fannie Mae time-adjusts from the **contract** date, so the tool should keep contract, closing
-  and recording dates apart. See also *evidence class* in §6.
-- **Source:** [SE-Help-Status], [SE-Help-Diff], [SE-Help-Closing], [FNMA-B4-1.3-08].
+  and recording dates apart.
+- **Source:** [SE-Help-Status], [SE-Help-Diff], [SE-Help-Closing], [FNMA-B4-1.3-08]; `01-design.md` §6.3,
+  §10.2; Appendix A #32.
 
 #### Public-record closing · DRAFT
 A sale that appears in the StreetEasy export only from city records — a `/closing/` URL — with no listing
@@ -730,8 +745,8 @@ sale-to-original-ask is always labelled separately. Listing discount = 100% − 
 - **Synonyms:** S/L; "list-to-sale ratio" (StreetEasy's comps report).
 - **Not to be confused with:** sale-to-original-ask; a price reduction (original ask against last ask).
 - **Conflict:** StreetEasy divides by the *initial* ask and reports medians; Miller Samuel uses the *last*
-  ask and averages. Never mix them in one table. The design uses both "sale-to-ask" (§6.7, §6.8) and
-  "sale-to-last-ask" (§6.3); one label would be clearer.
+  ask and averages. Never mix them in one table. Design v0.4 settled on one label, *sale-to-last-ask*
+  (§6.3), as the working default pending Noble (open question 6).
 - **Source:** [SE-Blog-STL-2023], [MS-Metrics].
 
 #### Days on market (DOM) · DRAFT
@@ -1016,6 +1031,14 @@ target closing, any interim rent; for a seller: target, timing, flexibility. Rev
 new scenario version.
 - **Source:** `01-design.md` §6.7; `docs/decisions.md` D-10.
 
+#### None listed · DRAFT
+A StreetEasy tag column that has tags, but none of a given kind — no outdoor tag, say. It's recorded as
+*none listed*, with input confidence `approx`, because the listing agent types the tags and a missing
+terrace tag is weak evidence. A blank column is *unknown*, not *none listed*.
+- **Not to be confused with:** a confirmed absence (the agent or the listing says so); *unknown* (a
+  blank column, no data at all).
+- **Source:** `01-design.md` §6.2; decision log 2026-09-28.
+
 ### Comps and review
 
 #### StreetEasy comp export · DRAFT
@@ -1042,9 +1065,23 @@ what counts.
 The agent's judgment of how much a comp counts, always with a reason. **Primary** comps are the closest
 like-for-like evidence, and primary *sold* comps set the range. **Secondary** comps are shown as
 supporting context. **Excluded** comps are kept, with the reason, but don't count.
-- **Not to be confused with:** *evidence class* (sold / in contract / active — what kind of evidence a
-  comp is, not how much it counts).
+- **Not to be confused with:** *evidence status* (sold / in contract / active / didn't sell — what kind of
+  evidence a comp is, not how much it counts); a *comparability check*'s suggested tier, which the agent
+  accepts or overrules.
 - **Source:** `01-design.md` §3, §6.5; audit §10.
+
+#### Comparability check (flag on a comp) · DRAFT
+One of the mentors' rules for what makes a comp, run by the engine on every comp: same building, first
+floor, private outdoor space on one side only, new development against resale, co-op against condo,
+sponsor unit, sold long ago, size far off, floor far off, distance. Each raises a **flag** with a
+suggested tier and a reason, which the agent accepts or overrules. A flag never blocks, and the tool never
+tiers a comp for the agent. The thresholds (the ±3 floor band, the ½ mile) are house-method settings:
+Kara's today, Noble's to set.
+- **Synonyms:** comp rule; the mentors' rules; Kara's rules.
+- **Not to be confused with:** *comparability score* (a Jev judgment used to sort); *QA* (checks on a
+  draft, not on a comp).
+- **Source:** `01-design.md` §6.10; `sources/kara-comp-reports-workshop-transcript.txt`; on the
+  thresholds, `adjustments.md` factors 4 and 26.
 
 #### Reason · DRAFT
 Why a comp is tiered as it is, typed as **property** (about the home), **client** (about this client's
@@ -1080,12 +1117,9 @@ unit-rate indicators.
 - **Source:** `01-design.md` §6.3; audit §4.
 
 #### Evidence class · DRAFT
-What kind of evidence a comp is: **sold** (a closed sale), **in contract** (a signed contract, not yet
-closed — ask basis) or **active** (on the market — ask basis). Classes never mix inside one statistic.
-- **Synonyms:** evidence status (the name used in Appendix A, factor 32).
-- **Not to be confused with:** *tier*; *listing status* (StreetEasy's column, which the evidence class
-  is read from).
-- **Source:** `01-design.md` §6.3; Appendix A #32. See also *sold*, *in contract*, *active* in §3.
+The design's earlier name for *evidence status*, and still the engine's field name (`evidence_class`).
+Agents and the tool's copy say *evidence status*.
+- **Source:** `01-design.md` §6.3 (v0.4). See *evidence status* in §3.
 
 ### Numbers and results
 
@@ -1125,6 +1159,13 @@ with a reason. The tool always gives value as a range, never a point.
   because it is a strategy, not a value claim.
 - **Source:** `01-design.md` §4.4, §6.2, §6.5.
 
+#### Price table · DRAFT
+The subject's implied price at $/sq ft steps across the range — "$880 – $638K · $900 – $652,500 …", as
+Frankie writes it. The subject's size times each step, computed and labelled by the engine, because
+clients read a price more easily than a rate.
+- **Not to be confused with:** *range* (the two ends only); a list of the comps' own prices.
+- **Source:** `01-design.md` §6.5, §10.2; `sources/2026-07-29-frankie-delessio-comp-email-111-fulton-517.pdf`.
+
 #### Additive model · DRAFT
 The engine's shape: the base case is a featureless unit, and each factor switches on when a property
 has it and the data exists. A Brooklyn one-bedroom and a Tribeca penthouse run the same engine.
@@ -1147,7 +1188,7 @@ How far an input can be trusted. **Exact** — as given by its source. **Approx*
 at its source (StreetEasy's `~1,840 ft²`). **Inferred** — derived from listing text or a Jev judgment;
 needs the agent's confirmation. **Guesstimate** — the agent's estimate.
 - **Not to be confused with:** *judgment confidence* (Jev's calibrated score for a decision). The design
-  uses "confidence" for both; the tool should label them differently.
+  names them apart since v0.4; the tool's labels should too.
 - **Source:** `01-design.md` §6.1.
 
 #### Input source · DRAFT
@@ -1168,18 +1209,20 @@ The date a figure was true at its source — a closing date, a listing's date, t
 
 #### Factor · DRAFT
 One entry in the adjustment catalog (Appendix A): what it captures, what data it needs, where the data
-can come from. Its magnitude is undetermined until Noble sets it in the house method.
+can come from. It has no magnitude. Since D-18 (2026-09-29) values stay `null` until a gap shows up in
+use, and may never be needed; meanwhile a factor works as a comparison (comp better, worse or similar)
+and as a checklist for choosing and tiering comps.
 - **Synonyms:** adjustment factor.
 - **Source:** `01-design.md` §6.6, Appendix A.
 
 #### Adjustment catalog · DRAFT
-The list of 36 factors that can bear on an NYC residential comp, in Appendix A, with the interaction
-map in A.5.
+The list of factors that can bear on an NYC residential comp, in Appendix A (36 at the draft; 39 since
+v0.4 added financing terms, tenant in place and non-realty items), with the interaction map in A.5.
 - **Source:** `01-design.md` Appendix A.
 
 #### House method · DRAFT
 The one versioned file holding every magnitude, weight and bound the engine uses. In production every
-value is `null` until Noble sets it; every version of a report records which house method produced it.
+value is `null` until Noble sets one, and Noble's view is that adjustment values may never be needed; every version of a report records which house method produced it.
 - **Not to be confused with:** *method setting* (the agent's choice for one report); the *test config*
   (values used only to exercise the arithmetic, refused outside tests).
 - **Source:** `01-design.md` §6.6.
@@ -1203,15 +1246,17 @@ or *value not yet determined*. The analyst view shows it in full; the client vie
 - **Source:** `01-design.md` §6.6, §10.1; audit §2 ("the complete mathematical bridge").
 
 #### Interaction map · DRAFT
-Appendix A.5: which factors change one another's value, and how. Structure only until magnitudes are
-researched (CR-R2).
+Appendix A.5: which factors change one another's value, and how. Structure only: D-14 closed the
+magnitude research as not needed, and the map stays because it keeps pairs honest (floor and view
+overlapping, say).
 - **Source:** `01-design.md` §6.6, Appendix A.5.
 
 #### Substitutes · DRAFT
 Two factors that meet the same need, so having one lowers what the other adds — a private terrace and
-a building roof deck. The engine applies a substitute group as the larger adjustment, never the sum.
+a building roof deck. When they pull the same way the engine applies the larger adjustment, never the
+sum; when they pull opposite ways it nets them.
 - **Not to be confused with:** *overlap* (one factor partly *is* the other).
-- **Source:** `01-design.md` §6.6, A.5.
+- **Source:** `01-design.md` §6.6, A.5; decision log 2026-09-28.
 
 #### Complements · DRAFT
 Two factors worth more together than apart — a terrace with a skyline view. Shown as an interaction
@@ -1236,6 +1281,25 @@ evidence, not necessarily when adjusting.
 Adjusting for both sides of a substitute or overlapping pair, so one difference is paid for twice —
 the classic comp error.
 - **Source:** `01-design.md` §6.6.
+
+#### The differences between comps · DRAFT
+What replaced house adjustment values (D-18, 2026-09-29). The engine sets out every comp against the
+home, factor by factor, and every comp against every other comp within one evidence status: the gap
+in price and $/sq ft, and the factors that differ ("5 Franklin #14A sold for $156 a sq ft more than 200
+Chambers #10A. It has a terrace and a skyline view, and it's 4 floors higher."). For a buyer it is the
+argument: what the seller is asking for a feature, against what similar homes without it sold for.
+- **Not to be confused with:** an *adjustment* (a set value that moves a sale onto the subject, built
+  for valuing); *paired sales* (the appraisal method this resembles, which derives an adjustment from
+  the gap — the tool shows the gap and applies nothing).
+- **Source:** `01-design.md` §6.6; `docs/decisions.md` D-18; on why gaps aren't values, `adjustments.md`
+  ("How practitioners derive adjustments — the methods": paired sales).
+
+#### Clean pair · DRAFT
+Two comps that differ in one factor, or one close group of factors, flagged by the engine. Their price
+gap is evidence of what that factor adds *here* ("the only difference is the terrace: about $150/sq
+ft"). Shown as evidence, never applied as a value.
+- **Not to be confused with:** a *determined* value; an agent's stated value.
+- **Source:** `01-design.md` §6.6; on the method it comes from, *paired sales* in §4.
 
 ### Price, carry and scenarios
 
@@ -1284,6 +1348,15 @@ target, shown in the analyst view.
 - **Source:** `01-design.md` §8.4.
 
 ### Writing, versions and QA
+
+#### Headline · DRAFT
+The one sentence, the agent's, on what the comps show — "The three closest sales put #517 at $880–$925
+a square foot — about $640K–$670K." The report exists to support it. The assistant offers drafts
+grounded in the numbers; QA checks every number in it against the engine; no email is copied without
+one.
+- **Not to be confused with:** StreetEasy's report headline ("Average sale price …"), which averages
+  sales and asks together (`01-design.md` §6.2).
+- **Source:** `01-design.md` §1, §10.2; `02-screens.md` (Send); Noble (decision log 2026-09-29).
 
 #### Version · DRAFT
 An immutable snapshot of the numbers: engine and house-method versions, a hash of the inputs, and both
@@ -1398,9 +1471,16 @@ differs from the subject on a factor — stored with its probabilities and confi
 #### Judgment confidence · DRAFT
 Jev's calibrated score for a judgment. **High** — applied at once, visible and undoable; **middling**
 — shown as a suggestion with its reason; **low** — asked of the agent. Thresholds are house-method
-values.
+values, set per question, provider and model. An answer between 0.4 and 0.6 is always asked. Until a
+question's bar is measured, its answers land as *watch*.
 - **Not to be confused with:** *input confidence* (exact / approx / inferred / guesstimate).
 - **Source:** `01-design.md` §7.1.
+
+#### Watch · DRAFT
+How a judgment lands while its question has no measured confidence bar: recorded, never shown to the
+agent, and moving no number. It's how Jev's answers are calibrated before they're trusted.
+- **Not to be confused with:** *inferred* (shown, awaiting the agent's confirmation).
+- **Source:** `01-design.md` §7.1; decision log 2026-09-29; `docs/dispatch/10-comp-report-decision-provider.md`.
 
 #### Decision provider · DRAFT
 The interface behind which Jev sits, with Claude Haiku 4.5 as the fallback, so the tool keeps working
