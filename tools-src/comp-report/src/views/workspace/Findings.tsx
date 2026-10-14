@@ -1,23 +1,28 @@
-// Findings (`02-screens.md`; §3.1, §6.3–§6.5, §8.4). Your number first: the
-// range stays hidden until the agent gives a low and a high, or skips (D-1).
-// Then, top to bottom: what the comps say in one sentence, the range (both
-// results side by side only when the agent's estimates change the answer), the
-// agent's number against it, the evidence by status (didn't sell as a ceiling,
-// §6.3), the price table (§6.5), the comps that count, and the target and offer
-// details (D-4). How it was worked out is folded, with the pairs (§6.6). Every
-// figure is the engine's; the sentences only word them (workspace/reading.ts).
-import { useMemo, useState } from 'react';
-import { EVIDENCE_CLASSES, type CompOut, type EngineOutput, type Figure, type ListingStatus, type PairOut, type PriceEvaluation, type Result, type ResultKind } from '../../../engine/index.ts';
-import { againstAsk, clientPrice, estimateWords, pct, psf, usd, usdRange } from '../../../workspace/format.ts';
-import { answerResult, estimatesChangeTheAnswer, homeName, neutralReading, numberAgainstIt } from '../../../workspace/reading.ts';
-import type { Entry } from '../../../workspace/state.ts';
-import { DecisionTag, NumberInput } from './bits.tsx';
+// Findings (Dispatch 14, item 9; the handoff, screen 8). The Gate comes first:
+// the range stays hidden until the agent gives a low and a high, or skips
+// (D-1). Then the top card: the true estimate (a Findings label only, never in
+// the email), the legend and the range bar on a fixed axis, the verdict, and
+// How Hubert got there beside Your reasoning. Then the status tiles and the
+// accordions: the price table (with a size only), the comps that count, the
+// target (D-4), pricing details and how this was worked out. Every figure is
+// the engine's; the sentences only word them (src/views/findings/findings.ts).
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import type { CompOut, EngineOutput, Figure, ListingStatus, PairOut, Result, ResultKind } from '../../../engine/index.ts';
+import { clientPrice, countWord, pct, psf, sqft, usd } from '../../../workspace/format.ts';
+import { answerResult, estimatesChangeTheAnswer } from '../../../workspace/reading.ts';
+import { noteOf } from '../../../workspace/state.ts';
+import { at, fixedAxis, span } from '../findings/axis.ts';
+import { engineWhy, hubertTake, statusTiles, verdictLine } from '../findings/findings.ts';
 import { compAddress, compPrice, compStatus, listingUrl, rowPsf, STATUS_LABEL, STATUS_ORDER } from './comps.tsx';
+import { Gate } from './Gate.tsx';
 import type { StepProps, Workspace } from './model.ts';
-import { OfferDetails, TargetSection } from './Terms.tsx';
+import { homeName } from './screens.ts';
+import { PricingDetails, TargetSection, targetLabel } from './Terms.tsx';
+import '../../styles/findings.css';
 
 const KINDS: ResultKind[] = ['on_facts', 'with_estimates'];
 const RESULT_WORDS: Record<ResultKind, string> = { on_facts: 'on the facts', with_estimates: 'with estimates' };
+const OTHER: Record<ResultKind, ResultKind> = { on_facts: 'with_estimates', with_estimates: 'on_facts' };
 
 /** A figure in its own unit. */
 export function fig(f: Figure | null | undefined): string {
@@ -33,116 +38,99 @@ export function fig(f: Figure | null | undefined): string {
   }
 }
 
+/** "$4.22M – $4.91M". */
+const rangeWords = (low: number, high: number) => `${clientPrice(low)} – ${clientPrice(high)}`;
+
 export function Findings({ ws }: StepProps) {
-  if (!ws.revealed) return <YourNumber ws={ws} />;
+  if (!ws.revealed) return <Gate ws={ws} />;
   if (ws.engineError) return <p className="notice error-notice">The engine couldn’t compute: {ws.engineError}</p>;
   const o = ws.output;
   if (!o) return null;
-  const both = estimatesChangeTheAnswer(o);
+  return <FindingsBody ws={ws} o={o} />;
+}
+
+function FindingsBody({ ws, o }: { ws: Workspace; o: EngineOutput }) {
   const kind = answerResult(o);
-  const name = homeName(ws.intake.unit?.value, ws.intake.address?.value.split(',')[0]);
-  const against = numberAgainstIt(o, kind);
+  const both = estimatesChangeTheAnswer(o);
+  const home = homeName(ws.intake, ws.report.title);
+  const names = useMemo(() => new Map(ws.comps.map((c) => [c.id, compAddress(c)])), [ws.comps]);
+  const take = useMemo(
+    () => hubertTake({ output: o, kind, names, home, sf: ws.sf, side: ws.side, asking: ws.intake.askingPrice?.value ?? null }),
+    [o, kind, names, home, ws.sf, ws.side, ws.intake.askingPrice?.value],
+  );
   return (
-    <div className="findings">
-      <YourNumberLine ws={ws} />
-      <p className="reading">{neutralReading(o, kind, name)}</p>
-      <Ranges output={o} both={both} />
-      {both && <p className="muted small">{divergenceWords(o)}</p>}
-      {against && <p className="against">{against}</p>}
-      <ByStatus ws={ws} output={o} kind={kind} />
-      <PriceTable ws={ws} r={o.results[kind]} name={name} />
-      <CountingComps ws={ws} output={o} kind={kind} />
-      <TargetSection ws={ws} />
-      <OfferDetails ws={ws} />
-      <WorkedOut ws={ws} output={o} both={both} kind={kind} />
+    <div className="fi-root">
+      <TopCard ws={ws} o={o} kind={kind} both={both} take={take} />
+      <Tiles ws={ws} o={o} kind={kind} />
+      <Accordions ws={ws} o={o} kind={kind} both={both} />
     </div>
   );
 }
 
-// ─── Your number: the gate ───────────────────────────────────────────────────
+// ─── The top card ────────────────────────────────────────────────────────────
 
-function YourNumber({ ws }: StepProps) {
-  const [low, setLow] = useState<Entry<number> | undefined>(undefined);
-  const [high, setHigh] = useState<Entry<number> | undefined>(undefined);
-  const [note, setNote] = useState('');
-  const valid = Boolean(low && high && low.value > 0 && high.value > 0 && low.value <= high.value);
-  if (ws.readOnly) return <p className="muted">The agent hasn’t given their number yet, so the range stays hidden.</p>;
-  const toConfirm = ws.comps.filter((c) => c.unconfirmed).length;
-  const sorted = ws.comps.filter((c) => c.judgment?.tier).length;
-  return (
-    <div className="card call your-number">
-      <p className="big-line">Before you see what the comps say: what do you think it’s worth?</p>
-      <p className="muted small">
-        A low and a high, from the comps you’ve sorted ({sorted} of {ws.comps.length}). The range shows as soon as you give it, or skip it.
-        {toConfirm > 0 && ` ${toConfirm} comp${toConfirm === 1 ? '' : 's'} still wait${toConfirm === 1 ? 's' : ''} for your confirm on Sort.`}
-        <DecisionTag id="D-1" />
-      </p>
-      <div className="row wrap">
-        <NumberInput label="Your number, low" prefix="$" value={low} onChange={setLow} today={ws.today} placeholder="Low" />
-        <span className="muted">to</span>
-        <NumberInput label="Your number, high" prefix="$" value={high} onChange={setHigh} today={ws.today} placeholder="High" />
-      </div>
-      {low && high && low.value > high.value && <p className="field-hint error">The low is above the high.</p>}
-      <label className="field" style={{ marginTop: 10 }}>
-        <span className="field-label">Why, in a line (optional)</span>
-        <input value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="e.g. The building’s sales have been slow since spring" />
-      </label>
-      <div className="row wrap" style={{ marginTop: 10 }}>
-        <button
-          type="button"
-          className="btn primary"
-          disabled={!valid}
-          onClick={() => ws.setCall({ low: low!.value, high: high!.value, ...(note.trim() ? { note: note.trim() } : {}), at: new Date().toISOString() })}
-        >
-          Show me what the comps say
-        </button>
-        <button type="button" className="btn" onClick={() => ws.setCall({ skipped: true, at: new Date().toISOString() })}>Skip</button>
-      </div>
-    </div>
-  );
-}
-
-function YourNumberLine({ ws }: StepProps) {
+function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean; take: string }) {
+  const r = o.results[kind];
+  const range = r.range;
+  const facts = o.headline_facts[kind].facts;
+  const lowRate = facts.find((f) => f.id === 'range.low_per_sqft')?.value;
+  const highRate = facts.find((f) => f.id === 'range.high_per_sqft')?.value;
+  const n = range?.comp_ids.length ?? 0;
+  const unitRate = r.lead.indicator.startsWith('unit_rate');
   const call = ws.call!;
+  const verdict = call.skipped ? 'You skipped your guess at the gate.' : verdictLine(o, kind);
+  const why = call.note?.trim() || (call.skipped ? 'You skipped this at the gate.' : 'You didn’t write a why at the gate.');
   return (
-    <p className="muted small your-number-line">
-      {call.skipped ? 'You skipped your number.' : <>Your number: <strong>{usdRange(call.low, call.high, clientPrice)}</strong>{call.note ? ` — ${call.note}` : ''}.</>}{' '}
-      {!ws.readOnly && (
-        <button type="button" className="link small" onClick={() => ws.setCall(null)}>
-          {call.skipped ? 'Give one after all' : 'Change it'}
-        </button>
+    <section className="fi-card fi-top" aria-label="The true estimate">
+      {range && (
+        <div className="fi-a">
+          <span className="fi-closest">{n === 1 ? 'The closest sale' : `The ${n} closest sales`}</span>
+          {ws.sf && unitRate && <span className="fi-chip"><span className="fi-chip-dot" aria-hidden="true" />Uses your size</span>}
+        </div>
       )}
-    </p>
-  );
-}
-
-// ─── The range ───────────────────────────────────────────────────────────────
-
-/** The range as a client hears it; the exact figures and the base are in "How this was worked out". */
-function RangeLine({ r, label }: { r: Result; label?: string }) {
-  return (
-    <p className="range-line">
-      {label && <span className="about-label">{label}</span>}
-      {r.range
-        ? <strong className="range" title={usdRange(r.range.low.value, r.range.high.value)}>{usdRange(r.range.low.value, r.range.high.value, clientPrice)}</strong>
-        : <span className="muted">No range: {r.range_unavailable_because}</span>}
-    </p>
-  );
-}
-
-/** One range, or both side by side when the agent's estimates change the answer. */
-function Ranges({ output, both }: { output: EngineOutput; both: boolean }) {
-  if (!both) return <RangeLine r={output.results[answerResult(output)]} />;
-  return (
-    <div className="results">
-      {KINDS.map((k) => (
-        <div key={k} className="result">
-          <RangeLine r={output.results[k]} label={output.results[k].label} />
-          {k === 'with_estimates' && output.results[k].estimates_used.length > 0 && (
-            <ul className="plain small">{output.results[k].estimates_used.map((e) => <li key={`${e.kind}:${e.id}:${e.target}:${e.what}`}>{estimateWords(e)}</li>)}</ul>
+      <div className="fi-est">
+        <span className="fi-eyebrow">True estimate{both && <span className="fi-eyebrow-sub"> · {r.label}</span>}</span>
+        {range
+          ? <span className="fi-big" title={`${usd(range.low.value)} – ${usd(range.high.value)}`}>{rangeWords(range.low.value, range.high.value)}</span>
+          : <span className="fi-big fi-big-none">No range yet</span>}
+        {range && ws.sf && lowRate !== undefined && highRate !== undefined && <span className="fi-psf">{psf(lowRate)} – {psf(highRate)} / SF</span>}
+        {!range && <p className="fi-why">The comps can’t make one yet: {engineWhy(r.range_unavailable_because ?? 'the analysis needs more to go on')}.</p>}
+      </div>
+      {both && <OtherResult o={o} kind={OTHER[kind]} />}
+      {range && <Chart ws={ws} o={o} kind={kind} both={both} />}
+      {verdict && <div className="fi-verdict">{verdict}</div>}
+      <div className="fi-compare">
+        <div className="fi-col">
+          <span className="fi-label"><span className="fi-spark" aria-hidden="true">✦</span>How Hubert got there</span>
+          <div className="fi-take">{take}</div>
+        </div>
+        <div className="fi-col fi-yours">
+          <span className="fi-label">Your reasoning <span className="fi-from">(from the gate)</span></span>
+          <div className="fi-reason">{why}</div>
+          {!ws.readOnly && (
+            <button type="button" className="link fi-change" onClick={() => ws.go('gate')}>
+              {call.skipped ? 'Give your number after all' : 'Change your number'}
+            </button>
           )}
         </div>
-      ))}
+      </div>
+    </section>
+  );
+}
+
+/** The other result, when the agent's estimates change the answer: both show, and it says so. */
+function OtherResult({ o, kind }: { o: EngineOutput; kind: ResultKind }) {
+  const r = o.results[kind];
+  return (
+    <div className="fi-other">
+      <span className="fi-eyebrow fi-eyebrow-mid">{r.label}</span>
+      <span className="fi-other-v">
+        {r.range ? rangeWords(r.range.low.value, r.range.high.value) : <span className="fi-other-none">No range: {engineWhy(r.range_unavailable_because ?? 'the analysis needs more to go on')}</span>}
+      </span>
+      <p className="fi-other-note">Your estimates change the answer. {divergenceWords(o)}</p>
+      {r.estimates_used.length > 0 && (
+        <ul className="fi-plain">{r.estimates_used.map((e) => <li key={`${e.kind}:${e.id}:${e.target}:${e.what}`}>{e.note || e.what}</li>)}</ul>
+      )}
     </div>
   );
 }
@@ -151,193 +139,283 @@ function Ranges({ output, both }: { output: EngineOutput; both: boolean }) {
 function divergenceWords(o: EngineOutput): string {
   const d = o.divergence;
   if (d.base.on_facts === null && d.base.with_estimates !== null) return 'Only “with estimates” has a range: it uses your estimates where the facts are missing.';
-  if (d.base.difference !== null) return `Your estimates move the base by ${usd(d.base.difference)}${d.base.difference_percent === null ? '' : ` (${pct(d.base.difference_percent)})`}.`;
-  return 'Your estimates change the numbers: compare the two.';
+  if (d.base.difference !== null) return `They move the base by ${usd(d.base.difference)}${d.base.difference_percent === null ? '' : ` (${pct(d.base.difference_percent)})`}.`;
+  return 'Compare the two.';
 }
 
-// ─── The evidence ────────────────────────────────────────────────────────────
+/** The legend and the range bar on the fixed axis (the handoff, "Findings axis"). */
+function Chart({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean }) {
+  const range = o.results[kind].range!;
+  const altKind = OTHER[kind];
+  const alt = both ? o.results[altKind].range : null;
+  const call = ws.call;
+  const guess = call && !call.skipped && call.low !== undefined && call.high !== undefined ? { low: call.low, high: call.high } : null;
+  const target = ws.target?.price.value ?? null;
+  const ask = ws.intake.askingPrice?.value ?? null;
+  const axis = fixedAxis([range.low.value, range.high.value, alt?.low.value, alt?.high.value, guess?.low, guess?.high, target, ask]);
+  if (!axis) return null;
+  const est = span(axis, range.low.value, range.high.value);
+  const altBar = alt ? span(axis, alt.low.value, alt.high.value) : null;
+  const guessBar = guess ? span(axis, guess.low, guess.high) : null;
+  const pctStyle = (b: { left: number; width: number }) => ({ left: `${b.left}%`, width: `${b.width}%` });
+  const summary = [
+    `True estimate ${rangeWords(range.low.value, range.high.value)}`,
+    alt && `${o.results[altKind].label} ${rangeWords(alt.low.value, alt.high.value)}`,
+    guess && `your guess ${rangeWords(guess.low, guess.high)}`,
+    target && `${targetLabel(ws).toLowerCase()} ${clientPrice(target)}`,
+    ask && `asking ${clientPrice(ask)}`,
+  ].filter(Boolean).join('; ');
+  return (
+    <div className="fi-chart">
+      <div className="fi-legend">
+        <span className="fi-key"><span className="fi-sw fi-sw-est" aria-hidden="true" />True estimate {rangeWords(range.low.value, range.high.value)}</span>
+        {alt && <span className="fi-key fi-key-alt"><span className="fi-sw fi-sw-alt" aria-hidden="true" />{o.results[altKind].label} {rangeWords(alt.low.value, alt.high.value)}</span>}
+        {guess && <span className="fi-key fi-key-guess"><span className="fi-sw fi-sw-guess" aria-hidden="true" />Your guess {rangeWords(guess.low, guess.high)}</span>}
+        {target !== null && <span className="fi-key fi-key-target"><span className="fi-sw fi-sw-target" aria-hidden="true" />{targetLabel(ws)} {clientPrice(target)}</span>}
+        {ask !== null && <span className="fi-key fi-key-ask"><span className="fi-sw fi-sw-ask" aria-hidden="true" />Asking {clientPrice(ask)}</span>}
+      </div>
+      <div className={`fi-track${altBar ? ' fi-track-alt' : ''}`} role="img" aria-label={`On a scale from ${clientPrice(axis.low)} to ${clientPrice(axis.high)}: ${summary}.`}>
+        <div className="fi-band" />
+        <div className="fi-bar fi-bar-est" style={pctStyle(est)} />
+        {altBar && <div className="fi-bar fi-bar-alt" style={pctStyle(altBar)} />}
+        {guessBar && <div className="fi-bar fi-bar-guess" style={pctStyle(guessBar)} />}
+        {target !== null && <div className="fi-mark fi-mark-target" style={{ left: `${at(axis, target)}%` }} />}
+        {ask !== null && <div className="fi-mark fi-mark-ask" style={{ left: `${at(axis, ask)}%` }} />}
+        {axis.ticks.map((t) => (
+          <Fragment key={t.value}>
+            <div className="fi-tick" style={{ left: `${t.left}%` }} />
+            <div className={`fi-tick-label fi-tl-${t.align}`} style={{ left: `${t.left}%` }}>{t.label}</div>
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-const BASIS_WORDS = { sold: 'sale prices', in_contract: 'last asks', active: 'asking prices', off_market: 'last asks' } as const;
-const AGAINST_BAND = { below: 'below the sold band', within: 'inside the sold band', above: 'above the sold band' } as const;
+// ─── The status tiles ────────────────────────────────────────────────────────
 
-/**
- * By status: count, median $/sq ft, and sale against last ask for sales. Asks
- * never mix with sales. Didn't sell is its own row, and its lowest ask is a
- * ceiling on what buyers would pay (§6.3).
- */
-function ByStatus({ ws, output, kind }: { ws: Workspace; output: EngineOutput; kind: ResultKind }) {
-  const r = output.results[kind];
-  // A status with nothing counted drops out: empty sections disappear.
-  const rows = EVIDENCE_CLASSES.filter((cls) => r.evidence[cls].counts.included > 0);
-  if (!rows.length) return null;
+function Tiles({ ws, o, kind }: { ws: Workspace; o: EngineOutput; kind: ResultKind }) {
+  const r = o.results[kind];
+  const tiles = statusTiles(r, ws.sf);
   const ceiling = r.asks_vs_sold.ceiling;
   const ceilingComp = ceiling ? ws.comps.find((c) => c.id === ceiling.comp_id) : undefined;
+  const BAND = { below: 'below the sold band', within: 'inside the sold band', above: 'above the sold band' } as const;
   return (
-    <section className="by-status" aria-label="By status">
-      <div className="table-wrap">
-        <table className="evidence">
-          <thead><tr><th>By status</th><th>Counted</th><th>Median $/sq ft</th><th /></tr></thead>
-          <tbody>
-            {rows.map((cls) => {
-              const e = r.evidence[cls];
-              const vsSold = cls === 'sold' ? null : r.asks_vs_sold.class_medians[cls];
-              return (
-                <tr key={cls}>
-                  <td>{STATUS_LABEL[cls]}<div className="muted small">{BASIS_WORDS[cls]}</div></td>
-                  <td>{e.counts.included}</td>
-                  <td>{e.price_per_sqft ? psf(e.price_per_sqft.median.value) : '—'}</td>
-                  <td className="small">
-                    {cls === 'sold' && r.sale_to_ask ? `Median ${againstAsk(r.sale_to_ask.median.value, '')}` : null}
-                    {vsSold ? `${pct(vsSold.versus_sold_median_percent.value)} against the sold median` : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+    <>
+      <section className="fi-tiles" aria-label="By status">
+        {tiles.map((t) => (
+          <div key={t.status} className="fi-tile">
+            <div className="fi-tile-name"><span className={`fi-sq fi-sq-${t.status}`} aria-hidden="true" />{t.name} <span className="fi-n">{t.n}</span></div>
+            <div className="fi-tile-v">{t.value}{t.unit && <span className="fi-unit">{t.unit}</span>}</div>
+          </div>
+        ))}
+      </section>
       {ceiling && (
-        <p className="small ceiling">
-          The lowest ask that didn’t sell, {psf(ceiling.lowest.value)}/sq ft{ceilingComp ? ` at ${compAddress(ceilingComp)}` : ''}, sits {AGAINST_BAND[ceiling.position]}{' '}
-          ({pct(ceiling.versus_sold_median_percent.value)} against the sold median): a ceiling on what buyers would pay.
+        <p className="fi-ceiling">
+          The lowest ask that didn’t sell, {ws.sf ? `${psf(ceiling.lowest.value)}/sq ft` : fig(ceiling.lowest)}{ceilingComp ? ` at ${compAddress(ceilingComp)}` : ''}, sits {BAND[ceiling.position]}
+          {' '}({pct(ceiling.versus_sold_median_percent.value)} against the sold median): a ceiling on what buyers would pay.
         </p>
       )}
-    </section>
+    </>
   );
 }
 
-/** The price table, as in Frankie's email: the home at each $/sq ft step across the range (§6.5). */
-function PriceTable({ ws, r, name }: { ws: Workspace; r: Result; name: string }) {
-  const t = r.price_table;
-  if (!t) return r.price_table_unavailable_because ? <p className="muted small">No price table yet: {r.price_table_unavailable_because}.</p> : null;
-  const byId = new Map(ws.comps.map((c) => [c.id, c]));
-  return (
-    <section className="price-table" aria-label="The price table">
-      <div className="label">Price per sq ft for {name}</div>
-      <div className="table-wrap">
-        <table className="evidence">
-          <thead><tr><th>$/sq ft</th><th>The home at that rate</th><th /></tr></thead>
-          <tbody>
-            {t.rows.map((row) => (
-              <tr key={row.per_sqft.value} className={`row-${row.kind}`}>
-                <td>{psf(row.per_sqft.value)}</td>
-                <td title={usd(row.price.value)}>{clientPrice(row.price.value)}</td>
-                <td className="muted small">
-                  {row.kind === 'comp' ? row.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join(', ') : row.kind === 'range_end' ? 'an end of your range' : ''}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="muted small">{t.basis}</p>
-    </section>
-  );
+// ─── The accordions ──────────────────────────────────────────────────────────
+
+interface Item {
+  key: string;
+  title: string;
+  sub: string;
+  body: ReactNode;
 }
 
-/** The comps that count, with their notes: the lists the email uses. */
-function CountingComps({ ws, output, kind }: { ws: Workspace; output: EngineOutput; kind: ResultKind }) {
-  const outById = useMemo(() => new Map<string, CompOut>(output.comps.map((c) => [c.id, c])), [output]);
+function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean }) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const outById = useMemo(() => new Map<string, CompOut>(o.comps.map((c) => [c.id, c])), [o]);
   const counted = ws.comps.filter((c) => outById.get(c.id)?.per_result[kind].included);
-  if (!counted.length) return <p className="muted">No comp counts yet: tier the closest Primary on Sort.</p>;
+  const target = ws.target?.price.value ?? null;
+  const area = ws.intake.areaSqft?.value ?? null;
+  const ask = ws.intake.askingPrice?.value ?? null;
+  const timing = ws.dealTerms?.template === 'seller_pricing' ? ws.dealTerms.timing?.value ?? '' : '';
+  const items: Item[] = [
+    ...(ws.sf ? [{ key: 'pt', title: 'Price table', sub: area ? sqft(area) : '', body: <PriceTable ws={ws} r={o.results[kind]} /> }] : []),
+    { key: 'cc', title: 'Comps that count', sub: String(counted.length), body: <CountingComps ws={ws} outById={outById} kind={kind} counted={counted} /> },
+    { key: 'tp', title: 'Target price', sub: target ? clientPrice(target) : '—', body: <TargetSection ws={ws} /> },
+    { key: 'pd', title: 'Pricing details', sub: ws.side === 'buyer' ? (ask ? `Asking ${clientPrice(ask)}` : '') : timing, body: <PricingDetails ws={ws} kind={kind} /> },
+    { key: 'hw', title: 'How this was worked out', sub: o.gaps.length ? `${o.gaps.length} still needed` : '', body: <WorkedOut ws={ws} output={o} both={both} kind={kind} /> },
+  ];
   return (
-    <section className="counting" aria-label="The comps that count">
-      <div className="label">The comps that count</div>
-      {STATUS_ORDER.map((s: ListingStatus) => {
-        const list = counted.filter((c) => compStatus(c) === s);
-        if (!list.length) return null;
+    <section className="fi-acc" aria-label="The details">
+      {items.map((item, i) => {
+        const isOpen = Boolean(open[item.key]);
+        const id = `fi-acc-${item.key}`;
         return (
-          <div key={s} className="counting-group">
-            <h4>{STATUS_LABEL[s]}</h4>
-            <ul className="plain">
-              {list.map((c) => {
-                const url = listingUrl(c);
-                const price = compPrice(c);
-                const rate = rowPsf(c, outById.get(c.id));
-                const note = c.judgment?.reasons.at(-1)?.reason;
-                return (
-                  <li key={c.id}>
-                    {url ? <a href={url} target="_blank" rel="noreferrer noopener">{compAddress(c)}</a> : compAddress(c)}
-                    {' — '}{price.label} {usd(price.value)}{rate !== null ? ` · ${psf(rate)}/sq ft` : ''}{c.judgment?.anchor ? ' · the closest comp' : ''}
-                    {note && <div className="muted small">{note}</div>}
-                  </li>
-                );
-              })}
-            </ul>
+          <div key={item.key} className="fi-acc-item">
+            <button type="button" className="fi-acc-head" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen({ ...open, [item.key]: !isOpen })}>
+              <span className="fi-acc-n">{String(i + 3).padStart(2, '0')}</span>
+              {item.title}
+              {item.sub && <span className="fi-acc-sub">{item.sub}</span>}
+              <span className="fi-acc-sign" aria-hidden="true">{isOpen ? '–' : '+'}</span>
+            </button>
+            {isOpen && <div className="fi-acc-body" id={id}>{item.body}</div>}
           </div>
         );
       })}
     </section>
+  );
+}
+
+/** The price table, as in Frankie's email: the home at each $/sq ft step across the range (§6.5). With a size only. */
+function PriceTable({ ws, r }: { ws: Workspace; r: Result }) {
+  const t = r.price_table;
+  if (!t) return <p className="fi-quiet">No price table yet{r.price_table_unavailable_because ? `: ${engineWhy(r.price_table_unavailable_because)}` : ''}.</p>;
+  const byId = new Map(ws.comps.map((c) => [c.id, c]));
+  return (
+    <>
+      <div className="fi-pt">
+        {t.rows.map((row) => {
+          const who = row.kind === 'comp' ? row.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join(', ') : row.kind === 'range_end' ? 'An end of your range' : '';
+          return (
+            <div key={`${row.kind}:${row.per_sqft.value}`} className={`fi-pt-cell fi-pt-${row.kind}`} title={who || undefined}>
+              <span className="fi-pt-rate">{psf(row.per_sqft.value)} / sq ft</span>
+              <span className="fi-pt-price" title={usd(row.price.value)}>{clientPrice(row.price.value)}</span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="fi-quiet">{t.basis}</p>
+    </>
+  );
+}
+
+/** The comps that count, with their notes: the lists the email uses. */
+function CountingComps({ ws, outById, kind, counted }: { ws: Workspace; outById: Map<string, CompOut>; kind: ResultKind; counted: Workspace['comps'] }) {
+  if (!counted.length) return <p className="fi-quiet">No comp counts yet: tier the closest sales 1st on Sort.</p>;
+  const ordered = STATUS_ORDER.flatMap((s: ListingStatus) => counted.filter((c) => compStatus(c) === s));
+  return (
+    <div className="fi-cc">
+      {ordered.map((c) => {
+        const status = compStatus(c);
+        const url = listingUrl(c);
+        const price = compPrice(c);
+        const rate = ws.sf ? rowPsf(c, outById.get(c.id)) : null;
+        const note = noteOf(c.judgment);
+        return (
+          <div key={c.id} className="fi-cc-row">
+            <span className={`fi-sq fi-sq-${status ?? 'unknown'}`} title={status ? STATUS_LABEL[status] : undefined} aria-label={status ? STATUS_LABEL[status] : undefined} />
+            <span className="fi-thumb" aria-hidden="true" />
+            <span className="fi-cc-info">
+              <span className="fi-cc-name">
+                {c.judgment?.anchor && <span className="fi-star" title="The closest comp">★</span>}
+                <button type="button" className="fi-cc-addr" onClick={() => ws.go('sort')}>{compAddress(c)}</button>
+                {url && <a className="fi-cc-link" href={url} target="_blank" rel="noreferrer noopener" aria-label={`${compAddress(c)} on StreetEasy`}>StreetEasy ↗</a>}
+              </span>
+              <span className="fi-cc-note">{note ?? 'No note yet. Edit to say why it’s here.'}</span>
+            </span>
+            <span className="fi-cc-price">
+              {price.value !== null ? clientPrice(price.value) : '—'}
+              {status !== 'sold' && price.value !== null && <span className="fi-cc-sub">{price.label}</span>}
+              {rate !== null && <span className="fi-cc-sub">{psf(rate)} / SF</span>}
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 // ─── How this was worked out ─────────────────────────────────────────────────
 
-const POSITION = { below: 'below the range', within: 'inside the range', above: 'above the range' } as const;
-
-function Position({ p, kind }: { p: PriceEvaluation; kind: ResultKind }) {
-  const r = p.per_result[kind];
-  return <li>{p.label} {usd(p.price)}: {r.vs_range ? POSITION[r.vs_range.position] : 'no range to compare with'}</li>;
+function Row({ k, children, flag }: { k: string; children: ReactNode; flag?: boolean }) {
+  return (
+    <div className="fi-row">
+      <span className="fi-k">{k}</span>
+      <span className={flag ? 'fi-flag' : undefined}>{flag && <span className="fi-flag-sq" aria-hidden="true" />}{children}</span>
+    </div>
+  );
 }
 
 function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOutput; both: boolean; kind: ResultKind }) {
   const kinds = both ? KINDS : [kind];
   const byId = new Map(ws.comps.map((c) => [c.id, c]));
+  const r = output.results[kind];
+  const n = r.range?.comp_ids.length ?? 0;
+  const size = ws.intake.areaSqft;
+  const call = ws.call;
+  const crossed = ws.comps.filter((c) => c.judgment?.tier === 'excluded').length;
+  const second = ws.comps.filter((c) => c.judgment?.tier === 'secondary').length;
+  const leftOut = [crossed ? `${crossed} comp${crossed === 1 ? '' : 's'} marked ✕` : '', second ? `${second} in the 2nd tier` : ''].filter(Boolean).join(', ');
   return (
-    <details className="worked-out">
-      <summary>How this was worked out</summary>
+    <div className="fi-rows">
+      <Row k="Range from">{r.range ? `The ${n === 1 ? 'closest sale' : `${n} closest sales`}, 1st tier only` : `No range yet: ${engineWhy(r.range_unavailable_because ?? 'the analysis needs more to go on')}`}</Row>
+      {ws.sf && size && (
+        <Row k="Size" flag={Boolean(size.estimate)}>
+          {sqft(size.value)}{size.estimate ? ', your estimate. Confirm with the floor plan' : size.from === 'listing' ? ', from StreetEasy' : ''}
+        </Row>
+      )}
+      <Row k="Why your number" flag={!call?.note?.trim()}>
+        {call?.note?.trim() ? 'Written at the gate' : call?.skipped ? 'You skipped your number' : 'Not written yet'}
+      </Row>
+      <Row k="Left out">{leftOut ? leftOut.charAt(0).toUpperCase() + leftOut.slice(1) : 'Nothing'}</Row>
       {kinds.map((k) => {
-        const r = output.results[k];
-        const considered = r.bridge.lines.filter((l) => l.status === 'considered_not_calculated');
+        const res = output.results[k];
+        const considered = res.bridge.lines.filter((l) => l.status === 'considered_not_calculated');
         return (
-          <div key={k} className="sub">
-            {both && <div className="about-label">{r.label}</div>}
-            <p>
-              <strong>The method:</strong> {r.lead.label}{r.lead.chosen_by === 'default' ? ', the default until Noble picks one' : ''}.
-              {r.base && <> The base is {usd(r.base.value)}.</>}
-              {r.range && <> The range, {usdRange(r.range.low.value, r.range.high.value)}, runs from the lowest to the highest price its {r.range.comp_ids.length} primary sales imply.</>}
-            </p>
-            {output.prices.some((p) => p.kind === 'call') && <ul className="plain small">{output.prices.filter((p) => p.kind === 'call').map((p) => <Position key={p.id} p={p} kind={k} />)}</ul>}
+          <Fragment key={k}>
+            <Row k={both ? `Method · ${res.label}` : 'Method'}>
+              {engineWhy(res.lead.label)}.
+              {res.base && <> The base is {usd(res.base.value)}.</>}
+              {res.range && <> The range, {usd(res.range.low.value)} – {usd(res.range.high.value)}, runs from the lowest to the highest price its {countWord(res.range.comp_ids.length)} 1st-tier sales imply.</>}
+            </Row>
             {considered.length > 0 && (
-              <p className="small">
-                <strong>Considered, not calculated:</strong> {considered.map((l) => l.name).join(', ')}. Each is weighed in choosing and sorting the comps; none moves a number.
-              </p>
+              <Row k="Considered, not calculated">{considered.map((l) => l.name).join(', ')}. Each is weighed in choosing and sorting the comps; none moves a number.</Row>
             )}
-            {r.sale_to_ask && <p className="small">Sale against last ask: median {pct(r.sale_to_ask.median.value)}, from {pct(r.sale_to_ask.min.value)} to {pct(r.sale_to_ask.max.value)}, across {r.sale_to_ask.n} sales.</p>}
-            <p className="small">Monthly carry: the home {fig(r.carry.subject)}, the comps’ median {fig(r.carry.comp_median)}{r.carry.subject_vs_median_percent ? ` (${pct(r.carry.subject_vs_median_percent.value)})` : ''}.</p>
-          </div>
+            {res.sale_to_ask && <Row k="Sale against last ask">Median {pct(res.sale_to_ask.median.value)}, from {pct(res.sale_to_ask.min.value)} to {pct(res.sale_to_ask.max.value)}, across {res.sale_to_ask.n} sales.</Row>}
+            {(res.carry.subject || res.carry.comp_median) && (
+              <Row k="Monthly carry">The home {fig(res.carry.subject)}, the comps’ median {fig(res.carry.comp_median)}{res.carry.subject_vs_median_percent ? ` (${pct(res.carry.subject_vs_median_percent.value)})` : ''}.</Row>
+            )}
+          </Fragment>
         );
       })}
-      {kinds.map((k) => <Pairs key={k} ws={ws} r={output.results[k]} label={both ? output.results[k].label : null} />)}
-      <div className="sub">
-        <div className="about-label">What the tool still needs</div>
-        {output.gaps.length === 0 ? <p className="muted small">Nothing.</p> : (
-          <ul className="plain small">
+      {output.prices.filter((p) => p.kind === 'call').length > 0 && (
+        <Row k="Your number">
+          {output.prices.filter((p) => p.kind === 'call').map((p) => {
+            const v = p.per_result[kind].vs_range;
+            const which = p.label.replace('Your call, ', '');
+            return `${which.charAt(0).toUpperCase()}${which.slice(1)} ${usd(p.price)}: ${v ? { below: 'below the range', within: 'inside the range', above: 'above the range' }[v.position] : 'no range to compare with'}`;
+          }).join(' · ')}
+        </Row>
+      )}
+      {kinds.map((k) => <Pairs key={`pairs:${k}`} ws={ws} r={output.results[k]} label={both ? output.results[k].label : null} />)}
+      <div className="fi-sub">
+        <span className="fi-sub-k">What the tool still needs</span>
+        {output.gaps.length === 0 ? <p className="fi-quiet">Nothing.</p> : (
+          <ul className="fi-plain">
             {output.gaps.map((g, i) => (
               <li key={i}>
-                {g.message}{g.results.length === 1 ? <span className="muted"> ({RESULT_WORDS[g.results[0]!]})</span> : null}
-                {g.target === 'subject' && !ws.readOnly && <> <button type="button" className="link small" onClick={() => ws.openStart('details')}>Fill it in</button></>}
-                {g.target && g.target !== 'subject' && byId.get(g.target) && <span className="muted"> — {compAddress(byId.get(g.target)!)}</span>}
+                {g.message}{g.results.length === 1 ? <span className="fi-quiet-inline"> ({RESULT_WORDS[g.results[0]!]})</span> : null}
+                {g.target === 'subject' && !ws.readOnly && <> <button type="button" className="link" onClick={() => ws.openStart('details')}>Fill it in</button></>}
+                {g.target && g.target !== 'subject' && byId.get(g.target) && <span className="fi-quiet-inline"> — {compAddress(byId.get(g.target)!)}</span>}
               </li>
             ))}
           </ul>
         )}
       </div>
       {output.warnings.length > 0 && (
-        <div className="sub">
-          <div className="about-label">Warnings</div>
-          <ul className="plain small">
+        <div className="fi-sub">
+          <span className="fi-sub-k">Warnings</span>
+          <ul className="fi-plain">
             {output.warnings.map((w, i) => (
-              <li key={i}>{w.message}{w.comp_ids.length > 0 && <span className="muted"> — {w.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join('; ')}</span>}</li>
+              <li key={i}>{w.message}{w.comp_ids.length > 0 && <span className="fi-quiet-inline"> — {w.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join('; ')}</span>}</li>
             ))}
           </ul>
         </div>
       )}
-      <p className="muted small">
+      <p className="fi-quiet">
         Analysis date {output.meta.as_of} · engine {output.meta.engine_version} · house method {output.meta.house_method.version}
         {output.meta.house_method.all_null ? ' (no adjustment values set: every factor is considered, not calculated)' : ''}.
       </p>
-    </details>
+    </div>
   );
 }
 
@@ -349,29 +427,29 @@ function Pairs({ ws, r, label }: { ws: Workspace; r: Result; label: string | nul
   const name = (id: string) => (byId.get(id) ? compAddress(byId.get(id)!) : id);
   const gaps = (x: PairOut) => {
     const parts: string[] = [];
-    if (x.price_per_sqft_gap) parts.push(`${psf(x.price_per_sqft_gap.value)}/sq ft more`);
+    if (x.price_per_sqft_gap && ws.sf) parts.push(`${psf(x.price_per_sqft_gap.value)}/sq ft more`);
     const g = x.price_gap.value;
     parts.push(g === 0 ? 'the same price' : `${usd(Math.abs(g))} ${g > 0 ? 'more' : 'less'} in price`);
     if (x.months_apart) parts.push(`${x.months_apart} month${x.months_apart === 1 ? '' : 's'} apart`);
     return parts.join(', ');
   };
   return (
-    <div className="sub pairs">
-      <div className="about-label">How the comps differ from each other{label ? ` · ${label}` : ''}</div>
+    <div className="fi-sub">
+      <span className="fi-sub-k">How the comps differ from each other{label ? ` · ${label}` : ''}</span>
       {p.clean_pair_evidence.length > 0
-        ? <ul className="plain small">{p.clean_pair_evidence.map((e) => <li key={`${e.evidence_class}:${e.key}`}>{e.summary}</li>)}</ul>
-        : <p className="small">No clean pairs yet: every pair differs in more than one factor, so none shows what one factor is worth here.</p>}
-      <details>
-        <summary className="small">All {p.pairs.length} pair{p.pairs.length === 1 ? '' : 's'}</summary>
-        <ul className="plain small">
+        ? <ul className="fi-plain">{p.clean_pair_evidence.map((e) => <li key={`${e.evidence_class}:${e.key}`}>{e.summary}</li>)}</ul>
+        : <p className="fi-quiet">No clean pairs yet: every pair differs in more than one factor, so none shows what one factor is worth here.</p>}
+      <details className="fi-pairs">
+        <summary>All {p.pairs.length} pair{p.pairs.length === 1 ? '' : 's'}</summary>
+        <ul className="fi-plain">
           {p.pairs.map((x) => (
             <li key={`${x.evidence_class}:${x.higher}:${x.lower}`}>
-              <strong>{name(x.higher)}</strong> over {name(x.lower)} <span className="muted">({STATUS_LABEL[x.evidence_class]})</span>: {gaps(x)}.{' '}
-              <span className="muted">{x.clean && x.isolates ? `Clean: only ${x.isolates.name.toLowerCase()} differs.` : x.not_clean_because ? `${x.not_clean_because}.` : ''}</span>
+              <strong>{name(x.higher)}</strong> over {name(x.lower)} <span className="fi-quiet-inline">({STATUS_LABEL[x.evidence_class]})</span>: {gaps(x)}.{' '}
+              <span className="fi-quiet-inline">{x.clean && x.isolates ? `Clean: only ${x.isolates.name.toLowerCase()} differs.` : x.not_clean_because ? `${x.not_clean_because}.` : ''}</span>
             </li>
           ))}
         </ul>
-        <p className="muted small">{p.note}</p>
+        <p className="fi-quiet">{p.note}</p>
       </details>
     </div>
   );
@@ -391,7 +469,7 @@ export function LiveNumbers({ ws }: StepProps) {
         return (
           <span key={k} className="live-result">
             {both && <strong>{r.label}: </strong>}
-            {r.range ? usdRange(r.range.low.value, r.range.high.value, clientPrice) : 'no range yet'}
+            {r.range ? rangeWords(r.range.low.value, r.range.high.value) : 'no range yet'}
           </span>
         );
       })}
