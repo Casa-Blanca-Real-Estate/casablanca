@@ -139,7 +139,7 @@ list.
 > `docs/dispatch/README.md` (your roster row says where you are), then your dispatch file in full:
 > `docs/dispatch/13-comp-report-writer-and-qa.md`, Dispatch 13, the writer and QA (CR-5), ledger line
 > `casa-r6-1`. Then read the handoff at the end of `docs/dispatch/11-comp-report-distance.md`, and your
-> latest PRs and their comments: the handoff's PR, and #62. Carry on from what's next there: Dispatch
+> latest PRs and their comments: #65 (this handoff) and #62. Carry on from what's next there: Dispatch
 > 13, phase 1. Sign as "— Mason (CR-5)".
 
 — Mason (CR-3c)
