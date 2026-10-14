@@ -204,6 +204,9 @@ function render(nodes, scope, label) {
 const STATUSES = ['draft', 'live', 'suspended', 'archived'];
 const TESTIMONIAL_SOURCES = ['google', 'manual'];
 const DEAL_SIDES = ['buyer', 'seller', 'both'];
+// The profile-pic roster's groups (Dispatch 12). They live in the agent store,
+// beside the CMS's draft and live, and never in a site's data.
+const PHOTO_SIDE = ['pic', 'placements', 'raws'];
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
@@ -464,6 +467,14 @@ function validateAgent(agent, file, seenSlugs) {
     optionalDate(v, 'delivery.archivedOn', delivery.archivedOn);
     if (delivery.status === 'archived' && !delivery.archivedOn) {
       v.warn('delivery.archivedOn', 'an archived agent should record the date the site came down');
+    }
+  }
+
+  // Refused rather than ignored: an export that copies a whole store record
+  // here fails loudly instead of committing photo notes and placement history.
+  for (const key of PHOTO_SIDE) {
+    if (agent[key] !== undefined) {
+      v.err(key, 'belongs to the profile-pic roster in the agent store, never to agent site data — export `live` only');
     }
   }
 

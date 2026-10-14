@@ -72,7 +72,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b), 11 (CR-3c), 13 (CR-5) | 05: merged #48, #52; CR-1.1 item 3 merged in #57; the step-6 proof is Kimani's (Netlify's function log). 07: done, merged #53. 09: done, merged #57, #60. 11: done, merged #62. 13: ready. Dev notebook and the Feedback list closed: merged #54 |
 | **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: done, merged #55, #58 |
 | **Arbiter** | The comp report's decision provider: Jev, with a Haiku fallback | 10 (CR-D) | 10: phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Phase 2 when Kimani's key is in |
-| *unnamed* (`claude/kind-heisenberg-ujrdup`) | Profile pics: the cutout, outpainting, and the roster and store | 01, 12 | 01: parked; #41's fixes await Casanova's re-review. 12: approved 2026-10-09, ready |
+| **Painter** (was the Dispatch 01 session; named by Kimani 2026-10-14) | Visual tools: photo and video features, manipulation and tooling. Today the profile pics: the cutout, outpainting, and the roster and store | 01, 12 | 01: parked; #41's fixes await Casanova's re-review. 12: phase 1 (the roster and the record) in review, PR-TBD |
 | *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
 | *unnamed* (`claude/laughing-newton-f96x9t`) | Agent CMS | 03 | Done — merged #47 |
 
@@ -80,7 +80,7 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 
 | # | Dispatch | To | State |
 |---|---|---|---|
-| 01 | [Profile Pic Generator — cutout quality + torso outpainting](01-profile-pic-cutout-and-outpaint.md) | unnamed | **Parked.** Stack #41–#45. #41's fixes (2026-10-06) await Casanova's re-review; #45 has a conflict |
+| 01 | [Profile Pic Generator — cutout quality + torso outpainting](01-profile-pic-cutout-and-outpaint.md) | Painter | **Parked.** Stack #41–#45. #41's fixes (2026-10-06) await Casanova's re-review; #45 has a conflict |
 | 02 | [Agent sites, Slice 0 — data model + build hardening](02-agent-sites-foundations.md) | unnamed | Done |
 | 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | unnamed | Done |
 | 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | Done — merged #49 |
@@ -91,5 +91,5 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
 | 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Phase 2 when Kimani's key is in |
 | 11 | [Comp report — distance, from coordinates (CR-3c)](11-comp-report-distance.md) | Mason | Done — merged #62 |
-| 12 | [Profile pics — the roster, the store and the email signature](12-profile-pic-tracker.md) | the Dispatch 01 session | Approved 2026-10-09 (#63); ready |
+| 12 | [Profile pics — the roster, the store and the email signature](12-profile-pic-tracker.md) | Painter | Phase 1 (the roster and the record) in review, PR-TBD |
 | 13 | [Comp report — the writer and QA (CR-5)](13-comp-report-writer-and-qa.md) | Mason | Ready |

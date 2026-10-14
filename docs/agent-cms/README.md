@@ -48,6 +48,14 @@ human edits them or marks them reviewed, then **AI · edited**. Publishing with 
 warns and names them. The prompts refuse to invent credentials, sales figures, licence numbers or
 biography, and return a list of what they left out, which the UI shows under the field.
 
+**The photo side (Dispatch 12).** A record can also carry `pic` and `placements`: the
+profile-pic roster's, written by `netlify/functions/agent-pics.mts` with its own token,
+`CB_PICS_TOKEN`. They sit beside `draft` and `live`, never inside them, so Publish can't carry
+them to a site and the preview link never shows them (`tools-src/agent-pics/boundary.test.ts`
+proves both). Every write in `agent-store` edits the record it read and keeps keys it doesn't
+know, so a CMS save keeps the photo side. Keep it that way. Deleting an agent here deletes
+their photo side too.
+
 **Empty stays empty.** A blank stat is `null`, never `0` — "0 years in NYC" is a false claim about
 a real person, and both the store and the form are written to make it impossible.
 

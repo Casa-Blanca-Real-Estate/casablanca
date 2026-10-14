@@ -16,7 +16,7 @@
     "build": "node agents/build.js && npm run build:comp-report",
     "build:comp-report": "vite build --config tools-src/comp-report/vite.config.ts",
     "dev:comp-report": "vite --config tools-src/comp-report/vite.config.ts",
-    "typecheck": "tsc -p tools-src/comp-report && tsc -p tools-src/dev-notebook",
+    "typecheck": "tsc -p tools-src/comp-report && tsc -p tools-src/dev-notebook && tsc -p tools-src/agent-pics",
     "check": "node agents/build.js --check",
     "test": "node --test agents/build.test.js",
     "test:comp-report": "node --test --test-concurrency=1 \"tools-src/comp-report/server/**/*.test.ts\" \"tools-src/comp-report/src/**/*.test.ts\" \"tools-src/comp-report/workspace/**/*.test.ts\" \"tools-src/comp-report/db/**/*.test.ts\"",
@@ -25,6 +25,7 @@
     "dev:notebook": "node tools-src/dev-notebook/dev/serve.ts",
     "test:dev-notebook": "node --test --test-concurrency=1 \"tools-src/dev-notebook/**/*.test.ts\"",
     "test:feedback": "node --test \"tools-src/feedback/**/*.test.ts\"",
+    "test:agent-pics": "node --test --test-concurrency=1 \"tools-src/agent-pics/**/*.test.ts\"",
     "test:engine": "node --test \"tools-src/comp-report/engine/test/**/*.test.ts\"",
     "typecheck:engine": "tsc -p tools-src/comp-report/engine && tsc -p tools-src/comp-report/engine/test"
   },
