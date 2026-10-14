@@ -1,10 +1,198 @@
 {
   "repo": "https://github.com/kjcamron/casablanca",
-  "since": "<strong>First edition, 2026-10-14,</strong> after the round that merged #64 to #76. It gathers everything waiting on you across the Casa tracks: the open decisions in <code>docs/decisions.md</code>, the questions the merged PRs left for you, the team feedback, and your to-dos. Casanova records your answers in the repo and refreshes the sheet at the end of each block.",
-  "newIds": [],
+  "since": "<strong>Updated 2026-10-14, evening:</strong> the design port is dispatched to Mason (Dispatch 14) for Noble's walk-through tomorrow. <strong>New:</strong> the design port's eight changes (DP-1 to DP-8, all being built on the default, so answer only to object) and Noble's way in (TD-11). Everything else is as this afternoon.",
+  "newIds": [
+    "DP-1",
+    "DP-2",
+    "DP-3",
+    "DP-4",
+    "DP-5",
+    "DP-6",
+    "DP-7",
+    "DP-8",
+    "TD-11"
+  ],
   "topics": [
     {
       "num": "01",
+      "title": "The design port",
+      "prefix": "DP",
+      "url": "{repo}/docs/dispatch/14-comp-report-design-port.md",
+      "linkLabel": "Open Dispatch 14",
+      "intro": "<p>Your design handoff is newer than the design of record, so Mason builds on it (D-27). These are the places it changes something you'd decided before. Each is being built on the default: <strong>answer only to object</strong>, before the port merges, so Noble sees what you mean.</p>",
+      "questions": [
+        {
+          "id": "DP-1",
+          "q": "The Gate: new agents can't skip it, and write a why of 100+ characters?",
+          "short": "The Gate's rule",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>D-1 had the agent's call skippable for everyone. The handoff makes it a Gate: <code>practice</code> agents give low, high and a 100+ character why and can't skip; <code>full</code> agents can skip. Admins get a way to view it as a new agent for the demo.</p>",
+          "options": [
+            [
+              "A",
+              "As the handoff: new agents can't skip",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Skippable for everyone, as D-1"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        },
+        {
+          "id": "DP-2",
+          "q": "Tier labels: 1st / 2nd / ✕?",
+          "short": "Tier labels",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>D-20 held Primary / Secondary / Excluded until testing with Noble. The handoff shows 1st / 2nd / ✕, also held until Noble. Copy only, easy to swap.</p>",
+          "options": [
+            [
+              "A",
+              "1st / 2nd / ✕, as the handoff",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Primary / Secondary / Excluded, as D-20"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        },
+        {
+          "id": "DP-3",
+          "q": "Lock Findings until every comp has a tier, a note and a tag?",
+          "short": "Findings locked until every comp is done",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>02-screens required nothing on Sort. The handoff locks Findings until each comp is tiered, noted and tagged, with yellow-edged rows and a filter to the unfinished ones.</p>",
+          "options": [
+            [
+              "A",
+              "Lock it, as the handoff",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Warn, but let them through"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        },
+        {
+          "id": "DP-4",
+          "q": "Co-op as the default type, with no square footage?",
+          "short": "Co-op default",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>01-design had co-ops as \"next\". The handoff puts the Co-op/Condo toggle in the first modal, default Co-op, and hides every per-SF figure when there's no size. The engine gets the real co-op path.</p>",
+          "options": [
+            [
+              "A",
+              "Co-op default, as the handoff",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Condo default"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        },
+        {
+          "id": "DP-5",
+          "q": "The default side for a new report: Buyer?",
+          "short": "Default side",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>02-screens says buyer first (about 95% of reports). The handoff's screenshots show Seller selected, which may just be how they were captured. Dispatch 14 keeps Buyer.</p>",
+          "options": [
+            [
+              "A",
+              "Buyer, as the design of record",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Seller, as the screenshots"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        },
+        {
+          "id": "DP-6",
+          "q": "Tags on comps: the prototype's list, several per comp, at least one required?",
+          "short": "Comp tags",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>Tags are new with the handoff: required on every comp, shown on rows, filterable on Sort. The prototype carries a fixed list.</p>",
+          "options": [
+            [
+              "A",
+              "The prototype's list, several per comp",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Free text"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        },
+        {
+          "id": "DP-7",
+          "q": "\"True estimate\" as the label on Findings, never in the email?",
+          "short": "\"True estimate\" label",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>The handoff labels the engine's result \"True estimate\". The design's voice rules avoid \"true\" in front of clients. Dispatch 14 uses it on Findings only, never in the email.</p>",
+          "options": [
+            [
+              "A",
+              "On Findings only, as Dispatch 14",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Use \"What the sales support\" instead"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        },
+        {
+          "id": "DP-8",
+          "q": "Name the assistant Hubert, everywhere?",
+          "short": "The assistant's name",
+          "quick": true,
+          "flag": "being built",
+          "context": "<p>After the office at 10 Hubert St. Guide only: it answers and suggests, never tiers, writes notes or picks tags, and never names a listing that isn't in the data.</p>",
+          "options": [
+            [
+              "A",
+              "Hubert",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Keep \"the assistant\""
+            ]
+          ],
+          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+        }
+      ]
+    },
+    {
+      "num": "02",
       "title": "The comp report",
       "prefix": "CR",
       "url": "{repo}/docs/decisions.md",
@@ -18,7 +206,16 @@
           "quick": true,
           "needsYou": true,
           "context": "<p><strong>What this is about.</strong> The writer's QA has one hard block: compliance (D-2). A term on the hard list blocks Copy outright (\"adults only\", \"perfect for young professionals\", \"no Section 8\", \"school district\", \"safe neighborhood\"). A word on the near list (\"family\", \"church\", \"school\") warns, and the agent acknowledges it before copying.</p><p><strong>Why it needs you.</strong> Mason drafted the list from HUD's advertising guidance and New York City's Human Rights Law ({repo}/tools-src/comp-report/workspace/fair-housing.ts, version <code>fh-2026-10-14</code>). A list that blocks agents' emails needs a reviewer before the pilot widens.</p>",
-          "options": [["A", "Hannah"], ["B", "Counsel, through Hannah"]],
+          "options": [
+            [
+              "A",
+              "Hannah"
+            ],
+            [
+              "B",
+              "Counsel, through Hannah"
+            ]
+          ],
           "source": "D-25 in {repo}/docs/decisions.md · #76"
         },
         {
@@ -28,7 +225,19 @@
           "quick": true,
           "flag": "already works this way",
           "context": "<p><strong>What this is about.</strong> \"Appraisal\" in client copy is a hard block (design §9.3), because a comp email must never read as an appraisal. So an agent who writes about waiving the appraisal contingency in the next step can't copy the email.</p><p><strong>Why it needs you.</strong> The phrase is a normal deal term in a buyer's offer. Allowing it means one exception in the list; keeping it means agents rephrase.</p>",
-          "options": [["A", "Keep it blocked", "agents rephrase it", true], ["B", "Allow the phrase as a deal term", "everything else with \"appraisal\" stays blocked"]],
+          "options": [
+            [
+              "A",
+              "Keep it blocked",
+              "agents rephrase it",
+              true
+            ],
+            [
+              "B",
+              "Allow the phrase as a deal term",
+              "everything else with \"appraisal\" stays blocked"
+            ]
+          ],
           "source": "D-25 in {repo}/docs/decisions.md · #76"
         },
         {
@@ -38,7 +247,21 @@
           "quick": false,
           "needsYou": true,
           "context": "<p><strong>What this is about.</strong> Claude now drafts the headlines and the email's sections in Casa's voice, in Frankie's order. The voice is a short style file: plain words, specific comparisons, numbers only from the comps, one to three lines a comp. It's quoted in full in #76's description ({repo}/tools-src/comp-report/server/house-voice.ts).</p><p><strong>Why it needs you.</strong> It's Casa's voice in front of clients. The real eval drafts (100 Barclay and Frankie's #517) come once <code>CR_EVAL_ANTHROPIC_API_KEY</code> is in the cloud environment (TD-3); read them together if you'd rather.</p>",
-          "options": [["A", "Yes, as written"], ["B", "Change it", "say how in the note"], ["C", "Wait for the eval drafts first"]],
+          "options": [
+            [
+              "A",
+              "Yes, as written"
+            ],
+            [
+              "B",
+              "Change it",
+              "say how in the note"
+            ],
+            [
+              "C",
+              "Wait for the eval drafts first"
+            ]
+          ],
           "source": "#76"
         },
         {
@@ -47,7 +270,19 @@
           "short": "Jev's seven questions: as written?",
           "quick": true,
           "context": "<p><strong>What this is about.</strong> Jev answers seven fixed questions about each listing's text (sponsor sale, estate sale, tenant in place and the like). The wording is at the end of #56's description. Phase 2 goes live on the reviewed text.</p><p><strong>Why it needs you.</strong> Casanova read them and found nothing to change. A change after the labelled batch runs means running it again.</p>",
-          "options": [["A", "Yes, as written", "", true], ["B", "Change them", "say which in the note"]],
+          "options": [
+            [
+              "A",
+              "Yes, as written",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Change them",
+              "say which in the note"
+            ]
+          ],
           "source": "#56 · #75"
         },
         {
@@ -56,7 +291,19 @@
           "short": "Floor band and distance thresholds: keep?",
           "quick": false,
           "context": "<p><strong>What this is about.</strong> The floor band (±3, from Frankie's email) flags 8 of Hannah's 11 comps; Kara's ½ mile flags 6 of the sample's 11, five of them Primary. A flag is a prompt to the agent, never a block.</p><p><strong>Why it needs you.</strong> Noble sets or confirms them. Until he does, the numbers stand.</p>",
-          "options": [["A", "Keep them until Noble weighs in", "", true], ["B", "Loosen them now", "say to what in the note"]],
+          "options": [
+            [
+              "A",
+              "Keep them until Noble weighs in",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Loosen them now",
+              "say to what in the note"
+            ]
+          ],
           "source": "{repo}/docs/decisions.md (Your actions)"
         },
         {
@@ -65,13 +312,29 @@
           "short": "D-17: counsel's two questions",
           "quick": true,
           "context": "<p><strong>What this is about.</strong> Surveyor found two legal questions research can't settle: (1) is a CMA an \"appraisal\" under New York law? (2) in sponsor sales, does transfer tax the buyer pays count toward the taxable consideration? Both are in {repo}/docs/comp-report/research/adjustments.md, with sources.</p><p><strong>Why it needs you.</strong> (1) matters before the pilot; (2) only if the tool ever computes the sponsor arithmetic.</p>",
-          "options": [["A", "Hold until the pilot is near", "", true], ["B", "Send them to a closing attorney now", "say who in the note"], ["C", "Ask Hannah who should answer"]],
+          "options": [
+            [
+              "A",
+              "Hold until the pilot is near",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Send them to a closing attorney now",
+              "say who in the note"
+            ],
+            [
+              "C",
+              "Ask Hannah who should answer"
+            ]
+          ],
           "source": "D-17 in {repo}/docs/decisions.md"
         }
       ]
     },
     {
-      "num": "02",
+      "num": "03",
       "title": "Profile pics",
       "prefix": "PP",
       "url": "{repo}/docs/dispatch/12-profile-pic-tracker.md",
@@ -85,7 +348,21 @@
           "quick": true,
           "needsYou": true,
           "context": "<p><strong>What this is about.</strong> The roster imports about 110 agents once: names, titles, emails and phones. The email-signatures Google Doc has duplicates, likely typos and gaps.</p><p><strong>Why it needs you.</strong> If a system of record (FileMaker) sits behind the doc, the import reads an export of that instead of parsing a doc.</p>",
-          "options": [["A", "The email-signatures doc"], ["B", "FileMaker", "an export you'll pull"], ["C", "Something else"]],
+          "options": [
+            [
+              "A",
+              "The email-signatures doc"
+            ],
+            [
+              "B",
+              "FileMaker",
+              "an export you'll pull"
+            ],
+            [
+              "C",
+              "Something else"
+            ]
+          ],
           "source": "D-24 in {repo}/docs/decisions.md · #71"
         },
         {
@@ -95,13 +372,24 @@
           "quick": true,
           "needsYou": true,
           "context": "<p><strong>What this is about.</strong> The roster tracks where each agent's photo is used. For photos already filed in the shared folders, the import can mark their placements done (they read <em>deployed</em>), or leave them for you to tick.</p><p><strong>Why it needs you.</strong> Done is faster; to do is more accurate if some filed photos never went out.</p>",
-          "options": [["A", "Placed", "they read deployed"], ["B", "To do", "I'll tick them"]],
+          "options": [
+            [
+              "A",
+              "Placed",
+              "they read deployed"
+            ],
+            [
+              "B",
+              "To do",
+              "I'll tick them"
+            ]
+          ],
           "source": "#71"
         }
       ]
     },
     {
-      "num": "03",
+      "num": "04",
       "title": "Team feedback",
       "prefix": "FB",
       "url": "https://casa-blanca-creative-studio.netlify.app/tools/dev-notebook/",
@@ -114,7 +402,22 @@
           "short": "Agent photos and renames: where?",
           "quick": true,
           "context": "<p><strong>The feedback (Oct 9).</strong> An easy way to add or replace an agent's photo and edit their library name in Creative Studio. Missing photos are blocking posts: Arianna Fotinos's new photo, Emma C. to Emma L. (Emma Liuzzi) with an updated photo, and Jackie Tran, who has none and two Greenpoint closings waiting.</p><p><strong>Why it needs you.</strong> Dispatch 12's roster and photo store is the natural home, but its phase 2 waits on D-24 (PP-1).</p>",
-          "options": [["A", "Fold it into Dispatch 12, first (Painter)", "", true], ["B", "A separate quick fix now"], ["C", "Not now"]],
+          "options": [
+            [
+              "A",
+              "Fold it into Dispatch 12, first (Painter)",
+              "",
+              true
+            ],
+            [
+              "B",
+              "A separate quick fix now"
+            ],
+            [
+              "C",
+              "Not now"
+            ]
+          ],
           "source": "Team feedback, 2026-10-09"
         },
         {
@@ -123,7 +426,22 @@
           "short": "Agents' Instagram handles: where?",
           "quick": true,
           "context": "<p><strong>The feedback (Oct 9).</strong> Captions go out with name placeholders because there's no handle list anywhere. Once handles live on the agent record, the post builders could output a ready-to-paste tag line.</p>",
-          "options": [["A", "The roster gets the field now (Painter); tag lines in the builders later (Publisher)", "", true], ["B", "With the CMS, when Concierge starts"], ["C", "Not now"]],
+          "options": [
+            [
+              "A",
+              "The roster gets the field now (Painter); tag lines in the builders later (Publisher)",
+              "",
+              true
+            ],
+            [
+              "B",
+              "With the CMS, when Concierge starts"
+            ],
+            [
+              "C",
+              "Not now"
+            ]
+          ],
           "source": "Team feedback, 2026-10-09"
         },
         {
@@ -132,7 +450,18 @@
           "short": "In Contract one-agent header",
           "quick": true,
           "context": "<p><strong>The feedback (Oct 8).</strong> \"IN CONTRACT: FRANKIE D.\" next to \"IN CONTRACT: MORNINGSIDE HEIGHTS\" reads inconsistently, and the name is already on the photo. Allow a neighborhood or free-text header like two-agent mode, or a layout that doesn't need one.</p>",
-          "options": [["A", "Publisher's first dispatch", "", true], ["B", "Not now"]],
+          "options": [
+            [
+              "A",
+              "Publisher's first dispatch",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Not now"
+            ]
+          ],
           "source": "Team feedback, 2026-10-08"
         },
         {
@@ -141,7 +470,18 @@
           "short": "Keep the StreetEasy link per property",
           "quick": true,
           "context": "<p><strong>The feedback (Oct 8).</strong> Store the StreetEasy URL on each deal, show it as a link in the editor, keep it in saved sessions and exports, in the In Contract, Closed, Listing and Editorial builders.</p>",
-          "options": [["A", "Publisher's first dispatch", "", true], ["B", "Not now"]],
+          "options": [
+            [
+              "A",
+              "Publisher's first dispatch",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Not now"
+            ]
+          ],
           "source": "Team feedback, 2026-10-08"
         },
         {
@@ -150,7 +490,22 @@
           "short": "Editorial builder wish list",
           "quick": true,
           "context": "<p><strong>The feedback (Aug 28).</strong> A native Instagram caption generator; instructions so the AI fills each slide with the right photos and captions; a toggle for end-slide layouts.</p><p><strong>Note.</strong> The retiring Editorial session found the builder works in a sandbox; Publisher's first job there is one live run ({repo}/docs/parked/sessions/editorial-builder.md).</p>",
-          "options": [["A", "Queue it for Publisher, after the live run", "", true], ["B", "In Publisher's first dispatch"], ["C", "Won't do"]],
+          "options": [
+            [
+              "A",
+              "Queue it for Publisher, after the live run",
+              "",
+              true
+            ],
+            [
+              "B",
+              "In Publisher's first dispatch"
+            ],
+            [
+              "C",
+              "Won't do"
+            ]
+          ],
           "source": "Team feedback, 2026-08-28"
         },
         {
@@ -159,13 +514,24 @@
           "short": "Business card headshot question",
           "quick": true,
           "context": "<p><strong>The feedback (June, no name).</strong> An agent expected a headshot on the business card. The card has no headshot, by design.</p>",
-          "options": [["A", "Won't fix: the card has no headshot", "", true], ["B", "Add a headshot to the card"]],
+          "options": [
+            [
+              "A",
+              "Won't fix: the card has no headshot",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Add a headshot to the card"
+            ]
+          ],
           "source": "Team feedback, 2026-06-23"
         }
       ]
     },
     {
-      "num": "04",
+      "num": "05",
       "title": "Moving to Casa accounts",
       "prefix": "AC",
       "url": "{repo}/docs/casa-accounts-transfer.md",
@@ -178,7 +544,18 @@
           "short": "API keys to Casa before the pilot?",
           "quick": true,
           "context": "<p><strong>What this is about.</strong> Anthropic, the AI Gateway (Jev) and Firecrawl process comp report data. Moving them is independent of GitHub and Claude: new key, set it in Netlify, redeploy, revoke the old one.</p><p><strong>Why it needs you.</strong> It means Casa accounts and a Casa card for three services before the rest of the move.</p>",
-          "options": [["A", "Yes, before the pilot widens", "and every new key is made on a Casa account from now", true], ["B", "With everything else, after the comp report"]],
+          "options": [
+            [
+              "A",
+              "Yes, before the pilot widens",
+              "and every new key is made on a Casa account from now",
+              true
+            ],
+            [
+              "B",
+              "With everything else, after the comp report"
+            ]
+          ],
           "source": "D-26 · {repo}/docs/casa-accounts-transfer.md"
         },
         {
@@ -198,7 +575,21 @@
           "quick": true,
           "needsYou": true,
           "context": "<p><strong>The proposal.</strong> Status and planning readable from your personal Claude, through the repo; client data, agents' details and comp reports stay in Casa's account. After the move, Casa data is cleaned out of the personal account.</p>",
-          "options": [["A", "Yes, that line"], ["B", "Stricter", "say how in the note"], ["C", "Ask Erez first"]],
+          "options": [
+            [
+              "A",
+              "Yes, that line"
+            ],
+            [
+              "B",
+              "Stricter",
+              "say how in the note"
+            ],
+            [
+              "C",
+              "Ask Erez first"
+            ]
+          ],
           "source": "D-26"
         },
         {
@@ -208,7 +599,16 @@
           "quick": true,
           "needsYou": true,
           "context": "<p><strong>What this is about.</strong> It was built to be private to you. In a Casa-owned account, assume Casa's admins can see it.</p>",
-          "options": [["A", "Move it, and keep it work-only"], ["B", "Keep it personal, with no client or agent data in it"]],
+          "options": [
+            [
+              "A",
+              "Move it, and keep it work-only"
+            ],
+            [
+              "B",
+              "Keep it personal, with no client or agent data in it"
+            ]
+          ],
           "source": "D-26"
         },
         {
@@ -238,13 +638,22 @@
           "quick": true,
           "needsYou": true,
           "context": "<p><strong>What this is about.</strong> Its address changes with the repo and doesn't redirect. <code>agents/SCHEMA.md</code> and the functions' CORS note name <code>kjcamron.github.io</code>.</p>",
-          "options": [["A", "No: turn it off before the move"], ["B", "Yes: keep it, and update its address"]],
+          "options": [
+            [
+              "A",
+              "No: turn it off before the move"
+            ],
+            [
+              "B",
+              "Yes: keep it, and update its address"
+            ]
+          ],
           "source": "D-26"
         }
       ]
     },
     {
-      "num": "05",
+      "num": "06",
       "title": "Your to-dos",
       "prefix": "TD",
       "url": "{repo}/docs/decisions.md",
@@ -252,13 +661,33 @@
       "intro": "<p>Settings and errands only you can do. Mark one <strong>Done</strong> when it's done; anything left here is still to do. Never paste a key into a chat.</p>",
       "questions": [
         {
+          "id": "TD-11",
+          "q": "Noble's way in for tomorrow",
+          "short": "Noble's sign-in",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>If his Google account is on Casa's domain he signs in as an agent already. To show it as a mentor, add him on the comp report's <strong>Access</strong> panel (Reports page, admin only) with the role <code>mentor</code>. Have him, or you, try one sign-in before the walk-through.</p>",
+          "options": [
+            [
+              "A",
+              "Done, he can sign in"
+            ]
+          ],
+          "source": "D-27 · Dispatch 14"
+        },
+        {
           "id": "TD-1",
           "q": "The Jev keys: AI Gateway key on a Casa Vercel account, CR_JEV_ZDR=off and CR_DECIDE_KEY",
           "short": "The Jev keys",
           "quick": true,
           "needsYou": true,
           "context": "<ol><li>Make the AI Gateway key on <strong>a Casa-owned Vercel account</strong>, not MindBinder's.</li><li>In Netlify (Functions scope): <code>AI_GATEWAY_API_KEY</code>, <code>CR_JEV_ZDR=off</code>, and <code>CR_DECIDE_KEY</code> (any random 32+ characters).</li><li>Put the same <code>CR_DECIDE_KEY</code> in the Claude Code cloud environment.</li><li>Redeploy. Leave <code>CR_JEV_MODE</code> alone until Arbiter's go/no-go call passes.</li></ol>",
-          "options": [["A", "Done"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
           "source": "#75"
         },
         {
@@ -268,7 +697,12 @@
           "quick": true,
           "needsYou": true,
           "context": "<p>Make it with <code>openssl rand -hex 32</code> (not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it isn't configured.</p>",
-          "options": [["A", "Done"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
           "source": "#71"
         },
         {
@@ -278,7 +712,12 @@
           "quick": true,
           "needsYou": true,
           "context": "<p>From a Casa Anthropic account if you can (AC-1). In the session's title bar: the cloud environment menu, then <strong>Edit</strong>; add it under its own name so sessions never take it up. Mason then runs the eval and posts real drafts (well under a dollar).</p>",
-          "options": [["A", "Done"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
           "source": "#76"
         },
         {
@@ -288,7 +727,16 @@
           "quick": false,
           "needsYou": true,
           "context": "<p>About 20 minutes, and Hannah could do it. The sheet is {repo}/docs/comp-report/jev-labels.csv; how to fill it in is {repo}/docs/comp-report/jev-calibration.md. Don't look at any Jev output first. If a link won't open, say so in its <code>note</code>.</p>",
-          "options": [["A", "Done"], ["B", "Hannah's doing it"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ],
+            [
+              "B",
+              "Hannah's doing it"
+            ]
+          ],
           "source": "#75"
         },
         {
@@ -298,7 +746,12 @@
           "quick": false,
           "needsYou": true,
           "context": "<p>Make a new comp from 100 Barclay #17L's link, add five comps by link and confirm them, tier and note them on Sort, give your number on Findings, then pick a headline and copy the email on Send. Leave notes with Ctrl+. as you go. Now the writer is in (#76), try <strong>Write it</strong> on Send too.</p>",
-          "options": [["A", "Done"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
           "source": "#57 · #76"
         },
         {
@@ -308,7 +761,17 @@
           "quick": true,
           "needsYou": true,
           "context": "<p>Logs → Functions → <code>identity-signup</code> (or <code>identity-validate</code>): find one line with <code>\"allowed\":false</code> from your Gmail test. No session can read those logs.</p>",
-          "options": [["A", "Done, the refusal is there"], ["B", "Couldn't find it", "say what you saw"]],
+          "options": [
+            [
+              "A",
+              "Done, the refusal is there"
+            ],
+            [
+              "B",
+              "Couldn't find it",
+              "say what you saw"
+            ]
+          ],
           "source": "Dispatch 05 · {repo}/docs/decisions.md"
         },
         {
@@ -318,7 +781,12 @@
           "quick": true,
           "needsYou": true,
           "context": "<p>Painter flagged it to you directly. Remove it from the doc and rotate it before anyone parses that doc for the roster import (PP-1).</p>",
-          "options": [["A", "Done"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
           "source": "#71"
         },
         {
@@ -328,7 +796,12 @@
           "quick": true,
           "needsYou": true,
           "context": "<p>D-16 said delete it. Sessions can't delete branches (the proxy refuses), so it's yours on GitHub.</p>",
-          "options": [["A", "Done"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
           "source": "D-16"
         },
         {
@@ -338,7 +811,12 @@
           "quick": false,
           "needsYou": true,
           "context": "<p>Three things for one meeting: the glossary draft's 8 open questions ({repo}/docs/comp-report/research/glossary-draft.md, updated in #70); the thresholds in CR-5; and the \"differences between comps\" approach (design §6.6), which builds on his point that prices already carry their features.</p>",
-          "options": [["A", "Done"]],
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
           "source": "#70 · {repo}/docs/decisions.md"
         },
         {
@@ -347,13 +825,24 @@
           "short": "Brand the Google sign-in",
           "quick": true,
           "context": "<p>Google's screen says \"Netlify Identity\" because sign-in uses Netlify's default client. To make it say Casa Blanca, paste a Google Cloud client's ID and secret into Netlify → Identity → Registration → External providers → Google. Best done on Casa's Google account, with the move (D-26).</p>",
-          "options": [["A", "Skip it for now", "", true], ["B", "Done"]],
+          "options": [
+            [
+              "A",
+              "Skip it for now",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Done"
+            ]
+          ],
           "source": "{repo}/docs/decisions.md"
         }
       ]
     },
     {
-      "num": "06",
+      "num": "07",
       "title": "What comes back next",
       "prefix": "QW",
       "url": "{repo}/docs/dispatch/README.md",
@@ -366,7 +855,30 @@
           "short": "Which parked track first?",
           "quick": true,
           "context": "<p><strong>What this is about.</strong> Concierge and Publisher are named and held on the ledger. Publisher has live team feedback waiting (FB-3, FB-4) and the builders are used weekly; the agent sites wait on your Wix capture for Slices 2–3.</p>",
-          "options": [["A", "Publisher (the post builders)", "", true], ["B", "Concierge (agent sites and the CMS)"], ["C", "Painter's Stories motion graphics"], ["D", "Merge the QR generator"], ["E", "None until the comp report settles"]],
+          "options": [
+            [
+              "A",
+              "Publisher (the post builders)",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Concierge (agent sites and the CMS)"
+            ],
+            [
+              "C",
+              "Painter's Stories motion graphics"
+            ],
+            [
+              "D",
+              "Merge the QR generator"
+            ],
+            [
+              "E",
+              "None until the comp report settles"
+            ]
+          ],
           "source": "{repo}/docs/dispatch/README.md"
         }
       ]
@@ -374,39 +886,87 @@
   ],
   "reading": [
     {
+      "id": "RL-7",
+      "date": "2026-10-14",
+      "qids": [
+        "DP-1",
+        "DP-2",
+        "DP-3",
+        "DP-4",
+        "DP-5",
+        "DP-6",
+        "DP-7",
+        "DP-8",
+        "TD-11"
+      ],
+      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/dispatch/14-comp-report-design-port.md\" target=\"_blank\" rel=\"noopener\">Dispatch 14, the design port</a>: what Mason builds for Noble, and what waits."
+    },
+    {
       "id": "RL-6",
       "date": "2026-10-14",
-      "qids": ["CR-3", "CR-1", "CR-2", "TD-3", "TD-5"],
+      "qids": [
+        "CR-3",
+        "CR-1",
+        "CR-2",
+        "TD-3",
+        "TD-5"
+      ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/76\" target=\"_blank\" rel=\"noopener\">The writer and QA (#76)</a>: Claude drafts the comp email in Casa's voice; the house voice is quoted at the end."
     },
     {
       "id": "RL-5",
       "date": "2026-10-14",
-      "qids": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7"],
+      "qids": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7"
+      ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/casa-accounts-transfer.md\" target=\"_blank\" rel=\"noopener\">Moving to Casa accounts</a>: the plan, with the claude.ai side from the Casa Blanca Project."
     },
     {
       "id": "RL-4",
       "date": "2026-10-14",
-      "qids": ["TD-1", "TD-4", "CR-4"],
+      "qids": [
+        "TD-1",
+        "TD-4",
+        "CR-4"
+      ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/comp-report/jev-calibration.md\" target=\"_blank\" rel=\"noopener\">Jev's calibration</a>: how to label the 30 listings, and what the go/no-go call checks (#75)."
     },
     {
       "id": "RL-3",
       "date": "2026-10-14",
-      "qids": ["PP-1", "PP-2", "TD-2", "TD-7"],
+      "qids": [
+        "PP-1",
+        "PP-2",
+        "TD-2",
+        "TD-7"
+      ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/71\" target=\"_blank\" rel=\"noopener\">The profile-pic roster (#71)</a>: every agent's photo status, and what the import needs."
     },
     {
       "id": "RL-2",
       "date": "2026-10-14",
-      "qids": ["FB-1", "FB-2", "FB-3", "FB-4", "FB-5", "FB-6"],
+      "qids": [
+        "FB-1",
+        "FB-2",
+        "FB-3",
+        "FB-4",
+        "FB-5",
+        "FB-6"
+      ],
       "html": "<a href=\"https://casa-blanca-creative-studio.netlify.app/tools/dev-notebook/\" target=\"_blank\" rel=\"noopener\">The team Feedback list</a>, on the notebook page: <strong>Make a note</strong> on anything worth acting on."
     },
     {
       "id": "RL-1",
       "date": "2026-10-06",
-      "qids": ["CR-4"],
+      "qids": [
+        "CR-4"
+      ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/56\" target=\"_blank\" rel=\"noopener\">Jev's seven questions (#56)</a>: the wording is at the end of the description."
     }
   ]

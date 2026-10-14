@@ -23,6 +23,7 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 | D-24 | Where agents' contact details come from | Soon — Dispatch 12, phase 1 | Quick | the roster's one-time import |
 | D-25 | The fair-housing list, and "appraisal contingency" | Soon — before agents copy writer drafts | Think (Hannah) | QA's compliance list (Dispatch 13) |
 | D-26 | Moving Casa's work onto Casa-owned accounts | Later — after the comp report settles; keys sooner | Think (with Erez) | `docs/casa-accounts-transfer.md` |
+| D-27 | The design port: what the handoff changes | Now — Mason builds on the defaults (Dispatch 14) | Quick (object only) | Noble's walk-through |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
 each was applied.
@@ -92,6 +93,9 @@ each was applied.
   - **The QR generator:** merge it when there's a gap (D-16).
   - **Your caption tracker** (a Claude artifact, linked from the carousel builders): it may become part
     of the studio later.
+- [ ] **Now — Noble's way in for tomorrow.** If his Google account is on Casa's domain he signs in as an
+  agent already; to see it as a mentor, add him on the comp report's **Access** panel (Reports page, admin)
+  with the role `mentor`. Have him (or you) try one sign-in before the walk-through.
 - [ ] **Soon — `CB_PICS_TOKEN` for the profile-pic roster** (#71 is merged). Make it with `openssl rand -hex 32`
   (not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it
   isn't configured.
@@ -155,6 +159,33 @@ Human Rights Law: `tools-src/comp-report/workspace/fair-housing.ts` (version `fh
    or allow the phrase as a deal term?
 
 **Answer →** _type here — who reviews the list; keep or allow "appraisal contingency"_
+
+---
+
+### D-27 · The design port: what the handoff changes
+`Now — Dispatch 14 builds on these; object on the answer sheet (DP-…) before it merges` · `Quick`
+
+Your design handoff (`docs/comp-report/design-port/`, 2026-10-14) is newer than the design of record, so
+**where they differ, the handoff wins** (Casanova's reading: it's your own later design). What that
+changes, as Dispatch 14 builds it:
+
+1. **The Gate** replaces D-1's skippable call: `practice` agents can't skip and write a why of 100+
+   characters; `full` agents can skip.
+2. **Tier labels 1st / 2nd / ✕** replace D-20's Primary / Secondary / Excluded, held until Noble's testing.
+3. **Findings locks until every comp has a tier, a note and a tag** (02-screens had nothing required on
+   Sort). Tags are new: the prototype's list, at least one per comp.
+4. **Co-op is in, and the default** (01-design had co-ops "next"), with no-SF hiding everywhere.
+5. **The target price moves to the first modal**; D-4's rule is unchanged (Hubert sees it only after the
+   neutral result; never in the email).
+6. **The assistant is Hubert**, guide only.
+7. **A fourth email format, Designed;** **one ★ anchor per report;** **shared-feature pickers** on the
+   home and every comp; **a Done screen** with typed-in outcomes (D-19's fallback; automatic later).
+
+**Kept from the design of record:** Buyer stays the default side (the screenshots show Seller); D-21 (Copy
+waits for a headline); D-4; no invented listings from Hubert; "True estimate" on Findings only, never in
+the email.
+
+**Answer →** _type here — or answer DP-1 to DP-8 on the answer sheet_
 
 ---
 
