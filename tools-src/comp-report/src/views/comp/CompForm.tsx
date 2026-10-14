@@ -107,8 +107,10 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
     setError(null);
     const extra = { note: d.note.trim(), tags: d.tags, features: d.features };
     if (factsFixed) {
-      await ws.editComp(comp!.judgment!.reportCompId, extra);
-      onDone();
+      await ws.run('Saving the comp…', async () => {
+        await ws.editComp(comp!.judgment!.reportCompId, extra);
+        onDone();
+      });
       return;
     }
     const price = readPrice(d.price);
