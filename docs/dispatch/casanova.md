@@ -74,6 +74,12 @@ environment. Keep it current: it's how the next one starts.
 9. **Comment on each PR:** merged and where, the suites, the production checks, answers to its
    questions, any fix you made at merge, and its author's next step.
 10. **Update the roster, the index, `CLAUDE.md`'s table and the ledger lines** (below).
+11. **Put every follow-up on the ledger.** When a merge comment leaves work a track still owes (a next
+    phase, a run waiting on a key, a fix for later), add a line for it in this round's follow-up round:
+    code `FU·<pr>`, `"kind": "follow-up"`, a short `body` Kimani can paste to the track (naming the line's
+    id), **queued** if it can go now, **held** with a `note` naming what it waits on (an answer-sheet id
+    where there is one). Mark it landed when its work merges. Kimani reads the Casa tab to see which
+    tracks still have work.
 
 ## The Dispatch Ledger
 
@@ -92,6 +98,8 @@ overseer (Big Kahuna). Casa's lines are on the Casa Blanca tab.
 - **Sessions mark their own line delivered** when their PR opens (rule 11). Mark it landed when you
   merge: `status: "landed"`, `landedIn`, `landedAt`, `updatedBy: "Casanova"`.
 - **Never touch a line without `project: "casa"`.** Those are MindBinder's.
+- **Don't change the ledger's page.** It's shared with MindBinder; everything Casa needs fits its fields
+  (follow-ups are ordinary lines with code `FU·<pr>`).
 
 ## Gotchas
 

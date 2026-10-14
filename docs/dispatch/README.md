@@ -32,7 +32,8 @@ this folder is authoritative; Kimani pastes a short kickoff into the new session
        `{"status": "delivered", "pr": <n>, "updatedBy": "<your name>"}`.
 
     If your session has no `ArtifactData` tool, say so in the PR and Casanova marks it. Casanova marks
-    lines landed when it merges.
+    lines landed when it merges. **Follow-up lines** (code `FU·<pr>`: work a merge comment left you) work
+    the same way: the message Kimani passes you names the line's id.
 
 ## Restarting a track in a new session
 
