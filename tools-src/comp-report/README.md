@@ -146,7 +146,7 @@ them, so the server looks each building up (Dispatch 11).
 - **The fact**: `coordinates`, `Sourced<{lat, lng}>`, source `geocoder`, `approx` (the building's
   point, not the unit's), its note naming GeoSearch and the matched address
   (`workspace/engine-input.ts`).
-- **On Sort**: the row shows the distance ("0.3 mi"), from the engine's own `distanceMiles`, so the
+- **On Sort**: the row shows the distance ("0.3 mi"), from the engine's own `distance_miles`, so the
   row and the flag agree. A comp in the home's building has its "Same building" flag, never "0.0
   mi". A building that couldn't be mapped is "— mi", with why on hover. The opened row says where
   the distance came from, or why there's none (`workspace/distance.ts`).

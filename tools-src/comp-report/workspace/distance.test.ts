@@ -50,11 +50,13 @@ test('the engine flags a comp past a quarter mile (noted) and past half a mile (
 test('every row has its distance, and a comp in the home’s building reads “Same building”', () => {
   const out = run(everywhere);
   const lookups: Lookup[] = [];
-  const of = (street: string) => compDistance(out.subject.identity, comps.find((c) => c.record.identity.address.street === street)!.record.identity, everywhere, lookups);
+  const of = (street: string) => compDistance(out.subject.identity, comps.find((c) => c.record.identity.address.street === street)!.record.identity, compOut(out, street).distance_miles, everywhere, lookups);
   const chambers = of('200 Chambers Street');
   assert.deepEqual([chambers.kind, (chambers as { label: string }).label], ['miles', '0.2 mi']);
   assert.deepEqual([(chambers as { home: string }).home, (chambers as { comp: string }).comp], ['100 Barclay Street, Manhattan', '200 Chambers Street, Manhattan'], 'what each was mapped as');
   assert.ok(Math.abs((chambers as { miles: number }).miles - 0.19) < 0.01, 'the engine’s own arithmetic: 0.19 mi');
+  assert.equal((chambers as { miles: number }).miles, compOut(out, '200 Chambers Street').distance_miles, 'the engine’s number, as it is');
+  assert.equal((of('5 Franklin Place') as { miles: number }).miles, distanceCheck(compOut(out, '5 Franklin Place'))!.measured!.value, 'the number its flag measures');
   assert.equal((of('77 Reade Street') as { label: string }).label, '0.3 mi');
   assert.equal((of('111 Murray Street') as { label: string }).label, '0.1 mi');
   assert.deepEqual(of('100 Barclay Street'), { kind: 'same_building' }, 'not “0.0 mi”');
@@ -65,18 +67,21 @@ test('without a location, the row says why: not looked up, refused, or failed an
   const subject = run(everywhere).subject.identity;
   // 100 Barclay #11F is a comp in the home's building: leave that building out too.
   const onlyComps = locate(comps.map((c) => c.record.identity.address.street!).filter((s) => s !== home.street));
-  assert.deepEqual(compDistance(subject, comp, onlyComps, []), { kind: 'unknown', why: 'The home hasn’t been looked up yet.', waiting: true });
+  assert.equal(compOut(run(onlyComps), '77 Reade Street').distance_miles, null, 'the engine has no miles without the home’s location');
+  assert.deepEqual(compDistance(subject, comp, null, onlyComps, []), { kind: 'unknown', why: 'The home hasn’t been looked up yet.', waiting: true });
   const refused: Lookup = { buildingKey: home.building_key, status: 'refused', reason: 'the geocoder found 100 Barclay Street, Brooklyn, not in Manhattan', retry: false };
-  assert.deepEqual(compDistance(subject, comp, onlyComps, [refused]), {
+  assert.deepEqual(compDistance(subject, comp, null, onlyComps, [refused]), {
     kind: 'unknown', why: 'The home isn’t mapped: the geocoder found 100 Barclay Street, Brooklyn, not in Manhattan.', waiting: false,
   });
   const underWay: Lookup = { buildingKey: home.building_key, status: 'pending', reason: null, retry: false };
-  assert.deepEqual(compDistance(subject, comp, onlyComps, [underWay]), { kind: 'unknown', why: 'The home is being looked up.', waiting: true });
+  assert.deepEqual(compDistance(subject, comp, null, onlyComps, [underWay]), { kind: 'unknown', why: 'The home is being looked up.', waiting: true });
   const onlyHome = locate([home.street]);
   const failed: Lookup = { buildingKey: comp.building_key!, status: 'failed', reason: 'the geocoder didn’t answer within 4 seconds', retry: true };
-  assert.deepEqual(compDistance(subject, comp, onlyHome, [failed]), {
+  assert.deepEqual(compDistance(subject, comp, null, onlyHome, [failed]), {
     kind: 'unknown', why: 'This building isn’t mapped yet: the geocoder didn’t answer within 4 seconds. It’s tried again when the report next opens.', waiting: false,
   });
   // And the engine says so in its own check.
   assert.equal(distanceCheck(compOut(run(onlyHome), '77 Reade Street'))?.status, 'unknown');
+  // Both mapped, but no engine output for the comp yet: the row waits rather than guesses.
+  assert.deepEqual(compDistance(subject, comp, null, everywhere, []), { kind: 'unknown', why: 'The distance isn’t worked out yet.', waiting: true });
 });

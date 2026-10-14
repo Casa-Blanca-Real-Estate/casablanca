@@ -62,6 +62,7 @@ test("Hannah's comps: first floors, the one same-building comp, a size far off, 
     const d = check(c, 'distance')!;
     assert.deepEqual([d.status, d.suggested_tier], ['unknown', null], c.id);
     assert.match(d.message, /^Distance can't be checked yet: it needs coordinates for the home and the comp/);
+    assert.equal(c.distance_miles, null, c.id);
   }
 });
 
@@ -187,6 +188,14 @@ test('distance, once there are coordinates: past a quarter mile noted, past half
   const far = check(comp(out, '#3'), 'distance')!;
   assert.deepEqual([far.message, far.suggested_tier, far.threshold!.basis], ['Over 0.5 miles away (0.62): far for Manhattan', 'secondary', "Kara's rule, pending Noble"]);
   assert.ok(Math.abs(far.measured!.value - 0.009 * 69.0941) < 0.0001);
+  // Every comp carries its miles, flagged or not: the very number the flag measures, unrounded.
+  assert.ok(Math.abs(comp(out, '#1').distance_miles! - 0.002 * 69.0941) < 0.0001);
+  assert.equal(comp(out, '#2').distance_miles, noted.measured!.value);
+  assert.equal(comp(out, '#3').distance_miles, far.measured!.value);
+  // Coordinates on one side only: no miles, and the check says which side lacks them.
+  const one = compute(input({ comps: [at('#4', home.lat + 0.004)] }));
+  assert.equal(comp(one, '#4').distance_miles, null);
+  assert.match(check(comp(one, '#4'), 'distance')!.message, /it needs coordinates for the home,/);
 });
 
 test('a floor from the unit label: only where it reads cleanly, inferred, pending — and a "1A" raises the first-floor check', () => {
