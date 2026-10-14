@@ -277,3 +277,43 @@ test('rejects a canonicalUrl override that is not an https URL', () => {
   assert.equal(r.ok, false);
   assert.match(r.stderr, /seo\.canonicalUrl/);
 });
+
+/* ─── The profile-pic roster never reaches a site (Dispatch 12) ─── */
+// The roster keeps `pic` and `placements` in the agent store, beside the CMS's
+// draft and live. The store's half — Publish never copies them into live — is
+// tools-src/agent-pics/boundary.test.ts. This is the build's half.
+
+rejects("the roster's pic group in site data", { pic: { notes: 'reshoot Friday' } }, /pic: belongs to the profile-pic roster/);
+rejects("the roster's placements in site data", { placements: { streeteasy: { state: 'done' } } }, /placements: belongs to the profile-pic roster/);
+rejects("the roster's raws in site data", { raws: [] }, /raws: belongs to the profile-pic roster/);
+
+test('photo-side fields tucked inside a group are never rendered anywhere the build writes', () => {
+  const MARK = 'PICSIDE-7f3a';
+  const r = build({
+    'test-agent': merge(BASE_AGENT, {
+      identity: { pic: { notes: MARK } },
+      profile: { placements: { streeteasy: { state: 'done', note: MARK } } },
+      assets: { pic: { sigPhotoKey: MARK } },
+      delivery: { placements: MARK },
+    }),
+  });
+  assert.ok(r.ok, r.stderr);
+  const written = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) { if (e.name !== 'data') walk(p); } else written.push(p);
+    }
+  };
+  walk(r.dir);
+  written.push(path.join(r.root, '_redirects'));
+  assert.ok(written.some((f) => f.endsWith(path.join('test-agent', 'index.html'))), 'the page was built');
+  for (const f of written) assert.ok(!fs.readFileSync(f, 'utf8').includes(MARK), `${path.relative(r.root, f)} carries a photo field`);
+});
+
+test('the build reads agents/data only: it has no path to the agent store', () => {
+  // If the build ever reads the cb-agents store (docs/agent-cms/storage-decision.md §4),
+  // replace this with a test that it renders `live` and nothing else.
+  const src = fs.readFileSync(path.join(HERE, 'build.js'), 'utf8');
+  assert.doesNotMatch(src, /@netlify\/blobs|cb-agents|agent-store|agent-pics/);
+});

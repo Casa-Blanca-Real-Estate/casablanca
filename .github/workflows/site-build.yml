@@ -19,12 +19,14 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: typecheck the comp report, the dev notebook and the Feedback function
+      - name: typecheck the comp report, the dev notebook, the Feedback function and the profile-pic roster
         run: npm run typecheck
       - name: the dev notebook's tests (its API on Blobs' local server, the CLI, the rules)
         run: npm run test:dev-notebook
       - name: the team Feedback function's tests (posting open, no public read, no lost submissions)
         run: npm run test:feedback
+      - name: the profile-pic roster's tests (its token gate, and the photo side never reaching live)
+        run: npm run test:agent-pics
       - name: the Netlify build
         run: npm run build
       - name: the build wrote nothing outside its gitignored output

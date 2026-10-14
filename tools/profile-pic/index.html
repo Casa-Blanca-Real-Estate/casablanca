@@ -608,6 +608,98 @@ input[type="range"]{
 /* ── Clickable output card ── */
 .out-preview { cursor: zoom-in; }
 
+/* ══ Roster (Dispatch 12): a second view beside the generator ══ */
+.view-tabs{ display: flex; gap: 4px; }
+.view-tab{
+  padding: 8px 16px;
+  font-family: 'ObjectSans', sans-serif;
+  font-size: var(--text-label); font-weight: 800;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  background: transparent; color: var(--cb-mid);
+  border: 1.5px solid var(--cb-border); border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.15s;
+}
+.view-tab:hover{ border-color: var(--cb-lavender); color: var(--cb-black); }
+.view-tab[aria-selected="true"]{ background: var(--cb-black); color: #fff; border-color: var(--cb-black); }
+main.roster-mode > :not(.view-tabs):not(#rosterView):not(#lightbox){ display: none !important; }
+#rosterView{ display: flex; flex-direction: column; gap: var(--gap-stack); }
+#rosterView[hidden], .ro-body[hidden]{ display: none; }
+.ro-body{ display: flex; flex-direction: column; gap: var(--gap-stack); }
+.ro-card{ background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: var(--radius); padding: 18px; }
+.ro-note{ font-size: var(--text-small); color: var(--cb-mid); line-height: 1.6; }
+.ro-note a{ color: var(--cb-black); text-decoration: none; border-bottom: 1px solid var(--cb-lavender); }
+.ro-row{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ro-input{
+  font-family: 'ObjectSans', sans-serif; font-size: var(--text-body);
+  padding: 10px 12px; border: 1px solid var(--cb-border); border-radius: var(--radius-sm);
+  background: var(--cb-surface); color: var(--cb-black); min-width: 0;
+}
+.ro-input:focus{ outline: none; border-color: var(--cb-lavender); }
+.ro-btn{
+  padding: 10px 16px; font-family: 'ObjectSans', sans-serif;
+  font-size: var(--text-btn); font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase;
+  background: var(--cb-black); color: #fff; border: 1.5px solid var(--cb-black);
+  border-radius: var(--radius-sm); cursor: pointer;
+}
+.ro-btn.ghost{ background: transparent; color: var(--cb-black); border-color: var(--cb-border); }
+.ro-btn.ghost:hover{ border-color: var(--cb-lavender); }
+.ro-btn:disabled{ opacity: 0.35; cursor: not-allowed; }
+.ro-counts{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ro-count{
+  text-align: left; background: var(--cb-surface); border: 1.5px solid var(--cb-border);
+  border-radius: var(--radius); padding: 12px 14px; cursor: pointer; font-family: inherit; color: var(--cb-black);
+}
+.ro-count:hover{ border-color: var(--cb-lavender); }
+.ro-count[aria-pressed="true"]{ border-color: var(--cb-black); }
+.ro-count b{ display: block; font-size: 28px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.ro-count span{ display: block; margin-top: 6px; font-size: 9px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: var(--cb-mid); }
+.ro-table{ width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: var(--radius); overflow: hidden; }
+.ro-table th:nth-child(1){ width: 30%; } .ro-table th:nth-child(2){ width: 20%; } .ro-table th:nth-child(3){ width: 16%; }
+.ro-table th:nth-child(4){ width: 21%; } .ro-table th:nth-child(5){ width: 13%; }
+.ro-table td:nth-child(4){ white-space: nowrap; }
+.ro-table th{ text-align: left; padding: 0; border-bottom: 1px solid var(--cb-border); }
+.ro-table th button{
+  width: 100%; text-align: left; background: none; border: none; cursor: pointer; padding: 10px 12px;
+  font-family: inherit; font-size: 9px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: var(--cb-mid);
+}
+.ro-table th[aria-sort] button{ color: var(--cb-black); }
+.ro-table td{ padding: 10px 12px; border-bottom: 1px solid var(--cb-border); font-size: var(--text-body); vertical-align: middle; }
+.ro-table tbody tr.ro-agent{ cursor: pointer; }
+.ro-table tbody tr.ro-agent:hover td{ background: #faf9fd; }
+.ro-table tbody tr.ro-agent[aria-expanded="true"] td{ background: var(--cb-bg); }
+.ro-table tr:last-child td{ border-bottom: none; }
+.ro-name{ font-weight: 800; }
+.ro-sub{ display: block; font-size: var(--text-small); color: var(--cb-mid); margin-top: 2px; }
+.ro-sub.ro-inline{ display: inline; margin: 0; }
+.ro-pill{
+  display: inline-block; padding: 4px 8px; border-radius: var(--radius-sm); white-space: nowrap;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase;
+  border: 1px solid var(--cb-border); color: var(--cb-mid);
+}
+.ro-pill.raw{ background: var(--cb-sand); border-color: var(--cb-sand); color: var(--cb-black); }
+.ro-pill.generated{ background: var(--cb-lavender); border-color: var(--cb-lavender); color: var(--cb-black); }
+.ro-pill.deployed{ background: var(--cb-black); border-color: var(--cb-black); color: #fff; }
+.ro-pill.left{ margin-left: 6px; }
+.ro-dots{ display: inline-flex; gap: 3px; vertical-align: middle; margin-right: 6px; }
+.ro-dots i{ width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--cb-mid); }
+.ro-dots i.done{ background: var(--cb-black); border-color: var(--cb-black); }
+.ro-dots i.na{ background: var(--cb-border); border-color: var(--cb-border); }
+.ro-dots i.stale{ border-color: var(--cb-lavender); background: var(--cb-lavender); }
+.ro-detail td{ background: var(--cb-bg); padding: 4px 12px 16px; }
+.ro-detail-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+.ro-detail-grid .full{ grid-column: 1 / -1; }
+.ro-detail textarea.ro-input{ width: 100%; min-height: 64px; resize: vertical; }
+.ro-check{ display: flex; gap: 8px; align-items: center; font-size: var(--text-body); cursor: pointer; }
+.ro-check input{ width: 16px; height: 16px; accent-color: var(--cb-black); }
+.ro-places{ display: flex; flex-wrap: wrap; gap: 6px; }
+.ro-empty{ text-align: center; color: var(--cb-mid); padding: 28px 12px !important; }
+@media (max-width: 560px){
+  .ro-counts{ grid-template-columns: repeat(2, 1fr); }
+  .ro-table .ro-wide{ display: none; }
+  .ro-table .ro-of{ display: none; }
+  .ro-table th:nth-child(1){ width: 46%; } .ro-table th:nth-child(2){ width: 32%; } .ro-table th:nth-child(4){ width: 22%; }
+  .ro-detail-grid{ grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -619,6 +711,12 @@ input[type="range"]{
 </header>
 
 <main>
+
+  <!-- Views (Dispatch 12): the generator, and the roster of who needs a photo -->
+  <div class="view-tabs" role="tablist" aria-label="Profile pics">
+    <button class="view-tab" type="button" role="tab" id="tabGenerator" aria-selected="true">Generator</button>
+    <button class="view-tab" type="button" role="tab" id="tabRoster" aria-selected="false" aria-controls="rosterView">Roster</button>
+  </div>
 
   <!-- Hero -->
   <h1 class="hero-headline">Drop a photo.<br>Get ten versions.</h1>
@@ -765,6 +863,39 @@ input[type="range"]{
 
   <div style="height:1px;background:var(--cb-border);"></div>
   <p class="footer-note">Files never leave your device. Nothing is uploaded.</p>
+
+
+  <!-- Roster (Dispatch 12): who needs a photo, and whose photo hasn't been deployed.
+       Reads and writes netlify/functions/agent-pics.mts with CB_PICS_TOKEN. -->
+  <section id="rosterView" role="tabpanel" aria-labelledby="tabRoster" hidden>
+    <div class="ro-card" id="roConnect" hidden>
+      <span class="section-label">Roster token</span>
+      <p class="ro-note" id="roConnectMsg"></p>
+      <form class="ro-row" id="roConnectForm" style="margin-top:12px;">
+        <input class="ro-input" id="roToken" type="password" autocomplete="off" spellcheck="false" placeholder="CB_PICS_TOKEN" aria-label="Roster token" style="flex:1;">
+        <button class="ro-btn" type="submit">Connect</button>
+      </form>
+    </div>
+    <div class="ro-body" id="roBody" hidden>
+      <div class="ro-counts" id="roCounts"></div>
+      <div class="ro-row">
+        <input class="ro-input" id="roSearch" type="search" placeholder="Find an agent" aria-label="Find an agent" style="flex:1;">
+        <button class="ro-btn ghost" id="roRefresh" type="button">Refresh</button>
+      </div>
+      <table class="ro-table">
+        <thead><tr>
+          <th data-sort="name"><button type="button">Agent</button></th>
+          <th data-sort="status"><button type="button">Status</button></th>
+          <th data-sort="generated" class="ro-wide"><button type="button">Generated</button></th>
+          <th data-sort="placed"><button type="button">Placed</button></th>
+          <th data-sort="updated" class="ro-wide"><button type="button">Updated</button></th>
+        </tr></thead>
+        <tbody id="roRows"></tbody>
+      </table>
+      <p class="ro-note">The status is worked out, never typed: <b>none</b>, then <b>raw</b> once an original exists, <b>generated</b>, and <b>deployed</b> when all five placements are done or don't apply. A placement done before the latest photo was generated counts as not done. Add agents in the <a href="../agent-cms/">Agent CMS</a>. The one-time import of the whole roster waits on your answer to D-24.</p>
+    </div>
+    <p class="ro-note" id="roStatus" role="status" aria-live="polite"></p>
+  </section>
 
 
 <!-- Lightbox -->
@@ -1759,6 +1890,247 @@ async function downloadAllZip(zipName, blobs) {
   showToast('✓ ZIP downloaded');
 }
 
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   ROSTER (Dispatch 12, phase 1) — who needs a photo, and whose photo
+   hasn't been deployed. docs/dispatch/12-profile-pic-tracker.md.
+
+   Reads every agent in the agent store through agent-pics, and writes
+   only the photo side of a record: whether an original is in Drive,
+   when the set was generated, and notes. The status is derived on the
+   server. Agents are created in the Agent CMS, never here.
+
+   The token (CB_PICS_TOKEN) lives in sessionStorage for this tab only.
+   All data-derived DOM is built with textContent, never innerHTML.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  var BACKEND=''; try{BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');}catch(e){}
+  var API=BACKEND+'/.netlify/functions/agent-pics';
+  var TOKEN_KEY='cb_pics_token';
+  var PLACEMENTS=[['gmailSig','Gmail signature'],['gmailAvatar','Gmail profile pic'],['filemaker','FileMaker'],
+    ['streeteasy','StreetEasy'],['businessCard','Business card']];
+  var STATUS_ORDER={none:0,raw:1,generated:2,deployed:3};
+  var FILTERS=[['all','All agents'],['needs','Need a photo'],['undeployed','Generated, not deployed'],['deployed','Deployed']];
+  var S={roster:null,filter:'all',sort:'name',dir:1,open:null,detail:{},loading:false};
+
+  function $(id){return document.getElementById(id);}
+  function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+  function tok(){try{return sessionStorage.getItem(TOKEN_KEY)||'';}catch(e){return '';}}
+  function setTok(v){try{v?sessionStorage.setItem(TOKEN_KEY,v):sessionStorage.removeItem(TOKEN_KEY);}catch(e){}}
+  function whoami(){try{return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}catch(e){return '';}}
+  function say(msg){$('roStatus').textContent=msg||'';}
+  var toastT=null;
+  function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);
+    toastT=setTimeout(function(){t.classList.remove('show');},2800);}
+
+  /* A generate date is a day, stored as midnight UTC: show it in UTC or it slips a day in New York. */
+  function day(iso){if(!iso)return '—';var d=new Date(iso);return isNaN(d)?'—':
+    d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});}
+  function when(iso){if(!iso)return '—';var d=new Date(iso);return isNaN(d)?'—':
+    d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+  function todayLocal(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+  function api(opts){
+    opts=opts||{};
+    var url=API+(opts.slug?'?slug='+encodeURIComponent(opts.slug):'');
+    return fetch(url,{method:opts.body?'POST':'GET',cache:'no-store',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok()},
+      body:opts.body?JSON.stringify(opts.body):undefined})
+    .then(function(r){
+      return r.json().catch(function(){return {error:'The backend returned something that isn’t JSON (HTTP '+r.status+').'};})
+      .then(function(d){
+        if(r.status===401){setTok('');connect('That token was rejected. Paste CB_PICS_TOKEN again.');throw new Error('unauthorized');}
+        if(r.status===503){setTok('');connect((d&&d.message)||'The roster isn’t configured on the backend yet.');throw new Error('not-configured');}
+        if(!r.ok)throw new Error((d&&d.message)||(d&&d.error)||('Request failed ('+r.status+')'));
+        return d;
+      });
+    },function(){throw new Error('Backend unreachable. The roster only runs on Netlify, not from a local file.');});
+  }
+
+  /* ── views ── */
+  function showView(roster){
+    var main=document.querySelector('main');
+    main.classList.toggle('roster-mode',roster);
+    $('rosterView').hidden=!roster;
+    $('tabGenerator').setAttribute('aria-selected',String(!roster));
+    $('tabRoster').setAttribute('aria-selected',String(roster));
+    try{history.replaceState(null,'',roster?'#roster':location.pathname+location.search);}catch(e){}
+    if(roster&&!S.roster&&!S.loading)start();
+  }
+  $('tabGenerator').addEventListener('click',function(){showView(false);});
+  $('tabRoster').addEventListener('click',function(){showView(true);});
+
+  function connect(msg){
+    $('roConnect').hidden=false;$('roBody').hidden=true;
+    $('roConnectMsg').textContent=msg||'The roster reads the agent store. Paste CB_PICS_TOKEN from Netlify; it’s held for this tab only.';
+    say('');
+    setTimeout(function(){$('roToken').focus();},0);
+  }
+  $('roConnectForm').addEventListener('submit',function(e){
+    e.preventDefault();var v=$('roToken').value.trim();if(!v)return;
+    setTok(v);$('roToken').value='';start();
+  });
+
+  function start(){
+    if(!tok()){connect();return;}
+    $('roConnect').hidden=true;
+    load();
+  }
+  function load(){
+    S.loading=true;say('Loading the roster…');
+    return api().then(function(d){
+      S.roster=d.roster||[];S.loading=false;say('');
+      $('roBody').hidden=false;render();
+    },function(e){S.loading=false;if(e.message!=='unauthorized'&&e.message!=='not-configured')say(e.message);});
+  }
+  $('roRefresh').addEventListener('click',function(){S.detail={};load();});
+  $('roSearch').addEventListener('input',render);
+
+  /* ── filters and sorting ── */
+  function inFilter(a,f){
+    var gone=a.site==='archived';
+    if(f==='needs')return !gone&&(a.status==='none'||a.status==='raw');
+    if(f==='undeployed')return !gone&&a.status==='generated';
+    if(f==='deployed')return a.status==='deployed';
+    return true;
+  }
+  function sorted(list){
+    var k=S.sort,d=S.dir;
+    return list.slice().sort(function(a,b){
+      var x,y;
+      if(k==='status'){x=STATUS_ORDER[a.status];y=STATUS_ORDER[b.status];}
+      else if(k==='generated'){x=a.generatedAt||'';y=b.generatedAt||'';}
+      else if(k==='placed'){x=a.placed;y=b.placed;}
+      else if(k==='updated'){x=a.updatedAt||'';y=b.updatedAt||'';}
+      else{x=0;y=0;}
+      if(x<y)return -d;if(x>y)return d;
+      return a.name.localeCompare(b.name);
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#rosterView th[data-sort] button'),function(b){
+    b.addEventListener('click',function(){
+      var k=b.parentNode.getAttribute('data-sort');
+      if(S.sort===k)S.dir=-S.dir;else{S.sort=k;S.dir=k==='name'?1:-1;}
+      render();
+    });
+  });
+
+  /* ── render ── */
+  function render(){
+    if(!S.roster)return;
+    var counts=$('roCounts');counts.textContent='';
+    FILTERS.forEach(function(f){
+      var b=el('button','ro-count');b.type='button';b.setAttribute('aria-pressed',String(S.filter===f[0]));
+      b.appendChild(el('b',null,String(S.roster.filter(function(a){return inFilter(a,f[0]);}).length)));
+      b.appendChild(el('span',null,f[1]));
+      b.addEventListener('click',function(){S.filter=S.filter===f[0]&&f[0]!=='all'?'all':f[0];render();});
+      counts.appendChild(b);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#rosterView th[data-sort]'),function(th){
+      var k=th.getAttribute('data-sort');
+      if(k===S.sort)th.setAttribute('aria-sort',S.dir===1?'ascending':'descending');else th.removeAttribute('aria-sort');
+    });
+
+    var q=($('roSearch').value||'').trim().toLowerCase();
+    var list=sorted(S.roster.filter(function(a){
+      return inFilter(a,S.filter)&&(!q||a.name.toLowerCase().indexOf(q)!==-1||a.slug.indexOf(q)!==-1);
+    }));
+    var body=$('roRows');body.textContent='';
+    if(!list.length){
+      var tr=el('tr'),td=el('td','ro-empty');td.colSpan=5;
+      td.textContent=S.roster.length?'No agents match.':'No agents in the store yet. Add them in the Agent CMS, or wait for the one-time import (D-24).';
+      tr.appendChild(td);body.appendChild(tr);return;
+    }
+    list.forEach(function(a){
+      body.appendChild(row(a));
+      if(S.open===a.slug)body.appendChild(detail(a));
+    });
+  }
+
+  function pill(status){return el('span','ro-pill '+status,status);}
+  function dots(a){
+    var w=el('span','ro-dots');
+    PLACEMENTS.forEach(function(p){var s=a.placements[p[0]];var i=el('i',s==='todo'?'':s);i.title=p[1]+': '+label(s);w.appendChild(i);});
+    return w;
+  }
+  function label(s){return s==='done'?'done':s==='na'?'doesn’t apply':s==='stale'?'done before the latest photo':'to do';}
+
+  function row(a){
+    var tr=el('tr','ro-agent');tr.tabIndex=0;tr.setAttribute('aria-expanded',String(S.open===a.slug));
+    var td=el('td');td.appendChild(el('span','ro-name',a.name));if(a.title)td.appendChild(el('span','ro-sub',a.title));tr.appendChild(td);
+    td=el('td');td.appendChild(pill(a.status));if(a.site==='archived'){var g=el('span','ro-pill left','left');g.title='Archived in the Agent CMS';td.appendChild(g);}tr.appendChild(td);
+    tr.appendChild(el('td','ro-wide',day(a.generatedAt)));
+    td=el('td');td.appendChild(dots(a));td.appendChild(el('span','ro-sub ro-inline ro-of',a.placed+' of 5'));tr.appendChild(td);
+    tr.appendChild(el('td','ro-wide',when(a.updatedAt)));
+    function toggle(){S.open=S.open===a.slug?null:a.slug;render();if(S.open&&!S.detail[a.slug])fetchDetail(a.slug);}
+    tr.addEventListener('click',toggle);
+    tr.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+    return tr;
+  }
+
+  function fetchDetail(slug){
+    api({slug:slug}).then(function(d){S.detail[slug]=d.agent;if(S.open===slug)render();},function(e){say(e.message);});
+  }
+
+  function detail(a){
+    var full=S.detail[a.slug];
+    var tr=el('tr','ro-detail'),td=el('td');td.colSpan=5;tr.appendChild(td);
+    var grid=el('div','ro-detail-grid');td.appendChild(grid);
+
+    var cell=el('div');cell.appendChild(el('span','section-label','Original'));
+    var lab=el('label','ro-check'),cb=el('input');cb.type='checkbox';cb.checked=a.rawInDrive;
+    lab.appendChild(cb);lab.appendChild(el('span',null,'In Drive, in @ Profile Pic RAWS'));cell.appendChild(lab);
+    if(a.raws)cell.appendChild(el('span','ro-sub',a.raws+' stored'));
+    grid.appendChild(cell);
+
+    cell=el('div');cell.appendChild(el('span','section-label','Generated on'));
+    var r=el('div','ro-row'),date=el('input','ro-input');date.type='date';date.value=(a.generatedAt||'').slice(0,10);date.max=todayLocal();
+    date.setAttribute('aria-label','Generated on');
+    var today=el('button','ro-btn ghost','Today');today.type='button';today.onclick=function(){date.value=todayLocal();};
+    var clr=el('button','ro-btn ghost','Clear');clr.type='button';clr.onclick=function(){date.value='';};
+    r.appendChild(date);r.appendChild(today);r.appendChild(clr);cell.appendChild(r);grid.appendChild(cell);
+
+    cell=el('div','full');cell.appendChild(el('span','section-label','Placements'));
+    var places=el('div','ro-places');
+    PLACEMENTS.forEach(function(p){
+      var s=a.placements[p[0]],chip=el('span','ro-pill'+(s==='done'?' deployed':s==='stale'?' generated':''),p[1]+' · '+label(s));
+      var log=full&&full.placementLog&&full.placementLog[p[0]];
+      if(log&&(log.at||log.note))chip.title=[log.at?when(log.at):'',log.note].filter(Boolean).join(' · ');
+      places.appendChild(chip);
+    });
+    cell.appendChild(places);
+    cell.appendChild(el('span','ro-sub','Ticking placements comes in the placements phase. Until then they read as stored.'));
+    grid.appendChild(cell);
+
+    cell=el('div','full');cell.appendChild(el('span','section-label','Notes'));
+    var notes=el('textarea','ro-input');notes.maxLength=2000;notes.value=a.notes||'';notes.setAttribute('aria-label','Notes');
+    cell.appendChild(notes);grid.appendChild(cell);
+
+    cell=el('div','full ro-row');
+    var save=el('button','ro-btn','Save');save.type='button';cell.appendChild(save);
+    var meta=el('span','ro-sub ro-inline');
+    if(full&&full.pic&&full.pic.updatedAt)meta.textContent='Last changed '+when(full.pic.updatedAt)+(full.pic.updatedBy?' by '+full.pic.updatedBy:'');
+    cell.appendChild(meta);grid.appendChild(cell);
+
+    save.addEventListener('click',function(){
+      var pic={};
+      if(cb.checked!==a.rawInDrive)pic.rawInDrive=cb.checked;
+      if(date.value!==(a.generatedAt||'').slice(0,10))pic.generatedAt=date.value;
+      if(notes.value.trim()!==(a.notes||''))pic.notes=notes.value;
+      if(!Object.keys(pic).length){toast('Nothing to save');return;}
+      save.disabled=true;
+      api({body:{action:'update',slug:a.slug,pic:pic,by:whoami()}}).then(function(d){
+        var i=S.roster.findIndex(function(x){return x.slug===a.slug;});
+        if(i!==-1)S.roster[i]=d.agent;S.detail[a.slug]=d.agent;
+        toast('Saved');render();
+      },function(e){save.disabled=false;if(e.message!=='unauthorized')say(e.message);});
+    });
+    return tr;
+  }
+
+  if(location.hash==='#roster')showView(true);
+})();
 </script>
 </body>
 </html>

@@ -58,11 +58,26 @@ the per-agent `preview` token above, which is read-only and scoped to one agent.
 
 **This is a shared secret, not authentication** — it says *authorised*, never *who*, and
 anyone holding it can edit any agent. Read `docs/agent-cms/security-model.md` before
-pointing a second person at it. `agent-store` is pinned to `node_bundler = "none"` in
-`netlify.toml` because it imports `@netlify/blobs`.
+pointing a second person at it.
 
 Env: `CB_CMS_TOKEN` (required), `NETLIFY_BUILD_HOOK` (optional — POSTed on publish and on
 suspend/restore; without it the CMS says plainly that nothing rebuilt).
+
+**Profile-pic roster** (`/tools/profile-pic/#roster`, Dispatch 12)
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`  | `/.netlify/functions/agent-pics` | Every agent in `cb-agents`: name, title, the derived photo status, placements. No contact details |
+| `GET`  | `/.netlify/functions/agent-pics?slug=X` | One agent's photo side |
+| `POST` | `/.netlify/functions/agent-pics` | `{action:"update", slug, pic?, placements?}` — writes those two groups and nothing else |
+
+It writes `pic` and `placements` onto the same `cb-agents` records, beside `draft` and `live`
+rather than in them, so Publish can't carry them to a site. **Every request needs
+`Authorization: Bearer $CB_PICS_TOKEN`**, a second token: it can't create, publish or delete an
+agent or change anything outside those two groups, and `agent-store` refuses it. With it unset,
+or equal to `CB_CMS_TOKEN`, the function refuses everything. Both functions read the store with
+strong consistency, so neither writes a cached copy back over the other's change. Code, tests
+and the one-time import: `tools-src/agent-pics/`.
 
 **Home page live content** (`/`)
 | Method | Path | Notes |
@@ -103,6 +118,8 @@ in-platform edits reach everyone, point agents at the Netlify URL (or set
    - `ANTHROPIC_API_KEY` — used by `copy`, `claude` and `agent-copy`
    - `CB_CMS_TOKEN` — shared secret for `agent-store` and `agent-copy`. Generate a long
      random string (`openssl rand -hex 32`); the CMS prompts for it and holds it per tab.
+   - `CB_PICS_TOKEN` — the profile-pic roster's own token for `agent-pics`. Generate it the
+     same way; it must differ from `CB_CMS_TOKEN`.
    - `NETLIFY_BUILD_HOOK` *(optional)* — build hook URL so publishing rebuilds the site
    - `ALLOWED_ORIGIN` *(optional)* — lock CORS for the `/api/*` functions (defaults to `*`)
 2. **Blobs** — `agents` and `sessions` use `@netlify/blobs`, which is zero-config on Netlify.

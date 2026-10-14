@@ -15,8 +15,13 @@
 //      NETLIFY_BUILD_HOOK  (optional) build hook URL, POSTed on publish/suspend
 //      ALLOWED_ORIGIN      (optional) CORS origin; not a security control
 //
-// Bundling: this imports @netlify/blobs, so netlify.toml pins it to
-// `node_bundler = "none"` per the hard constraint in CLAUDE.md.
+// THE PHOTO SIDE (Dispatch 12): a record can also carry `pic` and `placements`,
+// written by netlify/functions/agent-pics.mts with its own token. They sit
+// beside `draft` and `live`, never inside them, so Publish can't carry them to
+// the public site. Every write here edits the record it read and keeps keys it
+// doesn't know — don't rebuild a record from scratch, or the photo side is lost.
+// Both functions read with strong consistency, so neither writes back a cached
+// copy over the other's change.
 import { getStore } from '@netlify/blobs';
 
 const STORE = 'cb-agents';
@@ -329,7 +334,7 @@ export default async (req) => {
   }
 
   try {
-    const store = getStore(STORE);
+    const store = getStore({ name: STORE, consistency: 'strong' });
     const url = new URL(req.url);
     const slug = (url.searchParams.get('slug') || '').toLowerCase();
     const previewToken = url.searchParams.get('preview') || '';

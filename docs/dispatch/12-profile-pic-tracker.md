@@ -139,6 +139,21 @@ headshots.
 
 Phase 1 ships without a single upload and is already useful: it answers "who still needs one".
 
+> **Phase 1, as built (Painter, 2026-10-14, #71).** Where it differs from the list above:
+> - **The token is `CB_PICS_TOKEN`**, per §7.5, not `CB_CMS_TOKEN` as item 1 says. The function
+>   refuses everything when it's unset or the same as `CB_CMS_TOKEN`, and `agent-store` refuses it.
+> - **`raws` and `notes` sit inside `pic`**, so the token writes exactly two groups, `pic` and
+>   `placements`, both outside `draft` and `live`. A body naming anything else is refused whole.
+> - **`pic.rawInDrive` is new.** Until phase 2 stores originals, it's how "raw" is known.
+> - **The status keeps two more rules, still derived:** a placement done before the latest generate
+>   counts as not done (it shows as *stale*), and a raw stored after it puts the agent back at `raw`.
+> - **Agents are never created by the roster**, only in the agent CMS or by the import.
+> - **The import** (`tools-src/agent-pics/import.ts`) takes a reviewed JSON file, whatever D-24
+>   makes its source, dry-runs by default, creates CMS drafts only, and never overwrites a photo
+>   side recorded by hand.
+> - **`agent-store` reads with strong consistency now**, so neither function writes a cached copy
+>   of the shared record back over the other's change.
+
 ### Phase 2 — storage
 
 5. **Two classes of file, and they are not the same thing.**
