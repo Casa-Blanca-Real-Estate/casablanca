@@ -231,3 +231,102 @@ Phase 1 ships without a single upload and is already useful: it answers "who sti
   pasting, with a screenshot in the PR.
 - Five placements per agent, with dates.
 - `@ to do` in Drive is redundant, and Kimani says so.
+
+## Handoff, 2026-10-13
+
+From the Dispatch 01 session, leaving the old cloud environment (ledger line `casa-r7-4`). Main was
+`aee2e09` when this was written.
+
+### Where it stands
+
+- **Dispatch 12: approved, not started.** The draft merged in #63 on 2026-10-09 with Casanova's
+  answers in §7. No code exists for it on any branch. Its ledger line, `casa-r6-2`, is still
+  `queued`; mark it delivered when phase 1's PR opens.
+- **Dispatch 01: parked.** All five phases are open as a stack, #41–#45. Nothing moves on it until
+  Casanova re-reviews #41 (§7.6).
+
+### Open PRs (all Dispatch 01, all base `claude/main`)
+
+| PR | Branch | Head | Merge state | What's left |
+|---|---|---|---|---|
+| #41 | `claude/kind-heisenberg-ujrdup` | `dead409` | clean | Casanova's re-review of the 2026-10-06 fixes: the rectangular seam (`cbLocalColour` now blends continuously) and the edge halo (coherence-gated sharpening). Two points are still open in the thread: curly-1, where I think the real fault is the model half-claiming a background object, not hair; and whether to bound the decontamination band (not added). |
+| #42 | `…-p2` | `b785d9a` | clean | Carries the pre-fix `fc3aee2`. Merge `claude/main` in after #41 lands; it should be clean. |
+| #43 | `…-p3` | `857383b` | clean | **Where #41's fix will conflict.** #43 deletes the inlined pipeline from `tools/profile-pic/index.html` and moves the old code into `js/cb-cutout.js`. Keep the deletion and port #41's three changes into `js/cb-cutout.js`: the new `cbLocalColour`, the `// 4b` edge-sharpening stage, and the `edgeSharpen`/`edgeRef`/`edgeGain` defaults. Then re-prove with the harness that the module's output is byte-identical to #41's. |
+| #44 | `…-p4` | `37c39cc` | clean | Follows #43. Its `js/cb-inpaint.js` changes don't overlap the fix. |
+| #45 | `…-p5` | `2f22fe1` | **conflict** | Only `netlify/functions/README.md`; take both sides. #45 also fixes the 204 preflight in `netlify/functions/_lib.mjs` (`new Response('', …)` → `new Response(null, …)`), which main still lacks. If #45 sits for long, lift that fix out on its own. The provider comparison's prices date from 2026-09-11; re-check them before Kimani picks a provider. |
+
+### What's next
+
+**Dispatch 12, phase 1 — the roster and the record (§5.1–§5.4),** on Casanova's terms in §7:
+
+- The `pic` group and `placements` go on the `cb-agents` record. Put them **outside** `draft` and
+  `live`. Publish copies `draft` over `live` (`netlify/functions/agent-store.mjs`), so fields kept
+  outside both can't be published by it.
+- **The test Casanova asked for:** the agent-site build never renders or publishes `pic` or
+  `placements`. `agents/build.js` reads `agents/data/<slug>.json` today, not Blobs, so check how
+  records reach the build before writing the test. It goes in `agents/build.test.js` (`npm test`).
+- **`CB_PICS_TOKEN`, not `CB_CMS_TOKEN`.** §5.1 still says reuse the CMS token; §7.5 overrides it.
+  The pics token writes `pic` and `placements` only. It can't publish or touch the rest of the record.
+- The one-time roster import waits on D-24. Build the roster so it works empty, or with agents
+  added by hand, until then.
+
+Then phases 2–4 in order, one PR each. Return to Dispatch 01 only after Casanova's re-review, and
+never both at once.
+
+### Gotchas
+
+- **Don't push a fresh `claude/kind-heisenberg-ujrdup`.** On origin that branch is #41's head. A new
+  environment may check it out fresh from main; pushing that wipes #41. Work Dispatch 12 on a new
+  branch.
+- **The harness that proved Dispatch 01 is gone** (it lived in this environment). To rebuild it:
+  RMBG-1.4 from Hugging Face; `@huggingface/transformers@3.0.2` from npm, using
+  `dist/transformers.js` (`transformers.mjs` is the Node build); a local server sending COOP/COEP
+  headers; Chromium at `/opt/pw-browsers/chromium`. Serve the model and library locally, because
+  the browser couldn't reach CDNs through the proxy. The fixtures and their credits are in
+  `docs/dispatch/01-evidence/` on #41.
+- **The studio's members gate** (`cb_auth`) needs a localStorage seed in headless runs.
+- **The model:** Transformers.js defaults to q8 on wasm (`model_quantized.onnx`, about 44 MB);
+  fp32 is 176 MB and optional. The ONNX input is fixed at 1024×1024. Letterboxing was tried and
+  rejected; don't retry it.
+- **Gmail drops `data:` images** from a pasted signature. The photo has to be hosted over https —
+  that's why phase 3 commits it to `assets/agents/sig/<slug>.jpg`.
+- **Netlify buffers about 6 MB per request** (about 4.5 MB of binary), so NEF uploads go up in
+  chunks. Blobs' per-object limit and storage pricing are unconfirmed; check them before phase 2.
+- **The sigs doc holds a credential-looking string.** Parse the name, title, email and phone fields
+  only. Never copy or repeat the string, and confirm Kimani has removed and rotated it.
+- **Don't commit agents' phones or emails.** `publish = "."` serves the repo root.
+- **Drive:** the connector finds `@ Profile Pics` and `@ All Email Sigs` by name. Don't paste their
+  share links into the repo.
+- **The dev notebook:** `DEV_NOTEBOOK_KEY` was never set in this environment, so I haven't read it.
+  It is set in the new one; read it at the start.
+- **Delete `docs/dispatch/01-evidence/`** once real before/afters replace the stand-ins. Hard cases
+  can now come from `@ Profile Pic RAWS`.
+
+### Waiting on Kimani
+
+- **D-24:** is the sigs doc the source for agents' details, or FileMaker? This blocks the roster
+  import.
+- **Set `CB_PICS_TOKEN`** in Netlify before phase 1 can write.
+- **Remove and rotate the credential** in the sigs doc.
+- **Name this session.**
+- For Dispatch 01, later: the outpaint provider and its key, and whether to ship the fp32 weights.
+
+### Waiting on Casanova
+
+- **Re-review #41,** including the curly-1 disagreement. Then #42–#45, in order.
+
+### Restart kickoff
+
+> You're **the Dispatch 01 session**, continuing a Casa Blanca Creative Studio track. Read
+> `/CLAUDE.md`, then `docs/dispatch/README.md` (your roster row says where you are), then your
+> dispatch file in full — `docs/dispatch/12-profile-pic-tracker.md`, ending with "Handoff,
+> 2026-10-13" — then your latest PR and its comments, and #63, where Casanova approved Dispatch 12
+> and set its conditions. Carry on from what's next there: **Dispatch 12, phase 1 — the roster and
+> the record**, ledger line `casa-r6-2`. Pull `claude/main` first, open one PR per phase to
+> `claude/main`, never merge, and mark `casa-r6-2` delivered when phase 1's PR opens (rule 11).
+> **Leave Dispatch 01's parked stack alone:** #41–#45 are open; #41 carries the 2026-10-06 seam and
+> halo fixes and waits for Casanova's re-review, #42–#45 follow it in order, and #45 has a conflict.
+> Don't work both at once. If your environment hands you the branch `claude/kind-heisenberg-ujrdup`,
+> don't push it — on origin that's #41. Sign as "— the Dispatch 01 session (D12)".
+
+— the Dispatch 01 session
