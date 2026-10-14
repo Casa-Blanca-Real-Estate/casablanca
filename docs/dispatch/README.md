@@ -67,29 +67,30 @@ accountability travel with it. Surveyor, Mason and Abacus were confirmed by Kima
 
 | Name | Role | Dispatches | Status |
 |---|---|---|---|
-| **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active |
-| **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | Done — merged #49 |
-| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b), 11 (CR-3c), 13 (CR-5) | 05: merged #48, #52; CR-1.1 item 3 merged in #57; the step-6 proof is Kimani's (Netlify's function log). 07: done, merged #53. 09: done, merged #57, #60. 11: done, merged #62. 13: ready. Dev notebook and the Feedback list closed: merged #54 |
-| **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: done, merged #55, #58; handoff #66; Casanova's engine note (`distance_miles` on `CompOut`) in #68 |
-| **Arbiter** | The comp report's decision provider: Jev, with a Haiku fallback | 10 (CR-D) | 10: phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Phase 2 when Kimani's key is in |
-| **Painter** (was the Dispatch 01 session; named by Kimani 2026-10-14) | Visual tools: photo and video features, manipulation and tooling. Today the profile pics: the cutout, outpainting, and the roster and store | 01, 12 | 01: parked; #41's fixes await Casanova's re-review. 12: phase 1 (the roster and the record) in review, #71 |
-| *unnamed* (`claude/jolly-shannon-b6j14l`) | Agent sites foundations | 02 | Done — merged #46 |
-| *unnamed* (`claude/laughing-newton-f96x9t`) | Agent CMS | 03 | Done — merged #47 |
+| **Casanova** | Overseer — plans, writes dispatches, reviews and merges, keeps repo context current | — | Active. Restarted in Casa's cloud environment 2026-10-13 |
+| **Surveyor** | Research — the evidence behind the comp report's adjustments and glossary | 04 (CR-R) | 04: done, merged #49; handoff #69; the glossary brought up to design v0.5.1 in #70. On call: next would be evidence for "the differences between comps", when dispatched |
+| **Mason** | Foundations — the comp report's scaffold, build, auth, database, streaming | 05 (CR-1), 07 (CR-3a), 09 (CR-3b), 11 (CR-3c), 13 (CR-5) | 05: merged #48, #52; CR-1.1 item 3 merged in #57; the step-6 proof is Kimani's (Netlify's function log). 07: done, #53. 09: done, #57, #60. 11: done, #62. Handoff #65. 13: phase 1 merged #76; its production check and the real eval wait on Kimani; phase 2 next. Dev notebook and the Feedback list closed: #54 |
+| **Abacus** | The comp report's calculation engine and parser | 06 (CR-2), 08 (CR-2.2) | 06: done, merged #50, #51. 08: done, merged #55, #58. Handoff #66; `distance_miles` on `CompOut` merged #68 (engine 0.4.1). On call |
+| **Arbiter** | The comp report's decision provider: Jev, with a Haiku fallback | 10 (CR-D) | 10: phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Handoff #64. Phase 2's pre-live build merged #75; the live run waits on Kimani's keys and the labels sheet |
+| **Painter** (was the Dispatch 01 session; named by Kimani 2026-10-14) | Visual tools: photo and video features, manipulation and tooling. Today the profile pics: the cutout, outpainting, and the roster and store | 01, 12 | 01: parked; #41's fixes await Casanova's re-review. Handoff #67. 12: phase 1 (the roster and the record) merged #71; phase 2 after `CB_PICS_TOKEN` and D-24 |
+| **Concierge** (named by Kimani 2026-10-14; not started) | Agent sites and the agent CMS: Slices 2–3 (once the Wix capture exists) and 5, agent-record fields such as Instagram handles | 02, 03 (as built) | Held. Restart kickoff in `docs/parked/sessions/agent-cms.md` (#72); ledger `casa-r9-1` |
+| **Publisher** (named by Kimani 2026-10-14; not started) | The post builders (Closed, In Contract, For Sale, Listing, Editorial), the StreetEasy import, captions | — | Held. Kickoff on the ledger, `casa-r9-2`; notes in `docs/parked/sessions/editorial-builder.md` (#73) |
+| *Retired 2026-10-14* | The Dispatch 02 and 03 sessions, the Editorial builder, the motion graphic generator, and five one-off sessions | 02, 03 | Final notes in `docs/parked/sessions/` (#72–#74) |
 
 ## Dispatch index
 
 | # | Dispatch | To | State |
 |---|---|---|---|
 | 01 | [Profile Pic Generator — cutout quality + torso outpainting](01-profile-pic-cutout-and-outpaint.md) | Painter | **Parked.** Stack #41–#45. #41's fixes (2026-10-06) await Casanova's re-review; #45 has a conflict |
-| 02 | [Agent sites, Slice 0 — data model + build hardening](02-agent-sites-foundations.md) | unnamed | Done |
-| 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | unnamed | Done |
+| 02 | [Agent sites, Slice 0 — data model + build hardening](02-agent-sites-foundations.md) | retired session; Concierge next | Done — merged #46 |
+| 03 | [Agent sites, Slice 4 — the CMS](03-agent-cms.md) | retired session; Concierge next | Done — merged #47 |
 | 04 | [Comp report — adjustment research (CR-R)](04-comp-report-research.md) | Surveyor | Done — merged #49 |
 | 05 | [Comp report — foundations (CR-1)](05-comp-report-foundations.md) | Mason | Merged #48, #52, and CR-1.1 item 3 in #57. Step 6: Kimani confirms the refusal in Netlify's function log |
 | 06 | [Comp report — engine and parser (CR-2)](06-comp-report-engine.md) | Abacus | Done — merged #50, #51 |
 | 07 | [Comp report — the walkthrough scaffold (CR-3a)](07-comp-report-walkthrough-scaffold.md) | Mason | Done — merged #53 |
 | 08 | [Comp report — the engine for a buyer's argument (CR-2.2)](08-comp-report-buyers-argument-engine.md) | Abacus | Done — merged #55, #58 |
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
-| 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Phase 2 when Kimani's key is in |
+| 10 | [Comp report — the decision provider, Jev first (CR-D)](10-comp-report-decision-provider.md) | Arbiter | Phase 1, follow-ups and the zero-retention switch merged #56, #59, #61; phase 2's pre-live build merged #75. The live run waits on Kimani's keys and the labels sheet |
 | 11 | [Comp report — distance, from coordinates (CR-3c)](11-comp-report-distance.md) | Mason | Done — merged #62 |
-| 12 | [Profile pics — the roster, the store and the email signature](12-profile-pic-tracker.md) | Painter | Phase 1 (the roster and the record) in review, #71 |
-| 13 | [Comp report — the writer and QA (CR-5)](13-comp-report-writer-and-qa.md) | Mason | Ready |
+| 12 | [Profile pics — the roster, the store and the email signature](12-profile-pic-tracker.md) | Painter | Phase 1 merged #71. Phase 2 after `CB_PICS_TOKEN` and D-24 |
+| 13 | [Comp report — the writer and QA (CR-5)](13-comp-report-writer-and-qa.md) | Mason | Phase 1 merged #76. Its production check and the real eval wait on Kimani; phase 2 next |

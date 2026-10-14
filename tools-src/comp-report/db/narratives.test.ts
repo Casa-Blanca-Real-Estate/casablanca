@@ -20,6 +20,7 @@ import type { IdentityUser } from '../server/identity.ts';
 import { SAMPLE_BRIEF, SAMPLE_INTAKE, SAMPLE_SEND } from '../server/sample/barclay-17l.ts';
 import type { AuthDeps } from '../server/session.ts';
 import { DISCLAIMER } from '../workspace/frame.ts';
+import { ENGINE_VERSION } from '../engine/version.ts';
 import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
 
 const PEOPLE: Record<string, string> = {
@@ -135,7 +136,7 @@ describe('the writer and its drafts', { skip: skipWithoutDatabase }, () => {
     const { rows } = await asKimani<{ engine_version: string; house_method: string; headline_facts: { facts: { id: string }[]; agent_number: unknown }; request_id: string; input: { comps: unknown[] } }>(
       'select engine_version, house_method, headline_facts, request_id, input from comp_report.narratives where id = $1', [first.id]);
     assert.ok(rows[0]!.input.comps.length, 'the writer’s whole input is kept');
-    assert.equal(rows[0]!.engine_version, '0.4.0');
+    assert.equal(rows[0]!.engine_version, ENGINE_VERSION);
     assert.ok(rows[0]!.house_method);
     assert.ok(rows[0]!.headline_facts.facts.some((f) => f.id === 'range.low'));
     assert.equal(rows[0]!.headline_facts.agent_number, null, 'pinned from the neutral numbers');
