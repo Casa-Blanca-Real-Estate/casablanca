@@ -164,8 +164,8 @@ function CompRow({ ws, c, out, save }: { ws: Workspace; c: WorkspaceComp; out: C
   );
   const home = ws.output?.subject.identity;
   const distance = useMemo(
-    () => (home && !c.unsortable ? compDistance(home, c.record.identity, ws.locations, ws.geocodes) : null),
-    [home, c.unsortable, c.record.identity, ws.locations, ws.geocodes],
+    () => (home && !c.unsortable ? compDistance(home, c.record.identity, out?.distance_miles ?? null, ws.locations, ws.geocodes) : null),
+    [home, c.unsortable, c.record.identity, out?.distance_miles, ws.locations, ws.geocodes],
   );
 
   function setDraft(v: string) {

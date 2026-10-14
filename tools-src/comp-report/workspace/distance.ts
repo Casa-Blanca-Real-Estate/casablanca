@@ -1,9 +1,9 @@
 // Distance on Sort (Dispatch 11, §6.10): how far each comp's building is from
 // the home's, from each building's mapped location. The engine flags a comp
 // past a quarter mile (noted) and half a mile (far); this words the distance
-// for every row, flagged or not, with the engine's own arithmetic, so the row
-// and the flag never disagree. Without a distance, it says why.
-import { distanceMiles } from '../engine/compute/checks.ts';
+// for every row, flagged or not, from the engine's own `distance_miles`, the
+// number its flag measures, so the row and the flag never disagree. Without a
+// distance, it says why.
 import { sameBuilding, type PropertyIdentity } from '../engine/index.ts';
 import type { Location } from './engine-input.ts';
 
@@ -36,17 +36,18 @@ function whyNot(lookup: Lookup | undefined, whose: 'The home' | 'This building')
   return { kind: 'unknown', why: `${whose} isn’t mapped yet: ${lookup.reason ?? 'the lookup failed'}.${again}`, waiting: false };
 }
 
-/** A comp's distance from the home, or why there's none. */
+/**
+ * A comp's distance from the home, or why there's none. `miles` is the engine's
+ * `distance_miles` for the comp: null when it has none, or no output yet.
+ */
 export function compDistance(
-  home: PropertyIdentity, comp: PropertyIdentity, locations: ReadonlyMap<string, Location>, lookups: readonly Lookup[],
+  home: PropertyIdentity, comp: PropertyIdentity, miles: number | null, locations: ReadonlyMap<string, Location>, lookups: readonly Lookup[],
 ): Distance {
   if (home.building_key && comp.building_key && sameBuilding(home, comp)) return { kind: 'same_building' };
   const h = home.building_key ? locations.get(home.building_key) : undefined;
   const c = comp.building_key ? locations.get(comp.building_key) : undefined;
-  if (h && c) {
-    const miles = distanceMiles(h, c);
-    return { kind: 'miles', miles, label: milesLabel(miles), home: h.matched, comp: c.matched };
-  }
+  if (miles !== null) return { kind: 'miles', miles, label: milesLabel(miles), home: h?.matched ?? null, comp: c?.matched ?? null };
+  if (h && c) return { kind: 'unknown', why: 'The distance isn’t worked out yet.', waiting: true };
   const byKey = new Map(lookups.map((l) => [l.buildingKey, l]));
   if (!home.building_key) return { kind: 'unknown', why: 'The home has no address to map yet.', waiting: false };
   if (!h) return whyNot(byKey.get(home.building_key), 'The home');
