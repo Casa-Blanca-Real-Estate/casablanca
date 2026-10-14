@@ -119,3 +119,82 @@ values, which stay null (§6.6).
 - PRs are open against `claude/main`, and signed.
 
 — Casanova
+
+## Handoff, 2026-10-13
+
+**Where it stands.** Dispatch 08 is done: phase 1 merged as #55, phase 2 as #58 (`80ea22c`). Casanova
+accepted all 27 phase-2 interpretations (the engine README, "New in CR-2.2 (phase 2)"). The floor band
+stays Frankie's ±3, labelled "pending Noble", and a "noted" sale (past 3 months) suggests no tier.
+Since then, three small changes reached the engine from other tracks, all fine as built:
+- #59 (Arbiter): `CHECK_CODES` is exported as a value; the decision layer's registry imports it.
+- Casanova, merging #59 and #60 (`8dc026b`): the sale-age label reads "Contract signed …" for a sale
+  dated by its contract.
+- #62 (Mason, CR-3c): `geocoder` joined `SOURCES`, for `coordinates` only (a building's mapped point,
+  `approx`), so the distance check now runs. Its "unknown" message names each building's mapped location.
+
+Engine 0.4.0, parser 0.4.0, house method 0.3.0. `npm run test:engine`: 166 pass on `claude/main` (`aee2e09`).
+
+**Open PRs:** none but this handoff, which is docs only.
+
+**What's next.**
+1. **Casanova's engine note: `distance_miles` on `CompOut`.** Sort words every row's distance by
+   importing `distanceMiles` from the engine's internals (`workspace/distance.ts` imports
+   `engine/compute/checks.ts`). It has to, because the `distance` check carries `measured` only when it
+   flags, past ¼ mile. Put the miles on the comp instead:
+   - `distance_miles: number | null` — the miles between the home's and the comp's `coordinates`, read
+     from the same best values the check reads, so the row and the flag can't disagree. Null without
+     both. Compute it once and use it for the check's `measured` too.
+   - Same-building comps can carry their near-zero miles; Sort already shows "Same building" first.
+   - Bump `ENGINE_VERSION` (and its literal in `test/results.test.ts`), add the field to the README's
+     `comps[]`, and test it:
+     - it equals a flagged check's `measured`;
+     - it's set within ¼ mile, where nothing flags;
+     - it's null without coordinates.
+   - Swapping `workspace/distance.ts` to read `comp.distance_miles` is Mason's file (rule 8): say so in
+     the PR, or offer the one-line change for Casanova to take. Keep `distanceMiles` internal.
+2. **Nothing else is dispatched.** Deferred from #58 and not dispatched: comparing judgment factors
+   comp against comp, by way of two judgments against the home.
+
+**Gotchas.**
+- **The purity scan** (`test/purity.test.ts`) admits only `Math.abs`, `ceil`, `floor`, `max`, `min`,
+  `round`, `sign`, `trunc` and `sqrt`. So no `Math.PI` (π/180 is a literal in `checks.ts`), no trig,
+  `pow`, `**`, `Date` or `toLocaleString`. A local helper named `from` or `import`, called with a
+  string, trips its import check: rename it.
+- **The browser-against-Node hash check** lived in the old session's scratchpad. To rebuild it:
+  1. Bundle `engine/index.ts` with esbuild twice, once for the browser and once for Node.
+  2. Compute Hannah's export with each, the browser bundle in headless Chromium (Playwright, browsers
+     in `/opt/pw-browsers`).
+  3. Compare `meta.output_hash`.
+- **Other code imports engine internals.** `workspace/distance.ts` imports `compute/checks.ts`, and
+  `server/decide/registry.ts` imports `catalog/factors.ts`, `compute/output.ts` and `types.ts`. Moving
+  any of them breaks Mason's or Arbiter's build, so run the repo-wide `npm run typecheck`,
+  `npm run build` and `npm run test:comp-report`, not only the engine's suites.
+- **A new member of a union Mason keys on breaks his type check** where he indexes a `Record` or
+  switches exhaustively: `EvidenceClass`, `FigureUnit`, `CheckCode`. #58 needed two one-line fixes in
+  his code for didn't sell.
+- **The house-method files** round-trip `json.dumps(indent=2, ensure_ascii=False)`.
+  `house-method.test.ts` asserts that production's valuations hold no number. Only `check_thresholds`
+  do, and they're exempt from sign-off and `all_null` by design (configuration, not magnitudes).
+- **From Casanova's runbook:** the proxy refuses branch deletion, so Kimani deletes branches. Never read
+  `DATABASE_URL`.
+
+**Waiting on Kimani or Casanova.**
+- Nothing blocks the engine.
+- **For Noble, through Kimani** (`docs/decisions.md`): the floor band (±3 flags 8 of Hannah's 11), the
+  ½-mile distance (it flags 6 of the sample's 11), and the glossary's 12 questions. A changed threshold
+  is a `check_thresholds` edit with a new basis, needing no sign-off.
+- **Casanova:**
+  - review and merge this PR, and mark `casa-r7-2` landed;
+  - give the restart kickoff its ledger line.
+
+**Restart kickoff:**
+
+> You're **Abacus**, continuing a Casa Blanca Creative Studio track. Read `/CLAUDE.md`, then
+> `docs/dispatch/README.md` (your roster row says where you are), then your dispatch file in full, then
+> your latest PR and its comments. Carry on from what's next there. Sign as "— Abacus (CR-2.2)".
+>
+> Your dispatch file is `docs/dispatch/08-comp-report-buyers-argument-engine.md`; its "Handoff,
+> 2026-10-13" says where things stand. Your next work is Casanova's engine note: `distance_miles` on
+> `CompOut`, so the screens stop importing `distanceMiles`. Open a PR to `claude/main` and never merge.
+
+— Abacus (CR-2.2)
