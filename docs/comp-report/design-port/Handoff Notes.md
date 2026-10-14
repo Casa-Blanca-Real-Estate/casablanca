@@ -1,0 +1,20 @@
+# Comp report — notes for Claude Code
+
+- **Remove "Signed in as … · Sign out" from the workspace screens** (and the reports page) once Creative Studio sign-in is the main way in. The comp tool should inherit the Studio session; the Studio top bar's account pill covers it.
+- Prototype source: `Comp Report Prototype.dc.html` (navigable build). Design canvas with A/B + notes: `Comp Report.dc.html`.
+- Gate: new (non-graduated) agents must enter low, high and a why of 100+ characters. Graduated agents can skip; the why box still shows, marked optional. Needs an agent-level permission in the platform.
+- Finished reports collect actual list, contract and sold prices; backend fills them from deal records at contract and close.
+- Tier labels 1st / 2nd / ✕ hold until testing with Noble.
+- **Listing screenshots → comps**: agents can drop listing screenshots into Add comps; the platform extracts address, price, size, floor and date with AI, then shows the row as "to confirm".
+- **Target price** is entered on the New Home step (optional). It's hidden from Hubert until Hubert has finished its own math.
+- **Co-op / Condo** toggle on the New Home step, default Co-op. Co-ops usually have no square footage. With no SF, hide every SF element on the workspaces: $/ft and Size columns in Sort, $/SF and Size in the comp card and add form, the per-SF line on Findings, the price table section, and the Per sq ft tile on Done.
+- **Hubert** is the assistant's name (after Casa Blanca's office at 10 Hubert St, Tribeca). Opens by default when the agent first lands on Sort and greets them. Guide only: answers questions about listings and suggests sales the agent hasn't added ("+ Add" drops them in as untiered comps that still need the agent's note and tags). It never tiers, writes notes or picks tags.
+- **Sort → Gate requirement**: every comp needs a tier, a note and at least one tag before Findings unlocks. Incomplete rows get a yellow left edge and a "Needs …" label; the button's helper link filters to them.
+- **Add comp form** includes the note ("Why it's a comp") and tags; Save stays disabled until both are filled.
+- **Features**: the home's feature pickers (Outdoor space, Views, Exposure, Unit condition, Building) are shared with each comp. Comp card shows the comp's features; ones the home also has are lavender, with a "N shared with 17L" count. In edit mode, the full picker shows, and unselected options the home has get a lavender border.
+- **Findings chart scale**: the bar runs on a fixed price axis with labeled ticks at each end and between. Step size depends on the price tier (midpoint < $750K → $100K, < $1.5M → $250K, < $4M → $500K, < $10M → $1M, otherwise $2.5M). The axis covers the guess and estimate with half a step of padding, snapped to steps.
+- **Buyer vs Seller**: the side (New Home step, also a prototype Tweak) changes copy, not structure. Buyer: "Offer target" instead of "Target price"; Hubert's intro also flags days on market and price cuts; preset chat chips change; Findings adds an offer-leverage line to Hubert's take; Pricing details show days listed and offer strategy; email headline, intro, "things to consider" and advice speak to an offer; Done shows "Offered at" instead of "Listed at". Confirm buyer copy with Hannah.
+- **Designed email**: fourth format on Send (Full / Designed / Short / Text). Branded 600px HTML email: black header with wordmark, hero photo of the home, range in a black block, Hubert-free advice paragraph, anchor comp card (★), other 1st-tier comps as rows, agent sign-off with CTA, black footer with disclaimer. Images must be hosted URLs for Gmail.
+- **Add comp form features**: same pickers as the comp editor; options the home has are outlined lavender.
+- **Findings compare**: below the chart, Hubert's short explanation of how it got the true estimate sits next to the agent's reasoning from the gate. Hubert's text should be generated from the 1st-tier comps only.
+- **Anchor comp** (★): one per report, set from the Sort row. The email leads with it.
