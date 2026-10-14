@@ -79,3 +79,15 @@ export function readinessLine(r: SortReadiness): string {
 export function hasSF(intake: Intake): boolean {
   return Boolean(intake.areaSqft && intake.areaSqft.value > 0);
 }
+
+/**
+ * The home's short name, as the handoff writes it ("17L has it too", "What
+ * makes it comparable to 17L"): the unit without its "#", else the street
+ * line, else the report's title.
+ */
+export function homeName(intake: Intake, title: string): string {
+  const unit = intake.unit?.value.trim().replace(/^#\s*/, '');
+  if (unit) return unit;
+  const street = intake.address?.value.split(',')[0]?.trim();
+  return street || title.trim() || 'the home';
+}
