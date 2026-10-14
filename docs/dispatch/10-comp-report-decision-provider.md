@@ -223,3 +223,102 @@ dispatch.
 - PRs are open against `claude/main`, and signed.
 
 — Casanova
+
+## Handoff, 2026-10-13
+
+*Written by Arbiter on 2026-10-14, as Casa's tracks move to a new cloud environment.*
+
+### Where it stands
+
+- **Phase 1, its follow-ups and the zero-retention switch are merged and live:** #56, #59, #61, on
+  `claude/main`.
+- **Production is unchanged for agents.** `CR_JEV_MODE` is unset, so it's off: nothing is queued or
+  sent. `/api/comp-report/decide` answers 401 when signed out, as Casanova checked on #61.
+- **What exists,** all in `tools-src/comp-report/server/decide/`:
+  - the registry: seven listing-lane questions; the lane is declared `public` in `LANE_TEXT`;
+  - Jev's transport, with no training always on and zero retention behind `CR_JEV_ZDR`;
+  - the durable queue and drop ledger, `decide_requests`;
+  - the background drainer, with its lease, shared pacing and cool-down in `decide_runtime`;
+  - the Haiku 4.5 fallback, off;
+  - the verdict, with every bar uncalibrated, so everything lands as `watch`;
+  - the scrub;
+  - the admin readout at `/api/comp-report/decide`;
+  - `enqueueListingJudgments`, called from Mason's link import after a read commits.
+- **Migrations:** `20260930120000_comp_report_decide.sql` and `20261006120000_comp_report_decide_zdr.sql`.
+  Both were renamed at merge because their timestamps clashed with Mason's.
+- **Open PRs:** none of mine. The only one is this handoff's docs PR.
+
+### What's next: phase 2, held until Kimani's Jev key is in (ledger line `casa-r6-3`)
+
+Don't start phase 2 until the readout's `setup` shows `"jevKey": true, "zdr": false`. Read it signed
+in as an admin with `GET /api/comp-report/decide`. Then work through the phase 2 steps above, in
+order. Some steps have no code yet:
+
+1. **The go/no-go call has no code yet.** Build it as an admin-only action on the readout endpoint,
+   e.g. `POST {action: "probe"}`. It sends one fixed request with no user data, keeps the raw body,
+   and stops at any 4xx. The account gates look like outages.
+2. **Labels before any live call.** Export rows carry no listing description: the listing lane reads
+   `record.listing.description`, which only a link read has. The export's "Agent Commentary" column
+   isn't used. So the ~30-listing set needs its text from link reads, which cost Firecrawl credit
+   against the daily read limit. Alternatively, Casanova and Kimani decide that "Agent Commentary"
+   counts as public listing text. Ask before choosing; that's a lane-text decision.
+3. **"Haiku asked alongside as a second judge" doesn't exist yet.** Today Haiku runs only as a
+   fallback, when Jev can't answer. The labelled batch needs both providers asked on every listing,
+   kept apart by `provider` in `judgments`. Build it for the admin batch only. Leave the fallback's
+   semantics alone, and keep `CR_DECIDE_FALLBACK` off: that was settled on #56.
+4. **Pin the parser to the raw bodies.** It accepts a choice whose non-chosen options are missing
+   (they read as 0), and both `probability` and `noul` for a yes/no. Tighten it to what Jev actually
+   sends, and turn the raw bodies into fixtures.
+5. **The weekly drift check needs a scheduler.** None exists here; the drainer is started only by
+   kicks. A Netlify scheduled function can kick it, or call the admin probe weekly.
+
+### Gotchas
+
+- **Never use `DATABASE_URL`.** In the old environment it held MindBinder's database. Code reads
+  `NETLIFY_DB_URL`, or `CR_LOCAL_DATABASE_URL` locally. Tests use `CR_TEST_DATABASE_URL`, which needs
+  a server where that user can create roles and databases. Arbiter ran PostgreSQL 16 locally: as the
+  `postgres` user, `initdb -A trust` into `/var/tmp`, port 5433, then
+  `CR_TEST_DATABASE_URL=postgres://postgres@localhost:5433/postgres`. Run tests with `env -u DATABASE_URL`.
+- **Migrations.** Check `netlify/database/migrations/` for a free timestamp, because two sessions'
+  clashed twice. Never edit one that has shipped.
+- **The cool-down is shared, and it persists.** `decide_runtime.cool_until` and `next_start_at` hold
+  across invocations and across tests on one database. A drainer will rightly wait out a cool-down
+  that an earlier test left behind; `db/decide.test.ts` resets it.
+- **No sweep.** A drainer starts only from an import's kick, an admin's `POST {action: "drain"}`, or
+  itself when it runs out of time. A drain that stops on a database error doesn't hand on, so its
+  queue waits for the next kick.
+- **The rate limit may be shared with MindBinder.** Kimani's key is on the same Vercel account and
+  credits, and nobody knows whether the limit is per key or per team. The ledger keeps `attempts`,
+  `last_status` and `waitedMs` per request. Each 429 goes only to the function log, as a `retry`
+  event, so compare those log times against MindBinder's run times.
+- **Wire ids are `<question>__fwd` and `<question>__rev`.** Which characters the Gateway accepts in
+  an id isn't documented, and the first live call will show it. If it refuses them, change `wireId()`
+  in `render.ts` only.
+- **Any wording change bumps the version.** That's the question's `version` and `REGISTRY_VERSION`,
+  and its calibration starts over. Kimani hasn't yet skimmed the seven questions (#56's description;
+  `docs/decisions.md`).
+- **Every new lane must declare its text in `LANE_TEXT`.** A lane that declares nothing counts as
+  private, and with `CR_JEV_ZDR=off` it's refused as `zdr-required`.
+- **#61's Netlify deploy preview reported failed, but the merged deploy was fine.** Read a preview's
+  deploy log before assuming a failure is yours.
+
+### Waiting on Kimani or Casanova
+
+- **Kimani:** the Jev key, which unblocks phase 2. Make a new AI Gateway key on his existing Vercel
+  account, and set it in Netlify (Functions scope) as `AI_GATEWAY_API_KEY`, with `CR_JEV_ZDR=off`.
+  Leave `CR_JEV_MODE` alone: Arbiter turns it on after the go/no-go call.
+- **Kimani:** skim the seven questions' wording before phase 2 goes live.
+- **Kimani, or Hannah:** fill in the labels sheet once Arbiter commits it (phase 2 step 2).
+- **Casanova:** decide where the labelled set's text comes from, link reads or "Agent Commentary"
+  (gotcha in "What's next" step 2).
+
+### Restart kickoff
+
+> You're **Arbiter**, continuing a Casa Blanca Creative Studio track. Read `/CLAUDE.md`, then
+> `docs/dispatch/README.md` (your roster row says where you are), then your dispatch file in full,
+> `docs/dispatch/10-comp-report-decision-provider.md`, then your latest PR and its comments. Carry on
+> from what's next there: Dispatch 10 phase 2, held until Kimani's Jev key is in (ledger line
+> `casa-r6-3`). Start with the "Handoff, 2026-10-13" section at the end of the dispatch file. Never use
+> `DATABASE_URL`. Never merge. Sign as "— Arbiter (CR-D)".
+
+— Arbiter (CR-D)
