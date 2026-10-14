@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="../../assets/studio-header.js" defer></script>
+<script src="../../js/cb-cutout.js"></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 
 <script>
@@ -378,6 +379,41 @@ input[type="range"]{
 
 /* ── Touch-up ── */
 #touchupCard{ display:none; }
+.tu-toolbar{
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.tu-toolbar + .tu-toolbar{ margin-bottom: 10px; }
+.tu-toolbar .section-label{ margin: 0; }
+.tu-group{ display: inline-flex; align-items: center; gap: 6px; }
+.tu-toolbar input[type=range]{ width: 76px; }
+.tu-num{ font-size: 11px; color: var(--cb-mid); min-width: 34px; }
+.tu-spacer{ flex: 1 1 auto; }
+.tu-swatches{ display: flex; gap: 4px; }
+.tu-bg-btn{
+  width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+  border: 1.5px solid var(--cb-border); padding: 0;
+}
+.tu-bg-btn.active{ border-color: var(--cb-black); box-shadow: 0 0 0 2px var(--cb-lavender); }
+.tu-stage{
+  position: relative; overflow: auto; max-height: 60vh;
+  border-radius: var(--radius); background: var(--cb-bg);
+  border: 1px solid var(--cb-border);
+}
+.tu-cursor{
+  position: absolute; pointer-events: none; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55);
+  transform: translate(-50%, -50%); display: none; z-index: 2;
+}
+.tu-tips{
+  font-size: 10px; color: var(--cb-mid); margin: 8px 0 0;
+  letter-spacing: .02em;
+}
+.tu-tips kbd{
+  font: inherit; border: 1px solid var(--cb-border); border-radius: 3px;
+  padding: 1px 4px; background: var(--cb-surface);
+}
 .tu-header{
   display: flex; align-items: center; justify-content: space-between;
   cursor: pointer; user-select: none;
@@ -390,8 +426,7 @@ input[type="range"]{
 .tu-body{ display: none; margin-top: 12px; }
 .tu-body.open{ display: block; }
 #tuCanvas{
-  display: block; width: 100%; max-width: 600px;
-  border-radius: var(--radius); cursor: crosshair;
+  display: block; cursor: crosshair;
   margin: 0 auto;
   touch-action: none;
   /* checkerboard so transparent areas show as grey squares */
@@ -404,6 +439,18 @@ input[type="range"]{
   background-position: 0 0, 0 7px, 7px -7px, -7px 0;
   background-color: #fff;
 }
+.btn-secondary{
+  font-family: 'ObjectSans', sans-serif;
+  font-size: 9px; font-weight: 800;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 6px 11px;
+  background: transparent; color: var(--cb-mid);
+  border: 1.5px solid var(--cb-border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.btn-secondary:hover:not(:disabled){ border-color: var(--cb-lavender); color: var(--cb-black); }
+.btn-secondary:disabled{ opacity: .45; cursor: default; }
 .tu-mode-btn.active{
   border-color: var(--cb-black);
   background: var(--cb-black);
@@ -744,15 +791,35 @@ input[type="range"]{
       </span>
     </div>
     <div class="tu-body" id="tuBody">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <button class="btn-secondary tu-mode-btn active" id="tuEraseBtn">Erase</button>
-        <button class="btn-secondary tu-mode-btn" id="tuRestoreBtn">Restore</button>
-        <span class="section-label" style="margin-left:8px;">Brush</span>
-        <input type="range" id="tuBrushSize" min="5" max="80" value="20" style="width:90px;">
-        <span id="tuBrushVal" style="font-size:11px;color:var(--cb-mid);min-width:28px;">20px</span>
-        <span style="font-size:10px;color:var(--cb-mid);margin-left:auto;">Re-renders on stroke release</span>
+      <div class="tu-toolbar">
+        <button class="btn-secondary tu-mode-btn active" id="tuEraseBtn" title="Erase — E">Erase</button>
+        <button class="btn-secondary tu-mode-btn" id="tuRestoreBtn" title="Restore — R">Restore</button>
+        <span class="tu-group"><span class="section-label">Size</span><input type="range" id="tuBrushSize" min="4" max="300" value="48"><span class="tu-num" id="tuBrushVal">48</span></span>
+        <span class="tu-group"><span class="section-label">Edge</span><input type="range" id="tuBrushSoft" min="0" max="100" value="60"><span class="tu-num" id="tuSoftVal">60%</span></span>
+        <span class="tu-group"><span class="section-label">Flow</span><input type="range" id="tuFlow" min="10" max="100" value="100"><span class="tu-num" id="tuFlowVal">100%</span></span>
       </div>
-      <canvas id="tuCanvas"></canvas>
+      <div class="tu-toolbar">
+        <span class="tu-group"><span class="section-label">Zoom</span><input type="range" id="tuZoom" min="100" max="500" value="100" step="25"><span class="tu-num" id="tuZoomVal">Fit</span></span>
+        <span class="section-label">Behind</span>
+        <span class="tu-swatches" id="tuBgSwatches">
+          <button class="tu-bg-btn active" data-bg="#c8beb8" style="background:#c8beb8;" title="Brand taupe"></button>
+          <button class="tu-bg-btn" data-bg="ig" title="IG colour"></button>
+          <button class="tu-bg-btn" data-bg="checker" title="Transparent" style="background:
+            repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50%/10px 10px;"></button>
+        </span>
+        <span class="tu-spacer"></span>
+        <button class="btn-secondary" id="tuUndo" title="Undo — ⌘Z / Ctrl+Z" disabled>Undo</button>
+        <button class="btn-secondary" id="tuRedo" title="Redo — ⇧⌘Z / Ctrl+Y" disabled>Redo</button>
+        <button class="btn-secondary" id="tuReset" title="Back to the model's cutout">Reset</button>
+      </div>
+      <div class="tu-stage" id="tuStage">
+        <canvas id="tuCanvas"></canvas>
+        <div class="tu-cursor" id="tuCursor"></div>
+      </div>
+      <p class="tu-tips">
+        <kbd>E</kbd>/<kbd>R</kbd> erase or restore · hold <kbd>Alt</kbd> for the other one ·
+        <kbd>[</kbd><kbd>]</kbd> brush size · <kbd>⌘Z</kbd>/<kbd>⇧⌘Z</kbd> undo · outputs re-render on release
+      </p>
     </div>
   </div>
 
@@ -818,13 +885,14 @@ let RawImage    = null;
 
 async function loadBgRemoval() {
   if (tfModel) return;
+  if (!window.CBCutout) throw new Error('cb-cutout.js did not load — serve the tool from the repo root');
   setProgress(5,  'Loading Transformers.js…');
   const tf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2');
   tf.env.allowLocalModels = false;
   tf.env.useBrowserCache  = true;
   RawImage = tf.RawImage;
 
-  setProgress(12, 'Downloading model (~175MB, cached after first use)…');
+  setProgress(12, 'Downloading model (~45MB, cached after first use)…');
   [tfModel, tfProcessor] = await Promise.all([
     tf.AutoModel.from_pretrained('briaai/RMBG-1.4', {
       config: { model_type: 'custom' },
@@ -846,56 +914,37 @@ async function loadBgRemoval() {
   ]);
 }
 
+// Cutout maths live in js/cb-cutout.js, shared with the other tools.
+
+// Per-tool tuning for the shared cutout. This tool composites a person onto flat
+// brand colour at 1080 and then greyscales them: hair matters, a faint veil of
+// leftover background is very visible on taupe, and there is headroom to work at
+// 2048 because the output is never larger. Anything not named here comes from
+// CBCutout.defaults.
+const CUTOUT_TUNING = {
+  maxEdge: 2048,
+  gamma:   1.4,
+};
+
 async function removeBackground(file) {
-  const dataURL  = await fileToDataURL(file);
-  const rawImg   = await RawImage.fromURL(dataURL);
+  const dataURL = await fileToDataURL(file);
+  const rawImg  = await RawImage.fromURL(dataURL);
+
+  // RMBG-1.4's ONNX export has a hard-coded 1024x1024 input, so non-square
+  // photos are squashed to square. That is what the model was exported for;
+  // letterboxing to preserve aspect was tried and makes it worse (it reads the
+  // padding as subject on low-contrast shots).
   const { pixel_values } = await tfProcessor(rawImg);
   const { output }       = await tfModel({ input: pixel_values });
 
   const maskTensor = output[0].squeeze();
-  const maskData   = maskTensor.data;
   const [mH, mW]   = maskTensor.dims.length === 2
     ? maskTensor.dims
     : maskTensor.dims.slice(-2);
 
   const origImg = await loadImage(dataURL);
-  const oc      = document.createElement('canvas');
-  oc.width  = origImg.naturalWidth;
-  oc.height = origImg.naturalHeight;
-  const octx = oc.getContext('2d');
-  octx.drawImage(origImg, 0, 0);
-  const imgData = octx.getImageData(0, 0, oc.width, oc.height);
-
-  // Build smoothed mask: 3×3 average to dilute isolated speck pixels before threshold
-  const smoothMask = new Float32Array(mW * mH);
-  for (let my = 0; my < mH; my++) {
-    for (let mx = 0; mx < mW; mx++) {
-      let sum = 0, count = 0;
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const ny = my + dy, nx = mx + dx;
-          if (ny >= 0 && ny < mH && nx >= 0 && nx < mW) {
-            sum += maskData[ny * mW + nx]; count++;
-          }
-        }
-      }
-      smoothMask[my * mW + mx] = sum / count;
-    }
-  }
-
-  for (let y = 0; y < oc.height; y++) {
-    for (let x = 0; x < oc.width; x++) {
-      const mx  = Math.min(mW - 1, Math.round((x / oc.width)  * mW));
-      const my  = Math.min(mH - 1, Math.round((y / oc.height) * mH));
-      // Averaged mask kills isolated specks; remap with steeper curve
-      let val = smoothMask[my * mW + mx];
-      val = Math.max(0, Math.min(1, (val - 0.30) / (0.80 - 0.30)));
-      val = val * val * (3 - 2 * val); // smoothstep
-      imgData.data[(y * oc.width + x) * 4 + 3] = Math.round(val * 255);
-    }
-  }
-  octx.putImageData(imgData, 0, 0);
-  return new Promise(res => oc.toBlob(res, 'image/png'));
+  const cut     = CBCutout.cutout(origImg, maskTensor.data, mW, mH, CUTOUT_TUNING);
+  return new Promise(res => cut.toBlob(res, 'image/png'));
 }
 
 function fileToDataURL(file) {
@@ -947,6 +996,7 @@ function selectSwatch(color) {
   igColorHex.value = color;
   igColorPicker.value = color;
   swatchBtns.forEach(b => b.classList.toggle('active', b.dataset.color === color));
+  tuRepaint();
   // clear active if custom
 }
 // Default: first swatch active
@@ -962,13 +1012,14 @@ swatchBtns.forEach(btn => {
 
 // Contrast radio buttons
 document.querySelectorAll('input[name="contrast"]').forEach(radio => {
-  radio.addEventListener('change', () => { if (bwCanvas) renderAll(); });
+  radio.addEventListener('change', () => { if (bwCanvas) renderAll(); tuRepaint(); });
 });
 
 // Custom color picker
 igColorPicker.addEventListener('input', () => {
   igColorHex.value = igColorPicker.value;
   swatchBtns.forEach(b => b.classList.remove('active'));
+  tuRepaint();
 });
 
 skipAI.addEventListener('change', () => {
@@ -1003,7 +1054,8 @@ function setDropCompact(file) {
 }
 
 function resetAll() {
-  photoFile = null; bgBlob = null; bwCanvas = null; _origBWCanvas = null;
+  photoFile = null; bgBlob = null; bwCanvas = null;
+  TU.data = null; TU.cut = null; TU.hist.length = 0; TU.histIdx = -1;
   _agentStore.length = 0;
   _activeAgentId = null;
   _fileQueue.length = 0;
@@ -1181,13 +1233,21 @@ async function runGenerate() {
       await loadBgRemoval();
       setProgress(72, 'Removing background…');
       if (!bgBlob) bgBlob = await removeBackground(photoFile);
+      setProgress(80, 'Cleaning up the edge…');
       sourceBlob = bgBlob;
+      // Regenerating must not silently throw away touch-up work — Reset is how
+      // you get back to the model's cutout.
+      const cur = _agentStore.find(a => a.id === _activeAgentId);
+      if (cur && cur.editBlob && cur.file === photoFile) sourceBlob = cur.editBlob;
     }
 
     setProgress(82, 'Converting to B&W…');
-    const bgImg = await loadImage(URL.createObjectURL(sourceBlob));
+    const cutURL = URL.createObjectURL(sourceBlob);
+    const srcURL = URL.createObjectURL(photoFile);
+    const [bgImg, srcImg] = await Promise.all([loadImage(cutURL), loadImage(srcURL)]);
     bwCanvas = makeBWCanvas(bgImg);
-    initTouchup();
+    mountTouchup(bgImg, srcImg);
+    URL.revokeObjectURL(cutURL); URL.revokeObjectURL(srcURL);
 
     setProgress(92, 'Rendering outputs…');
     await document.fonts.ready;
@@ -1226,8 +1286,8 @@ function loadImage(src) {
 
 function makeBWCanvas(img) {
   const c   = document.createElement('canvas');
-  c.width   = img.naturalWidth;
-  c.height  = img.naturalHeight;
+  c.width   = img.naturalWidth  || img.width;
+  c.height  = img.naturalHeight || img.height;
   const ctx = c.getContext('2d');
   const k   = parseFloat(document.querySelector('input[name="contrast"]:checked')?.value ?? '1.0');
   ctx.filter = `grayscale(1) contrast(${k}) brightness(1.03)`;
@@ -1358,107 +1418,350 @@ function makeSquareBlank(sz, bgColor) {
   return c;
 }
 
-// ── Touch-up mask painter ──
-let _tuErasing   = true;
-let _origBWCanvas = null;
+// ── Touch-up: paint the alpha channel, composited live on the output background ──
+// No model is 100%, so this is the escape hatch: erase what the cutout kept,
+// restore what it ate, and watch the real composite while doing it.
+//
+// TU.cut is the authoritative RGBA cutout (offscreen). TU.src is the untouched
+// photo at the same size, so Restore brings back the photo's own pixels — hair
+// the model deleted can actually come back, not just whatever survived the cut.
 
-function initTouchup() {
-  // Snapshot pristine bwCanvas for Restore brush
-  _origBWCanvas = document.createElement('canvas');
-  _origBWCanvas.width  = bwCanvas.width;
-  _origBWCanvas.height = bwCanvas.height;
-  _origBWCanvas.getContext('2d').drawImage(bwCanvas, 0, 0);
+const TU_HIST_MAX = 24;
+const TU = {
+  cut: null, cutCtx: null, data: null, pristine: null,
+  src: null, srcData: null,
+  disp: null, dispCtx: null,
+  mode: 'erase', bg: '#c8beb8',
+  painting: false, pointerId: null, altFlip: false,
+  last: null, carry: 0, dirty: null, snapshot: null,
+  hist: [], histIdx: -1,
+  zoom: 1, wired: false,
+};
 
-  const card = document.getElementById('touchupCard');
-  card.style.display = 'block';
+const tuEl = id => document.getElementById(id);
+const tuBackdrop = () => (TU.bg === 'ig' ? (igColorHex.value || '#aaa3cf') : TU.bg);
+const tuBrushRadius = () => Math.max(1, parseInt(tuEl('tuBrushSize').value, 10) / 2);
 
-  // ── Toggle expand/collapse ──
-  const toggle  = document.getElementById('tuToggle');
-  const body    = document.getElementById('tuBody');
-  const newToggle = toggle.cloneNode(true);
-  toggle.replaceWith(newToggle);
-  newToggle.addEventListener('click', () => {
+// ── one dab, straight into the ImageData ──
+function tuDab(cx, cy, radius, soft, flow, erasing) {
+  const w = TU.cut.width, h = TU.cut.height;
+  const px = TU.data.data, sp = TU.srcData.data;
+  const x0 = Math.max(0, Math.floor(cx - radius)), x1 = Math.min(w - 1, Math.ceil(cx + radius));
+  const y0 = Math.max(0, Math.floor(cy - radius)), y1 = Math.min(h - 1, Math.ceil(cy + radius));
+  if (x1 < x0 || y1 < y0) return;
+  const inner   = radius * (1 - soft);
+  const feather = Math.max(1e-3, radius - inner);
+  for (let y = y0; y <= y1; y++) {
+    const dy = y - cy;
+    for (let x = x0; x <= x1; x++) {
+      const dx = x - cx, d = Math.sqrt(dx * dx + dy * dy);
+      if (d > radius) continue;
+      let g = d <= inner ? 1 : 1 - (d - inner) / feather;
+      g = g * g * (3 - 2 * g);                    // smoothstep falloff
+      const k = g * flow;
+      if (k <= 0) continue;
+      const i = (y * w + x) * 4;
+      if (erasing) {
+        px[i + 3] = px[i + 3] * (1 - k);
+      } else {
+        px[i + 3] = px[i + 3] + (255 - px[i + 3]) * k;
+        // pull the photo's own colour back as alpha comes up; skip it when the
+        // source is itself a cutout (Skip AI), where there is no colour to take
+        if (sp[i + 3] > 0) {
+          px[i]     += (sp[i]     - px[i])     * k;
+          px[i + 1] += (sp[i + 1] - px[i + 1]) * k;
+          px[i + 2] += (sp[i + 2] - px[i + 2]) * k;
+        }
+      }
+    }
+  }
+  TU.dirty = TU.dirty
+    ? { x0: Math.min(TU.dirty.x0, x0), y0: Math.min(TU.dirty.y0, y0),
+        x1: Math.max(TU.dirty.x1, x1), y1: Math.max(TU.dirty.y1, y1) }
+    : { x0, y0, x1, y1 };
+}
+
+// ── repaint the visible composite, whole frame or one rect ──
+function tuBlit(r) {
+  const ctx = TU.dispCtx;
+  const x = r ? r.x0 : 0, y = r ? r.y0 : 0;
+  const w = r ? r.x1 - r.x0 + 1 : TU.cut.width;
+  const h = r ? r.y1 - r.y0 + 1 : TU.cut.height;
+  TU.cutCtx.putImageData(TU.data, 0, 0, x, y, w, h);
+  ctx.clearRect(x, y, w, h);
+  if (TU.bg !== 'checker') { ctx.fillStyle = tuBackdrop(); ctx.fillRect(x, y, w, h); }
+  // same treatment the outputs get, so the preview is the real thing
+  const k = parseFloat(document.querySelector('input[name="contrast"]:checked')?.value ?? '1.0');
+  ctx.filter = `grayscale(1) contrast(${k}) brightness(1.03)`;
+  ctx.drawImage(TU.cut, x, y, w, h, x, y, w, h);
+  ctx.filter = 'none';
+}
+
+function tuPos(ev) {
+  const rect = TU.disp.getBoundingClientRect();
+  return {
+    x: (ev.clientX - rect.left) * (TU.cut.width  / rect.width),
+    y: (ev.clientY - rect.top)  * (TU.cut.height / rect.height),
+  };
+}
+
+function tuStroke(to) {
+  const radius  = tuBrushRadius();
+  const soft    = parseInt(tuEl('tuBrushSoft').value, 10) / 100;
+  const flow    = parseInt(tuEl('tuFlow').value, 10) / 100;
+  const erasing = TU.mode === 'erase';
+  const spacing = Math.max(1, radius * 0.22);
+  if (!TU.last) {
+    tuDab(to.x, to.y, radius, soft, flow, erasing);
+    TU.last = to; TU.carry = spacing;
+    tuBlit(TU.dirty);
+    return;
+  }
+  const dx = to.x - TU.last.x, dy = to.y - TU.last.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 1e-6) return;
+  let t = TU.carry;
+  for (; t <= dist; t += spacing) {
+    tuDab(TU.last.x + dx * (t / dist), TU.last.y + dy * (t / dist), radius, soft, flow, erasing);
+  }
+  TU.carry = t - dist;
+  TU.last  = to;
+  tuBlit(TU.dirty);
+}
+
+// ── history: only the rect a stroke touched, before and after ──
+function tuSlice(buf, r) {
+  const w = TU.cut.width, bw = r.x1 - r.x0 + 1, bh = r.y1 - r.y0 + 1;
+  const out = new Uint8ClampedArray(bw * bh * 4);
+  for (let y = 0; y < bh; y++) {
+    const from = (((r.y0 + y) * w) + r.x0) * 4;
+    out.set(buf.subarray(from, from + bw * 4), y * bw * 4);
+  }
+  return out;
+}
+function tuApplySlice(r, slice) {
+  const w = TU.cut.width, bw = r.x1 - r.x0 + 1, bh = r.y1 - r.y0 + 1;
+  for (let y = 0; y < bh; y++) {
+    TU.data.data.set(slice.subarray(y * bw * 4, (y + 1) * bw * 4), (((r.y0 + y) * w) + r.x0) * 4);
+  }
+  tuBlit(r);
+}
+function tuHistButtons() {
+  tuEl('tuUndo').disabled = TU.histIdx < 0;
+  tuEl('tuRedo').disabled = TU.histIdx >= TU.hist.length - 1;
+}
+function tuUndo() {
+  if (TU.histIdx < 0) return;
+  const e = TU.hist[TU.histIdx--];
+  tuApplySlice(e.rect, e.before);
+  tuHistButtons(); tuCommit();
+}
+function tuRedo() {
+  if (TU.histIdx >= TU.hist.length - 1) return;
+  const e = TU.hist[++TU.histIdx];
+  tuApplySlice(e.rect, e.after);
+  tuHistButtons(); tuCommit();
+}
+
+// ── push the edit back through the render pipeline ──
+let _tuCommitTimer = null;
+function tuCommit() {
+  if (_tuCommitTimer) clearTimeout(_tuCommitTimer);
+  _tuCommitTimer = setTimeout(() => {
+    bwCanvas = makeBWCanvas(TU.cut);
+    renderAll();
+    const entry = _agentStore.find(a => a.id === _activeAgentId);
+    if (entry) TU.cut.toBlob(b => { entry.editBlob = b; }, 'image/png');
+  }, 30);
+}
+
+function tuSetMode(mode) {
+  TU.mode = mode;
+  tuEl('tuEraseBtn').classList.toggle('active',   mode === 'erase');
+  tuEl('tuRestoreBtn').classList.toggle('active', mode === 'restore');
+}
+
+function tuSetZoom() {
+  const pct = parseInt(tuEl('tuZoom').value, 10);
+  TU.zoom = pct / 100;
+  tuEl('tuZoomVal').textContent = pct === 100 ? 'Fit' : pct + '%';
+  if (!TU.cut) return;
+  const stage = tuEl('tuStage');
+  const avail = stage.clientWidth - 2;
+  if (avail <= 0) return;                     // card is collapsed; sized on open
+  TU.disp.style.width  = Math.round(Math.min(avail, TU.cut.width) * TU.zoom) + 'px';
+  TU.disp.style.height = 'auto';
+}
+
+function tuCursor(ev) {
+  const cur = tuEl('tuCursor');
+  if (!ev || !TU.cut) { cur.style.display = 'none'; return; }
+  const stage = tuEl('tuStage');
+  const rect = TU.disp.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  const d = Math.max(6, tuBrushRadius() * 2 * (rect.width / TU.cut.width));
+  cur.style.display = 'block';
+  cur.style.width  = cur.style.height = d + 'px';
+  cur.style.left = (ev.clientX - sr.left + stage.scrollLeft) + 'px';
+  cur.style.top  = (ev.clientY - sr.top  + stage.scrollTop)  + 'px';
+}
+
+function tuRepaint() {
+  const igBtn = document.querySelector('.tu-bg-btn[data-bg="ig"]');
+  if (igBtn) igBtn.style.background = igColorHex.value || '#aaa3cf';
+  if (TU.cut) tuBlit(null);
+}
+
+// Wired once. mountTouchup() only swaps in new pixels.
+function tuWire() {
+  if (TU.wired) return;
+  TU.wired   = true;
+  TU.disp    = tuEl('tuCanvas');
+  TU.dispCtx = TU.disp.getContext('2d');
+
+  const toggle = tuEl('tuToggle'), body = tuEl('tuBody');
+  toggle.addEventListener('click', () => {
     const open = body.classList.toggle('open');
-    newToggle.querySelector('.tu-chevron').style.transform = open ? 'rotate(90deg)' : '';
-    const hint = newToggle.querySelector('.tu-hint');
+    toggle.querySelector('.tu-chevron').style.transform = open ? 'rotate(90deg)' : '';
+    const hint = toggle.querySelector('.tu-hint');
     if (hint) hint.textContent = open ? 'Click to collapse' : 'Click to expand';
+    if (open) tuSetZoom();
   });
 
-  // ── Mode buttons ──
-  const eraseBtn   = document.getElementById('tuEraseBtn');
-  const restoreBtn = document.getElementById('tuRestoreBtn');
-  const e2 = eraseBtn.cloneNode(true);
-  const r2 = restoreBtn.cloneNode(true);
-  eraseBtn.replaceWith(e2); restoreBtn.replaceWith(r2);
-  e2.classList.add('active'); r2.classList.remove('active');
-  _tuErasing = true;
-  e2.addEventListener('click', () => { _tuErasing = true;  e2.classList.add('active');    r2.classList.remove('active'); });
-  r2.addEventListener('click', () => { _tuErasing = false; r2.classList.add('active');    e2.classList.remove('active'); });
+  tuEl('tuEraseBtn').addEventListener('click',   () => tuSetMode('erase'));
+  tuEl('tuRestoreBtn').addEventListener('click', () => tuSetMode('restore'));
+  tuEl('tuUndo').addEventListener('click', tuUndo);
+  tuEl('tuRedo').addEventListener('click', tuRedo);
+  tuEl('tuReset').addEventListener('click', () => {
+    if (!TU.pristine) return;
+    TU.data.data.set(TU.pristine);
+    TU.hist.length = 0; TU.histIdx = -1;
+    tuHistButtons(); tuBlit(null); tuCommit();
+    showToast('✓ Mask reset');
+  });
 
-  // ── Brush slider ──
-  const brushSlider = document.getElementById('tuBrushSize');
-  const brushValEl  = document.getElementById('tuBrushVal');
-  const newSlider   = brushSlider.cloneNode(true);
-  brushSlider.replaceWith(newSlider);
-  newSlider.addEventListener('input', () => { brushValEl.textContent = newSlider.value + 'px'; });
+  const num = (id, out, fmt) => {
+    const el = tuEl(id);
+    el.addEventListener('input', () => { tuEl(out).textContent = fmt(el.value); });
+  };
+  num('tuBrushSize', 'tuBrushVal', v => v);
+  num('tuBrushSoft', 'tuSoftVal',  v => v + '%');
+  num('tuFlow',      'tuFlowVal',  v => v + '%');
+  tuEl('tuZoom').addEventListener('input', tuSetZoom);
 
-  // ── Canvas: clone to wipe old listeners ──
-  const oldCanvas = document.getElementById('tuCanvas');
-  const cv = oldCanvas.cloneNode(false);
-  oldCanvas.replaceWith(cv);
-  cv.width  = bwCanvas.width;
-  cv.height = bwCanvas.height;
-  const ctx = cv.getContext('2d');
-  ctx.drawImage(bwCanvas, 0, 0);
+  tuEl('tuBgSwatches').addEventListener('click', e => {
+    const btn = e.target.closest('.tu-bg-btn');
+    if (!btn) return;
+    tuEl('tuBgSwatches').querySelectorAll('.tu-bg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    TU.bg = btn.dataset.bg;
+    tuRepaint();
+  });
 
-  let painting = false;
-
-  function getPos(ev) {
-    const rect = cv.getBoundingClientRect();
-    return {
-      x: (( ev.touches ? ev.touches[0] : ev).clientX - rect.left) * (cv.width  / rect.width),
-      y: (( ev.touches ? ev.touches[0] : ev).clientY - rect.top)  * (cv.height / rect.height),
-    };
-  }
-
-  function paint(ev) {
-    if (!painting) return;
+  const cv = TU.disp;
+  cv.addEventListener('pointerdown', ev => {
+    if (!TU.data || ev.button !== 0) return;
     ev.preventDefault();
-    const { x, y } = getPos(ev);
-    const r     = parseInt(newSlider.value) * (cv.width / cv.getBoundingClientRect().width);
-    const bwCtx = bwCanvas.getContext('2d');
-
-    bwCtx.save();
-    bwCtx.beginPath();
-    bwCtx.arc(x, y, r, 0, Math.PI * 2);
-    bwCtx.clip();
-    if (_tuErasing) {
-      bwCtx.globalCompositeOperation = 'destination-out';
-      bwCtx.fillRect(0, 0, bwCanvas.width, bwCanvas.height);
-    } else {
-      bwCtx.globalCompositeOperation = 'source-over';
-      bwCtx.drawImage(_origBWCanvas, 0, 0);
+    cv.setPointerCapture(ev.pointerId);
+    TU.pointerId = ev.pointerId;
+    TU.painting  = true;
+    TU.altFlip   = ev.altKey;
+    if (TU.altFlip) tuSetMode(TU.mode === 'erase' ? 'restore' : 'erase');
+    TU.dirty = null; TU.last = null; TU.carry = 0;
+    TU.snapshot = new Uint8ClampedArray(TU.data.data);   // memcpy, not a per-pixel loop
+    tuStroke(tuPos(ev));
+  });
+  cv.addEventListener('pointermove', ev => {
+    tuCursor(ev);
+    if (!TU.painting || ev.pointerId !== TU.pointerId) return;
+    ev.preventDefault();
+    tuStroke(tuPos(ev));
+  });
+  const endStroke = () => {
+    if (!TU.painting) return;
+    TU.painting = false;
+    if (TU.altFlip) { tuSetMode(TU.mode === 'erase' ? 'restore' : 'erase'); TU.altFlip = false; }
+    const r = TU.dirty;
+    if (r) {
+      TU.hist.length = TU.histIdx + 1;
+      TU.hist.push({ rect: r, before: tuSlice(TU.snapshot, r), after: tuSlice(TU.data.data, r) });
+      if (TU.hist.length > TU_HIST_MAX) TU.hist.shift();
+      TU.histIdx = TU.hist.length - 1;
+      tuHistButtons();
+      tuCommit();
     }
-    bwCtx.restore();
+    TU.snapshot = null; TU.dirty = null; TU.last = null;
+  };
+  cv.addEventListener('pointerup', endStroke);
+  cv.addEventListener('pointercancel', endStroke);
+  cv.addEventListener('pointerenter', ev => tuCursor(ev));
+  cv.addEventListener('pointerleave', () => tuCursor(null));
 
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    ctx.drawImage(bwCanvas, 0, 0);
+  document.addEventListener('keydown', ev => {
+    if (!TU.data || !tuEl('tuBody').classList.contains('open')) return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const meta = ev.metaKey || ev.ctrlKey;
+    if (meta && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? tuRedo() : tuUndo(); return; }
+    if (meta && ev.key.toLowerCase() === 'y') { ev.preventDefault(); tuRedo(); return; }
+    if (ev.key === 'e' || ev.key === 'E') tuSetMode('erase');
+    if (ev.key === 'r' || ev.key === 'R') tuSetMode('restore');
+    if (ev.key === '[' || ev.key === ']') {
+      const sl = tuEl('tuBrushSize');
+      const step = Math.max(2, Math.round(parseInt(sl.value, 10) * 0.2));
+      sl.value = Math.max(+sl.min, Math.min(+sl.max, parseInt(sl.value, 10) + (ev.key === ']' ? step : -step)));
+      sl.dispatchEvent(new Event('input'));
+    }
+  });
+
+  window.addEventListener('resize', tuSetZoom);
+}
+
+// cutImg: the cutout (Image or canvas). srcImg: the untouched photo, any size.
+function mountTouchup(cutImg, srcImg) {
+  tuWire();
+  const w = cutImg.naturalWidth  || cutImg.width;
+  const h = cutImg.naturalHeight || cutImg.height;
+
+  TU.cut = document.createElement('canvas');
+  TU.cut.width = w; TU.cut.height = h;
+  TU.cutCtx = TU.cut.getContext('2d', { willReadFrequently: true });
+  TU.cutCtx.clearRect(0, 0, w, h);
+  TU.cutCtx.drawImage(cutImg, 0, 0, w, h);
+  TU.data     = TU.cutCtx.getImageData(0, 0, w, h);
+  TU.pristine = new Uint8ClampedArray(TU.data.data);
+
+  TU.src = document.createElement('canvas');
+  TU.src.width = w; TU.src.height = h;
+  const sctx = TU.src.getContext('2d', { willReadFrequently: true });
+  sctx.imageSmoothingQuality = 'high';
+  sctx.drawImage(srcImg, 0, 0, w, h);
+  TU.srcData = sctx.getImageData(0, 0, w, h);
+
+  TU.disp.width = w; TU.disp.height = h;
+  TU.hist.length = 0; TU.histIdx = -1;
+  tuHistButtons();
+  tuRepaint();
+  tuEl('touchupCard').style.display = 'block';
+  tuSetZoom();
+}
+
+// Switching agent tabs has to switch the pixels under the brush too, or the
+// touch-up silently edits whoever was generated last.
+async function remountTouchupFor(entry) {
+  if (!entry || !entry.file || !(entry.editBlob || entry.cutBlob)) {
+    tuEl('touchupCard').style.display = 'none';
+    TU.data = null;
+    return;
   }
-
-  function startPaint(ev) { painting = true; paint(ev); }
-  function stopPaint() {
-    if (!painting) return;
-    painting = false;
-    renderAll();
+  const cutURL = URL.createObjectURL(entry.editBlob || entry.cutBlob);
+  const srcURL = URL.createObjectURL(entry.file);
+  try {
+    const [cutImg, srcImg] = await Promise.all([loadImage(cutURL), loadImage(srcURL)]);
+    bwCanvas = makeBWCanvas(cutImg);
+    mountTouchup(cutImg, srcImg);
+  } finally {
+    URL.revokeObjectURL(cutURL); URL.revokeObjectURL(srcURL);
   }
-
-  cv.addEventListener('mousedown',  startPaint);
-  cv.addEventListener('mousemove',  paint);
-  cv.addEventListener('mouseup',    stopPaint);
-  cv.addEventListener('mouseleave', stopPaint);
-  cv.addEventListener('touchstart', startPaint, { passive: false });
-  cv.addEventListener('touchmove',  paint,      { passive: false });
-  cv.addEventListener('touchend',   stopPaint);
 }
 
 
@@ -1603,12 +1906,17 @@ function renderAll() {
 
   // Overwrite existing entry for same full name if re-running same agent
   const existIdx = _agentStore.findIndex(a => a.key === safeFull);
+  const prev  = existIdx >= 0 ? _agentStore[existIdx] : null;
   const entry = {
     key:      safeFull,
-    id:       existIdx >= 0 ? _agentStore[existIdx].id : agentId,
+    id:       prev ? prev.id : agentId,
     label:    tabLabel,
     zipName,
     blobs:    [...window._outputBlobs],
+    // what the touch-up brush needs to pick this agent back up on a tab switch
+    file:     photoFile || (prev && prev.file) || null,
+    cutBlob:  bgBlob    || (prev && prev.cutBlob) || null,
+    editBlob: prev ? prev.editBlob : null,
   };
   if (existIdx >= 0) { _agentStore[existIdx] = entry; }
   else               { _agentStore.push(entry); }
@@ -1657,6 +1965,9 @@ function switchToAgent(id) {
   if (!agent) return;
   _activeAgentId = id;
   window._outputBlobs = agent.blobs;
+  photoFile = agent.file || photoFile;
+  bgBlob    = agent.cutBlob || null;
+  remountTouchupFor(agent);
 
   // Rebuild grid from stored dataURLs using <img> — canvas data is lost in storage
   outputsGrid.innerHTML = '';
