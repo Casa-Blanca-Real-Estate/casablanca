@@ -1,0 +1,69 @@
+/* Hubert's drawer (the handoff: 380px, white, a #dddbd5 left edge and a soft shadow).
+   The shell's box places it (fixed, right, full height); .hb fills that box. Prefix hb-. */
+.hb {
+  height: 100%; width: 100%; display: flex; flex-direction: column; min-height: 0;
+  background: var(--cb-surface); color: var(--cb-black);
+  border-left: 1px solid var(--cb-border); box-shadow: -12px 0 32px rgba(15, 15, 15, .08);
+}
+.hb-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 18px 22px; border-bottom: 1px solid var(--cb-line); }
+.hb-mark { color: var(--cb-lavender); font-size: 15px; line-height: 1; }
+.hb-name { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.hb-close {
+  margin-left: auto; font: inherit; font-size: 18px; line-height: 1; color: var(--cb-mid);
+  background: none; border: none; padding: 0 4px; cursor: pointer;
+}
+.hb-close:hover { color: var(--cb-black); }
+
+/* The conversation: Hubert left on the page tone, the agent right in ink. */
+.hb-body { flex: 1; min-height: 0; overflow: auto; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.hb-bubble, .hb-msg.assistant {
+  align-self: flex-start; background: var(--cb-bg); padding: 12px 14px; font-size: 13px; line-height: 1.5; max-width: 300px; box-sizing: content-box;
+}
+.hb-msg.user { align-self: flex-end; background: var(--cb-black); color: #fff; padding: 10px 12px; font-size: 13px; line-height: 1.45; max-width: 260px; box-sizing: content-box; }
+.hb-msg.dim { opacity: .55; }
+.hb-msg p { margin: 0; }
+.hb-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.hb-progress { font-size: 11px; color: var(--cb-mid); margin: 0 0 6px !important; }
+.hb-hint { margin: 0; font-size: 12px; color: var(--cb-mid); line-height: 1.45; }
+.hb-notice { margin: 0; font-size: 12px; color: var(--cb-black); border-left: 3px solid var(--cb-yellow); padding: 4px 0 4px 10px; }
+
+/* "You might also look at": sales from the agent's own export they took out. */
+.hb-sug { display: flex; flex-direction: column; border: 1px solid var(--cb-line); margin-top: 6px; }
+.hb-sug-head { padding: 12px 14px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-black); }
+.hb-sug-item { border-top: 1px solid var(--cb-line); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.hb-sug-title { display: flex; align-items: center; gap: 8px; }
+.hb-sq { width: 8px; height: 8px; flex: none; background: var(--cb-black); }
+.hb-sq.in_contract { background: var(--cb-lavender); }
+.hb-sq.active { background: var(--cb-surface); border: 1px solid var(--cb-black); }
+.hb-sq.off_market { background: var(--cb-sand); }
+.hb-sug-addr { font-size: 13px; font-weight: 800; min-width: 0; }
+.hb-sug-cta {
+  margin-left: auto; flex: none; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--cb-black); background: none; border: none; padding: 0; cursor: pointer; white-space: nowrap;
+}
+.hb-sug-cta:disabled { cursor: default; opacity: .55; }
+.hb-sug-cta.done { color: var(--cb-mid); cursor: default; }
+.hb-sug-sub { font-size: 12px; color: var(--cb-mid); }
+.hb-sug-why { font-size: 12px; line-height: 1.45; }
+
+/* Two preset questions, then the input. */
+.hb-chips { flex: none; padding: 0 22px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.hb-chip {
+  font: inherit; font-size: 11px; line-height: 1.4; text-align: left; color: var(--cb-black);
+  background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 0; padding: 5px 10px; cursor: pointer;
+}
+.hb-chip:hover:not(:disabled) { border-color: var(--cb-black); }
+.hb-chip:disabled { opacity: .5; cursor: default; }
+.hb-input { flex: none; border-top: 1px solid var(--cb-line); padding: 14px 22px; display: flex; gap: 8px; align-items: stretch; }
+.hb-input textarea {
+  flex: 1; min-width: 0; resize: none; overflow: auto; max-height: 120px;
+  border: 1px solid var(--cb-border); border-radius: 0; padding: 11px 12px; font: inherit; font-size: 13px; line-height: 1.4; color: var(--cb-black); background: var(--cb-surface);
+}
+.hb-input textarea::placeholder { color: var(--cb-mid); }
+.hb-input textarea:focus { outline: none; border-color: var(--cb-black); }
+.hb-send {
+  flex: none; font: inherit; font-size: 12px; font-weight: 800; color: #fff; background: var(--cb-black);
+  border: none; border-radius: 0; padding: 0 14px; cursor: pointer;
+}
+.hb-send:disabled { cursor: default; }
+.hb-readonly { flex: none; margin: 0; border-top: 1px solid var(--cb-line); padding: 14px 22px; font-size: 12px; color: var(--cb-mid); }
