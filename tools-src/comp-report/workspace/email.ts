@@ -1,11 +1,17 @@
-// The client email (§10.2; `02-screens.md`, Send), still a fixed template —
-// the writer comes in CR-5. It's built around the agent's headline, in the
-// order Frankie's email goes (sources/2026-07-29-frankie-…):
+// The client email (§10.2; `02-screens.md`, Send). It's built around the
+// agent's headline, in the order Frankie's email goes (sources/2026-07-29-frankie-…):
 //
 //   greeting · the headline · how the comps were chosen · sold, in contract,
-//   active and didn't sell, each comp a link with its price and the agent's
-//   notes · things to consider · the price table · the next step · sign-off ·
+//   active and didn't sell, each comp a link with its price and its lines ·
+//   things to consider · the price table · the next step · sign-off ·
 //   the approved disclaimer (D-13)
+//
+// The frame is the code's, whoever writes the rest: the greeting, each comp's
+// link and price, the price table, the sign-off and the disclaimer. The
+// writer (CR-5) drafts the sections between — how the comps were chosen, each
+// comp's lines, things to consider, the next step. Without a draft, the
+// agent's own lines and notes fill them, as the template did before the
+// writer: it's the fallback when the writer fails (Dispatch 13).
 //
 // Empty sections are left out (Kara). Every figure comes from the engine's
 // output or from what the agent wrote; nothing here computes a number (§4.1).
@@ -14,17 +20,10 @@
 import type { EngineOutput, HeadlineFacts, ResultKind } from '../engine/index.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { againstAsk, clientPrice, countWord, estimateWords, psf, usd } from './format.ts';
-import { numbersNotInFacts } from './grounding.ts';
+import { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER } from './frame.ts';
 import { fact, homeName, readingFromFacts } from './reading.ts';
 
-export const SAMPLE_BANNER = '[SAMPLE DATA — this draft uses sample values. Not for clients.]';
-
-/** Approved 2026-09-29 (D-13, design §14). It carries the StreetEasy attribution. */
-export const DISCLAIMER =
-  'This comparative market analysis is an estimate of market value prepared by a licensed real estate agent for informational purposes. ' +
-  'It is not an appraisal. Data provided by StreetEasy and other sources, which may be incomplete or subject to change.';
-
-export const HEADLINE_PLACEHOLDER = '[Your headline: one sentence on what the comps show]';
+export { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER };
 
 export type EmailLength = 'full' | 'short' | 'text';
 
@@ -47,6 +46,19 @@ export interface EmailInput {
   nextStep?: string | undefined;
   length: EmailLength;
   sample: boolean;
+  /** The writer's sections (CR-5). Without them, the agent's own lines and notes fill the email. */
+  written?: WrittenSections | null | undefined;
+}
+
+/** What the writer drafts between the frame's parts, in Frankie's order (Dispatch 13, item 3). */
+export interface WrittenSections {
+  /** One line on how the comps were chosen. Empty: left out. */
+  chosen: string;
+  /** Each comp's one to three lines, by the engine's comp id. */
+  comps: { id: string; lines: string[] }[];
+  /** Things to consider, a point a line. */
+  consider: string[];
+  nextStep: string;
 }
 
 export interface EmailDraft {
@@ -60,32 +72,41 @@ export interface EmailDraft {
 type Block =
   | { kind: 'p'; text: string }
   | { kind: 'h'; text: string }
-  | { kind: 'comp'; name: string; url: string | null; line: string; note: string | null }
-  | { kind: 'rows'; rows: string[] };
+  | { kind: 'comp'; name: string; url: string | null; line: string; notes: string[] }
+  | { kind: 'rows'; rows: string[] }
+  | { kind: 'points'; points: string[] };
 
 const STATUS_HEADINGS = { sold: 'Sold', in_contract: 'In contract', active: 'Active', off_market: 'Didn’t sell' } as const;
 const ORDER = ['sold', 'in_contract', 'active', 'off_market'] as const;
 
-function addressOf(c: WorkspaceComp): string {
+/** "200 Chambers Street #10A". */
+export function addressOf(c: WorkspaceComp): string {
   const street = c.record.identity.address.street ?? 'Unknown address';
   const unit = c.record.identity.unit.raw;
   return unit ? `${street} ${unit.startsWith('#') ? unit : `#${unit}`}` : street;
 }
 
-function urlOf(c: WorkspaceComp): string | null {
+/** The comp's StreetEasy page, when it has one. */
+export function urlOf(c: WorkspaceComp): string | null {
   const url = c.record.listing?.url ?? c.record.identity.streeteasy?.url ?? null;
   return url && /^https:\/\/(www\.)?streeteasy\.com\//.test(url) ? url : null;
 }
 
-/** The comps the email lists: those counted in the chosen result, "didn't sell" included (§6.3). */
-function counted(input: EmailInput): { status: (typeof ORDER)[number]; comp: WorkspaceComp; line: string }[] {
-  const outById = new Map(input.output.comps.map((c) => [c.id, c]));
-  const rows: { status: (typeof ORDER)[number]; comp: WorkspaceComp; line: string }[] = [];
-  for (const c of input.comps) {
+export type EmailStatus = (typeof ORDER)[number];
+
+/**
+ * The comps the email lists — those counted in the chosen result, "didn't
+ * sell" included (§6.3) — each with the frame's line: its price, $/sq ft, sale
+ * against ask and days on the market. The writer is given the same list.
+ */
+export function countedComps(output: EngineOutput, result: ResultKind, comps: WorkspaceComp[]): { status: EmailStatus; comp: WorkspaceComp; line: string }[] {
+  const outById = new Map(output.comps.map((c) => [c.id, c]));
+  const rows: { status: EmailStatus; comp: WorkspaceComp; line: string }[] = [];
+  for (const c of comps) {
     const status = c.record.status.listing_status ?? c.record.status.evidence_class;
     if (!status) continue;
     const out = outById.get(c.id);
-    const pr = out?.per_result[input.result];
+    const pr = out?.per_result[result];
     if (!pr?.included) continue;
     const f = c.record.facts;
     const rate = pr?.price_per_sqft?.value ?? null;
@@ -111,6 +132,10 @@ function blocks(input: EmailInput): Block[] {
   const p = (text: string | undefined) => {
     if (text && text.trim()) out.push({ kind: 'p', text: text.trim() });
   };
+  const w = input.written ?? null;
+  const chosen = w ? w.chosen : input.chosen;
+  const nextStep = w ? w.nextStep : input.nextStep;
+  const consider = w ? w.consider.map((x) => x.trim()).filter(Boolean) : input.consider?.trim() ? [input.consider.trim()] : [];
   if (input.sample) p(SAMPLE_BANNER);
   p(`Hi ${input.clientName?.trim() || '[client name]'},`);
   p(input.headline?.trim() || HEADLINE_PLACEHOLDER);
@@ -119,28 +144,35 @@ function blocks(input: EmailInput): Block[] {
     p([...new Set(r.estimates_used.map(estimateWords))].join(' '));
   }
   if (input.length === 'text') {
-    p(input.nextStep);
+    p(nextStep);
     p(input.agentName || '[your name]');
     p(DISCLAIMER);
     return out;
   }
-  if (input.length === 'full') p(input.chosen);
+  if (input.length === 'full') p(chosen);
 
-  const rows = counted(input);
+  const writtenLines = new Map((w?.comps ?? []).map((c) => [c.id, c.lines.map((l) => l.trim()).filter(Boolean)]));
+  const rows = countedComps(input.output, input.result, input.comps);
   for (const status of ORDER) {
     if (input.length === 'short' && status !== 'sold') continue;
     const list = rows.filter((x) => x.status === status);
     if (!list.length) continue;
     out.push({ kind: 'h', text: STATUS_HEADINGS[status] });
     for (const { comp, line } of list) {
-      const note = input.length === 'full' ? comp.judgment?.reasons.at(-1)?.reason ?? null : null;
-      out.push({ kind: 'comp', name: addressOf(comp), url: urlOf(comp), line, note: note && note.trim() ? note.trim() : null });
+      let notes: string[];
+      if (w) notes = (writtenLines.get(comp.id) ?? []).slice(0, input.length === 'full' ? 3 : 1);
+      else {
+        const note = input.length === 'full' ? comp.judgment?.reasons.at(-1)?.reason?.trim() : null;
+        notes = note ? [note] : [];
+      }
+      out.push({ kind: 'comp', name: addressOf(comp), url: urlOf(comp), line, notes });
     }
   }
 
-  if (input.length === 'full' && input.consider?.trim()) {
+  if (input.length === 'full' && consider.length) {
     out.push({ kind: 'h', text: 'Things to consider' });
-    p(input.consider);
+    if (w) out.push({ kind: 'points', points: consider });
+    else p(consider[0]);
   }
   // The price table, as Frankie gives it: "$880 - $638K", a line a step (§6.5).
   const table = r.price_table;
@@ -148,7 +180,7 @@ function blocks(input: EmailInput): Block[] {
     out.push({ kind: 'h', text: `Price per sq ft for ${input.homeLine || 'the home'}` });
     out.push({ kind: 'rows', rows: table.rows.map((row) => `${psf(row.per_sqft.value)} - ${clientPrice(row.price.value)}`) });
   }
-  p(input.nextStep);
+  p(nextStep);
   p(input.agentName || '[your name]');
   p(DISCLAIMER);
   return out;
@@ -170,12 +202,16 @@ export function buildEmail(input: EmailInput): EmailDraft {
     } else if (b.kind === 'rows') {
       text.push(...b.rows, '');
       html.push(`<p>${b.rows.map(escape).join('<br>')}</p>`);
+    } else if (b.kind === 'points') {
+      text.push(...b.points.map((x) => `- ${x.replace(/\n/g, ' ')}`), '');
+      html.push(`<ul>${b.points.map((x) => `<li>${escape(x)}</li>`).join('')}</ul>`);
     } else {
       text.push(`- ${b.name} — ${b.line}${b.url ? ` — ${b.url}` : ''}`);
-      if (b.note) text.push(`  ${b.note.replace(/\n/g, ' ')}`);
+      for (const note of b.notes) text.push(`  ${note.replace(/\n/g, ' ')}`);
       if (bs[i + 1]?.kind !== 'comp') text.push(''); // a blank line after each status's list
       const name = b.url ? `<a href="${escape(b.url)}">${escape(b.name)}</a>` : escape(b.name);
-      html.push(`<p style="margin:0 0 6px">${name} — ${escape(b.line)}${b.note ? `<br><span style="margin-left:1.5em">${escape(b.note)}</span>` : ''}</p>`);
+      const notes = b.notes.map((n) => `<br><span style="margin-left:1.5em">${escape(n)}</span>`).join('');
+      html.push(`<p style="margin:0 0 6px">${name} — ${escape(b.line)}${notes}</p>`);
     }
   });
   const subject = `${input.sample ? '[SAMPLE] ' : ''}${input.homeLine || 'The home'}: what the comps say`;
@@ -188,75 +224,6 @@ export function htmlFromText(text: string): string {
     const body = escape(para).replace(/https:\/\/(www\.)?streeteasy\.com\/[^\s<]+/g, (u) => `<a href="${u}">${u}</a>`).replace(/\n/g, '<br>');
     return `<p>${body}</p>`;
   }).join('\n');
-}
-
-// ─── QA (§9) ─────────────────────────────────────────────────────────────────
-
-export interface QaFinding {
-  check: 'appraisal_word';
-  match: string;
-  index: number;
-}
-
-/**
- * "Appraisal" and "appraised value" never appear in client copy — the one hard
- * block (§9.3, D-2). The approved disclaimer is the exception: the tool puts it
- * there, and it says the analysis isn't one.
- */
-export function appraisalFindings(text: string): QaFinding[] {
-  const findings: QaFinding[] = [];
-  const copy = text.split(DISCLAIMER).join(' '.repeat(DISCLAIMER.length));
-  for (const m of copy.matchAll(/\b(appraisals?|appraised\s+values?)\b/gi)) {
-    findings.push({ check: 'appraisal_word', match: m[0], index: m.index ?? 0 });
-  }
-  return findings;
-}
-
-export interface QaCheck {
-  id: 'headline' | 'grounding' | 'appraisal' | 'disclaimer' | 'estimates' | 'sample';
-  state: 'pass' | 'fail' | 'warn';
-  message: string;
-}
-
-/**
- * The checks before an email goes out, and whether it can be copied: every
- * fail blocks. A headline number that traces to none of the headline facts
- * warns (§10.2); the full numeric grounding is QA's, with the writer (CR-5).
- */
-export function emailChecks(args: { text: string; headline: string | undefined; result: ResultKind; output: EngineOutput; sample: boolean }): QaCheck[] {
-  const checks: QaCheck[] = [];
-  const headline = args.headline?.trim();
-  checks.push(headline
-    ? { id: 'headline', state: 'pass', message: 'The headline leads.' }
-    : { id: 'headline', state: 'fail', message: 'Write the headline: one sentence on what the comps show.' });
-  if (headline) {
-    const stray = numbersNotInFacts(headline, args.output.headline_facts[args.result], { agent: true });
-    checks.push(stray.length
-      ? { id: 'grounding', state: 'warn', message: `Check ${stray.join(', ')} in the headline: ${stray.length === 1 ? 'it doesn’t' : 'they don’t'} match the numbers.` }
-      : { id: 'grounding', state: 'pass', message: 'Every number in the headline matches the numbers.' });
-  }
-  const words = appraisalFindings(args.text);
-  checks.push(words.length
-    ? { id: 'appraisal', state: 'fail', message: `Take out “${words[0]!.match}”: this is a comparative market analysis, never an appraisal.` }
-    : { id: 'appraisal', state: 'pass', message: 'No appraisal language.' });
-  checks.push(args.text.includes(DISCLAIMER)
-    ? { id: 'disclaimer', state: 'pass', message: 'The disclaimer is in.' }
-    : { id: 'disclaimer', state: 'fail', message: 'Put the disclaimer back: it has to go out with every email.' });
-  if (args.result === 'with_estimates' && args.output.results.with_estimates.estimates_used.length) {
-    const said = args.output.results.with_estimates.estimates_used.map(estimateWords).every((w) => args.text.includes(w));
-    checks.push(said
-      ? { id: 'estimates', state: 'pass', message: 'Your estimates are disclosed.' }
-      : { id: 'estimates', state: 'fail', message: 'The email uses your estimates: say so.' });
-  }
-  if (args.sample) checks.push({ id: 'sample', state: 'warn', message: 'It uses sample data: not for a client.' });
-  return checks;
-}
-
-/** "Ready to send", or "2 things to fix". */
-export function qaStatus(checks: QaCheck[]): { ready: boolean; line: string } {
-  const fails = checks.filter((c) => c.state === 'fail').length;
-  if (fails) return { ready: false, line: `${fails} thing${fails === 1 ? '' : 's'} to fix` };
-  return { ready: true, line: checks.some((c) => c.state === 'warn') ? 'Ready, with a note' : 'Ready to send' };
 }
 
 /** The name of a home or comp a fact rests on, from the facts' own names: "17L", "200 Chambers Street #10A". */

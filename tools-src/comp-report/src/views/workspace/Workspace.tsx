@@ -363,6 +363,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     },
     send,
     setSend: (next) => setState({ ...stateRef.current, send: next }),
+    flush: save.flush,
     imports: data.imports,
     parsed,
     unreadable,

@@ -1,7 +1,9 @@
 // Calls to the comp report's functions. Same origin; the session token rides
 // in the Authorization header on every request.
+import type { NarrativeView as Narrative } from '../server/api/narratives.ts';
 import type { LinkReadView, WorkspaceData } from '../server/api/workspace.ts';
 import type { GeocodeView } from '../server/buildings.ts';
+import type { Acknowledgment } from '../workspace/qa.ts';
 import type { Brief, CallState, DealTermsState, Intake, ReasonType, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
 import { session } from './session.ts';
 
@@ -121,6 +123,7 @@ export async function* streamTurn(reportId: string, message?: string): AsyncGene
 
 export type { LinkReadView, WorkspaceData, WorkspaceImport } from '../server/api/workspace.ts';
 export type { GeocodeView } from '../server/buildings.ts';
+export type { NarrativeView } from '../server/api/narratives.ts';
 
 export interface SampleWalkthrough {
   intake: Intake;
@@ -201,4 +204,34 @@ export const linksApi = {
       body: JSON.stringify({ reportId, readId }),
     }).catch(() => undefined); // a start that didn't reach it is started again by the poll
   },
+};
+
+// ─── The writer's drafts (CR-5) ──────────────────────────────────────────────
+
+
+export interface EmailToLog {
+  parentId: string | null;
+  length: 'full' | 'short' | 'text';
+  result: 'on_facts' | 'with_estimates';
+  headline: string;
+  subject: string;
+  text: string;
+}
+
+export const narrativesApi = {
+  load: (reportId: string) => api<{ narratives: Narrative[] }>(`/api/comp-report/narratives?report=${reportId}`),
+  /** Queues a draft; `keep` is the agent's edited email, kept before the new draft replaces it. */
+  write: (reportId: string, args: { length: EmailToLog['length']; result: EmailToLog['result']; keep?: Omit<EmailToLog, 'length' | 'result'> & { acknowledgments: Acknowledgment[] } }) =>
+    api<{ narrative: Narrative; kept: Narrative | null }>('/api/comp-report/narratives', { method: 'POST', body: { reportId, action: 'write', ...args } }),
+  /** Starts the queued draft in the background function; Netlify answers 202 at once, and polling picks it up. */
+  start: async (reportId: string, narrativeId: string): Promise<void> => {
+    await fetch('/.netlify/functions/comp-report-write-background', {
+      method: 'POST',
+      headers: await headers(),
+      body: JSON.stringify({ reportId, narrativeId }),
+    }).catch(() => undefined); // a start that didn't reach it is started again by the poll
+  },
+  /** Logs what was copied, with QA's results and the agent's answers (§9.1). */
+  copied: (reportId: string, email: EmailToLog, qa: unknown, acknowledgments: Acknowledgment[]) =>
+    api<{ narrative: Narrative }>('/api/comp-report/narratives', { method: 'POST', body: { reportId, action: 'copy', ...email, qa, acknowledgments } }),
 };

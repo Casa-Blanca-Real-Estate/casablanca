@@ -19,6 +19,7 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 |---|---|---|---|---|
 | D-17 | Two questions for counsel | Later | Quick (counsel) | the pilot; factor 18 |
 | D-24 | Where agents' contact details come from | Soon — Dispatch 12, phase 1 | Quick | the roster's one-time import |
+| D-25 | The fair-housing list, and "appraisal contingency" | Soon — before agents copy writer drafts | Think (Hannah) | QA's compliance list (Dispatch 13) |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
 each was applied.
@@ -89,6 +90,13 @@ each was applied.
   - **The QR generator:** merge it when there's a gap (D-16).
   - **Your caption tracker** (a Claude artifact, linked from the carousel builders): it may become part
     of the studio later.
+- [ ] **Soon — read the writer's house voice and its eval drafts** (Dispatch 13, phase 1's PR). The
+  style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. **The eval's real
+  drafts need an Anthropic key in the Casa cloud environment:** in the session's title bar, open the
+  cloud environment menu, then **Edit**, and add `CR_EVAL_ANTHROPIC_API_KEY` (under Network secrets
+  where it's offered, otherwise as an environment variable). Its own name, so the session itself
+  never takes it up. A new session picks it up, and Mason runs the
+  eval (well under a dollar). Don't paste the key into a chat.
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---
@@ -122,6 +130,26 @@ as FileMaker, that the import should read instead? The session found duplicates,
 gaps in the doc, so the answer decides between parsing a doc and doing a proper export.
 
 **Answer →** _type here — the doc, FileMaker, or something else_
+
+---
+
+### D-25 · The fair-housing list, and "appraisal contingency"
+`Soon — before agents copy writer drafts` · `Think — Hannah, or counsel through her`
+
+QA's one hard block is compliance (D-2). Dispatch 13 asks for "a fixed, reviewed list" of fair-housing
+terms, and nothing else. Mason drafted the list from HUD's advertising guidance and New York City's
+Human Rights Law: `tools-src/comp-report/workspace/fair-housing.ts` (version `fh-2026-10-14`).
+
+1. **The list needs a reviewer.** A term on its hard list blocks Copy outright ("adults only",
+   "perfect for young professionals", "no Section 8", "school district", "safe neighborhood"). A word
+   on its near list ("family", "church", "school") warns, and the agent acknowledges it before copying.
+   Who reviews it: Hannah, or counsel through her? School zones are on the hard list because design
+   §14 keeps them out of client copy until Hannah approves wording.
+2. **"Appraisal contingency."** "Appraisal" in client copy is a hard block (§9.3), so an agent who
+   writes about waiving the appraisal contingency in the next step can't copy the email. Keep that,
+   or allow the phrase as a deal term?
+
+**Answer →** _type here — who reviews the list; keep or allow "appraisal contingency"_
 
 ---
 

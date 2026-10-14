@@ -394,6 +394,11 @@ table.facts th { font-size: 11px; font-weight: 800; color: var(--cb-mid); white-
 .qa-line::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 .qa-line.ready::before { background: var(--cb-lavender); }
 .qa-line.fix::before { background: var(--cb-black); }
+/* The writer (CR-5): Write it, its progress, and QA's findings to answer. */
+.writer-bar { margin-bottom: 4px; }
+.qa-items { margin: 6px 0 0; gap: 4px; }
+.qa-items li { border-left: none; padding: 2px 0; }
+.qa-answers { display: inline-flex; gap: 10px; margin-left: 8px; }
 .starter { margin: 0 0 8px; }
 
 /* Wired to the engine (CR-3b phase 3): Kara's checks, the ceiling, the price table, the pairs. */
