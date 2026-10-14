@@ -139,7 +139,7 @@ headshots.
 
 Phase 1 ships without a single upload and is already useful: it answers "who still needs one".
 
-> **Phase 1, as built (Painter, 2026-10-14, PR-TBD).** Where it differs from the list above:
+> **Phase 1, as built (Painter, 2026-10-14, #71).** Where it differs from the list above:
 > - **The token is `CB_PICS_TOKEN`**, per §7.5, not `CB_CMS_TOKEN` as item 1 says. The function
 >   refuses everything when it's unset or the same as `CB_CMS_TOKEN`, and `agent-store` refuses it.
 > - **`raws` and `notes` sit inside `pic`**, so the token writes exactly two groups, `pic` and

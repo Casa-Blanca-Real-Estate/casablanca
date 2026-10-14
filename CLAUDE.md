@@ -105,7 +105,7 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](docs/dispatch/09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
 | 10 | [Comp report — the decision provider, Jev first (CR-D)](docs/dispatch/10-comp-report-decision-provider.md) | Arbiter | Phase 1, follow-ups and the zero-retention switch merged #56, #59, #61. Phase 2 when Kimani's key is in |
 | 11 | [Comp report — distance, from coordinates (CR-3c)](docs/dispatch/11-comp-report-distance.md) | Mason | Done — merged #62 |
-| 12 | [Profile pics — the roster, the store and the email signature](docs/dispatch/12-profile-pic-tracker.md) | Painter | Phase 1 (the roster and the record) in review, PR-TBD |
+| 12 | [Profile pics — the roster, the store and the email signature](docs/dispatch/12-profile-pic-tracker.md) | Painter | Phase 1 (the roster and the record) in review, #71 |
 | 13 | [Comp report — the writer and QA (CR-5)](docs/dispatch/13-comp-report-writer-and-qa.md) | Mason | Ready |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
