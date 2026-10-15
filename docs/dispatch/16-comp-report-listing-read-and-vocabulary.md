@@ -34,9 +34,11 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
      `source.extract`. Add and export `cleanPhotoUrls(urls): string[]` in `engine/parser/`: it keeps a URL only
      if it is `https:`, has no userinfo, and its host is on a short allowlist of StreetEasy's image hosts
      (a `PHOTO_HOSTS` list, exact host or a dot-suffix match); drops the carousel import's junk matches; removes
-     duplicates; and returns at most 8, hero first. Name the hosts from the fixtures and from a real read's
-     output (if StreetEasy refuses fetches, take them from Surveyor's checklist in 07). A URL on any other host
-     is dropped, not stored. The hero is kept only if it passes. Dispatch 20 runs the same function again
+     duplicates; and returns at most 8, hero first. No image host is in the repo today, so `PHOTO_HOSTS`
+     starts from the hosts in the fixtures you add (a page with photos, per the constraints below) and from a real read's
+     output, and it is provisional. Dispatch 17 (Surveyor) delivers the confirmed hosts, from fixtures and a live
+     read, or from Kimani's checklist in 07 if StreetEasy refuses fetches; when it lands, take its list in a one-line
+     change (this PR doesn't wait for it). A URL on any other host is dropped, not stored. The hero is kept only if it passes. Dispatch 20 runs the same function again
      before sending photos to the client.
    - Tests: an `http:` URL, a `data:` or `javascript:` URL, `https://user@evil.example/x.jpg`, a lookalike
      host (`streeteasy.com.evil.example`), an off-list host, a junk match, nine photos and a duplicate.
@@ -116,6 +118,7 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
   `typecheck:engine`, `build`.
 - The PR lists the new fields and exports Mason needs for Dispatch 20, and every decision built on a
   recommendation (NW-012's word, NW-045's six tags, the size thresholds, NW-018 a). Photo URLs are stored only
-  through `cleanPhotoUrls`, and its tests pass.
+  through `cleanPhotoUrls`, and its tests pass. The PR lists the `PHOTO_HOSTS` it ships and says they are
+  provisional until Dispatch 17's list lands.
 
 — Casanova

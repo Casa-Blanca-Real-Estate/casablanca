@@ -6,7 +6,8 @@ split, the read tools, the role gates, what conflicts with the design), `03-gate
 (NW-068), D-4 and D-27 items 5 and 6 in `docs/decisions.md`, and `01-design.md` §8 (§8.2 is superseded by D-27
 item 6 where they differ).
 **Depends on:** the move to Casa's Claude account (NW-096). Dispatch 15 merged (it adds Hubert's markdown
-renderer to `Chat.tsx`). Dispatch 22 merged before you edit `api/messages.ts`. Do the server work first,
+renderer to `Chat.tsx`). Dispatch 22's PR 22a merged (or its single PR, if it shipped as one) before you edit `api/messages.ts`;
+22b doesn't hold you. Do the server work first,
 except item 1, which reads Dispatch 21's reveal marker and so waits for 21; the copy lines in `Home.tsx` and
 `Terms.tsx` last, rebased on Dispatches 20 and 21. NW-093 d (the agent's own number) is Kimani's call; build
 `get_call` only if he says yes.
@@ -70,8 +71,10 @@ version, gated by role on the server.
 6. **The chips.** Sort's "Does 5 Franklin have a doorman?" must be answerable; no chip promises what he can't
    do. From Dispatch 14's follow-ups: Hubert's "Fix both" chip reaches Send's deterministic fix. The chip's
    side is yours. If Send needs a hook to take the fix, name it in the PR and Mason adds it (rule 8).
-7. **Dispatch 13's line** "the agent's number and target never reach a model" no longer matches D-4 as built.
-   Don't edit that brief (Casanova writes it): name the line in your PR, and Casanova corrects it.
+7. **Dispatch 13's line** "the agent's number and target never reach a model" was wrong for Hubert once D-4
+   said he sees the target after the reveal. It is corrected in Dispatch 13 (dated note, now "never reach the
+   writer"); the writer stays blind. Don't edit that brief; if your build changes what Hubert sees beyond item 1,
+   say so in the PR and Casanova updates it.
 
 ## Not in scope
 
@@ -86,6 +89,10 @@ one). The writer's voice and client profile: your next dispatch, once Dispatch 2
 - No migration. Hubert never tiers, writes notes or picks tags (D-27 item 6). He never names a listing that
   isn't in the data.
 - Jev gets no text an agent wrote (D-12); Hubert's context can. Keep the two pipes apart.
+- **Dispatch 23 item 4 touches your files.** It changes `productionAnthropic` to take the user
+  (`productionAnthropic(user)`, for the test user's separate key), which edits `api/turn.ts` and the write deps
+  you also edit. Whichever of 23's second PR and yours opens second rebases on the first; if 23 lands first,
+  rebase on it before touching `deps.anthropic` and keep the user argument.
 - The turn's 50 s deadline and six-round loop stay. Keep the tool block cached.
 - Make any new key on the Casa account (D-26). A session never uses the production Anthropic key; evals use
   `CR_EVAL_ANTHROPIC_API_KEY`.

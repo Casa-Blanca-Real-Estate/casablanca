@@ -68,6 +68,10 @@ the plan's Phase C) and the example email itself (NW-085 a, Kimani's call).
   PATCH; check the server's shape validation).
 - `workspace/qa.ts` changes are additive; its tests still pass. Copy stays blocked on a hard compliance
   failure, and waits for a headline (D-21).
+- **Everything in the Designed email is escaped.** Anything an agent typed (the title, the home's sub line, comp
+  names, notes, tags, the subject, `agent_stated` lines and a client's name) reaches the HTML only through the
+  `esc` in `designed.ts:208` (and item 8's renderer calls the same one), in text and in the `href` attributes alike (item 5's anchors take a StreetEasy URL
+  only if it is `https:`, else none). Listing text read from a page is escaped the same way.
 - Gmail strips `background-image`, so the photo blocks arrive flat grey until photos exist. Expected. Photos in the Designed email are Phase B (NW-020 b), after
   Dispatch 20 carries the photo URLs to the client; not here.
 
@@ -87,6 +91,10 @@ the plan's Phase C) and the example email itself (NW-085 a, Kimani's call).
 - Editing the subject stores `send.subject` and creates no body draft; the draft fingerprint ignores it; an
   old draft carrying `draft.subject` still shows it. Editing Full and then Short keeps both drafts. Mark as
   sent records the tab last copied, not the tab that's open. Tests for each.
+- Escaping: a test plants markup (`<img src=x onerror=1>`, `"><script>`, an `&amp;`, a `javascript:` link) in
+  the title, a comp name, a note, a tag, the subject and the client's name, and asserts the Designed, Full and
+  Short HTML contains each as text (`&lt;`) and none as a tag or attribute, and that a non-`https:` link
+  becomes no anchor.
 - Default tab is Designed for a report with no stored format, and a stored format still wins. A test.
 - Every suite passes with nothing skipped: `test:engine`, `test:comp-report` on a local Postgres
   (`npm run db:local`), `test`, `test:dev-notebook`, `test:feedback`, `test:agent-pics`; and `typecheck`,

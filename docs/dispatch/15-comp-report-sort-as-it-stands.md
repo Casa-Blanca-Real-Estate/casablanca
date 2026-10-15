@@ -99,7 +99,8 @@ suggested tags (Dispatch 16 makes the data, 20 shows it), photos (16, 20), sampl
 
 - **One migration, `20261016000000`.** No other open PR uses it; re-check before you open. Carry the
   `comp_report_app` grant block. `fact_overrides` is written under the same policy as the table's other
-  columns (`can_see_report` today; Dispatch 22 renames it `can_edit_report`).
+  columns: it follows `report_comps`' policies, whichever function they call (`can_see_report` today;
+  Dispatch 22 splits it into `can_read_report` and `can_edit_report` and rewrites those policies).
 - **Files.** You also edit `server/api/workspace.ts` (`loadJudgments`) and `server/api/comps.ts`; Dispatch 22
   rebases on you for both. Don't edit `workspace/features.ts` or `workspace/subject.ts`: Dispatch 16 owns them
   this round.

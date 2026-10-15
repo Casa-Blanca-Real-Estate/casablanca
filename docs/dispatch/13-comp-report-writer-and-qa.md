@@ -5,13 +5,18 @@
 - §10.2, the email and the headline;
 - §9, QA;
 - §8.1 and §8.8: the writer is Opus 5.5, stateless, with one call per draft;
-- §8.4: the agent's number and target never reach a model;
+- §8.4: the agent's number and target never reach the writer (Hubert's rule is D-4; see the note under Depends on);
 - §8.6 and §8.7: the client profile and agent voice, phase 2;
 - §12, `narratives`.
 
 Also `02-screens.md` (Send), and Frankie's email in `docs/comp-report/sources/` (render the pages).
 **Depends on:** nothing new. It builds on what's merged: Send, `workspace/email.ts`,
 `workspace/grounding.ts`, `headline_facts` (#58), and the turn's background-function pattern (CR-1).
+**Corrected 2026-10-15:** this brief said the agent's number and target "never reach a model". That is true of
+the writer, as built (`workspace/writer-input.ts` reads `headline_facts.facts` and `names`, never `agent_number`,
+and the engine input it reads has no named prices or deal terms). It is not the rule for Hubert: D-4 hides the target
+from him only until the neutral result exists, and Dispatch 24 gives it to him after the reveal. The two lines
+above and in Definition of done now say "the writer". Hubert is not covered by this brief.
 **Protocol:** `docs/dispatch/README.md`. **Open a PR to `claude/main` per phase. Never merge — Casanova
 or Kimani merges. Sign PRs, PR comments and commits "— Mason (CR-5)".**
 
@@ -126,7 +131,7 @@ gets the house voice, and the profile changes the tone and never a number.
 - Both phases are merged and verified as above.
 - No draft can be copied with a hard compliance failure.
 - Every number in a draft is checked, and the check is logged.
-- The agent's number and target never reach a model.
+- The agent's number and target never reach the writer.
 - Internal paths still 404, including uppercase.
 - PRs are open against `claude/main`, and signed.
 

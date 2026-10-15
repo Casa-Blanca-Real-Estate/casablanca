@@ -192,7 +192,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 | NW-074 b | Where the client fields are asked: intake step 2, or a step after Findings. |
 | NW-069 b, 075 | The loop after Findings: client details, what could move, and Hubert helping the target move toward the supportable range (§8.5 path-to-target mode). Combines 069 b and 074 b. Large. |
 | NW-076 | "How this was worked out" becomes a dropdown of every factor under "How Hubert got there". Data: the engine's bridge lines. |
-| NW-066 b | Review the co-op flow end to end on the co-op sample, including whether a five-price ladder stands in for the price table. |
+| NW-066 b | Review the co-op flow end to end on the co-op sample (Fill with sample or Reset the sample in the Dev tools strip, admins only; both arrive with Dispatch 23 items 1–2), including whether a five-price ladder stands in for the price table. |
 
 ### Constraints
 - The neutral result comes first and never moves. The target, the agent's call and the client's details never change the range (D-4, §8.4). The pinned neutral figure and its movement are shown, not hidden.
@@ -260,7 +260,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 
 ### Lands before you design
 - Admin and mentor list of every report, with the owner shown in the existing client line, read-only for non-owners (NW-088 a, after Kimani confirms mentors see all).
-- Server-side sample reports (condo, co-op) with a reset that replaces the report (NW-054). Buttons live in the Dev tools strip (`DevStrip`, admins only; the server check changes only if Kimani answers NW-054 for mentors).
+- Server-side sample reports (condo, co-op) with a reset that replaces the report (NW-054). They arrive with Dispatch 23 items 1–2, a PR of their own that ships before the rest of 23 so the co-op sample exists when you review the co-op flow. Buttons live in the Dev tools strip (`DevStrip`, admins only; the server check changes only if Kimani answers NW-054 for mentors).
 - Sign-in fix, activity and access logs (NW-091, 099): no visual change except a Try again button on the access error.
 - Share, duplicate and transfer need the access model first (NW-089 a, 090 c) and land after this design pass.
 
@@ -307,6 +307,6 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 | Client and deal fields (NW-074 a) | Findings deal terms, brief |
 | Hubert's wider read, role gates, markdown renderer (NW-023, 093 b, c, 068) | Hubert drawer, chips |
 | Designed email markup; subject on Full, Short and Designed; one HTML renderer; Mark as sent on the right of Copy (NW-080 to 084 a, 086 a, 101 a) | Send, Done |
-| Admin list of all reports; sample reset (NW-088 a, 054) | Reports list, Dev tools strip |
+| Admin list of all reports (NW-088 a, Dispatch 22); sample reset and the co-op sample (NW-054, Dispatch 23 items 1–2) | Reports list, Dev tools strip |
 
 Not in this file: NW-021 (rentals) and NW-095 (the process rule above) are not design points.

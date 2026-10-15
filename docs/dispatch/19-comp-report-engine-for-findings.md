@@ -55,7 +55,11 @@ sale-against-ask chart (NW-071 b, Design).
 - Items 1, 2 and 4 leave the range unchanged (test on the 100 Barclay sample). Item 3 can change comparisons.
   Record the sample's low, base and high before and after, and explain any difference in the PR. Also map
   `intake.rooms` into `subjectFacts` if the engine has a rooms fact; if it doesn't, say so.
-- `engine-input.ts` is shared: rebase on Dispatch 15's overrides before you start item 3.
+- **Rebase notes.** `workspace/engine-input.ts` is shared: rebase on Dispatch 15's overrides before you start
+  item 3, and expect Dispatch 21 (item 9, `dealTermsInput`) to rebase on you, so merge before it and say in the
+  PR which functions you touched. `engine/house-method/` and `engine/compute/` are Dispatch 16's this round (the
+  size-scale thresholds, `engine/types.ts`, the engine version): rebase on 16 before you start, and bump the
+  version once, after 16's bump.
 
 ## Definition of done
 
