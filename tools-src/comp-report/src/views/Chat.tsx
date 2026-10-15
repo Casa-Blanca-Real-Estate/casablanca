@@ -1,9 +1,10 @@
-// The assistant (§8), in a drawer open from Sort, Findings and Send, with a
-// starter question for the screen it's opened on (`02-screens.md`). CR-1's turn
+// Hubert's conversation (§8; the handoff's drawer): what he said before anyone
+// asked, the messages, two preset questions and the input. CR-1's turn
 // endpoint: one model call per request, the server owns the transcript (§8.3
-// rule 6).
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+// rule 6). The conversation is the report's, the same on every screen.
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError, streamTurn, type ShownMessage } from '../api.ts';
+import type { Chip } from './hubert/copy.ts';
 
 interface Live {
   text: string;
@@ -14,17 +15,22 @@ interface Live {
 
 const empty: Live = { text: '', progress: [], tools: [], note: null };
 
-const SUGGESTIONS = ['Which report is this?', 'What do the numbers say so far?', 'Which comps need a closer look?'];
+/** What Hubert looked at, in words: his tools read the report and its numbers. */
+const TOOL_WORDS: Record<string, string> = { get_numbers: 'the numbers', get_report: 'the report' };
+const looked = (tools: string[]) => [...new Set(tools.map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
 
-export function Chat({ reportId, readOnly = false, onCount, seed, starter }: {
+const MAX_INPUT_PX = 120;
+
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
   onCount?: (n: number) => void;
-  /** A question to put in the composer, unsent. */
-  seed?: { text: string; n: number } | null;
-  /** The screen's starter question, offered while the composer is empty. */
-  starter?: string;
+  /** What Hubert says before anyone asks: above the conversation. */
+  intro?: ReactNode;
+  /** The screen's two preset questions (an action chip runs `onAction` instead of asking). */
+  chips?: Chip[];
+  onAction?: (chip: Chip) => void;
 }) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -32,17 +38,15 @@ export function Chat({ reportId, readOnly = false, onCount, seed, starter }: {
   const [error, setError] = useState<string | null>(null);
   // What the last turn ended with (declined, stopped, failed), kept until the next message.
   const [notice, setNotice] = useState<string | null>(null);
-  const end = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
-  const [loaded, setLoaded] = useState(false);
-  // A reply still being written — sent from the other panel, or before a reload. The server
+  // A reply still being written — sent from another tab, or before a reload. The server
   // refuses a new message until it lands (server/api/turn.ts), so this waits for it.
   const [waiting, setWaiting] = useState(false);
 
   async function load() {
     const m = await api<{ messages: ShownMessage[] }>(`/api/comp-report/messages?report=${reportId}`);
     setMessages(m.messages);
-    setLoaded(true);
     const last = m.messages.at(-1);
     setWaiting(Boolean(last && last.role === 'user' && Date.now() - Date.parse(last.createdAt) < 90_000));
     onCount?.(m.messages.filter((x) => x.role === 'user' && !x.toolResultsOnly).length);
@@ -58,25 +62,25 @@ export function Chat({ reportId, readOnly = false, onCount, seed, starter }: {
     load().catch((e) => setError(String(e.message ?? e)));
   }, [reportId]);
 
+  // A block body, not an expression: an effect's return value is its cleanup (src/effects.test.ts).
+  // The drawer's own scroll, not scrollIntoView, so the page under it never moves.
   useEffect(() => {
-    if (!seed || readOnly) return;
-    setDraft(seed.text);
-    input.current?.focus();
-  }, [seed, readOnly]);
-
-  // A block body, not an expression: an effect's return value is its cleanup, and newer Chrome
-  // returns a Promise from scrollIntoView(). React then called that Promise on the next update and
-  // the page crashed ("l is not a function", 2026-09-29). src/effects.test.ts keeps it that way.
-  useEffect(() => {
-    end.current?.scrollIntoView({ block: 'end' });
+    const el = body.current;
+    if (el && (messages.length || live)) el.scrollTop = el.scrollHeight;
   }, [messages, live]);
 
+  function fit(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight + 2, MAX_INPUT_PX)}px`;
+  }
+
   // One model call per request (§8.3 rule 6): after a tool call, ask again.
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    const text = draft.trim();
-    if (!text || live || waiting) return;
+  async function ask(raw: string) {
+    const text = raw.trim();
+    if (!text || live || waiting || readOnly) return;
     setDraft('');
+    requestAnimationFrame(() => fit(input.current));
     setError(null);
     setNotice(null);
     setMessages((prev) => [...prev, { seq: -1, role: 'user', text, progress: [], tools: [], toolResultsOnly: false, stopReason: null, inContext: true, createdAt: new Date().toISOString() }]);
@@ -92,9 +96,9 @@ export function Chat({ reportId, readOnly = false, onCount, seed, starter }: {
           else if (ev.type === 'progress') current = { ...current, progress: [...current.progress, ev.text] };
           else if (ev.type === 'tool') current = { ...current, tools: [...current.tools, ev.name] };
           else if (ev.type === 'done') again = ev.stopReason === 'tool_use';
-          else if (ev.type === 'refused') current = { ...current, note: 'The assistant declined that request.' };
+          else if (ev.type === 'refused') current = { ...current, note: 'Hubert declined that request.' };
           else if (ev.type === 'interrupted') current = { ...current, note: 'That reply ran past the time limit and was stopped. Ask for a shorter answer.' };
-          else if (ev.type === 'error') current = { ...current, note: ev.code === 'rate_limited' ? 'The assistant is busy — try again in a minute.' : 'The assistant hit an error.' };
+          else if (ev.type === 'error') current = { ...current, note: ev.code === 'rate_limited' ? 'Hubert is busy. Try again in a minute.' : 'Hubert hit an error.' };
           setLive(current);
         }
         if (current.note) lastNote = current.note;
@@ -102,7 +106,7 @@ export function Chat({ reportId, readOnly = false, onCount, seed, starter }: {
         if (!again) break;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The assistant could not be reached.');
+      setError(err instanceof Error ? err.message : 'Hubert couldn’t be reached.');
       // Refused before it started (another reply still being written): keep what they typed.
       if (err instanceof ApiError && err.code === 'turn_in_progress' && message !== undefined) setDraft(text);
     } finally {
@@ -112,71 +116,77 @@ export function Chat({ reportId, readOnly = false, onCount, seed, starter }: {
     }
   }
 
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    void ask(draft);
+  }
+
+  const busy = Boolean(live) || waiting;
+
   return (
-    <div className="chat-panel">
-      {error && <p className="notice">{error}</p>}
-
-      {loaded && messages.length === 0 && !live && (
-        <div className="chat-empty">
-          <p className="muted small">It can read this report and its numbers. It never sees your call or your target.</p>
-          {!readOnly && (
-            <div className="row wrap">
-              {[...(starter ? [starter] : []), ...SUGGESTIONS.filter((t) => t !== starter)].map((text) => (
-                <button key={text} type="button" className="btn" onClick={() => { setDraft(text); input.current?.focus(); }}>{text}</button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="chat">
+    <>
+      <div className="hb-body" ref={body}>
+        {intro}
+        {error && <p className="hb-notice" role="alert">{error}</p>}
         {messages.filter((m) => !m.toolResultsOnly).map((m) => (
-          <div key={`${m.seq}-${m.createdAt}`} className={`msg ${m.role}${m.inContext ? '' : ' dim'}`}>
-            {m.progress.map((p, i) => <p key={i} className="progress">{p}</p>)}
-            {m.tools.length > 0 && <p className="progress">Looked up: {m.tools.join(', ')}</p>}
-            {m.text && <p className="msg-text">{m.text}</p>}
+          <div key={`${m.seq}-${m.createdAt}`} className={`hb-msg ${m.role}${m.inContext ? '' : ' dim'}`}>
+            {m.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
+            {m.role === 'assistant' && m.tools.length > 0 && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
+            {m.text && <p className="hb-text">{m.text}</p>}
             {!m.inContext && m.role === 'assistant' && (
-              <p className="muted small">{m.stopReason === 'refusal' ? 'Declined — not part of the conversation.' : 'Stopped before it finished — not part of the conversation.'}</p>
+              <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
             )}
           </div>
         ))}
         {live && (
-          <div className="msg assistant">
-            {live.progress.map((p, i) => <p key={i} className="progress">{p}</p>)}
-            {live.tools.length > 0 && <p className="progress">Looking up: {live.tools.join(', ')}</p>}
-            {live.text ? <p className="msg-text">{live.text}</p> : !live.note && <p className="muted">Thinking…</p>}
-            {live.note && <p className="notice">{live.note}</p>}
+          <div className="hb-msg assistant" aria-live="polite">
+            {live.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
+            {live.tools.length > 0 && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
+            {live.text ? <p className="hb-text">{live.text}</p> : !live.note && <p className="hb-progress">Thinking…</p>}
+            {live.note && <p className="hb-text">{live.note}</p>}
           </div>
         )}
-        {waiting && !live && <p className="muted small" aria-live="polite">Still answering the last message…</p>}
-        {notice && <p className="notice">{notice}</p>}
-        <div ref={end} />
+        {waiting && !live && <p className="hb-hint" aria-live="polite">Still answering the last message…</p>}
+        {notice && <p className="hb-notice">{notice}</p>}
       </div>
 
-      {!readOnly && starter && messages.length > 0 && !draft && !live && (
-        <p className="small starter">
-          <button type="button" className="link small" onClick={() => { setDraft(starter); input.current?.focus(); }}>Try: {starter}</button>
-        </p>
+      {!readOnly && chips.length > 0 && (
+        <div className="hb-chips">
+          {chips.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              className="hb-chip"
+              disabled={chip.kind === 'ask' && busy}
+              onClick={() => (chip.kind === 'ask' ? void ask(chip.label) : onAction?.(chip))}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
       )}
-      {readOnly ? <p className="muted small">Only the report's owner can talk to the assistant here.</p> : (
-      <form className="composer" onSubmit={send}>
-        <textarea
-          ref={input}
-          aria-label="Message the assistant"
-          placeholder="Ask about this report…"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              (e.currentTarget.form as HTMLFormElement).requestSubmit();
-            }
-          }}
-          rows={2}
-        />
-        <button className="btn primary" disabled={!!live || waiting || !draft.trim()}>Send</button>
-      </form>
+      {readOnly ? <p className="hb-readonly">Only the report’s owner can talk to Hubert here.</p> : (
+        <form className="hb-input" onSubmit={submit}>
+          <textarea
+            ref={input}
+            aria-label="Ask Hubert"
+            placeholder="Ask Hubert about the listings…"
+            rows={1}
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              fit(e.target);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                (e.currentTarget.form as HTMLFormElement).requestSubmit();
+              }
+            }}
+          />
+          <button type="submit" className="hb-send" aria-label="Send" disabled={busy || !draft.trim()}>→</button>
+        </form>
       )}
-    </div>
+    </>
   );
 }

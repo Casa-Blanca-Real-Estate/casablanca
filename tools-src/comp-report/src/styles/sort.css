@@ -1,0 +1,230 @@
+/* Sort (the handoff, screen 6; Dispatch 14). Classes are prefixed so-.
+   Columns are shared by each group's header and its rows, so they line up:
+   no SF  20px · address · price 84 · date 72 · tier 132
+   SF     20px · address · price 84 · $/ft 64 · size 70 · date 72 · tier 132 */
+.so { position: relative; display: flex; flex-direction: column; gap: 28px; }
+.so-cols { display: grid; grid-template-columns: 20px minmax(0, 1fr) 84px 72px 132px; gap: 12px; align-items: center; }
+.so-cols.sf { grid-template-columns: 20px minmax(0, 1fr) 84px 64px 70px 72px 132px; }
+
+/* Status squares (the group's swatch): 1px ink border on each. */
+.so-sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--cb-black); flex: none; }
+.so-sw.sold { background: var(--cb-black); }
+.so-sw.in_contract { background: var(--cb-lavender); }
+.so-sw.active { background: var(--cb-surface); }
+.so-sw.off_market { background: var(--cb-sand); }
+.so-sw.unsortable { background: var(--cb-surface); border-style: dashed; border-color: var(--cb-mid); }
+
+/* ─── The toolbar ──────────────────────────────────────────────────────────── */
+.so-toolcol { display: flex; flex-direction: column; gap: 12px; }
+.so-toolbar { display: flex; align-items: center; gap: 8px; }
+.so-addtoggle {
+  font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1.5;
+  border: 1px solid var(--cb-black); border-radius: 0; background: var(--cb-surface); color: var(--cb-black); padding: 8px 14px; cursor: pointer;
+}
+.so-addtoggle.on { background: var(--cb-black); color: #fff; }
+.so-finish {
+  font: inherit; font-size: 12px; font-weight: 800; line-height: 1.5; display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--cb-black); border-radius: 0; background: var(--cb-surface); color: var(--cb-black); padding: 8px 14px; cursor: pointer;
+}
+.so-finish.on { background: var(--cb-black); color: #fff; }
+.so-finish .so-need-sq { width: 8px; height: 8px; }
+.so-filter {
+  font: inherit; font-size: 12px; font-weight: 800; line-height: 1.5; display: flex; align-items: center; gap: 6px;
+  border: none; background: none; color: var(--cb-black); padding: 8px 14px; cursor: pointer;
+}
+.so-clear { font-size: 12px; }
+.so-count { margin-left: auto; font-size: 12px; color: var(--cb-mid); }
+.so-tagchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.so-tagchip {
+  font: inherit; font-size: 12px; line-height: 1.4; display: flex; gap: 6px; cursor: pointer;
+  border: 1px solid var(--cb-border); border-radius: 0; background: var(--cb-surface); color: var(--cb-black); padding: 6px 12px;
+}
+.so-tagchip:hover { border-color: var(--cb-black); }
+.so-tagchip.on { background: var(--cb-black); border-color: var(--cb-black); color: #fff; }
+.so-tagchip-n { opacity: .55; }
+.so-tagchips-none { font-size: 12px; color: var(--cb-mid); }
+.so-nomatch { margin: 0; font-size: 13px; color: var(--cb-mid); }
+
+/* The add panel: the shared paste bar and form, on white. */
+.so-addpanel { padding: 20px 24px; }
+
+/* Links being read, and reads that failed. */
+.so-reads { display: flex; flex-direction: column; }
+.so-read { display: flex; align-items: center; gap: 10px; padding: 13px 20px; font-size: 13px; border-top: 1px solid var(--cb-line); }
+.so-reads > :first-child.so-read, .so-reads > :first-child > .so-read { border-top: none; }
+.so-read-wrap .comp-form { margin: 0 20px 16px; }
+.so-read-state { font-size: 12px; color: var(--cb-mid); }
+.so-read.failed .so-read-state { color: var(--cb-black); }
+.so-read-actions { margin-left: auto; display: flex; gap: 14px; font-size: 12px; }
+
+/* ─── The empty state (06b) ───────────────────────────────────────────────── */
+.so-empty { padding: 80px 48px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
+.so-empty-sw { display: flex; gap: 6px; }
+.so-empty-sw .so-sw { width: 12px; height: 12px; }
+.so-empty-sw .so-sw.sold, .so-empty-sw .so-sw.in_contract, .so-empty-sw .so-sw.off_market { border: none; }
+.so-empty-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.so-empty-hint { margin: 0; font-size: 12px; color: var(--cb-mid); }
+
+/* ─── A group: its header, then its rows ──────────────────────────────────── */
+.so-group { background: var(--cb-surface); display: flex; flex-direction: column; }
+.so-ghead { padding: 14px 20px 14px 23px; font-size: 11px; color: var(--cb-mid); }
+.so-gname { font-size: 13px; font-weight: 800; color: var(--cb-black); }
+.so-gn { color: var(--cb-mid); font-weight: 400; }
+.so-colh {
+  font: inherit; font-size: 11px; font-weight: 800; color: var(--cb-mid); text-align: left; white-space: nowrap;
+  background: none; border: none; padding: 0; cursor: pointer; user-select: none;
+}
+.so-colh.on, .so-colh:hover { color: var(--cb-black); }
+
+.so-row-wrap { border-top: 1px solid var(--cb-line); border-left: 3px solid transparent; }
+.so-row-wrap.incomplete { border-left-color: var(--cb-yellow); }
+.so-row { padding: 13px 20px; font-size: 13px; cursor: pointer; }
+.so-caret { color: var(--cb-mid); }
+.so-addr-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* The address, its tags and what it needs wrap under the address, not under the thumb. */
+.so-addr-line { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.so-thumb { flex: none; width: 44px; height: 32px; background: repeating-linear-gradient(135deg, var(--cb-line-2) 0 6px, var(--cb-line) 6px 12px); }
+.so-addr {
+  font: inherit; font-size: 13px; font-weight: 800; color: var(--cb-black); text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--cb-lavender); padding: 0; cursor: pointer; line-height: 1.35;
+}
+.so-addr:hover { color: var(--cb-deep); }
+.so-flag { font-size: 11px; color: var(--cb-mid); }
+.so-need { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; }
+.so-need-sq { display: inline-block; width: 7px; height: 7px; background: var(--cb-yellow); flex: none; }
+.so-unsortable { font-size: 11px; color: var(--cb-mid); }
+.so-star {
+  margin-left: auto; flex: none; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  font: inherit; font-size: 17px; line-height: 1; color: var(--cb-mid); background: none; border: none; padding: 0; cursor: pointer; opacity: 0;
+}
+.so-star.on { color: var(--cb-yellow); opacity: 1; }
+.so-row:hover .so-star, .so-star:focus-visible { opacity: 1; }
+span.so-star { cursor: default; }
+.so-price { font-weight: 800; }
+.so-size { display: flex; align-items: center; gap: 5px; }
+.so-est { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--cb-black); flex: none; }
+
+/* The tier: 1st ink, 2nd lavender, ✕ sage. */
+.so-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--cb-border); cursor: default; }
+.so-seg button {
+  font: inherit; font-size: 11px; font-weight: 800; line-height: 1.5; text-align: center; padding: 6px 0;
+  background: var(--cb-surface); color: var(--cb-mid); border: none; border-radius: 0; cursor: pointer;
+}
+.so-seg button + button { border-left: 1px solid var(--cb-border); }
+.so-seg button.excluded { color: var(--cb-black); }
+.so-seg button:hover:not(:disabled) { background: var(--cb-bg); }
+.so-seg button.primary.on { background: var(--cb-black); color: #fff; }
+.so-seg button.secondary.on { background: var(--cb-lavender); color: var(--cb-deep); }
+.so-seg button.excluded.on { background: var(--cb-sand); }
+.so-seg button:disabled { cursor: default; }
+.so-seg button:disabled:not(.on) { color: var(--cb-border); }
+.so-confirm { display: flex; align-items: center; gap: 10px; cursor: default; }
+.so-confirm-btn {
+  font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1.5;
+  background: var(--cb-black); color: #fff; border: 1px solid var(--cb-black); border-radius: 0; padding: 6px 10px; cursor: pointer;
+}
+.so-confirm-btn:disabled { opacity: .35; cursor: default; }
+.so-remove-link { font-size: 12px; }
+.so-tier-ro { font-size: 11px; font-weight: 800; color: var(--cb-mid); }
+
+/* ─── The opened card ─────────────────────────────────────────────────────── */
+.so-card {
+  padding: 20px 20px 20px 52px; background: var(--cb-surface); font-size: 13px;
+  display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; align-items: start;
+}
+.so-card.editing { background: var(--cb-bg); }
+.so-photo { position: relative; width: 260px; height: 176px; background: repeating-linear-gradient(135deg, var(--cb-line-2) 0 6px, var(--cb-line) 6px 12px); }
+.so-photo-later {
+  position: absolute; left: 10px; bottom: 10px; background: var(--cb-surface); border: 1px solid var(--cb-border);
+  font-size: 11px; color: var(--cb-mid); padding: 7px 10px;
+}
+.so-card-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.so-card-top { display: flex; flex-direction: column; gap: 14px; }
+.so-util { display: flex; justify-content: flex-end; align-items: center; gap: 18px; min-height: 18px; }
+.so-se { font-size: 12px; font-weight: 800; color: var(--cb-black); text-decoration: none; border-bottom: 1px solid var(--cb-lavender); }
+.so-se:hover { color: var(--cb-deep); }
+.so-edit {
+  font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cb-mid);
+  background: none; border: none; padding: 0; cursor: pointer;
+}
+.so-edit:hover { color: var(--cb-black); }
+.so-pencil { display: inline-block; transform: rotate(90deg); }
+/* 96px, not the prototype's 104, so four facts and the distance share a row without a size. */
+.so-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px 20px; }
+.so-metric { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.so-metric-label { font-size: 11px; color: var(--cb-mid); }
+.so-metric-val { font-size: 18px; font-weight: 800; letter-spacing: -.02em; line-height: 1.3; }
+.so-metric-input {
+  width: 100%; min-width: 0; border: none; border-bottom: 1px solid var(--cb-black); border-radius: 0; padding: 2px 0;
+  font: inherit; font-size: 20px; font-weight: 800; background: transparent; color: var(--cb-black);
+}
+.so-metric-input[type='date'] { font-size: 15px; padding: 5px 0; }
+.so-metric-input:focus { outline: none; box-shadow: inset 0 -1px 0 var(--cb-black); }
+.so-fixed { margin: 0; font-size: 12px; color: var(--cb-mid); }
+
+.so-features { display: flex; flex-direction: column; }
+.so-features-head { display: flex; align-items: center; gap: 12px; padding-bottom: 6px; }
+.so-features-title { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-black); }
+.so-shared { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--cb-deep); }
+.so-shared-sq { width: 8px; height: 8px; background: var(--cb-lavender); flex: none; }
+.so-frow { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 0; border-top: 1px solid var(--cb-line); }
+.so-flabel { font-size: 11px; color: var(--cb-mid); }
+.so-fopts { display: flex; flex-wrap: wrap; gap: 5px; }
+.so-fchip { font-size: 12px; line-height: 1.4; border: 1px solid var(--cb-border); background: var(--cb-surface); color: var(--cb-black); padding: 4px 9px; }
+.so-fchip.shared { background: var(--cb-lavender); border-color: var(--cb-lavender); color: var(--cb-deep); }
+.so-fnone { font-size: 12px; color: var(--cb-sand); }
+/* The shared pickers, in the card's measure. */
+.so-card .feature-row { grid-template-columns: 110px minmax(0, 1fr); border-top-color: var(--cb-line); }
+.so-card .feature-row .chip { padding: 4px 9px; }
+
+.so-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.so-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.4; background: var(--cb-surface); border: 1px solid var(--cb-border); padding: 5px 10px; }
+.so-tag-x { font: inherit; font-size: 13px; line-height: 1; color: var(--cb-mid); background: none; border: none; padding: 0; cursor: pointer; }
+.so-tag-x:hover { color: var(--cb-black); }
+.so-tag-add {
+  font: inherit; font-size: 12px; line-height: 1.4; color: var(--cb-mid); background: transparent;
+  border: 1px dashed var(--cb-sand); border-radius: 0; padding: 5px 10px; cursor: pointer;
+}
+.so-tag-add:hover { color: var(--cb-black); border-color: var(--cb-black); }
+
+.so-note { margin: 0; font-size: 14px; line-height: 1.55; color: var(--cb-deep); white-space: pre-wrap; overflow-wrap: anywhere; }
+.so-note.empty { color: var(--cb-mid); }
+.so-note-input {
+  width: 100%; border: 1px solid var(--cb-border); border-bottom: 2px solid var(--cb-black); border-radius: 0; padding: 10px 12px;
+  font: inherit; font-size: 15px; line-height: 1.5; color: var(--cb-black); background: var(--cb-surface); resize: vertical; min-height: 72px;
+}
+.so-note-input:focus { outline: none; border-color: var(--cb-black); }
+.so-why { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.so-why-sq { width: 7px; height: 7px; background: var(--cb-yellow); flex: none; }
+.so-error { margin: 0; font-size: 12px; color: var(--cb-red); }
+.so-card-actions { display: flex; align-items: center; gap: 18px; font-size: 12px; }
+.so-remove { color: var(--cb-mid); }
+.so-save { margin-left: auto; font-size: 11px; padding: 11px 18px; }
+
+/* Checks, sources and history: folded under the card. */
+.so-more { font-size: 12px; }
+.so-more summary {
+  cursor: pointer; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cb-mid);
+  list-style: none; display: inline-flex; gap: 6px;
+}
+.so-more summary::-webkit-details-marker { display: none; }
+.so-more summary::before { content: '+'; }
+.so-more[open] summary::before { content: '–'; }
+.so-more summary:hover { color: var(--cb-black); }
+.so-more-body { display: flex; flex-direction: column; gap: 12px; padding-top: 10px; }
+.so-more-body h5 { margin: 0 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.so-more-body p, .so-more-body ul, .so-more-body ol { margin: 0; }
+.so-more-body ul, .so-more-body ol { padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }
+.so-more-mid { color: var(--cb-mid); }
+.so-more-deep { color: var(--cb-deep); }
+.so-facts { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.so-facts th, .so-facts td { text-align: left; vertical-align: top; padding: 4px 12px 4px 0; border-top: 1px solid var(--cb-line); }
+.so-facts th { font-weight: 400; color: var(--cb-mid); white-space: nowrap; }
+
+/* ─── The status tiles (Findings' row; built from Sort's figures) ─────────── */
+.so-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+.so-tile { background: var(--cb-surface); padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; }
+.so-tile-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; }
+.so-tile-n { color: var(--cb-mid); font-weight: 400; }
+.so-tile-val { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.so-tile-unit { font-size: 13px; color: var(--cb-mid); font-weight: 400; letter-spacing: 0; }
