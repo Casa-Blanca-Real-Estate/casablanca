@@ -112,6 +112,24 @@ describe('the design port’s data', { skip: skipWithoutDatabase }, () => {
     assert.deepEqual((await reasonsOf(main.reportCompId)).at(-1), { tier: 'secondary', reason: 'Same street, an ask.' });
   });
 
+  test('a typed-in comp sent again with a changed note keeps the old one in the reason history', async () => {
+    const manual = { address: '30 Warren Street, New York, NY', unit: '#7A', status: 'sold', price: 4400000, date: '2026-08-01', floor: 7 };
+    const warren = (await comps('tok-kimani-000000', 'POST', { manual })).body.comps.find((c) => c.propertyKey.includes('30 warren'))!;
+    await comps('tok-kimani-000000', 'PATCH', { reportCompId: warren.reportCompId, tier: 'primary' });
+    const before = (await reasonsOf(warren.reportCompId)).length;
+    const again = await comps('tok-kimani-000000', 'POST', { manual: { ...manual, price: 4450000 }, note: 'Same line, one floor down.', tags: ['Same area'] });
+    assert.equal(again.status, 201);
+    const c = again.body.comps.find((x) => x.reportCompId === warren.reportCompId)!;
+    assert.deepEqual([c.tier, c.note], ['primary', 'Same line, one floor down.']);
+    assert.equal((c.source as { fields: { price: number } }).fields.price, 4450000, 'the new facts replace the old');
+    const reasons = await reasonsOf(warren.reportCompId);
+    assert.equal(reasons.length, before + 1);
+    assert.deepEqual(reasons.at(-1), { tier: 'primary', reason: 'Same line, one floor down.' });
+    // The same note again appends nothing.
+    await comps('tok-kimani-000000', 'POST', { manual, note: 'Same line, one floor down.', tags: ['Same area'] });
+    assert.equal((await reasonsOf(warren.reportCompId)).length, before + 1);
+  });
+
   test('one ★ per report, any status: starring another moves it; a removed comp loses it, and comes back without it', async () => {
     const all = (await comps('tok-kimani-000000', 'PATCH', { reportCompId: chambers, anchor: true })).body.comps;
     const active = all.find((c) => c.evidenceClass === 'active')!;

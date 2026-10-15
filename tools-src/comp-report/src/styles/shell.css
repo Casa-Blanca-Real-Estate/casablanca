@@ -213,11 +213,9 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 .hubert-drawer {
   position: fixed; top: var(--sh-bar-h); right: 0; bottom: 0; z-index: 45; width: var(--sh-drawer-w);
   display: flex; flex-direction: column; overflow-y: auto;
-  background: var(--cb-surface); border-left: 1px solid var(--cb-border); box-shadow: -12px 0 32px rgba(15, 15, 15, .08);
+  background: var(--cb-surface); /* Hubert's own root (.hb) draws the left border and shadow */
 }
 .hubert-drawer > * { flex: 1 1 auto; min-height: 0; }
-/* Until the Hubert group's drawer lands, the groundwork's own box sits inside this one instead of over it. */
-.hubert-drawer > .drawer { position: static; width: auto; padding: 18px 22px; background: none; border: 0; box-shadow: none; overflow: visible; }
 
 .sh-hubert-tab {
   position: absolute; right: 0; top: 132px; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 12px;

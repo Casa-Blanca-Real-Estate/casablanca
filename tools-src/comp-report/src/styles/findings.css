@@ -1,9 +1,6 @@
 /* The Gate (gt-) and Findings (fi-): the handoff's screens 7 and 8 (Dispatch 14, items 8 and 9).
    White cards on the page; radius 0; Object Sans 400/800 only. */
 
-/* Both screens are cards on the page, not inside the step's own card. */
-.step:has(.gt-root), .step:has(.fi-root) { background: transparent; border: none; padding: 0; }
-
 /* ─── The Gate ───────────────────────────────────────────────────────────── */
 .gt-root { display: flex; flex-direction: column; align-items: center; padding: 24px 0; }
 .gt-card {

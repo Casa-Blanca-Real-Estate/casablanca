@@ -100,6 +100,23 @@ const MANUAL_FIELDS = [
   'common_charges_monthly', 'taxes_monthly', 'maintenance_monthly',
 ] as const;
 
+/** The tier and note of the comp a typed-in comp would replace (the same address in this report), if there is one. */
+async function noteAndTier(tx: Queryable, reportId: string, manual: unknown): Promise<{ tier: string | null; note: string | null } | null> {
+  if (!manual || typeof manual !== 'object' || Array.isArray(manual)) return null;
+  let key: string | null = null;
+  try {
+    key = compRecordFromManual(manual as ManualCompFields, { as_of: newYorkToday() }).record.identity.key;
+  } catch {
+    return null; // addManualComp says what's wrong with it
+  }
+  if (!key) return null;
+  return (await tx.query<{ tier: string | null; note: string | null }>(
+    `select rc.tier, rc.note from comp_report.report_comps rc join comp_report.properties p on p.id = rc.property_id
+      where rc.report_id = $1 and p.property_key = $2`,
+    [reportId, key],
+  )).rows[0] ?? null;
+}
+
 /** A comp typed in: read by the engine, recorded once as a property, kept as the agent's observation, and joined to the report. */
 async function addManualComp(tx: Queryable, reportId: string, manual: unknown, asOf: string): Promise<string> {
   if (!manual || typeof manual !== 'object' || Array.isArray(manual)) throw new HttpError(400, 'bad_comp', 'Send the comp as an object.');
@@ -181,8 +198,13 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
       const edits = compEdits(body);
       return json(await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
+        const before = await noteAndTier(tx, reportId, body.manual);
         const id = await addManualComp(tx, reportId, body.manual, newYorkToday());
         await saveEdits(tx, reportId, id, edits);
+        // Typed in again with a changed note, on a comp already tiered: the reason history keeps it, as a PATCH does.
+        if (before?.tier && edits.note !== undefined && (edits.note ?? null) !== (before.note ?? null)) {
+          await recordReason(tx, reportId, id, before.tier, (edits.note ?? '').slice(0, MAX_REASON) || NO_NOTE_YET, 'property', false);
+        }
         return loadWorkspace(tx, user, reportId);
       }), 201);
     }

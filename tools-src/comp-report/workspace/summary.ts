@@ -11,7 +11,7 @@
 //
 // Figures are as the walkthrough shows them — $/sqft truncated (§6.1) — so the
 // assistant quotes what the agent sees and never computes one (§4.1).
-import { EVIDENCE_CLASSES, type EngineOutput, type Result, type ResultKind } from '../engine/index.ts';
+import { EVIDENCE_CLASSES, type CompRecord, type EngineOutput, type Result, type ResultKind } from '../engine/index.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { estimateWords } from './format.ts';
 import { noteOf, type Intake } from './state.ts';
@@ -72,7 +72,25 @@ function result(r: Result, byId: Map<string, string>) {
   };
 }
 
-export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceComp[]; intake: Intake | undefined; revealed: boolean }) {
+/** An export row the agent took out: what it is, never a judgment of it. */
+function removedRow(r: CompRecord) {
+  const f = r.facts;
+  const street = r.identity.address.street ?? 'No address';
+  const unit = r.identity.unit.raw;
+  const status = r.status.evidence_class ?? r.status.listing_status;
+  return {
+    comp: unit ? `${street} ${unit.startsWith('#') ? unit : `#${unit}`}` : street,
+    evidence_status: status === 'off_market' ? 'didn’t sell' : status ?? `unknown (“${r.status.raw ?? ''}”)`,
+    [status === 'sold' ? 'sale_price' : 'asking_price']: (status === 'sold' ? f.sale_price?.value : f.list_price?.value) ?? null,
+    date: f.status_date?.value ?? null,
+    area_sqft: f.area_sqft?.value ?? null,
+    beds: f.beds?.value ?? null,
+    baths: f.baths?.value ?? null,
+    floor: f.floor?.value ?? null,
+  };
+}
+
+export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceComp[]; intake: Intake | undefined; revealed: boolean; removed?: CompRecord[] }) {
   const { output, comps, revealed } = args;
   const outById = new Map(output.comps.map((c) => [c.id, c]));
   const names = new Map(comps.map((c) => [c.id, address(c)]));
@@ -129,6 +147,12 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
     ...(revealed ? {
       results: Object.fromEntries(KINDS.map((k) => [k, result(output.results[k], names)])),
       estimates_move_the_numbers: !output.divergence.same,
+    } : {}),
+    ...(args.removed?.length ? {
+      removed_from_report: {
+        about: 'Sales from the agent’s StreetEasy export that the agent took out of the report. They count in nothing. They are the only other sales you may suggest looking at again; never name a listing that is not in this data.',
+        comps: args.removed.map(removedRow),
+      },
     } : {}),
     still_needed: output.gaps.map((g) => g.message),
     warnings: output.warnings.filter((w) => revealed || BEFORE_REVEAL_WARNINGS.has(w.code)).map((w) => w.message),

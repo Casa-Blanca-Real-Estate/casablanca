@@ -39,3 +39,20 @@ test('after the reveal it has both results, as the walkthrough shows them', () =
   assert.equal(results.on_facts!.base, null);
   assert.equal(s.estimates_move_the_numbers, true);
 });
+
+test('export rows the agent took out reach Hubert as facts only, marked as out of the report', () => {
+  const [first, ...rest] = comps;
+  const s = numbersSummary({ output, comps: rest, intake: SAMPLE_INTAKE, revealed: false, removed: [first!.record] });
+  const removed = s.removed_from_report!;
+  assert.match(removed.about, /count in nothing/);
+  assert.equal(removed.comps.length, 1);
+  assert.equal(removed.comps[0]!.comp, address(first!));
+  assert.ok(!('tier' in removed.comps[0]!) && !('reason' in removed.comps[0]!));
+  // None removed: the section isn't there.
+  assert.equal('removed_from_report' in numbersSummary({ output, comps, intake: SAMPLE_INTAKE, revealed: false }), false);
+});
+
+function address(c: (typeof comps)[number]): string {
+  const unit = c.record.identity.unit.raw;
+  return `${c.record.identity.address.street}${unit ? ` ${unit.startsWith('#') ? unit : `#${unit}`}` : ''}`;
+}
