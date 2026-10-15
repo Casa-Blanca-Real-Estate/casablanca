@@ -10,7 +10,7 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-10-14 by Casanova.
+Last updated 2026-10-15 by Casanova.
 
 **What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
 pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dispatch 10's phase 2.
@@ -24,6 +24,7 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 | D-25 | The fair-housing list, and "appraisal contingency" | Soon — before agents copy writer drafts | Think (Hannah) | QA's compliance list (Dispatch 13) |
 | D-26 | Moving Casa's work onto Casa-owned accounts | Later — after the comp report settles; keys sooner | Think (with Erez) | `docs/casa-accounts-transfer.md` |
 | D-27 | The design port: what the handoff changes | Now — Mason builds on the defaults (Dispatch 14) | Quick (object only) | Noble's walk-through |
+| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-28) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
 each was applied.
@@ -93,9 +94,11 @@ each was applied.
   - **The QR generator:** merge it when there's a gap (D-16).
   - **Your caption tracker** (a Claude artifact, linked from the carousel builders): it may become part
     of the studio later.
-- [ ] **Now — Noble's way in for tomorrow.** If his Google account is on Casa's domain he signs in as an
-  agent already; to see it as a mentor, add him on the comp report's **Access** panel (Reports page, admin)
-  with the role `mentor`. Have him (or you) try one sign-in before the walk-through.
+- [x] ~~Noble's way in.~~ Done 2026-10-15: invited by email, signed in with a password (his Google sign-in was refused; see NB-28).
+- [ ] **Next week — the Casa account move** (D-26), then tell Casanova; new tracks (Calliste) start there (TD-12).
+- [ ] **Soon — `CR_INSPECT_KEY` and `CR_TEST_KEY`** for Dispatch 23, made on the Casa side (TD-14).
+- [ ] **Soon — a co-op and its StreetEasy export** for the co-op sample (TD-15); **test an invite end to end** (TD-16);
+  **Noble on the size-scale bands** (TD-17); **record the next walk-through** (TD-13).
 - [ ] **Soon — `CB_PICS_TOKEN` for the profile-pic roster** (#71 is merged). Make it with `openssl rand -hex 32`
   (not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it
   isn't configured.
@@ -159,6 +162,28 @@ Human Rights Law: `tools-src/comp-report/workspace/fair-housing.ts` (version `fh
    or allow the phrase as a deal term?
 
 **Answer →** _type here — who reviews the list; keep or allow "appraisal contingency"_
+
+---
+
+### D-28 · Noble's walk-through: the calls it raised
+`Soon — Phase A (Dispatches 15–24) builds on the recommended defaults; answer to change one` · `Quick each`
+
+Noble walked the comp report on 2026-10-15; Kimani's notes after it are 102 numbered points in
+`docs/comp-report/feedback/2026-10-15-noble/00-items.md`, triaged in reports 01–07, planned in `09-plan.md`,
+with the Claude Design handoff in `08-claude-design-handoff.md`. The 28 calls it needs are on the answer sheet
+as **NB-1 to NB-28**, each with its context and a recommended default. The biggest:
+
+- **NB-13:** Hubert sees the target and the agent's own number after the reveal (revisits D-4's "never").
+- **NB-8 / NB-9:** whether full agents still need a note when they've tagged (revisits D-27 item 3), and
+  whether tags the data settles are suggested or pre-filled.
+- **NB-18 / NB-20:** what Hubert may write (propose and confirm), and whether the writer moves to Calliste.
+- **NB-22 / NB-23:** sessions read production through a keyed, redacted inspection API; mentors see every
+  report, read-only.
+- **NB-25:** the tracks already running start Phase A now; new tracks and production keys wait for the
+  Casa account.
+- **NB-28:** Gmail drafts through a Casa-internal Google client (Phase B).
+
+**Answer →** _on the answer sheet (NB-…), or here_
 
 ---
 
