@@ -10,7 +10,11 @@ import { DISCLAIMER } from './email.ts';
 import { engineInput, workspaceComps } from './engine-input.ts';
 import { fairHousingFindings } from './fair-housing.ts';
 import { unmatchedNumbers } from './grounding.ts';
-import { appraisalFindings, draftChecks, ledgerFor, pointValueFindings, qaRecord, qaStatus, type Acknowledgment } from './qa.ts';
+import {
+  appraisalFindings, draftChecks, estimateSentences, ledgerFor, moneyTokens, pointValueFindings, qaRecord, qaStatus, rangeFigureFor, replaceSpans,
+  roundingFindings, syncHeadline, withDisclaimer, withEstimateNotes, withHeadline, type Acknowledgment,
+} from './qa.ts';
+import { HEADLINE_PLACEHOLDER } from './frame.ts';
 
 const parsed = parseExport(new TextEncoder().encode(SAMPLE_EXPORT.csv), { as_of: SAMPLE_EXPORT.asOf });
 const comps = workspaceComps([{ importId: 'i', createdAt: '2026-09-29T00:00:00Z', parsed }], SAMPLE_TIERS.map((t, i) => ({
@@ -100,4 +104,88 @@ test('the status line: a hard fail can’t be answered away; a near term and a s
   const hard = check(`${HEADLINE} ${estimates} Adults only.`, [{ key: 'fair_housing:adults only', how: 'acknowledged', text: 'adults only', at }]);
   assert.equal(hard.find((c) => c.id === 'fair_housing')?.state, 'fail');
   assert.equal(qaStatus(hard).ready, false, 'an acknowledgment doesn’t clear a hard stop');
+});
+
+// ─── The fixes Send can make (Dispatch 14) ───────────────────────────────────
+// The sample's range "with estimates" is $4,225,352–$4,915,912: $4.23M–$4.92M, $2,112–$2,457 a sq ft.
+// The ledger without the agent's line ("I’d start at $4.15M", which reads as $4.2M at its precision).
+const args = { output, result: 'with_estimates' as const, ledger: ledgerFor({ output, result: 'with_estimates', comps, intake: SAMPLE_INTAKE }) };
+
+test('a range end written at another rounding is found, with the range’s own figure', () => {
+  const found = roundingFindings('Recent sales put 17L’s value between $4.225M and $4.9M.', args);
+  assert.deepEqual(found.map((f) => [f.text, f.expected, f.end]), [['$4.225M', '$4.23M', 'low'], ['$4.9M', '$4.92M', 'high']]);
+  assert.equal(found[1]!.index, 'Recent sales put 17L’s value between $4.225M and '.length);
+  assert.deepEqual(roundingFindings('Between $4.23M and $4.92M, or $4.9 million at the top.', args).map((f) => f.text), ['$4.9 million']);
+  assert.deepEqual(roundingFindings('Between $4.23M and $4.92M.', args), [], 'the range’s own figures');
+  assert.deepEqual(roundingFindings('PRICE PER SQ FT FOR 17L\n$2,400 - $4.8M\n$2,450 - $4.9M\n$2,457 - $4.92M\n\nAt most $4.9M.', args).map((f) => [f.text, f.index]),
+    [['$4.9M', 'PRICE PER SQ FT FOR 17L\n$2,400 - $4.8M\n$2,450 - $4.9M\n$2,457 - $4.92M\n\nAt most '.length]], 'a price-table line is its step’s price');
+  // $4.2M reads as 5 Franklin's $4,175,000 sale at its precision, so it may be that, and isn't flagged.
+  assert.deepEqual(roundingFindings('Between $4.2M and $4.9M.', args).map((f) => f.text), ['$4.9M']);
+  // Nor is a figure that reads as the agent's own number: here, $4.85M.
+  const theirs = ledgerFor({ output, result: 'with_estimates', comps, intake: SAMPLE_INTAKE, agentFigures: [4_850_000] });
+  assert.deepEqual(roundingFindings('Between $4.225M and $4.9M.', { ...args, ledger: theirs }).map((f) => f.text), ['$4.225M']);
+  assert.deepEqual(roundingFindings('The comps say $4.9M.', { ...args, output: compute(engineInput({ asOf: '2026-09-29', intake: SAMPLE_INTAKE, comps: [] })) }), [], 'no range, nothing to round to');
+});
+
+test('a figure just off the range gets the range’s figure, written the same way; one far from it doesn’t', () => {
+  assert.deepEqual(rangeFigureFor('$4.95M', args), { end: 'high', figure: '$4.92M', value: 4_915_912 });
+  assert.equal(rangeFigureFor('$4,950,000', args)?.figure, '$4,915,912');
+  assert.equal(rangeFigureFor('$4.19M', args)?.figure, '$4.23M');
+  assert.equal(rangeFigureFor('$2,470', args)?.figure, '$2,457', 'a $/sq ft end, truncated as the email shows it');
+  assert.equal(rangeFigureFor('$4.5M', args), null, 'inside the range, and the agent’s to answer for');
+  assert.equal(rangeFigureFor('$6.8M', args), null);
+  assert.equal(rangeFigureFor('7.5%', args), null);
+});
+
+test('money tokens carry their place, value and precision; a link’s digits aren’t figures', () => {
+  assert.deepEqual(moneyTokens('From $4.2 million to $950K, see https://streeteasy.com/sale/$4500000.').map((t) => [t.text, t.index, t.value, t.step, t.scaled]),
+    [['$4.2 million', 5, 4_200_000, 100_000, true], ['$950K', 21, 950_000, 1000, true]]);
+});
+
+test('spans are replaced back to front, so every place holds', () => {
+  assert.equal(replaceSpans('between $4.2M and $4.9M', [{ index: 8, length: 5, with: '$4.23M' }, { index: 18, length: 5, with: '$4.92M' }]), 'between $4.23M and $4.92M');
+  assert.equal(replaceSpans('abc', [{ index: 5, length: 1, with: 'x' }]), 'abc', 'a span off the end is skipped');
+});
+
+test('the disclaimer goes back in: an edited one is restored, a missing one goes at the end', () => {
+  assert.equal(withDisclaimer(`Hi.\n\n${DISCLAIMER}`), `Hi.\n\n${DISCLAIMER}`);
+  assert.equal(withDisclaimer('Hi.\n\nBest,\nKimani\n'), `Hi.\n\nBest,\nKimani\n\n${DISCLAIMER}`);
+  const edited = `Hi.\n\n${DISCLAIMER.replace('informational purposes', 'your information')}\n\nP.S.`;
+  assert.equal(withDisclaimer(edited), `Hi.\n\n${DISCLAIMER}\n\nP.S.`);
+  assert.equal(withDisclaimer(''), DISCLAIMER);
+});
+
+test('the estimate note goes in after the headline’s paragraph, and then the check passes', () => {
+  const sentences = estimateSentences(output, 'with_estimates');
+  assert.deepEqual(sentences, ['The home’s interior size is our estimate.']);
+  assert.deepEqual(estimateSentences(output, 'on_facts'), []);
+  const body = `Hi Sam,\n\n${HEADLINE}\n\nThe sales we used.\n\n${DISCLAIMER}`;
+  const fixed = withEstimateNotes(body, sentences, HEADLINE);
+  assert.equal(fixed, `Hi Sam,\n\n${HEADLINE}\n\n${sentences[0]}\n\nThe sales we used.\n\n${DISCLAIMER}`);
+  assert.equal(withEstimateNotes(fixed, sentences, HEADLINE), fixed, 'once');
+  assert.equal(withEstimateNotes(`Hi.\n\n${DISCLAIMER}`, sentences), `Hi.\n\n${sentences[0]}\n\n${DISCLAIMER}`, 'no headline: before the disclaimer');
+  assert.equal(draftChecks({ text: fixed, headline: HEADLINE, ledger, result: 'with_estimates', output, sample: false }).find((c) => c.id === 'estimates')?.state, 'pass');
+});
+
+test('the headline’s placeholder takes the headline; a changed headline changes in the body too', () => {
+  assert.equal(withHeadline(`Hi.\n\n${HEADLINE_PLACEHOLDER}\n\nMore.`, 'Mine.'), 'Hi.\n\nMine.\n\nMore.');
+  assert.equal(withHeadline(`Hi.\n\n${HEADLINE_PLACEHOLDER}`, '  '), `Hi.\n\n${HEADLINE_PLACEHOLDER}`);
+  assert.equal(syncHeadline(`Hi.\n\n${HEADLINE_PLACEHOLDER}\n\nMore.`, undefined, 'Mine.'), 'Hi.\n\nMine.\n\nMore.');
+  assert.equal(syncHeadline('Hi.\n\nMine.\n\nMore.', 'Mine.', 'Mine, better.'), 'Hi.\n\nMine, better.\n\nMore.');
+  assert.equal(syncHeadline('Hi.\n\nMine.\n\nMore.', 'Mine.', ''), `Hi.\n\n${HEADLINE_PLACEHOLDER}\n\nMore.`, 'cleared: the placeholder again');
+  assert.equal(syncHeadline('Hi.\n\nRewritten.', 'Mine.', 'Other.'), 'Hi.\n\nRewritten.', 'a body without it stays as it is');
+});
+
+test('fixing both of the handoff’s issues — the rounding and the missing size note — leaves a draft QA passes', () => {
+  const headline = 'Recent sales put 17L’s value between $4.23M and $4.9M.';
+  const body = `Hi Sam,\n\n${headline}\n\nI focused on the closest sales.\n\nFrankie\n\n${DISCLAIMER}`;
+  const before = draftChecks({ text: body, headline, ledger, result: 'with_estimates', output, sample: false });
+  assert.equal(qaStatus(before).ready, false);
+  const r = roundingFindings(body, args);
+  assert.deepEqual(r.map((f) => f.text), ['$4.9M']);
+  const fixedHeadline = 'Recent sales put 17L’s value between $4.23M and $4.92M.';
+  const fixed = withEstimateNotes(replaceSpans(body, r.map((f) => ({ index: f.index, length: f.text.length, with: f.expected }))), estimateSentences(output, 'with_estimates'), fixedHeadline);
+  assert.ok(fixed.includes(fixedHeadline));
+  assert.deepEqual(roundingFindings(fixed, args), []);
+  assert.deepEqual(qaStatus(draftChecks({ text: fixed, headline: fixedHeadline, ledger, result: 'with_estimates', output, sample: false })), { ready: true, line: 'Ready to send' });
 });

@@ -22,7 +22,7 @@
 import type { EngineOutput, ResultKind } from '../engine/index.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { fairHousingFindings, FAIR_HOUSING_LIST_VERSION } from './fair-housing.ts';
-import { estimateWords } from './format.ts';
+import { clientPrice, estimateWords, psf, usd } from './format.ts';
 import { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER } from './frame.ts';
 import { numbersIn, unmatchedNumbers, type Known, type KnownUnit, type Ledger } from './grounding.ts';
 import type { Intake } from './state.ts';
@@ -372,4 +372,210 @@ export function qaRecord(checks: QaCheck[]) {
       ...(c.items ? { items: c.items.map((i) => ({ key: i.key, text: i.text, context: i.context, ...(i.note ? { note: i.note } : {}), ...(i.ack ? { ack: i.ack } : {}) })) } : {}),
     })),
   };
+}
+
+// ─── Fixes QA knows (Dispatch 14: Send's issues panel) ───────────────────────
+//
+// Send lists what QA found, numbered, and "Fix both" applies the fixes QA can
+// make itself, deterministically, on the plain-text body: a figure written at
+// another rounding than the range's own, or just off it, becomes the range's
+// figure; a missing disclaimer goes back in; a missing note that the email
+// uses the agent's estimates (the size, usually) goes in after the headline.
+// Everything else stays the agent's: edit it, or answer for it.
+
+const MONEY_TOKEN = /\$\d[\d,]*(?:\.\d+)?(?:\s?(?:million|mil|thousand|[KkMm])(?![a-z]))?/g;
+
+export interface MoneyToken {
+  text: string;
+  index: number;
+  value: number;
+  /** Its own precision: "$4.9M" is 100,000. */
+  step: number;
+  /** Written with a scale: "$4.9M", "$950K", "$4.2 million". */
+  scaled: boolean;
+}
+
+/** The dollar figures in a text, with where each is, as grounding reads them. A link's digits aren't figures. */
+export function moneyTokens(text: string): MoneyToken[] {
+  const scan = text.replace(/https?:\/\/\S+/g, (u) => ' '.repeat(u.length));
+  const out: MoneyToken[] = [];
+  for (const m of scan.matchAll(MONEY_TOKEN)) {
+    const raw = m[0].replace(/,+$/, '');
+    const scale = /(million|mil|thousand|[KkMm])$/i.exec(raw)?.[1]?.toLowerCase();
+    const multiplier = scale === 'm' || scale === 'million' || scale === 'mil' ? 1e6 : scale === 'k' || scale === 'thousand' ? 1e3 : 1;
+    const digits = /\d[\d,]*(?:\.\d+)?/.exec(raw)![0].replace(/,/g, '');
+    const decimals = digits.includes('.') ? digits.split('.')[1]!.length : 0;
+    out.push({ text: raw, index: m.index ?? 0, value: Number(digits) * multiplier, step: 10 ** -decimals * multiplier, scaled: multiplier > 1 });
+  }
+  return out;
+}
+
+/** "$4.2 million" → "$4.2M", to compare a figure with how clientPrice writes it. */
+function normalMoney(text: string): string {
+  return text.replace(/\s+/g, '').replace(/(?:million|mil)$/i, 'M').replace(/thousand$/i, 'K').replace(/m$/, 'M').replace(/k$/, 'K');
+}
+
+/** Does a written figure read as this value, at its own precision? */
+function readsAs(t: MoneyToken, value: number): boolean {
+  return Math.abs(Math.round(value / t.step) * t.step - t.value) < t.step / 1000;
+}
+
+export interface RangeEnd {
+  end: 'low' | 'high';
+  /** The range's own figure for that end, as the email writes it: "$4.91M", "$2,112". */
+  figure: string;
+  value: number;
+}
+
+/** The range's ends for a result, in dollars and, with a size, in $/sq ft. */
+function rangeEnds(output: EngineOutput, result: ResultKind): { usd: RangeEnd[]; perSqft: RangeEnd[] } {
+  const r = output.results[result].range;
+  const h = output.headline_facts[result];
+  const dollars: RangeEnd[] = r ? [
+    { end: 'low', figure: clientPrice(r.low.value), value: r.low.value },
+    { end: 'high', figure: clientPrice(r.high.value), value: r.high.value },
+  ] : [];
+  const perSqft: RangeEnd[] = [];
+  for (const end of ['low', 'high'] as const) {
+    const f = h.facts.find((x) => x.id === `range.${end}_per_sqft`);
+    if (f) perSqft.push({ end, figure: psf(f.value), value: f.value });
+  }
+  return { usd: dollars, perSqft };
+}
+
+/** The email's price-table line, as the template writes it (email.ts): "$2,450 - $4.9M". */
+const TABLE_LINE = /^\s*\$[\d,]+(?:\.\d+)?\s+-\s+\$[\d,.]+[KkMm]?\s*$/;
+
+export interface RoundingFinding {
+  text: string;
+  index: number;
+  /** The range's own figure: what the email should say. */
+  expected: string;
+  end: 'low' | 'high';
+}
+
+/**
+ * The range's ends written at another rounding than the range's own: "$4.9M"
+ * where the range says $4.91M (the handoff's "round it the same way").
+ * Grounding passes them; Send offers the fix. A figure that reads as another
+ * value the email may cite — a comp's price, the agent's own number — at its
+ * own precision may be that value, and isn't flagged.
+ */
+export function roundingFindings(text: string, args: { output: EngineOutput; result: ResultKind; ledger: Ledger }): RoundingFinding[] {
+  const ends = rangeEnds(args.output, args.result).usd;
+  if (!ends.length) return [];
+  const out: RoundingFinding[] = [];
+  for (const t of moneyTokens(text)) {
+    if (!t.scaled) continue;
+    // A line of the price table ("$2,450 - $4.9M") is a step's own price, not the range's end.
+    const lineStart = text.lastIndexOf('\n', t.index) + 1;
+    const lineEnd = text.indexOf('\n', t.index);
+    if (TABLE_LINE.test(text.slice(lineStart, lineEnd < 0 ? text.length : lineEnd))) continue;
+    const hits = ends.filter((e) => readsAs(t, e.value) && normalMoney(t.text) !== e.figure);
+    if (!hits.length) continue;
+    const e = hits.sort((a, b) => Math.abs(a.value - t.value) - Math.abs(b.value - t.value))[0]!;
+    // The price table's steps are round by design ($4.9M at $2,450 a foot), so they don't count here.
+    const other = args.ledger.numbers.some((k) =>
+      (k.unit === 'usd' || k.unit === 'any') && k.source !== 'table'
+      && ends.every((x) => Math.abs(k.value - x.value) > x.value * 0.001) && readsAs(t, k.value));
+    if (other) continue;
+    out.push({ text: t.text, index: t.index, expected: e.figure, end: e.end });
+  }
+  return out;
+}
+
+/**
+ * A figure QA couldn't match that sits just off one of the range's ends —
+ * within 1.5% — and the range's own figure for it, written the same way:
+ * "$4.95M" → "$4.92M", "$4,950,000" → "$4,917,354", "$2,115" → "$2,112".
+ * Null when it's nowhere near the range: that one stays the agent's.
+ */
+export function rangeFigureFor(text: string, args: { output: EngineOutput; result: ResultKind }): RangeEnd | null {
+  const t = moneyTokens(text)[0];
+  if (!t || t.text !== text.trim()) return null;
+  const ends = rangeEnds(args.output, args.result);
+  const pool = t.value >= 100_000 ? ends.usd : ends.perSqft;
+  const near = pool
+    .filter((e) => Math.abs(t.value - e.value) <= e.value * 0.015)
+    .sort((a, b) => Math.abs(a.value - t.value) - Math.abs(b.value - t.value))[0];
+  if (!near) return null;
+  if (pool === ends.perSqft) return near;
+  return { ...near, figure: t.scaled ? clientPrice(near.value) : usd(near.value) };
+}
+
+/** Each span replaced by its text, back to front so the earlier spans keep their places. */
+export function replaceSpans(text: string, edits: { index: number; length: number; with: string }[]): string {
+  let out = text;
+  for (const e of [...edits].sort((a, b) => b.index - a.index)) {
+    if (e.index < 0 || e.index + e.length > out.length) continue;
+    out = out.slice(0, e.index) + e.with + out.slice(e.index + e.length);
+  }
+  return out;
+}
+
+const DISCLAIMER_START = DISCLAIMER.slice(0, 40).toLowerCase();
+
+/**
+ * The approved disclaimer back in (D-13). An edited one — a paragraph that
+ * starts as it does — goes back to the approved words; otherwise it goes in
+ * at the end.
+ */
+export function withDisclaimer(text: string): string {
+  if (text.includes(DISCLAIMER)) return text;
+  const parts = text.split(/(\n\s*\n)/);
+  const at = parts.findIndex((p, i) => i % 2 === 0 && p.trim().toLowerCase().startsWith(DISCLAIMER_START));
+  if (at >= 0) {
+    parts[at] = DISCLAIMER;
+    return parts.join('');
+  }
+  const body = text.trimEnd();
+  return body ? `${body}\n\n${DISCLAIMER}` : DISCLAIMER;
+}
+
+/**
+ * The email says it uses the agent's estimates (§9.5): the missing sentences
+ * go in as a paragraph after the headline's, where the template puts them;
+ * without the headline, before the disclaimer; else at the end.
+ */
+export function withEstimateNotes(text: string, sentences: string[], headline?: string): string {
+  const missing = [...new Set(sentences)].filter((s) => s && !text.includes(s));
+  if (!missing.length) return text;
+  const note = missing.join(' ');
+  const h = headline?.trim();
+  const from = h ? text.indexOf(h) : -1;
+  if (h && from >= 0) {
+    const end = text.indexOf('\n\n', from + h.length);
+    const at = end < 0 ? text.length : end;
+    return `${text.slice(0, at)}\n\n${note}${text.slice(at)}`;
+  }
+  const d = text.indexOf(DISCLAIMER);
+  if (d > 0) return `${text.slice(0, d)}${note}\n\n${text.slice(d)}`;
+  const body = text.trimEnd();
+  return body ? `${body}\n\n${note}` : note;
+}
+
+/** The headline's placeholder, left in an edited body, replaced by the headline. */
+export function withHeadline(text: string, headline: string): string {
+  const h = headline.trim();
+  return h ? text.split(HEADLINE_PLACEHOLDER).join(h) : text;
+}
+
+/**
+ * The headline changed while the agent has an edited body: the body's copy of
+ * it changes too, so the two never disagree. The old headline (or, with none,
+ * the placeholder) is replaced where it first appears; a body that no longer
+ * holds it is left as it is.
+ */
+export function syncHeadline(text: string, from: string | undefined, to: string | undefined): string {
+  const a = from?.trim() || HEADLINE_PLACEHOLDER;
+  const b = to?.trim() || HEADLINE_PLACEHOLDER;
+  if (a === b) return text;
+  const at = text.indexOf(a);
+  return at < 0 ? text : text.slice(0, at) + b + text.slice(at + a.length);
+}
+
+/** The sentences an email on this result must carry about the agent's estimates (§9.5). */
+export function estimateSentences(output: EngineOutput, result: ResultKind): string[] {
+  if (result !== 'with_estimates') return [];
+  return [...new Set(output.results.with_estimates.estimates_used.map(estimateWords))];
 }
