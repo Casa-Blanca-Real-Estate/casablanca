@@ -4,9 +4,9 @@
 import {
   compRecordFromListing, compRecordFromManual, confirmListingRecord, FACT_CHECKS, identify,
   type CompInput, type CompRecord, type DealTerms, type EngineInput, type FactField, type IsoDate,
-  type ManualCompFields, type NamedPrice, type OutdoorKind, type ParsedExport, type PropertyFacts, type Sourced,
+  type ManualCompFields, type NamedPrice, type OutdoorKind, type ParsedExport, type PropertyFacts, type ReportPropertyType, type Sourced,
 } from '../engine/index.ts';
-import type { CallState, CompJudgment, CompSource, DealTermsState, Entry, Intake, TargetState } from './state.ts';
+import { noteOf, type CallState, type CompJudgment, type CompSource, type DealTermsState, type Entry, type Intake, type TargetState } from './state.ts';
 
 /** An import, parsed: the browser and the server parse the stored file with the same parser. */
 export interface ParsedImport {
@@ -82,6 +82,11 @@ export function workspaceComps(imports: ParsedImport[], judgments: CompJudgment[
   const out: WorkspaceComp[] = [];
   const seen = new Set<string>();
   for (const j of judgments) {
+    // A removed comp counts in nothing, and its export row doesn't come back as a new one (Dispatch 14).
+    if (j.removedAt) {
+      seen.add(j.propertyKey);
+      continue;
+    }
     if (j.source.kind === 'export') {
       const hit = fromExport(j.propertyKey, j.source.importId);
       if (!hit) continue; // its export couldn't be read here: the export says so
@@ -139,10 +144,10 @@ function sourced<T>(entry: Entry<T> | undefined, field: FactField, value?: T): S
 }
 
 /** The subject's facts from the intake form, each attributed to the agent (§2). */
-export function subjectFacts(intake: Intake | undefined, asOf: IsoDate): PropertyFacts {
+export function subjectFacts(intake: Intake | undefined, asOf: IsoDate, propertyType: ReportPropertyType = 'condo'): PropertyFacts {
   const i = intake ?? {};
   const facts: PropertyFacts = {
-    property_type: { value: 'condo', source: 'agent', as_of: asOf, confidence: 'exact' },
+    property_type: { value: propertyType, source: 'agent', as_of: asOf, confidence: 'exact' },
   };
   const put = <K extends FactField>(field: K, value: PropertyFacts[K] | undefined) => {
     if (value !== undefined) facts[field] = value;
@@ -154,7 +159,9 @@ export function subjectFacts(intake: Intake | undefined, asOf: IsoDate): Propert
   put('list_price', sourced(i.askingPrice, 'list_price'));
   put('year_built', sourced(i.yearBuilt, 'year_built'));
   put('new_development', sourced(i.newDevelopment, 'new_development'));
-  put('common_charges_monthly', sourced(i.commonCharges, 'common_charges_monthly'));
+  // A co-op's monthly charge is its maintenance (Details labels the same field "Maintenance"): what the engine's carry reads.
+  if (propertyType === 'coop') put('maintenance_monthly', sourced(i.commonCharges, 'maintenance_monthly'));
+  else put('common_charges_monthly', sourced(i.commonCharges, 'common_charges_monthly'));
   put('taxes_monthly', sourced(i.taxes, 'taxes_monthly'));
   put('central_air', sourced(i.centralAir, 'central_air'));
   put('dishwasher', sourced(i.dishwasher, 'dishwasher'));
@@ -274,12 +281,15 @@ export function engineInput(args: {
   comps: WorkspaceComp[];
   prices?: NamedPrice[];
   locations?: ReadonlyMap<string, Location>;
+  /** The report's type (the Co-op/Condo toggle, Dispatch 14). Condo when not given, as before. */
+  propertyType?: ReportPropertyType;
 }): EngineInput {
   const i = args.intake ?? {};
   const comps: CompInput[] = args.comps.map((c) => {
     const tier = c.judgment?.tier ?? 'excluded';
     const latest = c.judgment?.reasons.at(-1);
-    const reason = c.unsortable ?? (c.judgment?.tier ? latest?.reason : 'Not sorted yet');
+    // The agent's note is the tier's reason once it's in (a tier given first records "(no note yet)").
+    const reason = c.unsortable ?? (c.judgment?.tier ? noteOf(c.judgment) ?? latest?.reason : 'Not sorted yet');
     return {
       id: c.id,
       record: located(c.record, args.locations),
@@ -290,15 +300,31 @@ export function engineInput(args: {
   });
   const deal = dealTermsInput(args.dealTerms);
   const identity = identify({ address: i.address?.value ?? null, unit: i.unit?.value ?? null });
-  const facts = subjectFacts(args.intake, args.asOf);
+  const propertyType = args.propertyType ?? 'condo';
+  const facts = subjectFacts(args.intake, args.asOf, propertyType);
   const home = identity.building_key ? args.locations?.get(identity.building_key) : undefined;
   if (home) facts.coordinates = coordinatesFact(home);
   return {
     as_of: args.asOf,
-    property_type: 'condo',
+    property_type: propertyType,
     subject: { identity, facts },
     comps,
     ...(args.prices && args.prices.length ? { prices: args.prices } : {}),
     ...(deal ? { deal_terms: deal } : {}),
   };
+}
+
+/**
+ * The comps the agent took out of the report that came from an export: the
+ * only sales Hubert may point back to ("You might also look at", Dispatch 14).
+ * Each is data already in the report, never a listing Hubert found.
+ */
+export function removedExportComps(imports: ParsedImport[], judgments: CompJudgment[]): { judgment: CompJudgment; record: CompRecord }[] {
+  const out: { judgment: CompJudgment; record: CompRecord }[] = [];
+  for (const j of judgments) {
+    if (!j.removedAt || j.source.kind !== 'export') continue;
+    const record = imports.map((i) => i.parsed.comps.find((r) => r.identity.key === j.propertyKey)).find(Boolean);
+    if (record) out.push({ judgment: j, record });
+  }
+  return out;
 }

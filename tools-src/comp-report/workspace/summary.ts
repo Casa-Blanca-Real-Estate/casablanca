@@ -11,10 +11,11 @@
 //
 // Figures are as the walkthrough shows them — $/sqft truncated (§6.1) — so the
 // assistant quotes what the agent sees and never computes one (§4.1).
-import { EVIDENCE_CLASSES, type EngineOutput, type Result, type ResultKind } from '../engine/index.ts';
+import { EVIDENCE_CLASSES, type CompRecord, type EngineOutput, type Result, type ResultKind } from '../engine/index.ts';
 import type { WorkspaceComp } from './engine-input.ts';
+import { hasHomeSize } from './email.ts';
 import { estimateWords } from './format.ts';
-import type { Intake } from './state.ts';
+import { noteOf, type Intake } from './state.ts';
 
 const KINDS: ResultKind[] = ['on_facts', 'with_estimates'];
 
@@ -34,7 +35,7 @@ function address(c: WorkspaceComp): string {
   return unit ? `${street} ${unit.startsWith('#') ? unit : `#${unit}`}` : street;
 }
 
-function result(r: Result, byId: Map<string, string>) {
+function result(r: Result, byId: Map<string, string>, sized: boolean) {
   const stat = (s: { median: { value: number }; min: { value: number }; max: { value: number }; n: number } | null, f: (v: number) => number | null) =>
     s ? { median: f(s.median.value), low: f(s.min.value), high: f(s.max.value), n: s.n } : null;
   return {
@@ -49,7 +50,7 @@ function result(r: Result, byId: Map<string, string>) {
         price_basis: e.basis === 'sale' ? 'sale prices' : 'asking prices',
         in_the_numbers: e.counts.included,
         of: e.counts.total,
-        price_per_sqft: stat(e.price_per_sqft, trunc),
+        ...(sized ? { price_per_sqft: stat(e.price_per_sqft, trunc) } : {}),
         price: stat(e.price, whole),
       }];
     })),
@@ -72,8 +73,28 @@ function result(r: Result, byId: Map<string, string>) {
   };
 }
 
-export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceComp[]; intake: Intake | undefined; revealed: boolean }) {
+/** An export row the agent took out: what it is, never a judgment of it. */
+function removedRow(r: CompRecord) {
+  const f = r.facts;
+  const street = r.identity.address.street ?? 'No address';
+  const unit = r.identity.unit.raw;
+  const status = r.status.evidence_class ?? r.status.listing_status;
+  return {
+    comp: unit ? `${street} ${unit.startsWith('#') ? unit : `#${unit}`}` : street,
+    evidence_status: status === 'off_market' ? 'didn’t sell' : status ?? `unknown (“${r.status.raw ?? ''}”)`,
+    [status === 'sold' ? 'sale_price' : 'asking_price']: (status === 'sold' ? f.sale_price?.value : f.list_price?.value) ?? null,
+    date: f.status_date?.value ?? null,
+    area_sqft: f.area_sqft?.value ?? null,
+    beds: f.beds?.value ?? null,
+    baths: f.baths?.value ?? null,
+    floor: f.floor?.value ?? null,
+  };
+}
+
+export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceComp[]; intake: Intake | undefined; revealed: boolean; removed?: CompRecord[] }) {
   const { output, comps, revealed } = args;
+  // No size for the home (or a co-op): Hubert gets no per-SF figure to quote, as no screen shows one (Dispatch 14).
+  const sized = hasHomeSize(output);
   const outById = new Map(output.comps.map((c) => [c.id, c]));
   const names = new Map(comps.map((c) => [c.id, address(c)]));
   const intake = args.intake ?? {};
@@ -106,13 +127,14 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
           ? 'didn’t sell (came off the market unsold; its last ask is a ceiling signal)'
           : c.record.status.evidence_class ?? `unknown (“${c.record.status.raw ?? ''}”)`,
         tier: c.unsortable ? 'can’t be sorted' : c.judgment?.tier ?? 'not sorted yet',
-        reason: c.unsortable ?? c.judgment?.reasons.at(-1)?.reason ?? null,
+        reason: c.unsortable ?? noteOf(c.judgment),
+        ...(c.judgment?.tags?.length ? { tags: c.judgment.tags } : {}),
         reviewed: Boolean(c.judgment?.reviewedAt),
         ...(c.judgment?.anchor ? { anchor: true } : {}),
         [sold ? 'sale_price' : c.record.status.evidence_class === 'in_contract' ? 'last_asking_price' : 'asking_price']: price ?? null,
         ...(sold && f.list_price ? { last_asking_price: f.list_price.value } : {}),
-        area_sqft: f.area_sqft ? `${f.area_sqft.confidence === 'approx' || c.record.flags.approx_area ? '~' : ''}${f.area_sqft.value}` : null,
-        price_per_sqft: trunc(pr?.on_facts.price_per_sqft?.value),
+        ...(sized ? { area_sqft: f.area_sqft ? `${f.area_sqft.confidence === 'approx' || c.record.flags.approx_area ? '~' : ''}${f.area_sqft.value}` : null } : {}),
+        ...(sized ? { price_per_sqft: trunc(pr?.on_facts.price_per_sqft?.value) } : {}),
         date: f.status_date?.value ?? null,
         beds: f.beds?.value ?? null,
         baths: f.baths?.value ?? null,
@@ -126,8 +148,14 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
       };
     }),
     ...(revealed ? {
-      results: Object.fromEntries(KINDS.map((k) => [k, result(output.results[k], names)])),
+      results: Object.fromEntries(KINDS.map((k) => [k, result(output.results[k], names, sized)])),
       estimates_move_the_numbers: !output.divergence.same,
+    } : {}),
+    ...(args.removed?.length ? {
+      removed_from_report: {
+        about: 'Sales from the agent’s StreetEasy export that the agent took out of the report. They count in nothing. They are the only other sales you may suggest looking at again; never name a listing that is not in this data.',
+        comps: args.removed.map(removedRow),
+      },
     } : {}),
     still_needed: output.gaps.map((g) => g.message),
     warnings: output.warnings.filter((w) => revealed || BEFORE_REVEAL_WARNINGS.has(w.code)).map((w) => w.message),

@@ -10,25 +10,32 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, geocodeApi, workspaceApi, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
-import { engineInput, locationsFrom, namedPrices, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
+import { ApiError, geocodeApi, workspaceApi, type CompEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { engineInput, locationsFrom, namedPrices, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
+import { homeFeatures } from '../../../workspace/features.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
-  isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type SendState, type TargetState, type WorkspaceState,
+  isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type Outcomes, type Reached, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
-import { Chat } from '../Chat.tsx';
 import { StartFlow, type StartScreen } from '../newcomp/NewComp.tsx';
-import { About, STEPS, type StepId } from './About.tsx';
+import type { StepId } from './About.tsx';
 import { BuildNotesContext, useBuildNotesSwitch } from './buildNotes.tsx';
-import { Findings, LiveNumbers } from './Findings.tsx';
+import { Done } from './Done.tsx';
+import { Findings } from './Findings.tsx';
+import { Gate } from './Gate.tsx';
 import { fromBase64, localToday, type Workspace as WorkspaceModel } from './model.ts';
 import { useLinkReads } from './reads.ts';
 import { SendStep } from './SendStep.tsx';
+import { hasSF, isScreen, sortReadiness, type ScreenId } from './screens.ts';
+import { SortFirst } from './SortFirst.tsx';
 import { SortStep } from './SortStep.tsx';
+import { Center, DevStrip, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
+import { ReportBar } from '../shell/ReportBar.tsx';
+import { ProgressRow, WorkspaceHeader } from '../shell/WorkspaceHeader.tsx';
 
-type Field = 'title' | 'brief' | 'call' | 'target' | 'state' | 'sampleData';
+type Field = 'title' | 'brief' | 'call' | 'target' | 'state' | 'sampleData' | 'propertyType';
 
 type SaveStatus =
   | { kind: 'idle' }
@@ -99,18 +106,24 @@ const SAMPLE_FILLS: Record<StepId, string> = {
   send: 'The email’s own lines (how the comps were chosen, things to consider, the next step), a made-up client and the result that has a range. The headline stays yours.',
 };
 
-/** The assistant's starter question on each screen (`02-screens.md`, The assistant drawer). */
-const STARTERS: Record<StepId, string> = {
-  sort: 'Which of these are closest to the home?',
-  findings: 'What’s the strongest case for where this should trade?',
-  send: 'Tighten my headline.',
-};
-
-/** CR-3a's steps map onto the three screens: the reveal and "work it through" are Findings now. */
-function stepFromUrl(): StepId {
+/** CR-3a's steps map onto the screens: the reveal and "work it through" are Findings now. */
+function screenFromUrl(): ScreenId {
   const s = new URLSearchParams(location.search).get('step');
   if (s === 'reveal' || s === 'work') return 'findings';
-  return STEPS.some((x) => x.id === s) ? (s as StepId) : 'sort';
+  return isScreen(s) ? s : 'sort';
+}
+
+const REACH: Record<ScreenId, Reached> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
+const REACH_ORDER: Reached[] = ['sort', 'findings', 'send'];
+
+/** An admin can view the Gate as a new (practice) agent, to show it (Dispatch 14). Per browser. */
+const VIEW_AS_NEW_KEY = 'cr-view-as-new-agent';
+function readViewAsNew(): boolean {
+  try {
+    return localStorage.getItem(VIEW_AS_NEW_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 /** The new-comp modal's screen, from ?start= (and CR-3a's ?step=home and ?step=export, which it replaces). */
@@ -127,14 +140,14 @@ const NO_READS: LinkReadView[] = [];
 function SaveLine({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
   if (status.kind === 'error') {
     return (
-      <span className="save-line error">
+      <span className="sh-save error" role="alert">
         Not saved: {status.message}{' '}
         <button type="button" className="link" onClick={onRetry}>Try again</button>
       </span>
     );
   }
   const text = { idle: 'Saved', pending: 'Unsaved changes…', saving: 'Saving…', saved: 'Saved' }[status.kind];
-  return <span className={`save-line ${status.kind}`} aria-live="polite">{text}</span>;
+  return <span className={`sh-save ${status.kind}`} aria-live="polite">{text}</span>;
 }
 
 export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; onBack: () => void }) {
@@ -144,9 +157,13 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const [call, setCallState] = useState<CallState | null>(null);
   const [target, setTargetState] = useState<TargetState | null>(null);
   const [state, setStateState] = useState<WorkspaceState>({});
-  const [step, setStep] = useState<StepId>(stepFromUrl);
+  const [screen, setScreen] = useState<ScreenId>(screenFromUrl);
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
-  const [chatOpen, setChatOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
+  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
+  const [propertyType, setPropertyTypeState] = useState<'condo' | 'coop'>('condo');
+  const [viewAsNewAgent, setViewAsNewAgentState] = useState(readViewAsNew);
+  const [sortFilter, setSortFilter] = useState<{ incomplete: boolean; tags: string[] }>({ incomplete: false, tags: [] });
+  const [toastText, setToastText] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
@@ -163,6 +180,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         setCallState(d.call as CallState | null);
         setTargetState(d.target as TargetState | null);
         setStateState((d.state ?? {}) as WorkspaceState);
+        setPropertyTypeState(d.report.propertyType);
         setMessageCount(d.messageCount);
       },
       (e: unknown) => live && setLoadError(e instanceof Error ? e : new Error(String(e))),
@@ -174,20 +192,20 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
 
   useEffect(() => {
     const onPop = () => {
-      setStep(stepFromUrl());
+      setScreen(screenFromUrl());
       setStart(startFromUrl());
     };
     addEventListener('popstate', onPop);
     return () => removeEventListener('popstate', onPop);
   }, []);
 
-  const go = useCallback((next: StepId) => {
+  const go = useCallback((next: ScreenId) => {
     const params = new URLSearchParams(location.search);
     params.set('report', reportId);
     params.set('step', next);
     params.delete('start');
     history.pushState(null, '', `?${params}`);
-    setStep(next);
+    setScreen(next);
     setStart(null);
     scrollTo({ top: 0 });
   }, [reportId]);
@@ -241,14 +259,19 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   // The engine, in the browser: instant, and the same code the functions run (§5).
   const { output, engineError } = useMemo((): { output: EngineOutput | null; engineError: string | null } => {
     try {
-      return { output: compute(engineInput({ asOf: today, intake, dealTerms, comps, prices, locations })), engineError: null };
+      return { output: compute(engineInput({ asOf: today, intake, dealTerms, comps, prices, locations, propertyType })), engineError: null };
     } catch (e) {
       const message = e instanceof EngineInputError ? e.issues.join('; ') : e instanceof Error ? e.message : String(e);
       return { output: null, engineError: message };
     }
-  }, [today, intake, dealTerms, comps, prices, locations]);
+  }, [today, intake, dealTerms, comps, prices, locations, propertyType]);
+  const readiness = useMemo(() => sortReadiness(comps), [comps]);
+  const suggestions = useMemo(() => removedExportComps(parsed, data?.comps ?? []), [parsed, data?.comps]);
+  const features = useMemo(() => homeFeatures(intake), [intake]);
 
   const readOnly = Boolean(data && data.report.ownerEmail.toLowerCase() !== me.user.email.toLowerCase());
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
 
   // StreetEasy links being read: start each, and poll until every row has filled in.
   const applyLinks = useCallback((next: LinksState) => {
@@ -306,6 +329,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   }, [save]);
 
   const setState = useCallback((next: WorkspaceState) => {
+    // Two setters in one event each build on the last: the ref moves now, not at the next render.
+    stateRef.current = next;
     setStateState(next);
     save.queue('state', next);
   }, [save]);
@@ -313,6 +338,42 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   // The latest state for the setters below, so each keeps the other parts as they are.
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // A comp's edits run one at a time, in order, so each returned workspace lands in turn (as Sort's did).
+  const compChain = useRef<Promise<void>>(Promise.resolve());
+  const editComp = useCallback((reportCompId: string, edit: CompEdit): Promise<void> => {
+    const next = compChain.current.then(async () => {
+      const d = await workspaceApi.editComp(reportId, reportCompId, edit);
+      setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads, geocodes: d.geocodes } : d));
+    });
+    compChain.current = next.catch(() => undefined);
+    return next;
+  }, [reportId]);
+
+  // The furthest screen reached, for the reports list's Stage.
+  const reached: Reached = state.reached ?? 'sort';
+  const goTo = useCallback((next: ScreenId) => {
+    const r = REACH[next];
+    if (!readOnlyRef.current && REACH_ORDER.indexOf(r) > REACH_ORDER.indexOf(stateRef.current.reached ?? 'sort')) {
+      setState({ ...stateRef.current, reached: r });
+    }
+    go(next);
+  }, [go, setState]);
+
+  // Hubert opens by default on the first Sort visit, once (the handoff).
+  const loadedState = Boolean(data);
+  useEffect(() => {
+    if (!loadedState || readOnlyRef.current || screen !== 'sort' || stateRef.current.hubertSeen) return;
+    setDrawerOpen(true);
+    setState({ ...stateRef.current, hubertSeen: true });
+  }, [loadedState, screen, setState]);
+
+  const toastTimer = useRef(0);
+  const toast = useCallback((message: string) => {
+    setToastText(message);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToastText(null), 3200);
+  }, []);
 
   // The home's page, once read, fills the details the agent hasn't filled: once per read.
   const homeRead = (data?.reads ?? NO_READS).filter((r) => r.purpose === 'subject').at(-1);
@@ -390,9 +451,43 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     },
     busy,
     fillSample: async () => undefined, // set below: it needs the model itself
-    go,
     messageCount,
     setMessageCount,
+    screen,
+    go: goTo,
+    propertyType,
+    setPropertyType: (next) => {
+      setPropertyTypeState(next);
+      setData((d) => (d ? { ...d, report: { ...d.report, propertyType: next } } : d));
+      save.queue('propertyType', next);
+    },
+    side: brief.audience?.value === 'seller' ? 'seller' : 'buyer',
+    sf: hasSF(intake, propertyType),
+    homeFeatures: features,
+    level: me.user.role === 'admin' && viewAsNewAgent ? 'practice' : me.user.capability,
+    isAdmin: me.user.role === 'admin',
+    viewAsNewAgent,
+    setViewAsNewAgent: (on) => {
+      setViewAsNewAgentState(on);
+      try {
+        localStorage.setItem(VIEW_AS_NEW_KEY, on ? '1' : '0');
+      } catch {
+        /* per browser only */
+      }
+    },
+    devTools: me.user.role === 'admin' && buildNotes,
+    readiness,
+    sortFilter,
+    setSortFilter,
+    editComp,
+    suggestions,
+    drawerOpen,
+    setDrawerOpen,
+    outcomes: state.outcomes ?? {},
+    setOutcomes: (next: Outcomes) => setState({ ...stateRef.current, outcomes: next }),
+    reached,
+    toast,
+    back: onBack,
   };
 
   // Values the agent typed (not the sample's), which a sample fill of that step would replace.
@@ -458,134 +553,74 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   if (loadError) {
     const missing = loadError instanceof ApiError && loadError.status === 404;
     return (
-      <div className="card">
-        <p className="card-title">{missing ? 'No such report.' : 'This report couldn’t be loaded.'}</p>
-        <p className="muted">{missing ? 'It may belong to someone else, or the link is wrong.' : loadError.message}</p>
-        <div className="row" style={{ marginTop: 14 }}>
-          <button type="button" className="btn" onClick={onBack}>All reports</button>
+      <Center>
+        <div className="sh-card">
+          <h1 className="sh-card-title">{missing ? 'No such report.' : 'This report couldn’t be loaded.'}</h1>
+          <p className="sh-help">{missing ? 'It may belong to someone else, or the link is wrong.' : loadError.message}</p>
+          <div>
+            <button type="button" className="btn primary" onClick={onBack}>All reports</button>
+          </div>
         </div>
-      </div>
+      </Center>
     );
   }
-  if (!ws || !data) return <p className="muted">Loading the report…</p>;
+  if (!ws || !data) return <Center><StateLine>Loading the report…</StateLine></Center>;
 
-  const has: Record<StepId, boolean> = {
-    sort: comps.some((c) => c.judgment?.tier),
-    findings: Boolean(call),
-    send: Boolean(send.copiedAt || send.draft || send.headline),
-  };
-  const current = STEPS.find((s) => s.id === step)!;
-
+  // The shell (Dispatch 14): the bar's report pieces, the header and progress row, the screen, and
+  // Hubert's drawer beside it. The screens and their routing are final.
+  // Findings stays locked until every comp has a tier, a note and a tag (Dispatch 14): whatever the way in —
+  // the Gate's button, a typed ?step=, the browser's Back — not only the progress row and its button.
+  const sortLocked = !readOnly && !readiness.ready && (screen === 'gate' || screen === 'findings' || screen === 'send');
+  const stepFor: Record<ScreenId, StepId> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
+  const step = stepFor[screen];
   return (
     <BuildNotesContext.Provider value={buildNotes}>
-    <div className={`workspace${chatOpen ? ' with-drawer' : ''}`}>
-      <div className="ws-head">
-        <button type="button" className="link" onClick={onBack}>‹ All reports</button>
-        <div className="ws-title-row">
-          <h2 className="report-title">{data.report.title}</h2>
-          {readOnly && <span className="tag" title={`${data.report.ownerEmail}'s report. Admins can read it; only its owner can change it.`}>Read only</span>}
-        </div>
-        <div className="ws-tools">
-          {!readOnly && <SaveLine status={save.status} onRetry={() => void save.flush()} />}
-          <button type="button" className="btn small-btn" onClick={() => openStart('details')}>The home</button>
-          <button type="button" className="btn small-btn" aria-expanded={chatOpen} onClick={() => setChatOpen((o) => !o)}>
-            {chatOpen ? 'Close the assistant' : 'Assistant'}
-          </button>
-          {me.user.role === 'admin' && (
-            <label className="check small" title="The build’s own notes: what each screen implements, what’s stubbed, the decisions behind it. Admins only.">
-              <input type="checkbox" checked={buildNotes} onChange={(e) => setBuildNotes(e.target.checked)} />
-              Build notes
-            </label>
-          )}
-          {canSample && buildNotes && (
-            <button type="button" className="btn small-btn" disabled={Boolean(busy)} onClick={() => void ws.fillSample('all')}>
-              Fill the whole report with sample data
-            </button>
-          )}
-        </div>
+      <ReportBar ws={ws} setDevTools={setBuildNotes} />
+      <div className={`sh-page${drawerOpen ? ' with-drawer' : ''}`}>
+        <HubertTab ws={ws} />
+        <WorkspaceHeader
+          ws={ws}
+          onBack={onBack}
+          saveLine={readOnly ? null : <SaveLine status={save.status} onRetry={() => void save.flush()} />}
+        />
+        <ProgressRow ws={ws} />
+
+        {(busy || actionError || ws.devTools) && (
+          <div className="sh-aux">
+            <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
+            {ws.devTools && <DevStrip ws={ws} step={step} fills={SAMPLE_FILLS} />}
+          </div>
+        )}
+
+        <section className="sh-screen">
+          <ErrorBoundary resetKey={screen} onBack={onBack}>
+            {screen === 'sort' && <SortStep ws={ws} />}
+            {sortLocked ? <SortFirst ws={ws} /> : (
+              <>
+                {screen === 'gate' && <Gate ws={ws} />}
+                {screen === 'findings' && <Findings ws={ws} />}
+                {screen === 'send' && <SendStep ws={ws} />}
+              </>
+            )}
+            {screen === 'done' && <Done ws={ws} />}
+          </ErrorBoundary>
+        </section>
       </div>
-
-      {data.report.sampleData && (
-        <p className="sample-banner" role="note">
-          <strong>Sample report.</strong> It uses sample data (100 Barclay #17L) for trying the tool. Nothing in it is for clients.
-        </p>
-      )}
-
-      <nav className="rail" aria-label="Screens">
-        {STEPS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`rail-step${s.id === step ? ' current' : ''}${has[s.id] ? ' has' : ''}`}
-            aria-current={s.id === step ? 'step' : undefined}
-            onClick={() => go(s.id)}
-            title={has[s.id] ? `${s.title} — has something in it` : `${s.title} — empty`}
-          >
-            <span className="rail-n">{s.n}</span>
-            <span className="rail-name">{s.short}</span>
-            <span className="rail-dot" aria-label={has[s.id] ? 'has content' : 'empty'} />
-          </button>
-        ))}
-      </nav>
-
-      {busy && <p className="notice" aria-live="polite">{busy}</p>}
-      {actionError && (
-        <p className="notice error-notice" role="alert">
-          {actionError} <button type="button" className="link" onClick={() => setActionError(null)}>Dismiss</button>
-        </p>
-      )}
-
-      {ws.revealed && step !== 'findings' && <LiveNumbers ws={ws} />}
-
-      <section className="step" aria-labelledby="step-title">
-        <div className="step-head">
-          <h3 id="step-title">{current.title}</h3>
-          {canSample && buildNotes && (
-            <button
-              type="button"
-              className="btn small-btn"
-              disabled={Boolean(busy)}
-              title={SAMPLE_FILLS[step]}
-              onClick={() => void ws.fillSample(step)}
-            >
-              Fill with sample
-            </button>
-          )}
-        </div>
-        <About key={step} step={step} />
-        <ErrorBoundary resetKey={step} onBack={onBack}>
-          {step === 'sort' && <SortStep ws={ws} />}
-          {step === 'findings' && <Findings ws={ws} />}
-          {step === 'send' && <SendStep ws={ws} />}
-        </ErrorBoundary>
-        <div className="step-nav">
-          {current.n > 1 && (
-            <button type="button" className="btn" onClick={() => go(STEPS[current.n - 2]!.id)}>‹ {STEPS[current.n - 2]!.short}</button>
-          )}
-          {current.n < STEPS.length && (
-            <button type="button" className="btn primary" onClick={() => go(STEPS[current.n]!.id)}>
-              {STEPS[current.n]!.short} ›
-            </button>
-          )}
-        </div>
-      </section>
 
       {start && (
         <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
           <StartFlow ws={ws} screen={start} onScreen={openStart} onDone={closeStart} />
         </ErrorBoundary>
       )}
-
-      {chatOpen && (
-        <aside className="drawer" aria-label="The assistant">
-          <div className="drawer-head">
-            <span className="label">Assistant</span>
-            <button type="button" className="link" onClick={() => setChatOpen(false)}>Close</button>
-          </div>
-          <Chat reportId={reportId} readOnly={readOnly} onCount={setMessageCount} starter={STARTERS[step]} />
-        </aside>
+      {/* Over the modal, a save or a server call says what it's doing, and what went wrong, where it can be seen. */}
+      {start && (busy || actionError) && (
+        <div className="sh-modal-notes">
+          <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
+        </div>
       )}
-    </div>
+
+      {drawerOpen && <HubertDrawer ws={ws} />}
+      {toastText && <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">{toastText}</div>}
     </BuildNotesContext.Provider>
   );
 }

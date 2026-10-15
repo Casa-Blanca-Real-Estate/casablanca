@@ -141,3 +141,60 @@ Hubert should see notes and tags where they already see tiers.
   before Noble's walk-through.
 
 — Casanova
+
+---
+
+## Handoff — Mason (CR-6), 2026-10-15
+
+**State:** the port is in one PR to `claude/main`, #77. Every screen of the handoff
+works end to end on the dev server, in buyer and seller, co-op and condo; every suite passes.
+
+**Where things are:**
+- **Data** (migration `20261015000000_comp_report_design_port`): a comp's `note`, `tags`, `features`
+  and `removed_at` on `report_comps`. A tier given before a note records "(no note yet)"; a changed
+  note on a tiered comp appends a reason (PATCH, and a typed-in comp sent again). Removing keeps the
+  row; an export's removed rows are Hubert's only "You might also look at", and `get_numbers` lists
+  them as facts. The workspace state gains `reached`, `hubertSeen`, `outcomes`, `send.format` and
+  `send.sentAt`; the home's pickers write `exposures`, `building` and the wider `condition` into the
+  intake. The reports list reads client, side, stage and unsorted in its one query.
+- **Rules on the server:** the Gate (`checkCall` in `server/api/workspace.ts`: practice agents can't
+  skip and need a why of 100+ characters, trimmed); `propertyType` on the workspace PATCH, which the
+  engine reads (`numbers.ts`, `engine-input.ts`); Hubert's prompt `cr6-2026-10-15`.
+- **Shared front-end:** `workspace/features.ts` (tags, pickers, the home's features),
+  `src/views/workspace/screens.ts` (screens, readiness, `hasSF`, `homeName`), `src/views/comp/`
+  (the comp form, pickers, paste bar and drop target, the type-mismatch notice), the tokens and
+  primitives in `src/styles.css`.
+- **Screens:** the shell in `src/views/shell/` (top bar with the account menu and the real sign-out,
+  the workspace header and progress row, Reports' list logic); the new-report modal in
+  `src/views/newcomp/`; Sort in `SortStep.tsx` and `src/views/sort/`; Hubert in `Hubert.tsx`,
+  `Chat.tsx` and `src/views/hubert/`; the Gate and Findings in `Gate.tsx`, `Findings.tsx`, `Terms.tsx`
+  and `src/views/findings/` (the fixed axis and "How Hubert got there", pure and tested); Send and Done
+  in `SendStep.tsx`, `Done.tsx` and `src/views/send/` (issues, fixes, the designed email, pure and
+  tested). Each screen's CSS is its own file in `src/styles/`, with a class prefix.
+- **Dev:** `dev/seed-report.mjs` makes a report at any stage, side and type;
+  `dev/walk-screens.mjs` screenshots all 11 screens (it needs `npm i --no-save playwright-core`).
+
+**Gotchas for the next session:**
+- **A co-op report counts co-op comps only** (the engine's like-for-like rule). The sample building is
+  a condo, so the seed's co-op walk imports the sample export as co-ops with no sizes. Sort and
+  Findings say when the type doesn't match the comps.
+- **This cloud machine has 4 CPUs, so a workflow runs two agents at a time.** Parallel builders need
+  separate workflows.
+- **The top bar is 50px and sticky** (the Studio chrome's fixed pills centre on it); anything sticky
+  sits at `top: 50px`. The account menu is ours; the Studio's own chip is hidden while it shows.
+- **State setters in one event build on each other** through `stateRef` (Edit details' Cancel needed
+  it). Keep it that way.
+- **Send keeps one edited draft at a time** (`send.draft`); its length is read from the fingerprint.
+- **Dev tools** (About this screen, Fill with sample) and **View the Gate as a new agent** are in the
+  account menu, for admins, off by default.
+
+**Follow-ups (not in this dispatch; the UI says so where a user meets them):** screenshots read into
+comps; Hubert's real suggestions; photos; inheriting the Studio session; outcomes from records; narrow
+widths. And from the build: one edited draft per length; Hubert's "Fix both" chip reaching Send's fix;
+a way to set an agent to `practice` in Access; Escape in the new-report modal drops a half-filled comp
+form; changing the home's address on step 1 doesn't retitle the report; Mark as sent records the open
+tab, which may not be the one last copied.
+
+**Next for Mason:** Dispatch 13, phase 2.
+
+— Mason (CR-6)

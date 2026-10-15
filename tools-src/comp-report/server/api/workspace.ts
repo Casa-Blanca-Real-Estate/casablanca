@@ -4,9 +4,11 @@
 //                          intake and deal terms, every import (the file, for
 //                          the browser's own parse), every comp's judgment and
 //                          where its record comes from, and the link reads
-//   PATCH {reportId, title?, brief?, call?, target?, state?, sampleData?}
+//   PATCH {reportId, title?, brief?, call?, target?, state?, sampleData?, propertyType?}
 //                          saves what the agent entered. Each field given
-//                          replaces the stored one; sampleData can only be set
+//                          replaces the stored one; sampleData can only be set;
+//                          propertyType is the Co-op/Condo toggle (Dispatch 14).
+//                          The call follows the Gate's rule for the agent's level
 //
 // The owner or an admin can read a report; only its owner can change it.
 // Every query is scoped by owner as well as by row-level security (§12).
@@ -93,8 +95,10 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     is_anchor: boolean; reviewed_at: Date | null;
     source: 'se_export' | 'se_pdf' | 'listing' | 'agent' | null; import_id: string | null; raw: unknown; as_of: string | null; links: string[] | null;
     read_id: string | null; confirmed_at: Date | null;
+    note: string | null; tags: string[] | null; features: Record<string, string[]> | null; removed_at: Date | null;
   }>(
     `select rc.id, p.property_key, rc.evidence_class, rc.tier, rc.is_anchor, rc.reviewed_at,
+            rc.note, rc.tags, rc.features, rc.removed_at,
             o.source, o.import_id, o.raw, o.as_of::text as as_of, o.links,
             lr.id as read_id, lr.confirmed_at
        from comp_report.report_comps rc
@@ -133,6 +137,10 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
       .filter((r) => r.report_comp_id === c.id)
       .map((r) => ({ tier: r.tier, reason: r.reason, reasonType: r.reason_type, actor: r.actor, at: iso(r.created_at), by: r.created_by, sample: r.sample })),
     source: source(c),
+    note: c.note,
+    tags: c.tags ?? [],
+    features: c.features ?? {},
+    removedAt: c.removed_at ? iso(c.removed_at) : null,
   }));
 }
 
@@ -214,8 +222,15 @@ function checkSize(field: string, value: unknown, max: number) {
   if (JSON.stringify(value).length > max) throw new HttpError(413, 'too_large', `${field} is too large.`);
 }
 
-/** The call: a low and a high the agent gives, or a skip. Both recorded with when. */
-function checkCall(call: unknown) {
+/** The Gate's why, for an agent still in practice (D-11, Dispatch 14): at least this many characters. */
+export const PRACTICE_WHY_MIN = 100;
+
+/**
+ * The call: a low and a high the agent gives, or a skip. Both recorded with
+ * when. The Gate (Dispatch 14): an agent still in practice can't skip, and
+ * gives a why of at least 100 characters; a graduated (full) agent may skip.
+ */
+function checkCall(call: unknown, capability: 'practice' | 'full') {
   if (call === null) return;
   if (!isObject(call)) throw new HttpError(400, 'bad_call', 'The call is an object or null.');
   const { low, high, skipped } = call;
@@ -225,8 +240,13 @@ function checkCall(call: unknown) {
     if ((low as number) > (high as number)) throw new HttpError(400, 'bad_call', 'The low is above the high.');
   }
   if (typeof call.at !== 'string') throw new HttpError(400, 'bad_call', 'The call needs the time it was given.');
-  if (call.note !== undefined && (typeof call.note !== 'string' || call.note.length > 500)) {
-    throw new HttpError(400, 'bad_call', 'Keep the line under 500 characters.');
+  if (call.note !== undefined && (typeof call.note !== 'string' || call.note.length > 2000)) {
+    throw new HttpError(400, 'bad_call', 'Keep the why under 2,000 characters.');
+  }
+  if (capability === 'practice') {
+    if (skipped) throw new HttpError(400, 'gate_required', 'Give your low, high and why: the comps show after that.');
+    const why = typeof call.note === 'string' ? call.note.trim() : '';
+    if (why.length < PRACTICE_WHY_MIN) throw new HttpError(400, 'gate_why', `Say why in at least ${PRACTICE_WHY_MIN} characters.`);
   }
 }
 
@@ -271,8 +291,13 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
       set('brief', body.brief);
     }
     if ('call' in body) {
-      checkCall(body.call);
+      checkCall(body.call, user.capability);
       set('agent_call', body.call);
+    }
+    if ('propertyType' in body) {
+      if (body.propertyType !== 'condo' && body.propertyType !== 'coop') throw new HttpError(400, 'bad_property_type', 'A co-op or a condo.');
+      values.push(body.propertyType);
+      sets.push(`property_type = $${values.length}`);
     }
     if ('target' in body) {
       checkTarget(body.target);

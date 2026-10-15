@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+// The shared styles first, so every view's own stylesheet (src/styles/*.css) comes after them in the bundle.
+import './styles.css';
+import './styles/shell.css';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { api, ApiError, type Me } from './api.ts';
 import { session, type SessionState } from './session.ts';
 import { AcceptInvite, NotAuthorised, SetNewPassword, SignIn, Unavailable } from './views/SignIn.tsx';
 import { Reports } from './views/Reports.tsx';
 import { Workspace } from './views/workspace/Workspace.tsx';
+import type { ScreenId } from './views/workspace/screens.ts';
+import { Center, StateLine } from './views/shell/Pieces.tsx';
+import { Shell } from './views/shell/TopBar.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
 
 function currentReportId(): string | null {
@@ -31,56 +37,54 @@ export function App() {
     api<Me>('/api/comp-report/me').then(setMe, (e) => setRefusal(e instanceof ApiError ? e : new ApiError(0, 'network', String(e))));
   }, [state]);
 
+  // The account menu's Sign out: the real Identity sign-out (the Studio chip only clears its own key).
+  // The sign-in screen shows whether or not the call got through; a reload checks again.
   const signOut = useCallback(async () => {
-    await session.signOut();
+    try {
+      await session.signOut();
+    } catch {
+      /* fall through to the sign-in screen */
+    }
     history.pushState(null, '', location.pathname);
     setReportId(null);
     setState({ status: 'signed-out' });
   }, []);
 
-  // A new comp opens straight into its modal's next screen (?start=details).
-  const open = useCallback((id: string | null, start?: 'details') => {
-    history.pushState(null, '', id ? `?report=${id}${start ? `&start=${start}` : ''}` : location.pathname);
+  // A new comp opens straight into its modal's next screen (?start=details); a report from the list
+  // opens on the screen its stage reached (?step=send).
+  const open = useCallback((id: string | null, start?: 'details', step?: ScreenId) => {
+    const query = id ? `?report=${id}${start ? `&start=${start}` : ''}${step ? `&step=${step}` : ''}` : location.pathname;
+    history.pushState(null, '', query);
     setReportId(id);
   }, []);
 
-  let body;
-  if (state.status === 'loading') body = <p className="muted">Loading…</p>;
+  // Sign-in and every state before a report are a card in the middle of the page; the list and a report lay out their own.
+  let body: ReactNode;
+  let framed = true;
+  if (state.status === 'loading') body = <StateLine>Loading…</StateLine>;
   else if (state.status === 'unavailable') body = <Unavailable />;
   else if (state.status === 'invite') body = <AcceptInvite token={state.token} onDone={setState} />;
   else if (state.status === 'recovery') body = <SetNewPassword onDone={() => session.start().then(setState)} />;
   else if (state.status === 'signed-out') body = <SignIn notice={state.notice} onSignedIn={setState} />;
   else if (refusal) body = <NotAuthorised email={state.email} error={refusal} onSignOut={signOut} />;
-  else if (!me) body = <p className="muted">Checking your access…</p>;
-  else if (reportId) body = <Workspace key={reportId} reportId={reportId} me={me} onBack={() => open(null)} />;
-  else body = <Reports me={me} onOpen={open} />;
+  else if (!me) body = <StateLine>Checking your access…</StateLine>;
+  else if (reportId) {
+    framed = false;
+    body = <Workspace key={reportId} reportId={reportId} me={me} onBack={() => open(null)} />;
+  } else {
+    framed = false;
+    body = <Reports me={me} onOpen={open} />;
+  }
+
+  const account = state.status === 'signed-in' ? { email: state.email, role: me?.user.role, dev: session.dev } : null;
 
   return (
-    <>
-      <header className="bar">
-        <img src="/assets/brand/casa-blanca-wordmark-white.png" alt="Casa Blanca" />
-        <span className="bar-label">Comp Report</span>
-      </header>
-
-      {!reportId && (
-        <section className="hero">
-          <h1>Comp<br />report</h1>
-          <p>Bring the comps you found on StreetEasy, work through them, and leave with a defensible
-            range and a client-ready email.</p>
-        </section>
-      )}
-
-      <main className={reportId ? 'page wide-page' : 'page'}>
-        {/* The studio chrome owns the header's right edge (Feedback), so the account line lives here. */}
-        {state.status === 'signed-in' && (
-          <p className="account muted small">
-            Signed in as {state.email}
-            {session.dev && ' (dev)'} ·{' '}
-            <button type="button" className="link" onClick={signOut}>Sign out</button>
-          </p>
-        )}
-        <ErrorBoundary resetKey={`${state.status}:${reportId ?? ''}`} onBack={() => open(null)}>{body}</ErrorBoundary>
-      </main>
-    </>
+    <Shell account={account} onSignOut={() => void signOut()}>
+      <div className="sh-app">
+        <ErrorBoundary resetKey={`${state.status}:${reportId ?? ''}`} onBack={() => open(null)}>
+          {framed ? <Center>{body}</Center> : body}
+        </ErrorBoundary>
+      </div>
+    </Shell>
   );
 }

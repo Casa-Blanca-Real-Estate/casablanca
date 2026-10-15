@@ -1,398 +1,416 @@
-// Send (`02-screens.md`; §9, §10.2; Dispatch 13). The headline first: one
-// sentence, the agent's, required before the email can be copied (D-21).
-// "Write it" has Claude draft the headlines and the email's sections in the
-// house voice, in Frankie's order (CR-5), in the background; the agent picks a
-// headline or writes their own, then edits the email inline. The frame stays
-// the code's. If the writer fails, the fixed template stands in, and says so.
-// QA is one status line that opens to the checks: every number is checked,
-// and a finding the agent keeps is answered for and logged when they copy.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// Send (Dispatch 14, item 10; the handoff's screens 9 and 10). Left, what QA
+// found: "N to fix", numbered as the email marks them, each with Show, and
+// "✦ Fix both" for the fixes QA can make itself. Right, the email: the tabs
+// Full, Designed, Short and Text; the headline (D-21: Copy waits for it) with
+// its drafts; the plain-text body the agent edits, the source of truth, with
+// the issues painted over it; Designed, the Full draft laid out as the
+// branded email; then Mark as sent (after a copy) and Copy.
+//
+// Everything CR-5 built stays: Hubert (the writer) drafts the headline and the
+// email in the house voice in the background, the template stands in when it
+// fails, the agent's lines feed both, an out-of-date draft says so, and every
+// copy is logged with QA's checks and the agent's answers.
+import { useEffect, useRef, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
-import { ApiError, narrativesApi, type NarrativeView } from '../../api.ts';
-import { buildEmail, headlineDrafts, htmlFromText, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
-import { draftChecks, ledgerFor, qaRecord, qaStatus, type Acknowledgment, type QaItem } from '../../../workspace/qa.ts';
-import { answerResult, estimatesChangeTheAnswer } from '../../../workspace/reading.ts';
-import type { Entry, SendState } from '../../../workspace/state.ts';
-import { writerInputFrom, writerInputKey } from '../../../workspace/writer-input.ts';
-import { BuildNote, entry, Field, StubTag, TextInput } from './bits.tsx';
-import { fingerprint, type StepProps } from './model.ts';
+import type { Entry } from '../../../workspace/state.ts';
+import { AnnotatedText, revealMark, type TextMark } from '../send/AnnotatedText.tsx';
+import { COPY_LABEL, FORMATS, LENGTH_WORD, sentDay } from '../send/copy.ts';
+import { IssuesPanel } from '../send/IssuesPanel.tsx';
+import type { SendIssue } from '../send/issues.ts';
+import { useSendEmail, type SendModel } from '../send/useSendEmail.ts';
+import '../../styles/send.css';
+import { BuildNote, StubTag, TextInput } from './bits.tsx';
+import type { StepProps, Workspace } from './model.ts';
 
-const LENGTHS: { id: EmailLength; label: string }[] = [
-  { id: 'full', label: 'Full' },
-  { id: 'short', label: 'Short' },
-  { id: 'text', label: 'Text message' },
-];
+const marksOf = (issues: SendIssue[], where: 'body' | 'headline'): TextMark[] =>
+  issues.flatMap((i) => i[where].map((s) => ({ start: s.start, end: s.end, issue: i.key, n: i.n, blocking: i.blocking })));
 
-type Written = { headlines: string[]; sections: WrittenSections };
-
-const inFlight = (n: NarrativeView) => n.origin === 'writer' && (n.status === 'queued' || n.status === 'running');
-
-/** The report's drafts, polled while one is written; a queued draft that didn't start is started again. */
-function useNarratives(reportId: string, enabled: boolean) {
-  const [narratives, setNarratives] = useState<NarrativeView[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const reload = useCallback(async () => {
-    try {
-      setNarratives((await narrativesApi.load(reportId)).narratives);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [reportId]);
-  useEffect(() => {
-    if (enabled) void reload();
-  }, [enabled, reload]);
-  const writing = narratives.find(inFlight);
-  const writingId = writing?.id;
-  const queuedAt = writing?.status === 'queued' ? writing.createdAt : null;
-  useEffect(() => {
-    if (!writingId) return undefined;
-    const poll = window.setInterval(() => void reload(), 1500);
-    // Started right after it's queued; a start that never arrived is sent again.
-    const kick = queuedAt ? window.setTimeout(() => void narrativesApi.start(reportId, writingId), 15_000) : 0;
-    return () => {
-      window.clearInterval(poll);
-      window.clearTimeout(kick);
-    };
-  }, [reportId, writingId, queuedAt, reload]);
-  return { narratives, setNarratives, reload, error, writing };
+/** Show: the issue's mark, flashed and selected; or, with none, the field it's about. */
+function reveal(i: SendIssue) {
+  if (revealMark(i.key)) return;
+  const id = i.target === 'headline' ? 'se-headline' : i.target === 'subject' ? 'se-subject' : i.target === 'end' ? 'se-body' : null;
+  const el = id ? document.getElementById(id) as HTMLTextAreaElement | HTMLInputElement | null : null;
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.focus({ preventScroll: true });
+  if (i.target === 'end') el.setSelectionRange(el.value.length, el.value.length);
 }
 
 export function SendStep({ ws }: StepProps) {
-  const [copied, setCopied] = useState<string | null>(null);
-  const [openChecks, setOpenChecks] = useState(false);
-  const [writeError, setWriteError] = useState<string | null>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
-  const o = ws.output;
-  const send = ws.send;
-  const off = ws.readOnly;
-  const setSend = (patch: Partial<SendState>) => ws.setSend({ ...send, ...patch });
-  const setText = (key: 'headline' | 'chosen' | 'consider' | 'nextStep') => (v: Entry<string> | undefined) => {
-    const next = { ...send };
+  const m = useSendEmail(ws);
+  const [pending, setPending] = useState<SendIssue | null>(null);
+  const format = m.ready ? m.format : null;
+
+  // Show from Designed (or for the headline from Short or Text) opens Full first, then finds the mark.
+  useEffect(() => {
+    if (!pending || format !== 'full') return;
+    const i = pending;
+    setPending(null);
+    window.setTimeout(() => reveal(i), 60);
+  }, [pending, format]);
+
+  if (!m.revealed) {
+    return (
+      <div className="se-wait panel">
+        <p>The email quotes what the comps say, so it waits for your number on Findings.</p>
+        <button type="button" className="btn primary" onClick={() => ws.go('findings')}>Go to Findings</button>
+      </div>
+    );
+  }
+  if (!m.ready) return <p className="notice error-notice">The engine couldn’t compute{ws.engineError ? `: ${ws.engineError}` : '.'}</p>;
+
+  const show = (i: SendIssue) => {
+    const inFull = m.format === 'full';
+    const needsFull = m.format === 'designed' || (!inFull && (i.target === 'headline' || (i.headline.length > 0 && !i.body.length)));
+    if (needsFull) {
+      m.pickFormat('full');
+      setPending(i);
+      return;
+    }
+    reveal(i);
+  };
+
+  return (
+    <div className="se-send">
+      <div className="se-grid">
+        <div className="se-side">
+          <IssuesPanel issues={m.issues} canChange={!m.off && !m.editedElsewhere} onShow={show} onFix={() => m.fix()} onAnswer={m.answer} />
+          {m.both && <WhichResult m={m} />}
+          <YourLines ws={ws} m={m} />
+        </div>
+
+        <section className="panel se-card" aria-label="The email">
+          <header className="se-card-head">
+            <div className="se-sec"><span className="se-sec-n">01</span>Email</div>
+            <span className="se-status" role="status">
+              <span className="se-star" aria-hidden="true">✦</span>
+              {m.writing
+                ? `Hubert is drafting the ${LENGTH_WORD[m.writing.length]}${m.writing.length === 'text' ? '' : ' email'}${m.writing.progress ? ` (${m.writing.progress.toLocaleString('en-US')} characters so far)` : ''}…`
+                : `${m.usesWriter ? 'Drafted' : 'Template'}${m.draftHere ? ' · edited by you' : ''}`}
+            </span>
+            {!m.off && m.everWritten && !m.writing && (
+              <button type="button" className="link se-rewrite" title="Hubert writes it again from the comps and your lines" onClick={() => void m.writeIt()}>Redraft</button>
+            )}
+            <div className="se-tabs" role="group" aria-label="Format">
+              {FORMATS.map((f) => (
+                <button key={f.id} type="button" aria-pressed={m.format === f.id} className={m.format === f.id ? 'on' : ''} onClick={() => m.pickFormat(f.id)}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </header>
+
+          <Notices m={m} />
+
+          {m.format === 'full' && <FullBody m={m} />}
+          {m.format === 'short' && <PlainBody m={m} label="Body · short" />}
+          {m.format === 'text' && <TextBody m={m} />}
+          {m.format === 'designed' && <DesignedBody m={m} />}
+
+          <footer className="se-foot">
+            {m.send.sentAt
+              ? <span className="se-foot-note">Marked as sent {sentDay(m.send.sentAt)}.</span>
+              : !m.off && !m.send.copiedAt && <span className="se-foot-note">Copy it, send it, then mark it as sent.</span>}
+            <div className="se-foot-actions">
+              {!m.off && (
+                <button type="button" className="btn se-sent" disabled={!m.send.copiedAt} title={m.send.copiedAt ? undefined : 'Copy it first'} onClick={m.markSent}>
+                  Mark as sent
+                </button>
+              )}
+              <span className="se-copy">
+                <span className="se-tip" role="tooltip">{m.copyable ? 'Double-check before sending' : 'Fix what’s listed first'}</span>
+                <button type="button" className="btn primary" disabled={!m.copyable} onClick={() => void m.copy()}>
+                  {COPY_LABEL[m.format]}
+                </button>
+              </span>
+            </div>
+          </footer>
+          <BuildNote>
+            <StubTag>CR-5</StubTag> The writer runs in a background function; each draft is pinned to its numbers (<code>narratives</code>).
+            QA’s fixes are deterministic (<code>workspace/qa.ts</code>); Designed reads the Full draft’s plain text back (<code>send/designed.ts</code>).
+          </BuildNote>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// ─── The card's notices: the writer, an out-of-date draft, edits on another tab ──
+
+function Notices({ m }: { m: SendModel }) {
+  const back = m.usesWriter ? 'draft' : 'template';
+  return (
+    <>
+      {!m.off && !m.everWritten && !m.writing && (
+        <div className="se-writer">
+          <p>Hubert drafts the headline and the email from the comps that count, in the house voice. Or edit the template below.</p>
+          <button type="button" className="btn primary se-write" onClick={() => void m.writeIt()}>
+            <span className="se-star" aria-hidden="true">✦</span>Write it
+          </button>
+        </div>
+      )}
+      {m.failed && !m.writing && (
+        <p className="se-notice">
+          {m.done && !m.send.useTemplate
+            ? `The newest draft didn’t come through, so this is the one before it. ${m.failed.errorMessage ?? ''}`
+            : `Hubert couldn’t draft this one, so this is the template. ${m.failed.errorMessage ?? ''} Edit it, or write it again.`}
+        </p>
+      )}
+      {(m.writeError || m.loadError) && <p className="se-notice error">{m.writeError ?? m.loadError}</p>}
+      {m.draftOutOfDate && !m.writing && (
+        <p className="se-notice">The numbers or your lines changed since Hubert drafted this. Redraft it to pick them up.</p>
+      )}
+      {m.stale && (
+        <p className="se-notice">
+          The numbers, your lines or the draft changed since you edited this email.{' '}
+          {!m.off && <button type="button" className="link" onClick={() => m.setSend({ draft: undefined })}>Back to the {back}</button>}
+          {!m.off && ' to pick them up.'}
+        </p>
+      )}
+      {m.editedElsewhere && (
+        <p className="se-notice">
+          Your edits are on the {LENGTH_WORD[m.editedElsewhere]}{m.editedElsewhere === 'text' ? '' : ' email'}, so this one shows as drafted.{' '}
+          {!m.off && (
+            <button type="button" className="link" onClick={() => m.setSend({ draft: undefined })}>
+              Edit this one instead
+            </button>
+          )}
+          {!m.off && ' (your edits there go).'}
+        </p>
+      )}
+    </>
+  );
+}
+
+// ─── The four formats ────────────────────────────────────────────────────────
+
+function HeadlineDrafts({ m }: { m: SendModel }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const picks = m.headlinePicks;
+  if (m.off || !picks.length) return null;
+  return (
+    <details className="se-drafts" ref={ref}>
+      <summary>{picks.length} draft{picks.length === 1 ? '' : 's'} ▾</summary>
+      <div className="se-drafts-menu">
+        <span className="se-drafts-title">{m.written ? 'Hubert’s drafts' : 'Drafts from the numbers'}: pick one, then make it yours</span>
+        {picks.map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => {
+              m.setHeadline(d);
+              if (ref.current) ref.current.open = false;
+            }}
+          >
+            {d}
+          </button>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function Subject({ m }: { m: SendModel }) {
+  return (
+    <div className="se-subject-row">
+      <label className="se-label" htmlFor="se-subject">Subject</label>
+      <input
+        id="se-subject"
+        className="se-subject"
+        value={m.shown.subject}
+        readOnly={m.off || Boolean(m.editedElsewhere)}
+        onChange={(e) => m.edit({ subject: e.target.value })}
+      />
+    </div>
+  );
+}
+
+function BackToDraft({ m }: { m: SendModel }) {
+  if (m.off || !m.draftHere || m.stale) return null;
+  return (
+    <button type="button" className="link se-undo" onClick={() => m.setSend({ draft: undefined })}>
+      Back to the {m.usesWriter ? 'draft' : 'template'}
+    </button>
+  );
+}
+
+function FullBody({ m }: { m: SendModel }) {
+  return (
+    <>
+      <div className="se-block se-head-block">
+        <div className="se-labelrow">
+          <label className="se-label" htmlFor="se-headline">Headline</label>
+          <HeadlineDrafts m={m} />
+        </div>
+        <AnnotatedText
+          id="se-headline"
+          label="Headline"
+          className="se-headline"
+          value={m.send.headline?.value ?? ''}
+          onChange={m.setHeadline}
+          marks={marksOf(m.issues, 'headline')}
+          readOnly={m.off}
+          spellCheck={false}
+          placeholder="One sentence, yours: what the comps show"
+        />
+      </div>
+      <PlainBody m={m} label="Body" />
+    </>
+  );
+}
+
+function PlainBody({ m, label }: { m: SendModel; label: string }) {
+  return (
+    <div className="se-block">
+      <Subject m={m} />
+      <div className="se-labelrow">
+        <label className="se-label" htmlFor="se-body">{label}</label>
+        <BackToDraft m={m} />
+      </div>
+      <AnnotatedText
+        id="se-body"
+        label="Email body"
+        className="se-body"
+        value={m.shown.text}
+        onChange={(body) => m.edit({ body })}
+        marks={marksOf(m.issues, 'body')}
+        readOnly={m.off || Boolean(m.editedElsewhere)}
+      />
+    </div>
+  );
+}
+
+function TextBody({ m }: { m: SendModel }) {
+  return (
+    <div className="se-block">
+      <div className="se-labelrow">
+        <label className="se-label" htmlFor="se-body">Text message</label>
+        <span className="se-label se-count">{m.shown.text.length.toLocaleString('en-US')} characters</span>
+      </div>
+      <div className="se-text-stage">
+        <AnnotatedText
+          id="se-body"
+          label="Text message"
+          className="se-bubble"
+          value={m.shown.text}
+          onChange={(body) => m.edit({ body })}
+          marks={marksOf(m.issues, 'body')}
+          readOnly={m.off || Boolean(m.editedElsewhere)}
+        />
+      </div>
+      <div className="se-labelrow">
+        <span className="se-label">Copies as plain text. The disclaimer goes with it.</span>
+        <BackToDraft m={m} />
+      </div>
+    </div>
+  );
+}
+
+function DesignedBody({ m }: { m: SendModel }) {
+  return (
+    <div className="se-block se-designed">
+      <div className="se-labelrow wrap">
+        <span className="se-label">Designed · Casa Blanca branded</span>
+        <span className="se-label se-right">Same findings as Full, laid out for the client</span>
+      </div>
+      <div className="se-stage">
+        <div className="se-designed-card" dangerouslySetInnerHTML={{ __html: m.designed() }} />
+      </div>
+      <span className="se-label">
+        Copies as HTML for Gmail, with the Full email’s words. Photos come later: the gray blocks hold their place.
+      </span>
+    </div>
+  );
+}
+
+// ─── The left column's other panels ──────────────────────────────────────────
+
+const RESULT_WORDS: { id: ResultKind; label: string }[] = [
+  { id: 'on_facts', label: 'On the facts' },
+  { id: 'with_estimates', label: 'With your estimates' },
+];
+
+/** When the agent's estimates change the answer, which result the email uses (§6.4). */
+function WhichResult({ m }: { m: SendModel }) {
+  return (
+    <section className="panel se-panel" aria-label="Which result">
+      <span className="fh">The email uses</span>
+      <div className="seg small" role="group" aria-label="Which result the email uses">
+        {RESULT_WORDS.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            aria-pressed={m.result === r.id}
+            className={m.result === r.id ? 'on' : ''}
+            disabled={m.off || (r.id === 'on_facts' && !m.o.results.on_facts.range)}
+            onClick={() => m.setSend({ result: r.id })}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <p className="se-hint">{m.result === 'with_estimates' ? 'Uses your estimates: the email says so.' : 'On the facts: no estimate of yours in it.'}</p>
+    </section>
+  );
+}
+
+/** The agent's own lines: the template's words, and what the writer works from. Folded. */
+function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
+  const off = m.off;
+  const setText = (key: 'chosen' | 'consider' | 'nextStep' | 'signOff') => (v: Entry<string> | undefined) => {
+    const next = { ...m.send };
     if (v) next[key] = v;
     else delete next[key];
     ws.setSend(next);
   };
-  const { narratives, setNarratives, reload, error: loadError, writing } = useNarratives(ws.reportId, ws.revealed);
-
-  const both = o ? estimatesChangeTheAnswer(o) : false;
-  const result: ResultKind = o ? (both ? send.result ?? answerResult(o) : answerResult(o)) : 'on_facts';
-  const length = send.length ?? 'full';
-  const codeDrafts = useMemo(() => (o && ws.revealed ? headlineDrafts(o.headline_facts[result]) : []), [o, ws.revealed, result]);
-  const inputFor = useCallback(
-    (len: EmailLength) => (o ? writerInputKey(writerInputFrom({ output: o, comps: ws.comps, intake: ws.intake, brief: ws.brief, send, result, length: len })) : ''),
-    [o, ws.comps, ws.intake, ws.brief, send, result],
-  );
-  const currentInput = useMemo(() => inputFor(length), [inputFor, length]);
-
-  if (!ws.revealed) {
-    return (
-      <div className="send">
-        <p className="muted">The email quotes what the comps say, so it waits for your number on Findings.</p>
-        <button type="button" className="btn" onClick={() => ws.go('findings')}>Go to Findings</button>
-      </div>
-    );
-  }
-  if (!o) return <p className="notice error-notice">The engine couldn’t compute{ws.engineError ? `: ${ws.engineError}` : '.'}</p>;
-
-  // The writer's drafts for this length and result, newest first. The email uses the newest that finished.
-  const mine = narratives.filter((n) => n.origin === 'writer' && n.length === length && n.result === result);
-  const done = mine.find((n) => n.status === 'done');
-  const lastTry = mine.find((n) => n.status === 'done' || n.status === 'failed');
-  const failed = lastTry?.status === 'failed' ? lastTry : null;
-  const usesWriter = Boolean(done) && !send.useTemplate;
-  const written = usesWriter ? (done!.content as Written) : null;
-  const draftOutOfDate = Boolean(usesWriter && done && done.inputKey !== currentInput);
-  const everWritten = narratives.some((n) => n.origin === 'writer');
-
-  const homeLine = [ws.intake.address?.value.split(',')[0], ws.intake.unit?.value].filter(Boolean).join(' ') || ws.report.title;
-  const signedAs = send.signOff?.value ?? ws.agentName;
-  const email = buildEmail({
-    homeLine,
-    audience: ws.brief.audience?.value ?? null,
-    output: o,
-    result,
-    comps: ws.comps,
-    agentName: signedAs,
-    clientName: ws.brief.clientName?.value ?? send.clientName?.value,
-    headline: send.headline?.value,
-    chosen: send.chosen?.value,
-    consider: send.consider?.value,
-    nextStep: send.nextStep?.value,
-    length,
-    sample: ws.report.sampleData,
-    written: written?.sections ?? null,
-  });
-  const basedOn = fingerprint(`${email.subject}\n${email.text}`);
-  const draft = send.draft;
-  const shown = draft ? { subject: draft.subject, text: draft.body } : email;
-  const stale = Boolean(draft && draft.basedOn !== basedOn);
-  const parentId = draft ? draft.parentId ?? null : usesWriter ? done!.id : null;
-
-  // QA (§9): every number against the facts, the comps, the table, and what the agent stated.
-  const agentNumber = o.headline_facts[result].agent_number?.facts.map((f) => f.value) ?? [];
-  const ledger = ledgerFor({
-    output: o, result, comps: ws.comps, intake: ws.intake,
-    agentText: [send.chosen?.value, send.consider?.value, send.nextStep?.value, signedAs, ws.brief.clientName?.value, ...ws.comps.map((c) => c.judgment?.reasons.at(-1)?.reason)],
-    agentFigures: [...agentNumber, ws.target?.price.value, ws.dealTerms?.price?.value, ws.dealTerms?.sellerTarget?.value].filter((v): v is number => typeof v === 'number'),
-  });
-  const acks = send.acks ?? [];
-  const checks = draftChecks({ text: `${shown.subject}\n${shown.text}`, headline: send.headline?.value, ledger, result, output: o, sample: ws.report.sampleData, acks });
-  const status = qaStatus(checks);
-
-  const edit = (change: { subject?: string; body?: string }) =>
-    setSend({ draft: { subject: shown.subject, body: shown.text, ...change, basedOn: draft?.basedOn ?? basedOn, at: new Date().toISOString(), parentId } });
-
-  const answer = (item: QaItem, how: Acknowledgment['how']) =>
-    setSend({ acks: [...acks.filter((a) => a.key !== item.key), { key: item.key, how, text: item.text, at: new Date().toISOString() }] });
-
-  async function writeIt(len: EmailLength = length) {
-    if (off) return;
-    setWriteError(null);
-    try {
-      await ws.flush(); // the server reads the lines the agent sees
-      const keep = draft ? { parentId, headline: send.headline?.value ?? '', subject: draft.subject, text: draft.body, acknowledgments: acks } : undefined;
-      const { narrative } = await narrativesApi.write(ws.reportId, { length: len, result, ...(keep ? { keep } : {}) });
-      ws.setSend({ ...send, length: len, draft: undefined, useTemplate: false });
-      setNarratives((list) => [narrative, ...list.filter((n) => n.id !== narrative.id)]);
-      void narrativesApi.start(ws.reportId, narrative.id);
-    } catch (e) {
-      if (e instanceof ApiError && e.code === 'write_in_progress') await reload();
-      setWriteError(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  function pickLength(len: EmailLength) {
-    if (len === length) return;
-    // Length switches rewrite: once the writer is in use, a length without a current draft gets one.
-    const has = narratives.some((n) => n.origin === 'writer' && n.length === len && n.result === result && n.status === 'done' && n.inputKey === inputFor(len));
-    if (everWritten && !send.useTemplate && !has && !writing && !draft) void writeIt(len);
-    else setSend({ length: len });
-  }
-
-  async function copy() {
-    if (!status.ready) return;
-    const text = shown.text;
-    const html = draft ? htmlFromText(text) : email.html;
-    try {
-      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
-        await navigator.clipboard.write([new ClipboardItem({
-          'text/html': new Blob([html], { type: 'text/html' }),
-          'text/plain': new Blob([text], { type: 'text/plain' }),
-        })]);
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
-    } catch {
-      bodyRef.current?.select();
-      document.execCommand('copy');
-    }
-    setCopied(new Date().toLocaleTimeString());
-    if (off) return;
-    setSend({ copiedAt: new Date().toISOString() });
-    // The log: what went out, its checks and the agent's answers (§9.1). The same checks gate Copy here.
-    const keys = new Set(checks.flatMap((c) => c.items ?? []).map((i) => i.key));
-    try {
-      await narrativesApi.copied(ws.reportId, { parentId, length, result, headline: send.headline?.value ?? '', subject: shown.subject, text },
-        qaRecord(checks), acks.filter((a) => keys.has(a.key)));
-    } catch (e) {
-      setWriteError(`Copied, but the log didn’t save: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
-  const headlinePicks = written ? written.headlines : codeDrafts;
-
+  const setBrief = (key: 'clientName' | 'clientNote') => (v: Entry<string> | undefined) => {
+    const brief = { ...ws.brief };
+    if (v) brief[key] = v;
+    else delete brief[key];
+    ws.setBrief(brief);
+  };
   return (
-    <div className="send">
-      <section className="headline" aria-label="The headline">
-        <div className="label">The headline</div>
+    <details className="panel se-panel se-lines">
+      <summary>Your lines for the email</summary>
+      <p className="se-hint">The template uses them as they are; Hubert drafts from them and keeps your next step’s meaning and numbers.</p>
+      <label className="se-field">
+        <span className="fh">To</span>
+        <TextInput label="Client name" value={ws.brief.clientName ?? m.send.clientName} onChange={setBrief('clientName')} today={ws.today} disabled={off} placeholder="Client name" />
+      </label>
+      <label className="se-field">
+        <span className="fh">How you chose the comps</span>
+        <TextInput label="How you chose the comps" multiline value={m.send.chosen} onChange={setText('chosen')} today={ws.today} disabled={off} placeholder="e.g. I focused on lower floors and homes close in size." />
+      </label>
+      <label className="se-field">
+        <span className="fh">Things to consider</span>
+        <TextInput label="Things to consider" multiline value={m.send.consider} onChange={setText('consider')} today={ws.today} disabled={off} placeholder="Buildings that trade higher or lower, carrying costs, recent activity in the building" />
+      </label>
+      <label className="se-field">
+        <span className="fh">The next step</span>
         <TextInput
-          label="Your headline"
+          label="The next step"
           multiline
-          value={send.headline}
-          onChange={setText('headline')}
+          value={m.send.nextStep}
+          onChange={setText('nextStep')}
           today={ws.today}
           disabled={off}
-          placeholder="One sentence, yours: what the comps show"
+          placeholder={ws.side === 'seller' ? 'Where you’d list it, and why' : 'What you’d offer, and on what terms'}
         />
-        {!off && headlinePicks.length > 0 && (
-          <div className="drafts">
-            <span className="muted small">{written ? 'Claude’s drafts' : 'Drafts from the numbers'} — pick one, then make it yours:</span>
-            <ul className="plain">
-              {headlinePicks.map((d) => (
-                <li key={d}>
-                  <button type="button" className="link small" onClick={() => setText('headline')(entry(d, ws.today))}>{d}</button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <BuildNote>
-          Code drafts cite only <code>headline_facts</code> and its names. Claude’s drafts are written from the same facts and the comps that count,
-          never the agent’s number or target (§8.4); QA checks every number in the email against them and what the agent stated (§9.1).
-        </BuildNote>
-      </section>
-
-      <div className="card email">
-        <div className="row wrap writer-bar">
-          {!off && (
-            <button type="button" className={`btn ${everWritten ? '' : 'primary'}`} disabled={Boolean(writing)} onClick={() => void writeIt()}>
-              {writing ? 'Writing…' : usesWriter ? 'Write it again' : 'Write it'}
-            </button>
-          )}
-          {writing && (
-            <span className="muted small" role="status">
-              Claude is drafting the {writing.length === 'text' ? 'text message' : `${writing.length} email`}
-              {writing.progress ? ` (${writing.progress.toLocaleString('en-US')} characters so far)` : ''}…
-            </span>
-          )}
-          {!off && done && !writing && (
-            send.useTemplate
-              ? <button type="button" className="link small" onClick={() => setSend({ useTemplate: false, draft: undefined })}>Use Claude’s draft</button>
-              : <button type="button" className="link small" onClick={() => setSend({ useTemplate: true, draft: undefined })}>Use the template instead</button>
-          )}
-        </div>
-        {!everWritten && !writing && <p className="muted small">Claude drafts the headlines and the email from the comps that count, in the house voice. Or edit the template below.</p>}
-        {failed && !writing && (
-          <p className="notice">
-            {done && !send.useTemplate
-              ? `The newest draft didn’t come through, so this is the one before it. ${failed.errorMessage ?? ''}`
-              : `The writer couldn’t draft this one, so this is the template. ${failed.errorMessage ?? ''} Edit it, or write it again.`}
-          </p>
-        )}
-        {(writeError || loadError) && <p className="notice error-notice">{writeError ?? loadError}</p>}
-        {draftOutOfDate && !writing && (
-          <p className="notice">The numbers or your lines changed since Claude drafted this. Write it again to pick them up.</p>
-        )}
-
-        <div className="grid">
-          <Field label="How you chose the comps" wide>
-            <TextInput label="How you chose the comps" value={send.chosen} onChange={setText('chosen')} today={ws.today} disabled={off} placeholder="e.g. I focused on lower floors and homes close in size." />
-          </Field>
-          <Field label="Things to consider" wide>
-            <TextInput label="Things to consider" multiline value={send.consider} onChange={setText('consider')} today={ws.today} disabled={off} placeholder="Buildings that trade higher or lower, carrying costs, recent activity in the building" />
-          </Field>
-          <Field label="The next step" wide hint={usesWriter ? 'Claude keeps your next step’s meaning and numbers.' : undefined}>
-            <TextInput
-              label="The next step"
-              multiline
-              value={send.nextStep}
-              onChange={setText('nextStep')}
-              today={ws.today}
-              disabled={off}
-              placeholder={ws.brief.audience?.value === 'seller' ? 'Where you’d list it, and why' : 'What you’d offer, and on what terms'}
-            />
-          </Field>
-          <Field label="Signed">
-            <TextInput label="Signed" value={send.signOff} onChange={(v) => setSend({ signOff: v })} today={ws.today} disabled={off} placeholder={ws.agentName || 'Your name'} />
-          </Field>
-          <Field label="To">
-            <TextInput
-              label="Client name"
-              value={ws.brief.clientName ?? send.clientName}
-              onChange={(v) => {
-                const brief = { ...ws.brief };
-                if (v) brief.clientName = v;
-                else delete brief.clientName;
-                ws.setBrief(brief);
-              }}
-              today={ws.today}
-              disabled={off}
-              placeholder="Client name"
-            />
-          </Field>
-          <Field label="About the client (for you)" wide hint="What matters to them. It isn’t quoted in the email, and Claude doesn’t see it.">
-            <TextInput
-              label="Client note"
-              value={ws.brief.clientNote}
-              onChange={(v) => {
-                const brief = { ...ws.brief };
-                if (v) brief.clientNote = v;
-                else delete brief.clientNote;
-                ws.setBrief(brief);
-              }}
-              today={ws.today}
-              disabled={off}
-            />
-          </Field>
-          <div className="field">
-            <span className="field-label">Length</span>
-            <div className="segmented" role="radiogroup" aria-label="Length">
-              {LENGTHS.map((l) => (
-                <button key={l.id} type="button" role="radio" aria-checked={length === l.id} className={length === l.id ? 'on' : ''} disabled={off || Boolean(writing)} onClick={() => pickLength(l.id)}>
-                  {l.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {both && (
-            <Field label="Which result" hint={result === 'with_estimates' ? 'Uses your estimates — the email says so.' : 'On the facts: no estimate of yours in it.'}>
-              <select aria-label="Which result the email uses" value={result} disabled={off} onChange={(e) => setSend({ result: e.target.value as ResultKind })}>
-                <option value="on_facts" disabled={!o.results.on_facts.range}>On the facts{o.results.on_facts.range ? '' : ' (no range)'}</option>
-                <option value="with_estimates">With your estimates</option>
-              </select>
-            </Field>
-          )}
-        </div>
-
-        {stale && (
-          <p className="notice">
-            The numbers, your lines or the draft changed since you edited this email.{' '}
-            <button type="button" className="link" onClick={() => setSend({ draft: undefined })}>Back to the {usesWriter ? 'draft' : 'template'}</button> to pick them up.
-          </p>
-        )}
-        <label className="field">
-          <span className="field-label">Subject</span>
-          <input aria-label="Email subject" value={shown.subject} readOnly={off} onChange={(e) => edit({ subject: e.target.value })} />
-        </label>
-        <label className="field">
-          <span className="field-label">Email{usesWriter ? ' — Claude’s draft, yours to edit' : ''}</span>
-          <textarea ref={bodyRef} aria-label="Email body" className="email-body" value={shown.text} readOnly={off} rows={length === 'text' ? 8 : 22} onChange={(e) => edit({ body: e.target.value })} />
-        </label>
-
-        <div className="qa">
-          <button type="button" className={`link qa-line ${status.ready ? 'ready' : 'fix'}`} aria-expanded={openChecks} onClick={() => setOpenChecks((x) => !x)}>
-            {status.line}
-          </button>
-          {openChecks && (
-            <ul className="plain checks">
-              {checks.map((c) => (
-                <li key={c.id} className={c.state}>
-                  {c.message}
-                  {c.items && c.items.length > 0 && (
-                    <ul className="plain qa-items">
-                      {c.items.map((i) => (
-                        <li key={i.key}>
-                          <strong>{i.text}</strong> <span className="muted small">{i.context}{i.note ? ` · ${i.note}` : ''}</span>
-                          {c.needsAck && !off && (i.ack
-                            ? <span className="muted small"> · {i.ack.how === 'attributed' ? 'yours, attributed' : 'kept, acknowledged'}</span>
-                            : (
-                              <span className="qa-answers">
-                                {c.id === 'numbers' && <button type="button" className="link small" onClick={() => answer(i, 'attributed')}>It’s mine or the client’s</button>}
-                                <button type="button" className="link small" onClick={() => answer(i, 'acknowledged')}>Keep it</button>
-                              </span>
-                            ))}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="row wrap">
-          <button type="button" className="btn primary" disabled={!status.ready} onClick={() => void copy()} title={status.ready ? 'Copies it as rich text, with the comps as links' : 'Fix what QA found first'}>
-            Copy the email
-          </button>
-          {draft && !off && <button type="button" className="btn" onClick={() => setSend({ draft: undefined })}>Back to the {usesWriter ? 'draft' : 'template'}</button>}
-          {copied && <span className="muted small">Copied at {copied}.</span>}
-        </div>
-        <BuildNote>
-          <StubTag>CR-5</StubTag> The writer runs in a background function; each draft is pinned to its numbers (<code>narratives</code>). Phase 2 adds the agent’s own voice and the client profile.{' '}
-          <StubTag>CR-6</StubTag> The client report and its PDF come with Kimani’s template.
-        </BuildNote>
-      </div>
-    </div>
+      </label>
+      <label className="se-field">
+        <span className="fh">Signed</span>
+        <TextInput label="Signed" value={m.send.signOff} onChange={setText('signOff')} today={ws.today} disabled={off} placeholder={ws.agentName || 'Your name'} />
+      </label>
+      <label className="se-field">
+        <span className="fh">About the client <span className="opt">(for you)</span></span>
+        <TextInput label="Client note" value={ws.brief.clientNote} onChange={setBrief('clientNote')} today={ws.today} disabled={off} />
+        <span className="se-hint">What matters to them. It isn’t quoted in the email, and Hubert doesn’t see it.</span>
+      </label>
+      {!off && m.done && !m.writing && (
+        <button type="button" className="link" onClick={() => m.setSend({ useTemplate: !m.send.useTemplate, draft: undefined })}>
+          {m.send.useTemplate ? 'Use Hubert’s draft' : 'Use the template instead'}
+        </button>
+      )}
+    </details>
   );
 }

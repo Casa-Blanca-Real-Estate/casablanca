@@ -138,7 +138,7 @@ describe('get_numbers and prompt versions', { skip: skipWithoutDatabase }, () =>
     const sent = lastSent();
     assert.deepEqual((sent.tools as Block[]).map((t) => t.name), ['get_report', 'get_numbers']);
     assert.equal((sent.system as Block[])[0]!.text, CURRENT_PROMPT.system);
-    assert.ok((await messageRows(reportId)).every((r) => r.prompt_version === 'cr3a-2026-09-29'));
+    assert.ok((await messageRows(reportId)).every((r) => r.prompt_version === CURRENT_PROMPT.id));
     assert.equal(before.numbers.revealed, false);
     assert.equal('results' in before.numbers, false, 'no results before the call');
     const comps = before.numbers.comps as Array<{ comp: string; tier: string; price_per_sqft: number | null }>;

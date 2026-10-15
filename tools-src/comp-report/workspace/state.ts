@@ -31,7 +31,8 @@ export interface Entry<T> {
 
 export type OutdoorChoice = OutdoorKind | 'none';
 
-export type Condition = 'renovated' | 'good' | 'needs_work';
+/** Unit condition: the handoff's picker (Original, Updated, Renovated, Mint); good and needs_work are CR-3's. */
+export type Condition = 'original' | 'updated' | 'renovated' | 'mint' | 'good' | 'needs_work';
 
 /**
  * The home (§3; `02-screens.md`, New comp): its details. Every field optional:
@@ -57,8 +58,12 @@ export interface Intake {
   outdoorKind?: Entry<OutdoorChoice>;
   outdoorSqft?: Entry<number>;
   views?: Entry<string[]>;
-  /** Which way the windows face: "South", "North and east". Context; the engine doesn't compare it yet. */
+  /** Which way the windows face: "South", "North and east". CR-3's free text; the pickers write `exposures`. */
   exposure?: Entry<string>;
+  /** Which way the windows face, from the handoff's picker: North, South, East, West. Context; the engine doesn't compare it yet. */
+  exposures?: Entry<string[]>;
+  /** The building's features, from the handoff's picker: Doorman, Gym, Pool, Storage, Parking, Roof deck. */
+  building?: Entry<string[]>;
   corner?: Entry<boolean>;
   condition?: Entry<Condition>;
   yearBuilt?: Entry<number>;
@@ -77,6 +82,17 @@ export interface Brief {
   clientNote?: Entry<string>;
   /** CR-3a's question. No longer asked; kept for the reports that have one. */
   question?: Entry<string>;
+}
+
+/** The furthest screen a report has reached, for the reports list's Stage (Dispatch 14). */
+export type Reached = 'sort' | 'findings' | 'send';
+
+/** How it went (D-19's one-tap fallback; filled from deal records later): what the agent typed in. */
+export interface Outcomes {
+  /** The seller's list price, or the buyer's offer. */
+  listedOrOffered?: Entry<number>;
+  contract?: Entry<number>;
+  sold?: Entry<number>;
 }
 
 /** Step 1, deal terms — D-10's recommendation B: two templates in v1 (§6.7). */
@@ -136,6 +152,10 @@ export interface SendState {
   clientName?: Entry<string>;
   signOff?: Entry<string>;
   draft?: { subject: string; body: string; basedOn: string; at: string; parentId?: string | null };
+  /** Which of the four formats Send shows (Dispatch 14): Designed renders the Full draft. */
+  format?: 'full' | 'designed' | 'short' | 'text';
+  /** Marked as sent (after a copy); Reopen clears it. Done shows it. */
+  sentAt?: string;
   /** The agent chose the template over the writer's drafts (CR-5). */
   useTemplate?: boolean;
   acks?: Acknowledgment[];
@@ -149,6 +169,11 @@ export interface WorkspaceState {
   send?: SendState;
   /** The home's link read whose values filled the details, so they fill once. */
   subjectRead?: string;
+  /** The furthest screen reached, for the reports list (Dispatch 14). */
+  reached?: Reached;
+  outcomes?: Outcomes;
+  /** Hubert's drawer has opened on Sort once: it opens by default only the first time (the handoff). */
+  hubertSeen?: boolean;
 }
 
 export type ReasonType = 'property' | 'client' | 'method';
@@ -177,6 +202,25 @@ export interface CompJudgment {
   /** Oldest first. The latest is the current reason (§12). */
   reasons: { tier: Tier; reason: string; reasonType: ReasonType; actor: string; at: string; by: string; sample: boolean }[];
   source: CompSource;
+  /** The agent's note, "Why it's a comp" (Dispatch 14): it can come before a tier. Older comps have only reasons: see noteOf. */
+  note?: string | null;
+  /** The agent's tags, from the handoff's list (workspace/features.ts). */
+  tags?: string[];
+  /** The comp's features as the agent sees them, in the home's pickers. Empty: none given. */
+  features?: Record<string, string[]>;
+  /** Taken out of the report: it counts in nothing, and an export's removed row is what Hubert can suggest again. */
+  removedAt?: string | null;
+}
+
+/** A reason recorded when a comp is tiered before it has a note (the reasons table needs one). */
+export const NO_NOTE_YET = '(no note yet)';
+
+/** The agent's note on a comp: the note itself, else the latest reason that's a real one (older comps). */
+export function noteOf(j: CompJudgment | null | undefined): string | null {
+  if (!j) return null;
+  if (j.note !== undefined && j.note !== null) return j.note.trim() || null;
+  const r = j.reasons.at(-1)?.reason?.trim();
+  return r && r !== NO_NOTE_YET ? r : null;
 }
 
 /** The range stays hidden until the agent gives their call or skips it (§3.1). */

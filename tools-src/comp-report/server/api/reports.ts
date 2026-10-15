@@ -20,7 +20,15 @@ export interface ReportSummary {
   sampleData: boolean;
   createdAt: string;
   updatedAt: string;
+  /** The reports list (Dispatch 14): the client's name, the side, and where the report has got to. */
+  client?: string | null;
+  side?: 'buyer' | 'seller' | null;
+  stage?: ReportStage;
+  /** Comps still without a tier, while the report is on Sort. */
+  unsorted?: number;
 }
+
+export type ReportStage = 'sort' | 'findings' | 'send' | 'sent';
 
 interface ReportRow {
   id: string;
@@ -32,6 +40,10 @@ interface ReportRow {
   sample_data: boolean;
   created_at: Date;
   updated_at: Date;
+  client?: string | null;
+  side?: 'buyer' | 'seller' | null;
+  stage?: ReportStage;
+  unsorted?: number | string;
 }
 
 const COLUMNS = 'id, title, property_type, mode, status, owner_email, sample_data, created_at, updated_at';
@@ -47,6 +59,7 @@ function summary(r: ReportRow): ReportSummary {
     sampleData: r.sample_data,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
+    ...(r.stage ? { client: r.client ?? null, side: r.side ?? null, stage: r.stage, unsorted: Number(r.unsorted ?? 0) } : {}),
   };
 }
 
@@ -80,10 +93,23 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
         return json({ report: summary(report) });
       }
       const reports = await withActor(pool, asUser(user), async (tx) => {
+        // Client, side and stage for every row in one query (Dispatch 14): the stage is how far the
+        // report has got — sent, then on Send, then past the Gate, else still sorting.
         const { rows } = await tx.query<ReportRow>(
-          `select ${COLUMNS} from comp_report.reports
-            where owner_email = $1 and status = 'active'
-            order by updated_at desc limit 200`,
+          `select ${COLUMNS.split(', ').map((c) => `r.${c}`).join(', ')},
+                  nullif(btrim(coalesce(r.brief->'clientName'->>'value', r.state->'send'->'clientName'->>'value')), '') as client,
+                  case when r.brief->'audience'->>'value' in ('buyer', 'seller') then r.brief->'audience'->>'value' end as side,
+                  case
+                    when r.state->'send'->>'sentAt' is not null then 'sent'
+                    when r.state->>'reached' = 'send' or r.state->'send'->'headline' is not null then 'send'
+                    when r.agent_call is not null then 'findings'
+                    else 'sort'
+                  end as stage,
+                  (select count(*) from comp_report.report_comps rc
+                    where rc.report_id = r.id and rc.removed_at is null and rc.tier is null) as unsorted
+             from comp_report.reports r
+            where r.owner_email = $1 and r.status = 'active'
+            order by r.updated_at desc limit 200`,
           [user.email],
         );
         return rows;

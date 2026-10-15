@@ -65,16 +65,15 @@ export function Access({ me }: { me: Me }) {
   const removed = entries ? entries.length - current.length : 0;
 
   return (
-    <section className="access">
-      <div className="label">Access · admins only</div>
-      <form className="card stack" onSubmit={grant}>
-        <p className="muted">
+    <section className="sh-access-body">
+      <form className="sh-access-form" onSubmit={grant}>
+        <p className="sh-help">
           Anyone with a Casa Blanca address gets in as an agent. Add anyone else here, or give a Casa
           address another role. For someone new, then send the invitation from Netlify → Identity →
           Invite users. Changes apply on the person's next request. Admins are set in Netlify
           (CR_ADMIN_EMAILS), not here.
         </p>
-        <div className="row wrap">
+        <div className="sh-access-row">
           <input
             type="email"
             aria-label="Email address"
@@ -98,31 +97,31 @@ export function Access({ me }: { me: Me }) {
           <button className="btn primary" disabled={busy || !email.trim()}>Grant access</button>
         </div>
       </form>
-      {error && <p className="notice">{error}</p>}
+      {error && <p className="sh-note error" role="alert">{error}</p>}
 
-      {entries === null && !error && <p className="muted">Loading…</p>}
-      {entries && current.length === 0 && <p className="muted">No one has been added yet.</p>}
-      <ul className="list">
+      {entries === null && !error && <p className="sh-help">Loading…</p>}
+      {entries && current.length === 0 && <p className="sh-help">No one has been added yet.</p>}
+      <ul className="sh-access-list">
         {current.map((e) => (
-          <li key={e.email} className="entry">
+          <li key={e.email} className="sh-access-entry">
             <div>
-              <span className="list-title">{e.email}</span> <span className="muted small">· {roleLabel(e.role)}</span>
-              <p className="muted small">
+              <span className="sh-access-who">{e.email}</span> <span className="sh-help">· {roleLabel(e.role)}</span>
+              <p className="sh-help">
                 {e.note ? `${e.note} · ` : ''}added by {e.createdBy}, {new Date(e.createdAt).toLocaleDateString()}
               </p>
             </div>
             {e.email !== me.user.email && (confirming === e.email ? (
-              <span className="row">
+              <span className="sh-access-confirm">
                 <button type="button" className="btn" disabled={busy} onClick={() => remove(e.email)}>Remove</button>
                 <button type="button" className="link" onClick={() => setConfirming(null)}>Keep</button>
               </span>
             ) : (
-              <button type="button" className="link small" onClick={() => setConfirming(e.email)}>Remove…</button>
+              <button type="button" className="link" onClick={() => setConfirming(e.email)}>Remove…</button>
             ))}
           </li>
         ))}
       </ul>
-      {removed > 0 && <p className="muted small">{removed} removed. Granting again restores access.</p>}
+      {removed > 0 && <p className="sh-help">{removed} removed. Granting again restores access.</p>}
     </section>
   );
 }

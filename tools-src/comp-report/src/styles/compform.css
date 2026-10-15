@@ -1,0 +1,60 @@
+/* One comp's form (the handoff, New report 3 of 3 "Type one in"): shared by the add-comps
+   modal and Sort. Panel #f4f3f0, padding 20px, 16px between rows. */
+.comp-form { background: var(--cb-bg); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.cf-title { font-size: 13px; font-weight: 800; }
+.cf-fixed { font-size: 14px; }
+.cf-hint { color: var(--cb-mid); font-size: 12px; }
+.cf-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cf-input {
+  border: none; border-bottom: 1px solid var(--cb-black); border-radius: 0; padding: 8px 0;
+  font: inherit; font-size: 15px; font-weight: 800; background: transparent; min-width: 0; width: 100%; color: var(--cb-black);
+}
+.cf-input:focus { outline: none; box-shadow: inset 0 -1px 0 var(--cb-black); }
+.cf-input:disabled { color: var(--cb-mid); border-bottom-color: var(--cb-border); }
+.cf-input::placeholder { color: var(--cb-mid); font-weight: 400; }
+.cf-row { display: flex; gap: 20px; align-items: flex-start; }
+.cf-photo {
+  flex: none; width: 104px; height: 78px; border: 1px dashed var(--cb-mid); border-radius: 0; background: var(--cb-surface);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cb-mid);
+}
+.cf-status { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.cf-status-chip { display: flex; align-items: center; gap: 6px; font-weight: 800; padding: 8px 12px; }
+.cf-status-chip .sq { width: 8px; height: 8px; border: 1px solid var(--cb-black); }
+.cf-status-chip.on .sq { border-color: #fff; }
+.cf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 16px; }
+.cf-block { display: flex; flex-direction: column; gap: 8px; }
+.cf-block > .fh { display: flex; align-items: baseline; gap: 6px; }
+.cf-block > .fh .opt { font-size: 12px; margin-left: 0; letter-spacing: 0; }
+.cf-note { background: var(--cb-surface); line-height: 1.5; min-height: 60px; padding: 10px 12px; }
+.cf-error { margin: 0; font-size: 12px; color: var(--cb-red); }
+.cf-foot { display: flex; align-items: center; gap: 12px; }
+.cf-cancel { font-size: 12px; }
+.cf-need { margin-left: auto; font-size: 11px; color: var(--cb-mid); }
+.cf-cta { font-size: 11px; padding: 11px 18px; }
+
+/* The feature rows: label column 120px, options after; a hairline between rows. */
+.feature-rows { display: flex; flex-direction: column; }
+.feature-row {
+  display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: center;
+  padding: 6px 0; border-top: 1px solid var(--cb-line-2);
+}
+.feature-label { font-size: 11px; color: var(--cb-mid); }
+
+/* The paste bar (the handoff, New report 3 of 3): dashed, the input, Add when it's a link, Type one in. */
+.add-bar { display: flex; flex-direction: column; gap: 14px; }
+.paste-bar { display: flex; align-items: center; gap: 12px; border: 1px dashed var(--cb-mid); padding: 8px 10px 8px 20px; background: var(--cb-surface); }
+.paste-bar input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 14px; padding: 10px 0; }
+.paste-add { font-size: 11px; padding: 10px 16px; }
+.paste-type { font-size: 12px; flex: none; }
+.paste-hint { font-size: 12px; color: var(--cb-mid); }
+.paste-note { margin: 0; font-size: 12px; color: var(--cb-black); }
+/* The drop veil covers whatever holds the bar (it needs position: relative). */
+.drop-veil {
+  position: absolute; inset: 0; z-index: 5; background: rgba(255, 255, 255, .94); border: 2px dashed var(--cb-black);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; letter-spacing: -.02em; pointer-events: none;
+}
+
+/* A report whose type doesn't match its comps (co-op or condo, like for like): Sort and Findings. */
+.type-mismatch { display: flex; align-items: center; gap: 20px; background: var(--cb-surface); border-left: 3px solid var(--cb-yellow); padding: 14px 18px; margin-bottom: 20px; }
+.type-mismatch p { margin: 0; flex: 1; font-size: 13px; line-height: 1.5; }

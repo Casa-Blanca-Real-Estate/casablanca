@@ -23,11 +23,11 @@
 import type { ComparisonOut, EngineOutput, HeadlineFact, ResultKind } from '../engine/index.ts';
 import { canonicalJson } from '../engine/util/canonical-json.ts';
 import { sha256Tag } from '../engine/util/sha256.ts';
-import { addressOf, countedComps, urlOf, type EmailLength } from './email.ts';
+import { addressOf, countedComps, hasHomeSize, urlOf, type EmailLength } from './email.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { againstAsk, clientPrice, estimateWords, psf, sqft, usd } from './format.ts';
 import { homeName } from './reading.ts';
-import type { Audience, Brief, Intake, SendState } from './state.ts';
+import { noteOf, type Audience, type Brief, type Intake, type SendState } from './state.ts';
 
 export interface WriterComp {
   /** The engine's comp id: the writer returns each comp's lines by it. */
@@ -44,6 +44,8 @@ export interface WriterComp {
   against_the_home: string[];
   /** The agent's own note on it: agent-stated, their words. */
   agent_note: string | null;
+  /** The agent's tags on it, from the house list (Dispatch 14). */
+  agent_tags: string[];
 }
 
 export interface WriterInput {
@@ -119,13 +121,15 @@ export function writerInput(args: {
   const r = output.results[result];
   const outById = new Map(output.comps.map((c) => [c.id, c]));
   const listed = length === 'text' ? [] : countedComps(output, result, args.comps).filter((x) => length === 'full' || x.status === 'sold');
+  // No size for the home (or a co-op): no sizes and no per-SF figures for the writer to quote (Dispatch 14).
+  const sized = hasHomeSize(output);
 
   const comps: WriterComp[] = listed.map(({ status, comp, line }) => {
     const out = outById.get(comp.id)!;
     const f = comp.record.facts;
     const facts: Record<string, string> = {};
     if (f.floor) facts.floor = String(f.floor.value);
-    if (f.area_sqft) facts.size = sqft(f.area_sqft.value, f.area_sqft.confidence === 'approx' || comp.record.flags.approx_area);
+    if (f.area_sqft && sized) facts.size = sqft(f.area_sqft.value, f.area_sqft.confidence === 'approx' || comp.record.flags.approx_area);
     if (f.beds) facts.bedrooms = String(f.beds.value);
     if (f.baths) facts.bathrooms = String(f.baths.value);
     if (out.days_on_market !== null) facts.days_on_the_market = String(out.days_on_market);
@@ -133,7 +137,7 @@ export function writerInput(args: {
     if (f.status_date) facts[status === 'sold' ? 'sale_date' : 'date'] = f.status_date.value;
     const pr = out.per_result[result];
     if (pr.monthly_carry) facts.monthly_carry = `${usd(pr.monthly_carry.value)} a month`;
-    const note = comp.judgment?.reasons.at(-1)?.reason?.trim() || null;
+    const note = noteOf(comp.judgment);
     return {
       id: comp.id,
       name: addressOf(comp),
@@ -145,6 +149,7 @@ export function writerInput(args: {
       facts,
       against_the_home: pr.comparisons.map(againstHome).filter((x): x is string => Boolean(x)),
       agent_note: note,
+      agent_tags: comp.judgment?.tags ?? [],
     };
   });
 
@@ -161,10 +166,10 @@ export function writerInput(args: {
     length,
     result: { kind: result, label: r.label, uses_agent_estimates: [...new Set(r.estimates_used.map(estimateWords))] },
     // The base is one number: the house speaks in ranges (§9.2), so the writer isn't handed it.
-    headline_facts: h.facts.filter((f) => !f.id.startsWith('base')).map((f) => ({ id: f.id, what: f.label, value: shown(f) })),
+    headline_facts: h.facts.filter((f) => !f.id.startsWith('base') && (sized || f.unit !== 'usd_per_sqft')).map((f) => ({ id: f.id, what: f.label, value: shown(f) })),
     headline_cannot_say: h.missing,
     comps,
-    price_table: length === 'full' && r.price_table
+    price_table: length === 'full' && sized && r.price_table
       ? r.price_table.rows.map((row) => ({ per_sqft: psf(row.per_sqft.value), price: clientPrice(row.price.value) }))
       : null,
     agent_stated: agent,

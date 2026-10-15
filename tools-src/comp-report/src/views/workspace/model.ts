@@ -1,14 +1,17 @@
 // What every step of the walkthrough is handed: the report as the server has
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
-import type { EngineOutput } from '../../../engine/index.ts';
-import type { GeocodeView, LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
+import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
+import type { CompEdit, GeocodeView, LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
+import type { Features } from '../../../workspace/features.ts';
+import type { CompJudgment, Outcomes, Reached } from '../../../workspace/state.ts';
+import type { ScreenId, SortReadiness } from './screens.ts';
 import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
 } from '../../../workspace/state.ts';
 import type { StartScreen } from '../newcomp/NewComp.tsx';
-import type { StepId } from './About.tsx';
+
 
 export interface Workspace {
   reportId: string;
@@ -62,10 +65,49 @@ export interface Workspace {
   /** Runs a server call with the busy flag and the error line. */
   run: (label: string, work: () => Promise<void>) => Promise<void>;
   busy: string | null;
-  fillSample: (step: StepId | 'all') => Promise<void>;
-  go: (step: StepId) => void;
+  fillSample: (step: 'sort' | 'findings' | 'send' | 'all') => Promise<void>;
   messageCount: number;
   setMessageCount: (n: number) => void;
+
+  // ─── The design port (Dispatch 14) ───────────────────────────────────────
+  /** The screen showing: Sort, the Gate, Findings, Send or Done. */
+  screen: ScreenId;
+  go: (screen: ScreenId) => void;
+  /** The Co-op/Condo toggle: the engine computes with it. */
+  propertyType: 'condo' | 'coop';
+  setPropertyType: (next: 'condo' | 'coop') => void;
+  /** Buyer (the default) or seller: copy changes, structure doesn't. */
+  side: 'buyer' | 'seller';
+  /** The home has a size or an estimate of one: otherwise every per-SF figure is hidden. */
+  sf: boolean;
+  /** The home's features, from its intake (the pickers' view of it). */
+  homeFeatures: Features;
+  /** The agent's level for the Gate: practice (new) or full (graduated). An admin can view it as a new agent. */
+  level: 'practice' | 'full';
+  isAdmin: boolean;
+  viewAsNewAgent: boolean;
+  setViewAsNewAgent: (on: boolean) => void;
+  /** Admin dev scaffolding (About this screen, Build notes, Fill with sample): off by default. */
+  devTools: boolean;
+  /** Sort → Gate: every comp has a tier, a note and a tag, and none waits for a confirm. */
+  readiness: SortReadiness;
+  /** Sort's filter, shared so the Findings button's helper link can filter to the incomplete rows. */
+  sortFilter: { incomplete: boolean; tags: string[] };
+  setSortFilter: (next: { incomplete: boolean; tags: string[] }) => void;
+  /** One comp's edits, saved in order with the others; the server returns the workspace. */
+  editComp: (reportCompId: string, edit: CompEdit) => Promise<void>;
+  /** Export rows the agent took out: the only sales Hubert may point back to. */
+  suggestions: { judgment: CompJudgment; record: CompRecord }[];
+  /** Hubert's drawer. It opens by default on the first Sort visit. */
+  drawerOpen: boolean;
+  setDrawerOpen: (open: boolean) => void;
+  outcomes: Outcomes;
+  setOutcomes: (next: Outcomes) => void;
+  reached: Reached;
+  /** A short confirmation at the bottom of the screen: "Copied. Paste into Gmail." */
+  toast: (message: string) => void;
+  /** Back to the reports list (what ← Reports does). */
+  back: () => void;
 }
 
 export interface StepProps {

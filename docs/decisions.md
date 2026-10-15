@@ -185,6 +185,30 @@ changes, as Dispatch 14 builds it:
 waits for a headline); D-4; no invented listings from Hubert; "True estimate" on Findings only, never in
 the email.
 
+**Where the handoff left it open, Dispatch 14 built it this way** (object to any in a dev note; each is a
+small change):
+- **Saving a comp needs a note and a tag for every agent.** The handoff's form asks both levels; only the
+  Gate's why differs by level. Save is a real disabled button until both are in.
+- **A tier can't be cleared once given**, only changed (the reasons are append-only). ✕ is the way out.
+- **"True estimate" is the range** (the 48px figure is low–high, as the screenshot draws it); the engine's
+  point estimate is under "How this was worked out".
+- **Hubert's chips that promise what he can't do were reworded** to the nearest thing he can answer (he
+  never sees the agent's number or the email, can't redraft, and can't search the market): for example
+  "Find more sales like X" became "Which comps are most like X?". The rest are the prototype's words.
+- **The progress row locks with the CTA:** Findings until every comp has a tier, a note and a tag; Send
+  until the agent has given their number or skipped.
+- **Send's Full and Short are plain text** (the source of truth, which QA reads); Designed is the
+  branded view of the Full draft. One edited draft at a time: editing another length starts over.
+- **The Text tab keeps the disclaimer** (QA requires it), so a text runs to about 500 characters.
+- **Done's first tile reads "What the sales support",** not "True estimate" (Findings only).
+- **Reports' third column is headed "Side"** (the prototype's "Client" sat over Buyer/Seller; the
+  client's name is under the address).
+- **A co-op report counts co-op comps only** (the engine's like-for-like rule): condo comps in a co-op
+  report count in nothing, and Sort and Findings say so with a one-click switch. Set the type to match
+  the comps.
+- **A co-op shows no per-SF figure even with a size** (the engine prices co-ops without $/sq ft), and a
+  condo without a size shows none anywhere, the email and Hubert's draft lines included.
+
 **Answer →** _type here — or answer DP-1 to DP-8 on the answer sheet_
 
 ---
