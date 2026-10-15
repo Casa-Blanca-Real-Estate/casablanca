@@ -89,6 +89,12 @@ and give sessions a read-only, redacted, logged view of production that never co
      path listed as `text` is `text`. Comp facts that are numbers or dates (price, size, beds, baths, floor,
      dates), in `comps` and in the copy, are `pass`. The home's intake, deal terms, `target`, `agent_call`
      (low, high, note), `state.reveal` and every other client-specific figure are `text`, numbers included.
+     **Coordinates are addresses.** `geocodes` is `text` throughout except `status`, `geocoder` (closed list),
+     `attempts`, `retry` and `lookedUpAt`, which pass; `lat`, `lng`, `buildingKey`, `matched`, `reason` and
+     `bin` are `text` and come out `[redacted]` without `text=1`. The home's own building is geocoded into
+     this table (`reportBuildings`, then `loadGeocodes`), so a coordinate in `workspace.geocodes` is the
+     client's address. An observation's `coordinates` fact is not in the numeric-key allowlist, so it is
+     `text` on every path. `copy-to-test` writes no `geocodes` rows and no `coordinates` facts.
      The `text` kind covers `reports.title`; the home's address, unit and notes; every `state.send` field; `agent_call` and its note; `target.*`; all deal-terms text
      and money (price, target, rate, down payment, `preApprovalAmount`); `reasons.reason`; comp notes and
      free-text tags; `imports.filename`; the addresses, keys, `streeteasy_id`, `link_reads.url` and any other
@@ -247,7 +253,14 @@ production). Any change to what Sort, Findings or Send show, or where anything s
   `inspect` actor kind in `enter()`, the `comp_report_inspect` role and grants, the recreated select policies,
   the `inspect-audit` policies, the three `kind` names and the `view`, `text_flag` and `target_report_id`
   columns on `access_events`, `users.is_test` with its check and trigger, the `users_insert` change, and a
-  check on `allowlist` refusing `@test.invalid`. No other open PR uses the timestamp; re-check. If NW-090 a
+  check on `allowlist` refusing `@test.invalid`. **Role work is guarded as foundations' is:** everything that
+  creates or grants to `comp_report_inspect` (`create role`, the membership grant to `current_user` with
+  `with set true, inherit false`, falling back to a plain grant on `syntax_error`, `grant usage on schema
+  comp_report`, the table `select` grants, and the column-list grants on `imports` without `content` and
+  `link_reads` without `extract`) goes inside one `do $$` block that returns with a notice unless the current
+  role has `rolcreaterole` or `rolsuper`, and wraps the work in `exception when insufficient_privilege` that
+  raises a notice. Nothing else in the migration (`enter()`, policies, columns, triggers, the `kind` CHECK)
+  depends on that role existing. No other open PR uses the timestamp; re-check. If NW-090 a
   is unanswered when you reach this, ship items 1–2 and list items 3–4 as held; Casanova queues them as a
   follow-up line, and `20261017000000` stays unused until then.
 - **Keys:** `CR_INSPECT_KEY`, `CR_TEST_KEY`, `CR_TEST_USER_EMAIL` and `CR_EVAL_ANTHROPIC_API_KEY` are made
@@ -289,8 +302,10 @@ production). Any change to what Sort, Findings or Send show, or where anything s
     column of any `comp_report` table, or a key in the jsonb fixtures, is not classified in `views.ts`. A
     third shows `?text=1` returns the sentinels from the `text` fields and never from the `never` ones, and
     that emails stay hashed. The sentinels include unique numbers at the numeric `text` paths (price, target,
-    rate, `agent_call` low and high, `state.reveal`), which must not appear by default; a comp price, size or
-    date passes. The classification test also fails for any column or jsonb key named `email`, `*_email` or
+    rate, `agent_call` low and high, `state.reveal`), and a unique `lat` and `lng` on the home's `geocodes`
+    row and a `coordinates` fact on a comp observation; none appears by default. A comp price, size or date
+    passes. The migration applies on a database whose connecting role can't create roles, and the inspect
+    views still work there through the policies alone. The classification test also fails for any column or jsonb key named `email`, `*_email` or
     `*_by` (and `fact_overrides.by`) that is not hashed. A query spy shows `loadWorkspace` with the inspect
     reader never selects `imports.content` or `link_reads.extract`, and that no inspect query touches
     `narratives`.
