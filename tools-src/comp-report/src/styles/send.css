@@ -1,0 +1,187 @@
+/* Send and Done (Dispatch 14, items 10 and 11): the handoff's screens 9, 10 and 11.
+   Every class is se-; the shared primitives (.btn, .link, .panel, .seg, .fh, .sq) come from styles.css. */
+
+/* ─── Send: the issues on the left, the email on the right ───────────────── */
+.se-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
+.se-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.se-star { color: var(--cb-lavender); font-size: 15px; line-height: 1; }
+.se-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--cb-mid); }
+.se-hint.error { color: var(--cb-red); }
+/* Labels here are the handoff's 12px gray captions, not the app's uppercase field labels. */
+label.se-label, .se-label {
+  display: inline; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--cb-mid); line-height: 1.45;
+}
+
+.se-wait { padding: 24px 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.se-wait p { margin: 0; font-size: 14px; }
+
+/* The issues panel. */
+.se-issues { padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
+.se-issues-head { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 800; }
+.se-badge {
+  width: 20px; height: 20px; flex: none; display: flex; align-items: center; justify-content: center;
+  background: var(--cb-red); color: #fff; font-size: 11px; font-weight: 800; line-height: 1;
+}
+.se-badge.ok { background: var(--cb-lavender); color: var(--cb-deep); }
+.se-badge.se-note { background: var(--cb-highlight); color: var(--cb-black); box-shadow: inset 0 0 0 1px var(--cb-yellow); }
+.se-issues-clear { margin: 0; font-size: 13px; line-height: 1.45; color: var(--cb-mid); }
+.se-issue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.se-issue { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--cb-line); font-size: 13px; line-height: 1.45; }
+.se-issue-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.se-issue-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; }
+.link.se-show { font-size: 12px; align-self: flex-start; }
+.se-fix {
+  font: inherit; display: flex; align-items: center; gap: 8px; align-self: flex-start; cursor: pointer;
+  background: var(--cb-surface); color: var(--cb-black); border: 1px solid var(--cb-black); padding: 10px 14px; font-size: 12px; font-weight: 800;
+}
+.se-fix:hover { background: var(--cb-bg); }
+
+/* The left column's other panels: which result, and the agent's lines. */
+.se-panel { padding: 20px 28px; display: flex; flex-direction: column; gap: 10px; }
+.se-panel .seg { align-self: flex-start; }
+.se-lines summary { font-size: 14px; font-weight: 800; cursor: pointer; }
+.se-lines[open] summary { margin-bottom: 4px; }
+label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--cb-black); }
+.se-field input, .se-field textarea { width: 100%; }
+.se-field textarea { resize: vertical; min-height: 64px; }
+
+/* ─── The email card ─────────────────────────────────────────────────────── */
+.se-card { display: flex; flex-direction: column; min-width: 0; }
+.se-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 28px; border-bottom: 1px solid var(--cb-line); }
+.se-sec { display: flex; gap: 10px; align-items: baseline; font-size: 14px; font-weight: 800; }
+.se-sec-n { color: var(--cb-lavender); }
+.se-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--cb-mid); }
+.link.se-rewrite { font-size: 11px; }
+.se-tabs { margin-left: auto; display: flex; border: 1px solid var(--cb-black); }
+.se-tabs button {
+  font: inherit; font-size: 11px; font-weight: 800; padding: 7px 12px; cursor: pointer;
+  background: var(--cb-surface); color: var(--cb-black); border: none;
+}
+.se-tabs button.on { background: var(--cb-black); color: #fff; }
+
+.se-writer { display: flex; align-items: center; gap: 16px; padding: 14px 28px; border-bottom: 1px solid var(--cb-line); }
+.se-writer p { margin: 0; flex: 1; font-size: 12px; line-height: 1.45; color: var(--cb-mid); }
+.se-write { display: flex; align-items: center; gap: 8px; padding: 10px 16px; }
+.se-notice {
+  margin: 14px 28px 0; padding: 10px 14px; font-size: 12px; line-height: 1.5;
+  background: var(--cb-bg); border-left: 3px solid var(--cb-yellow);
+}
+.se-notice.error { border-left-color: var(--cb-red); }
+
+.se-block { padding: 20px 28px 24px; display: flex; flex-direction: column; gap: 6px; }
+.se-head-block { padding-bottom: 0; }
+.se-labelrow { display: flex; align-items: baseline; gap: 12px; }
+.se-labelrow.wrap { flex-wrap: wrap; }
+.se-right, .se-count, .se-undo { margin-left: auto; }
+.link.se-undo { font-size: 12px; }
+
+.se-subject-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.se-subject-row .se-subject {
+  flex: 1; min-width: 0; border: none; border-bottom: 1px solid var(--cb-border); background: transparent; padding: 6px 0; font-size: 13px;
+}
+.se-subject-row .se-subject:focus { border-bottom-color: var(--cb-black); }
+
+/* The headline's drafts. */
+.se-drafts { margin-left: auto; position: relative; font-size: 12px; color: var(--cb-mid); }
+.se-drafts summary { list-style: none; cursor: pointer; border-bottom: 1px solid var(--cb-lavender); }
+.se-drafts summary::-webkit-details-marker { display: none; }
+.se-drafts-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(440px, 70vw);
+  display: flex; flex-direction: column; background: var(--cb-surface); border: 1px solid var(--cb-black);
+  box-shadow: 0 12px 32px rgba(15, 15, 15, .12);
+}
+.se-drafts-title { padding: 10px 14px; font-size: 11px; color: var(--cb-mid); border-bottom: 1px solid var(--cb-line); }
+.se-drafts-menu button {
+  font: inherit; font-size: 13px; line-height: 1.45; text-align: left; color: var(--cb-black); cursor: pointer;
+  background: var(--cb-surface); border: none; border-bottom: 1px solid var(--cb-line); padding: 10px 14px;
+}
+.se-drafts-menu button:last-child { border-bottom: none; }
+.se-drafts-menu button:hover { background: var(--cb-bg); }
+
+/* ─── The annotated text: a mirror behind a transparent textarea ─────────── */
+.se-annot { position: relative; --pad: 0; }
+.se-annot .se-mirror,
+.se-annot .se-ta {
+  margin: 0; padding: var(--pad); font: inherit; letter-spacing: inherit;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; tab-size: 4;
+}
+.se-annot .se-mirror { position: absolute; inset: 0; overflow: hidden; color: transparent; pointer-events: none; }
+.se-annot .se-ta {
+  position: relative; display: block; width: 100%; min-height: 0; resize: none; overflow: hidden;
+  background: transparent; color: var(--cb-black); border: 0; border-radius: 0; box-shadow: none;
+}
+.se-annot .se-ta:focus { outline: none; border: 0; }
+.se-annot .se-ta::placeholder { color: var(--cb-sand); }
+.se-mark { position: relative; padding: 0; color: transparent; background: var(--cb-highlight); }
+.se-mark.fix { box-shadow: inset 0 -2px 0 var(--cb-red); }
+.se-mark::after {
+  content: attr(data-n); position: absolute; right: -2px; top: -.55em; transform: translateX(100%);
+  background: var(--cb-red); color: #fff; font-size: 9px; font-weight: 800; line-height: 1; letter-spacing: 0; padding: 2px 4px;
+}
+.se-mark:not(.fix)::after { background: var(--cb-yellow); color: var(--cb-black); }
+.se-mark.flash { animation: se-flash .45s ease-in-out 3; }
+@keyframes se-flash { 50% { background: #f2d36a; } }
+
+.se-headline { --pad: 6px 0 12px; font-size: 20px; font-weight: 800; line-height: 1.3; border-bottom: 2px solid var(--cb-black); }
+.se-body { --pad: 20px 22px; font-size: 14px; line-height: 1.6; background: var(--cb-surface); border: 1px solid var(--cb-border); }
+.se-body:focus-within { border-color: var(--cb-black); }
+.se-annot.read-only .se-ta { cursor: default; }
+
+/* Text: an SMS bubble on the page color. */
+.se-text-stage { display: flex; justify-content: flex-start; background: var(--cb-bg); padding: 24px; }
+.se-bubble {
+  --pad: 14px 16px; width: 100%; max-width: 380px; font-size: 14px; line-height: 1.5;
+  background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: 16px 16px 16px 4px; overflow: hidden;
+}
+
+/* Designed: the branded email on the outer color, 600px at most. */
+.se-designed { gap: 10px; }
+.se-stage { background: var(--cb-outer); padding: 28px 16px; display: flex; justify-content: center; }
+.se-designed-card { width: 100%; max-width: 600px; background: var(--cb-surface); }
+.se-designed-card table { border-spacing: 0; }
+
+/* The card's foot: Mark as sent, then Copy with its reminder. */
+.se-foot { display: flex; align-items: center; gap: 12px; padding: 16px 28px; border-top: 1px solid var(--cb-line); }
+.se-foot-note { font-size: 12px; color: var(--cb-mid); }
+.se-foot-actions { margin-left: auto; display: flex; gap: 8px; }
+.se-sent { padding: 12px 20px; }
+.se-copy { position: relative; display: flex; }
+.se-tip {
+  position: absolute; bottom: calc(100% + 8px); right: 0; white-space: nowrap; pointer-events: none;
+  background: var(--cb-black); color: #fff; font-size: 12px; padding: 8px 12px; opacity: 0; transition: opacity .12s;
+}
+.se-copy:hover .se-tip, .se-copy:focus-within .se-tip { opacity: 1; }
+
+/* ─── Done ───────────────────────────────────────────────────────────────── */
+.se-done { padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; }
+.se-done-empty { gap: 16px; }
+.se-confirm { display: flex; align-items: center; gap: 16px; }
+.se-check {
+  width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center;
+  background: var(--cb-black); color: #fff; font-size: 20px; font-weight: 800;
+}
+.se-confirm-text { display: flex; flex-direction: column; gap: 2px; }
+.se-sent-title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+.se-sent-sub { font-size: 13px; color: var(--cb-mid); }
+.se-done-headline { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.35; max-width: 40ch; }
+.se-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 2px; }
+.se-tile { background: var(--cb-bg); padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; }
+.se-tile-label { font-size: 12px; color: var(--cb-mid); }
+.se-tile-value { font-size: 22px; font-weight: 800; letter-spacing: -.01em; color: var(--cb-black); }
+.se-tile-value.guess { color: var(--cb-deep); }
+.se-outcomes { border: 1px solid var(--cb-border); padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.se-outcomes-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; }
+.se-outcomes-title .sq { width: 8px; height: 8px; }
+.se-outcome-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.se-outcome { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.se-outcome .se-amount {
+  width: 100%; border: none; border-bottom: 1px solid var(--cb-border); background: transparent; padding: 6px 0;
+  font-size: 18px; font-weight: 800; color: var(--cb-black);
+}
+.se-outcome .se-amount::placeholder { color: var(--cb-sand); }
+.se-outcome .se-amount:focus { border-bottom-color: var(--cb-black); }
+.se-outcome .se-amount:disabled { background: transparent; }
+.se-outcome .se-hint { font-size: 11px; }
+.se-done-actions { display: flex; align-items: center; gap: 10px; }
+.se-done-actions .btn:not(.primary) { padding: 12px 20px; }
+.link.se-reopen { margin-left: auto; font-size: 12px; color: var(--cb-mid); }
