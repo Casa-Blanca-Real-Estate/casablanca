@@ -33,7 +33,8 @@ export function identityName(c: CompOut | undefined): string {
 
 /** The engine's reasons speak of "primary" comps; the screens call them 1st tier. */
 export function engineWhy(reason: string): string {
-  return reason.replace(/\bprimary\b/g, '1st-tier').replace(/\s+—\s+/g, ': ');
+  // The engine's method label carries a note for the build ("the default method, pending Noble"): agents don't need it.
+  return reason.replace(/\s+—\s+the default method, pending Noble/, '').replace(/\bprimary\b/g, '1st-tier').replace(/\s+—\s+/g, ': ');
 }
 
 export interface TakeArgs {

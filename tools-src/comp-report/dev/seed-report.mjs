@@ -18,6 +18,11 @@ const today = new Date().toISOString().slice(0, 10);
 await api('/api/comp-report/me');
 const { report } = await api('/api/comp-report/reports', 'POST', { title: '100 Barclay Street #17L', propertyType: type });
 const id = report.id;
+// The side, the client and the type, at every stage (an empty report too).
+await api('/api/comp-report/workspace', 'PATCH', {
+  reportId: id, propertyType: type,
+  brief: { audience: { value: side, asOf: today }, clientName: { value: 'Jordan and Sam', asOf: today } },
+});
 if (stage !== 'empty') {
   const s = await api('/api/comp-report/sample');
   const intake = { ...s.intake };

@@ -23,7 +23,7 @@
 import type { ComparisonOut, EngineOutput, HeadlineFact, ResultKind } from '../engine/index.ts';
 import { canonicalJson } from '../engine/util/canonical-json.ts';
 import { sha256Tag } from '../engine/util/sha256.ts';
-import { addressOf, countedComps, urlOf, type EmailLength } from './email.ts';
+import { addressOf, countedComps, hasHomeSize, urlOf, type EmailLength } from './email.ts';
 import type { WorkspaceComp } from './engine-input.ts';
 import { againstAsk, clientPrice, estimateWords, psf, sqft, usd } from './format.ts';
 import { homeName } from './reading.ts';
@@ -121,13 +121,15 @@ export function writerInput(args: {
   const r = output.results[result];
   const outById = new Map(output.comps.map((c) => [c.id, c]));
   const listed = length === 'text' ? [] : countedComps(output, result, args.comps).filter((x) => length === 'full' || x.status === 'sold');
+  // No size for the home (or a co-op): no sizes and no per-SF figures for the writer to quote (Dispatch 14).
+  const sized = hasHomeSize(output);
 
   const comps: WriterComp[] = listed.map(({ status, comp, line }) => {
     const out = outById.get(comp.id)!;
     const f = comp.record.facts;
     const facts: Record<string, string> = {};
     if (f.floor) facts.floor = String(f.floor.value);
-    if (f.area_sqft) facts.size = sqft(f.area_sqft.value, f.area_sqft.confidence === 'approx' || comp.record.flags.approx_area);
+    if (f.area_sqft && sized) facts.size = sqft(f.area_sqft.value, f.area_sqft.confidence === 'approx' || comp.record.flags.approx_area);
     if (f.beds) facts.bedrooms = String(f.beds.value);
     if (f.baths) facts.bathrooms = String(f.baths.value);
     if (out.days_on_market !== null) facts.days_on_the_market = String(out.days_on_market);
@@ -164,10 +166,10 @@ export function writerInput(args: {
     length,
     result: { kind: result, label: r.label, uses_agent_estimates: [...new Set(r.estimates_used.map(estimateWords))] },
     // The base is one number: the house speaks in ranges (§9.2), so the writer isn't handed it.
-    headline_facts: h.facts.filter((f) => !f.id.startsWith('base')).map((f) => ({ id: f.id, what: f.label, value: shown(f) })),
+    headline_facts: h.facts.filter((f) => !f.id.startsWith('base') && (sized || f.unit !== 'usd_per_sqft')).map((f) => ({ id: f.id, what: f.label, value: shown(f) })),
     headline_cannot_say: h.missing,
     comps,
-    price_table: length === 'full' && r.price_table
+    price_table: length === 'full' && sized && r.price_table
       ? r.price_table.rows.map((row) => ({ per_sqft: psf(row.per_sqft.value), price: clientPrice(row.price.value) }))
       : null,
     agent_stated: agent,

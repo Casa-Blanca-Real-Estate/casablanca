@@ -204,7 +204,10 @@ small change):
 - **Reports' third column is headed "Side"** (the prototype's "Client" sat over Buyer/Seller; the
   client's name is under the address).
 - **A co-op report counts co-op comps only** (the engine's like-for-like rule): condo comps in a co-op
-  report count in nothing, and their rows say why. Set the type to match the comps.
+  report count in nothing, and Sort and Findings say so with a one-click switch. Set the type to match
+  the comps.
+- **A co-op shows no per-SF figure even with a size** (the engine prices co-ops without $/sq ft), and a
+  condo without a size shows none anywhere, the email and Hubert's draft lines included.
 
 **Answer →** _type here — or answer DP-1 to DP-8 on the answer sheet_
 

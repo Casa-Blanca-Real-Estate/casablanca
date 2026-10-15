@@ -30,7 +30,7 @@ export function compPrice(c: WorkspaceComp): { value: number | null; label: stri
   const f = c.record.facts;
   const status = compStatus(c);
   if (status === 'sold') return { value: f.sale_price?.value ?? null, label: 'sold' };
-  return { value: f.list_price?.value ?? null, label: status === 'active' ? 'ask' : 'last ask' };
+  return { value: f.list_price?.value ?? null, label: status === 'off_market' ? 'last ask' : 'ask' };
 }
 
 /**

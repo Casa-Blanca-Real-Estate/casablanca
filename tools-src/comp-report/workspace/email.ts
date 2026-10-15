@@ -102,6 +102,8 @@ export type EmailStatus = (typeof ORDER)[number];
  */
 export function countedComps(output: EngineOutput, result: ResultKind, comps: WorkspaceComp[]): { status: EmailStatus; comp: WorkspaceComp; line: string }[] {
   const outById = new Map(output.comps.map((c) => [c.id, c]));
+  // The home has no size (none given, not even an estimate) or is a co-op: no per-SF figure (the handoff).
+  const homeHasSize = hasHomeSize(output);
   const rows: { status: EmailStatus; comp: WorkspaceComp; line: string }[] = [];
   for (const c of comps) {
     const status = c.record.status.listing_status ?? c.record.status.evidence_class;
@@ -111,7 +113,7 @@ export function countedComps(output: EngineOutput, result: ResultKind, comps: Wo
     if (!pr?.included) continue;
     const f = c.record.facts;
     const rate = pr?.price_per_sqft?.value ?? null;
-    const perFoot = rate !== null ? ` (${psf(rate)} a sq ft)` : '';
+    const perFoot = rate !== null && homeHasSize ? ` (${psf(rate)} a sq ft)` : '';
     let line: string;
     if (status === 'sold') {
       const vsAsk = out?.sale_to_ask_percent ? `, ${againstAsk(out.sale_to_ask_percent.value)}` : '';
@@ -240,7 +242,13 @@ function named(h: HeadlineFacts, id: string | undefined): string | null {
  * from the result's headline facts and the names beside them — never from the
  * agent's own number (§8.4). The first is the neutral reading Findings shows.
  */
-export function headlineDrafts(h: HeadlineFacts): string[] {
+/** The home has a size, given or estimated, on a condo report: what a per-SF figure needs (Dispatch 14). */
+export function hasHomeSize(output: EngineOutput): boolean {
+  return output.meta.property_type !== 'coop' && Boolean(output.subject.facts.with_estimates.area_sqft);
+}
+
+/** `sized`: the home has a size (hasHomeSize); without one, no draft quotes a per-SF figure. */
+export function headlineDrafts(h: HeadlineFacts, sized = true): string[] {
   const home = named(h, 'subject') ?? 'the home';
   const drafts: string[] = [];
   const reading = readingFromFacts(h, home);
@@ -262,7 +270,7 @@ export function headlineDrafts(h: HeadlineFacts): string[] {
     drafts.push(`The closest comp, ${anchor}, sold at ${psf(anchorRate.value)} a sq ft — about ${clientPrice(anchorImplied.value)} for ${home}.`);
   }
   const ceiling = fact(h, 'off_market.lowest_per_sqft');
-  if (prices && ceiling) {
+  if (prices && ceiling && sized) {
     drafts.push(`The sales support ${prices} for ${home}, and a listing that didn’t sell at ${psf(ceiling.value)} a sq ft marks the ceiling.`);
   }
   // The plainest restatement of the reading, kept only while there's room.
@@ -273,7 +281,7 @@ export function headlineDrafts(h: HeadlineFacts): string[] {
     const median = fact(h, 'sold.median_per_sqft');
     const sold = fact(h, 'sold.count');
     // No range yet: what the sales say per foot.
-    if (median && sold) drafts.push(`The ${sold.value === 1 ? 'closest sale came in at' : `${countWord(sold.value)} closest sales have a median of`} ${psf(median.value)} a sq ft.`);
+    if (median && sold && sized) drafts.push(`The ${sold.value === 1 ? 'closest sale came in at' : `${countWord(sold.value)} closest sales have a median of`} ${psf(median.value)} a sq ft.`);
   }
   return [...new Set(drafts)].slice(0, 4);
 }

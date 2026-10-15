@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
 import { ApiError, narrativesApi, type NarrativeView } from '../../api.ts';
-import { buildEmail, countedComps, headlineDrafts, htmlFromText, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
+import { buildEmail, countedComps, hasHomeSize, headlineDrafts, htmlFromText, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
 import { clientPrice, psf } from '../../../workspace/format.ts';
 import { draftChecks, ledgerFor, qaRecord, qaStatus, syncHeadline, type Acknowledgment } from '../../../workspace/qa.ts';
 import { answerResult, estimatesChangeTheAnswer, fact, homeName } from '../../../workspace/reading.ts';
@@ -89,7 +89,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
 
   const both = o ? estimatesChangeTheAnswer(o) : false;
   const result: ResultKind = o ? (both ? send.result ?? answerResult(o) : answerResult(o)) : 'on_facts';
-  const codeDrafts = useMemo(() => (o && ws.revealed ? headlineDrafts(o.headline_facts[result]) : []), [o, ws.revealed, result]);
+  const codeDrafts = useMemo(() => (o && ws.revealed ? headlineDrafts(o.headline_facts[result], hasHomeSize(o)) : []), [o, ws.revealed, result]);
   const inputFor = useCallback(
     (len: EmailLength) => (o ? writerInputKey(writerInputFrom({ output: o, comps: ws.comps, intake: ws.intake, brief: ws.brief, send, result, length: len })) : ''),
     [o, ws.comps, ws.intake, ws.brief, send, result],

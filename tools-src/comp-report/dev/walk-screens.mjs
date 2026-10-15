@@ -43,6 +43,8 @@ async function shot(p, name) {
   await p.screenshot({ path: file, fullPage: true });
   log.push(file);
 }
+// A modal is fixed to the viewport: a tall one shows the whole card in the shot.
+const tall = async (p) => { await p.setViewportSize({ width: 1440, height: 2400 }); await p.waitForTimeout(400); };
 const settle = async (p) => { await p.waitForLoadState('networkidle').catch(() => {}); await p.waitForTimeout(600); };
 const url = (id, q) => `${base}/tools/comp-report/?report=${id}&${q}`;
 
@@ -67,6 +69,11 @@ const ctx = await context(true);
   if (await start.count()) {
     await start.click();
     await settle(p);
+    // The handoff's state: a link pasted and matched, the side and type chosen.
+    await p.getByPlaceholder(/StreetEasy link/i).first().fill('https://streeteasy.com/building/100-barclay/17l').catch(() => errors.push('03: no link field'));
+    if (side === 'seller') await p.getByRole('button', { name: /^seller$/i }).first().click().catch(() => errors.push('03: no Seller'));
+    if (type === 'condo') await p.getByRole('button', { name: /^condo$/i }).first().click().catch(() => errors.push('03: no Condo'));
+    await tall(p);
     await shot(p, '03-new-home');
   } else errors.push('03: no "New report" button');
   await p.close();
@@ -75,14 +82,18 @@ const ctx = await context(true);
 {
   const id = seed('sort');
   const p = await page(ctx, '04');
+  // 2 of 3 as the new-report flow shows it (Edit details is the same screen without this mark).
+  await p.addInitScript((k) => sessionStorage.setItem(k, '1'), `cr-new-report:${id}`);
   await p.goto(url(id, 'start=details'));
   await settle(p);
+  await tall(p);
   await shot(p, '04-new-details');
   await p.goto(url(id, 'start=comps'));
   await settle(p);
   const type1 = p.getByRole('button', { name: /^type one in$/i }).first();
   if (await type1.count()) await type1.click();
   else errors.push('05: no "Type one in"');
+  await tall(p);
   await shot(p, '05-new-comps-add-form');
   await p.close();
 }
@@ -94,8 +105,9 @@ const ctx = await context(true);
   await settle(p);
   await openHubert(p);
   await shot(p, '06-sort');
-  const row = p.locator('[aria-expanded="false"]').first();
+  const row = p.locator('button.so-addr[aria-expanded="false"]').first();
   if (await row.count()) { await row.click().catch(() => {}); await shot(p, '06c-sort-expanded'); }
+  else errors.push('06c: no row to open');
   await p.goto(url(id, 'step=gate'));
   await settle(p);
   await shot(p, '07b-gate-full-agent');

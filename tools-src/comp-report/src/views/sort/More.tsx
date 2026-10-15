@@ -34,7 +34,8 @@ function DistanceLine({ d }: { d: Distance }) {
 
 export function More({ ws, c, out, distance }: { ws: Workspace; c: WorkspaceComp; out: CompOut | undefined; distance: Distance | null }) {
   const j = c.judgment;
-  const facts = useMemo(() => factLines(c.record), [c.record]);
+  // Without a size for the home, no size column anywhere: the comp's own size stays out too.
+  const facts = useMemo(() => factLines(c.record).filter((f) => ws.sf || f.label !== 'Size'), [c.record, ws.sf]);
   const usual = usualSource(facts);
   const checks = out?.checks ?? [];
   const flagged = checks.filter((k) => k.status === 'flagged');

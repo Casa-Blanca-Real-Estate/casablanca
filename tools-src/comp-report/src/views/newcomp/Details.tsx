@@ -138,7 +138,7 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
           <div className="nr-size">
             <span className="fh nr-label-line">
               Interior size
-              {!ws.sf && <span className="nr-sub">{coop ? '(most co-ops have none: then no per-SF figures anywhere)' : '(without it, no per-SF figures anywhere)'}</span>}
+              {coop ? <span className="nr-sub">(co-ops are priced without per-SF figures)</span> : !ws.sf && <span className="nr-sub">(without it, no per-SF figures anywhere)</span>}
             </span>
             {showSize ? (
               <div className="nr-size-line">

@@ -341,6 +341,8 @@ function Row({ k, children, flag }: { k: string; children: ReactNode; flag?: boo
 function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOutput; both: boolean; kind: ResultKind }) {
   const kinds = both ? KINDS : [kind];
   const byId = new Map(ws.comps.map((c) => [c.id, c]));
+  // Without a size, a warning that's about $/sqft doesn't apply to what the agent sees.
+  const warnings = output.warnings.filter((w) => ws.sf || (w.code !== 'approx_area' && !/\$\/sq ?ft/i.test(w.message)));
   const r = output.results[kind];
   const n = r.range?.comp_ids.length ?? 0;
   const size = ws.intake.areaSqft;
@@ -404,11 +406,11 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
           </ul>
         )}
       </div>
-      {output.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <div className="fi-sub">
           <span className="fi-sub-k">Warnings</span>
           <ul className="fi-plain">
-            {output.warnings.map((w, i) => (
+            {warnings.map((w, i) => (
               <li key={i}>{w.message}{w.comp_ids.length > 0 && <span className="fi-quiet-inline"> — {w.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join('; ')}</span>}</li>
             ))}
           </ul>
@@ -440,7 +442,7 @@ function Pairs({ ws, r, label }: { ws: Workspace; r: Result; label: string | nul
     <div className="fi-sub">
       <span className="fi-sub-k">How the comps differ from each other{label ? ` · ${label}` : ''}</span>
       {p.clean_pair_evidence.length > 0
-        ? <ul className="fi-plain">{p.clean_pair_evidence.map((e) => <li key={`${e.evidence_class}:${e.key}`}>{e.summary}</li>)}</ul>
+        ? <ul className="fi-plain">{p.clean_pair_evidence.filter((e) => ws.sf || !/sq ?ft/i.test(e.summary)).map((e) => <li key={`${e.evidence_class}:${e.key}`}>{e.summary}</li>)}</ul>
         : <p className="fi-quiet">No clean pairs yet: every pair differs in more than one factor, so none shows what one factor is worth here.</p>}
       <details className="fi-pairs">
         <summary>All {p.pairs.length} pair{p.pairs.length === 1 ? '' : 's'}</summary>

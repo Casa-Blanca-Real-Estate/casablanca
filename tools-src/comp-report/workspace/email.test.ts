@@ -9,6 +9,7 @@ import { compute, parseExport } from '../engine/index.ts';
 import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
 import { SAMPLE_INTAKE, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
 import {
+  countedComps, hasHomeSize,
   buildEmail, DISCLAIMER, HEADLINE_PLACEHOLDER, headlineDrafts, htmlFromText, SAMPLE_BANNER,
   type EmailInput,
 } from './email.ts';
@@ -161,4 +162,16 @@ test('an edited draft copies as HTML with its StreetEasy links made links', () =
 
 test('formatting: $/sqft truncates, money is whole dollars, client prices are three figures', () => {
   assert.deepEqual([psf(2112.676), usd(4650000.4), pct(-3.02), pct(12.26), clientPrice(4225352), clientPrice(950000)], ['$2,112', '$4,650,000', '−3.0%', '+12.3%', '$4.23M', '$950K']);
+});
+
+test('no size for the home, or a co-op: no per-SF figure in the comp lines or the drafts', () => {
+  const { areaSqft: _size, ...noSize } = SAMPLE_INTAKE;
+  const out = compute(engineInput({ asOf: '2026-09-29', intake: noSize, comps }));
+  assert.equal(hasHomeSize(out), false);
+  for (const r of countedComps(out, 'with_estimates', comps)) assert.ok(!r.line.includes('a sq ft'), r.line);
+  for (const d of headlineDrafts(out.headline_facts.on_facts, hasHomeSize(out))) assert.ok(!d.includes('a sq ft'), d);
+  const sized = compute(engineInput({ asOf: '2026-09-29', intake: SAMPLE_INTAKE, comps }));
+  assert.equal(hasHomeSize(sized), true, 'an estimated size counts');
+  assert.ok(countedComps(sized, 'with_estimates', comps).some((r) => r.line.includes('a sq ft')));
+  assert.equal(hasHomeSize(compute(engineInput({ asOf: '2026-09-29', intake: SAMPLE_INTAKE, comps, propertyType: 'coop' }))), false, 'a co-op never prices by the foot');
 });

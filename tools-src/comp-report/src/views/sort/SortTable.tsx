@@ -63,7 +63,8 @@ export function SortGroup({ ws, id, rows, outById, sort, onSort }: {
 
 function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | undefined }) {
   const cardId = useId();
-  const [open, setOpen] = useState(false);
+  // The ★ comp's card starts open, as the handoff draws it.
+  const [open, setOpen] = useState(() => row.anchor);
   const [editing, setEditing] = useState(false);
   const [pendingTier, setPendingTier] = useState<Tier | null>(null);
   const [pendingAnchor, setPendingAnchor] = useState<boolean | null>(null);
