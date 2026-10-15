@@ -56,9 +56,8 @@ How an agent edits what they see in Designed (NW-079 b); how Full and Short look
 rich editor would break the offset-based issue marks); where an example email lives (NW-085 b); Done's place in
 the progress row and Mark as sent stacked or set apart, with the way on to Done greyed until it is marked
 sent (NW-086 b, NW-101 b; Done isn't a control in the progress row today, so greying it is that layout call).
-Also not here: the writer drafting
-subject options (NW-083 c, the writer's track after Dispatch 24) and the example email itself (NW-085 a,
-Kimani's call).
+Also not here: the writer drafting subject options (NW-083 c, the writer's track after Dispatch 24; it is in
+the plan's Phase C) and the example email itself (NW-085 a, Kimani's call).
 
 ## Data and constraints
 

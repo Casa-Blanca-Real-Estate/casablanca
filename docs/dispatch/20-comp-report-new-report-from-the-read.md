@@ -5,7 +5,8 @@
 and fields), `02-sort.md` (tag groups and suggested tags on the card), Abacus's PR for Dispatch 16 (the new
 fields and exports), and the follow-ups at the end of `docs/dispatch/14-comp-report-design-port.md`.
 **Depends on:** Dispatch 16 merged (the data this shows) and Dispatch 18 merged (Mason's queue). The transit
-line (item 13) needs Dispatch 17's station data; skip it if that hasn't merged.
+line (item 13) needs Dispatch 17's station data; skip it if that hasn't merged. Dispatch 22 also edits
+`server/api/comps.ts`: whichever of 20, 21 and 22 opens second rebases on the first.
 **Protocol:** `docs/dispatch/README.md`. Restating rules 3–5: **open a PR to `claude/main` when done; never
 merge; sign "— Mason (CR-7c)"** in the PR, its comments and your commits. Ledger line: `casa-r13-6`. With 18,
 22 and 24, it supersedes `casa-r12-1`, and it takes the free-text tags (DP-6) out of `casa-r10-1`.

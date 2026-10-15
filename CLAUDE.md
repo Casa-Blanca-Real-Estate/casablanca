@@ -4,7 +4,9 @@ Internal browser-based tools for Casa Blanca, a boutique NYC residential brokera
 Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/tools person,
 3 days a week, working in blocks across several tracks).
 
-**Current priority (from 2026-09-23): the comp report tool.** The master design is
+**Current priority (from 2026-09-23): the comp report tool.** Noble's walk-through (2026-10-15) set the
+next round: `docs/comp-report/feedback/2026-10-15-noble/` (its `09-plan.md` orders Dispatches 15–24;
+`08-claude-design-handoff.md` is what goes to Claude Design). The master design is
 `docs/comp-report/01-design.md` — every comp report dispatch builds from it; `00-orientation.md`
 holds the research and sources behind it. Everything that was in flight before it
 is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`.
@@ -110,6 +112,16 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 12 | [Profile pics — the roster, the store and the email signature](docs/dispatch/12-profile-pic-tracker.md) | Painter | Phase 1 merged #71. Phase 2 after `CB_PICS_TOKEN` and D-24 |
 | 13 | [Comp report — the writer and QA (CR-5)](docs/dispatch/13-comp-report-writer-and-qa.md) | Mason | Phase 1 merged #76. Its production check and the real eval wait on Kimani; phase 2 next |
 | 14 | [Comp report — the design port, for Noble (CR-6)](docs/dispatch/14-comp-report-design-port.md) | Mason | Done — merged #77. Follow-ups listed at the end of the dispatch |
+| 15 | [Comp report — Sort, as it stands (CR-7a)](docs/dispatch/15-comp-report-sort-as-it-stands.md) | Mason | Ready — runs with 16 and 17 |
+| 16 | [Comp report — the listing read and the home's vocabulary (CR-2.3)](docs/dispatch/16-comp-report-listing-read-and-vocabulary.md) | Abacus | Ready |
+| 17 | [Comp report — StreetEasy's lists, and the subway (CR-R2)](docs/dispatch/17-comp-report-streeteasy-lists-and-subway.md) | Surveyor | Ready |
+| 18 | [Comp report — Send and Done (CR-7b)](docs/dispatch/18-comp-report-send-and-done.md) | Mason | Queued behind 15 |
+| 19 | [Comp report — the engine for Findings (CR-2.4)](docs/dispatch/19-comp-report-engine-for-findings.md) | Abacus | Queued behind 15 and 16 |
+| 20 | [Comp report — the new report, filled from the read (CR-7c)](docs/dispatch/20-comp-report-new-report-from-the-read.md) | Mason | Queued behind 16 and 18 |
+| 21 | [Comp report — Findings, target and client (CR-7d)](docs/dispatch/21-comp-report-findings-target-and-client.md) | Mason | Queued behind 19 and 20 |
+| 22 | [Comp report — access, the sign-in log and the activity log (CR-7e)](docs/dispatch/22-comp-report-access-and-activity-log.md) | Mason, or a second builder | Queued behind 21 |
+| 23 | [Comp report — samples that reset, reading production safely (CR-7f)](docs/dispatch/23-comp-report-samples-and-inspection.md) | Mason, or a second builder | Queued behind 22; Casa account |
+| 24 | [Calliste — Hubert sees what the agent sees (CR-H1)](docs/dispatch/24-calliste-hubert-sees-what-the-agent-sees.md) | Calliste (new) | Waits on the move to the Casa account |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and

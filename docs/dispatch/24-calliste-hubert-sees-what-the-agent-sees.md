@@ -6,9 +6,10 @@ split, the read tools, the role gates, what conflicts with the design), `03-gate
 (NW-068), D-4 and D-27 items 5 and 6 in `docs/decisions.md`, and `01-design.md` §8 (§8.2 is superseded by D-27
 item 6 where they differ).
 **Depends on:** the move to Casa's Claude account (NW-096). Dispatch 15 merged (it adds Hubert's markdown
-renderer to `Chat.tsx`). Do the server work first; the copy lines in `Home.tsx` and `Terms.tsx` last, rebased
-on Dispatches 20 and 21. NW-093 d (the agent's own number) is Kimani's call; build `get_call` only if he says
-yes.
+renderer to `Chat.tsx`). Dispatch 22 merged before you edit `api/messages.ts`. Do the server work first,
+except item 1, which reads Dispatch 21's reveal marker and so waits for 21; the copy lines in `Home.tsx` and
+`Terms.tsx` last, rebased on Dispatches 20 and 21. NW-093 d (the agent's own number) is Kimani's call; build
+`get_call` only if he says yes.
 **Protocol:** `docs/dispatch/README.md`. Restating rules 3–5: **open a PR to `claude/main` when done; never
 merge; sign "— Calliste (CR-H1)"** in the PR, its comments and your commits. Ledger line: `casa-r13-10`.
 
@@ -25,7 +26,7 @@ definitions, the context sent, role gates, the model-choice policy, AI cost, and
 
 Typed answers from a fixed question list are Arbiter's; free text, conversation, tools and context are yours.
 You meet Arbiter at one read-only function that returns a comp's typed judgments, surfaced later through an
-`assess` tool. Add your roster row's lane in your PR (rule 10).
+`assess` tool. Casanova adds your roster row. Keep it current through your PRs (rule 10).
 
 ## The goal
 
@@ -36,7 +37,8 @@ version, gated by role on the server.
 ## In scope
 
 1. **NW-068 a · the target after the reveal.** `neutralNumbers` (`server/numbers.ts`) reads `reports.target`
-   only once the result is revealed and adds a target block to `get_numbers` (with `owner` from Dispatch 21).
+   only once the result is revealed and adds a target block to `get_numbers` (with `owner` when Dispatch 21
+   has added it; absent otherwise). "Revealed" means `state.reveal` exists (Dispatch 21).
    A test proves the range is identical with and without a target. The prompt names §8.5's legitimate levers
    and forbids steering the estimate or advising dropping low comps and adding high ones. Deal terms stay out
    (the recommendation: decide them with NW-074's privacy rules). The writer stays blind.
@@ -60,7 +62,8 @@ version, gated by role on the server.
    `Terms.tsx:74`, `hubert/copy.ts:64`, the `get_numbers` description): "Hubert sees this once you've seen the
    result. It never changes the numbers and is never in the email." Long form behind an ⓘ.
 6. **The chips.** Sort's "Does 5 Franklin have a doorman?" must be answerable; no chip promises what he can't
-   do. From Dispatch 14's follow-ups: Hubert's "Fix both" chip reaches Send's deterministic fix.
+   do. From Dispatch 14's follow-ups: Hubert's "Fix both" chip reaches Send's deterministic fix. The chip's
+   side is yours. If Send needs a hook to take the fix, name it in the PR and Mason adds it (rule 8).
 7. **Dispatch 13's line** "the agent's number and target never reach a model": correct it to D-4 as built.
 
 ## Not in scope

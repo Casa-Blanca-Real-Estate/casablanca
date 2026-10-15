@@ -4,7 +4,8 @@
 **Builds from:** `docs/comp-report/feedback/2026-10-15-noble/03-gate-findings-and-client.md` (the code map for
 NW-061 to NW-077), `05-hubert-and-ai.md` (NW-063), Abacus's PR for Dispatch 19 (the five-row table and the
 `fillable` gaps), and `01-design.md` §8.4 (the backstop) and §8.6 (no protected characteristics).
-**Depends on:** Dispatch 19 merged (items 3 and 10) and Dispatch 20 merged (Mason's queue).
+**Depends on:** Dispatch 19 merged (items 3 and 10) and Dispatch 20 merged (Mason's queue). Dispatch 22 also
+edits `server/api/workspace.ts`: whichever of 20, 21 and 22 opens second rebases on the first.
 **Protocol:** `docs/dispatch/README.md`. Restating rules 3–5: **open a PR to `claude/main` when done; never
 merge; sign "— Mason (CR-7d)"** in the PR, its comments and your commits. Ledger line: `casa-r13-7`.
 

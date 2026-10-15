@@ -1,9 +1,9 @@
 # The plan from Noble's walk-through
 
 Casanova, 2026-10-15. Built from `00-items.md` (NW-001 to NW-102) and the topic reports `01` to `07`.
-Kimani's process (NW-095): ship first what adds controls, data or back end **without changing the layout,
-flow or architecture**, especially what Claude Design needs to see the tool as it really is. Layout, flow,
-polish, responsive and motion go to Kimani in Claude Design. Small things keep shipping while he designs.
+**The plan follows Kimani's process (NW-095):** Phase A is functionality and data that don't change the
+layout, flow or architecture, starting with what Claude Design needs to see the tool as it really is. Phase B
+is Claude Design: layout, flow, polish, responsive and motion. Small things keep shipping while he designs.
 
 ## The phases
 
@@ -24,13 +24,15 @@ polish, responsive and motion go to Kimani in Claude Design. Small things keep s
 | 19 | The engine for Findings (CR-2.4) | Abacus | `casa-r13-5` | this account | 16 and 15 merged | — |
 | 20 | The new report and the home, filled from the read (CR-7c) | Mason | `casa-r13-6` | this account | 16 and 18 merged; 17 for transit only | part of `casa-r12-1`; DP-6 from `casa-r10-1` |
 | 21 | Findings: plainer, whose target, the client's facts (CR-7d) | Mason | `casa-r13-7` | this account | 19 and 20 merged | — |
-| 22 | Who sees what, the sign-in log, the activity log (CR-7e) | Mason | `casa-r13-8` | this account | 15 merged; after 21 in Mason's queue | `casa-r12-2`; part of `casa-r12-1` |
-| 23 | Samples that reset, and reading production safely (CR-7f) | Mason | `casa-r13-9` | this account | 22 merged; Kimani on NW-090 a and NW-054 | — |
-| 24 | Calliste: Hubert sees what the agent sees (CR-H1) | Calliste (new) | `casa-r13-10` | **Casa's account** | the account move; 15 merged; copy last, after 20 and 21 | part of `casa-r12-1` |
+| 22 | Who sees what, the sign-in log, the activity log (CR-7e) | Mason | `casa-r13-8` | this account | 15 merged; after 21 in Mason's queue (items 1 and 2 first if no second builder, see below) | `casa-r12-2`; part of `casa-r12-1` |
+| 23 | Samples that reset, and reading production safely (CR-7f) | Mason | `casa-r13-9` | **Casa's account** (its keys live there; D-26 Q3) | 22 merged; Kimani on NW-090 a and NW-054 | — |
+| 24 | Calliste: Hubert sees what the agent sees (CR-H1) | Calliste (new) | `casa-r13-10` | **Casa's account** | the account move; 15 merged; 22 merged before it edits `api/messages.ts`; item 1 after 21; copy last, after 20 and 21 | part of `casa-r12-1` |
 
 The existing tracks keep working in this account this week and restart in Casa's account from their
 kickoffs (README, "Restarting a track"). Their state is in the repo, so a restart costs one kickoff. Calliste
-is new, so it starts there and is never started twice.
+is new, so it starts there and is never started twice. Dispatch 23, and any session that holds `CR_INSPECT_KEY`
+or `CR_TEST_KEY`, runs only in Casa's account: a key in a session on Kimani's account would bring production
+client data into it, and D-26 question 3 (where comp reports and client data are kept) is still open.
 
 **What happens to the earlier lines:**
 - `casa-r12-1` (the port's leftovers): superseded, split by where each item lives. One draft per length and
@@ -55,21 +57,25 @@ Calliste                 (after the move) 24
   16 edits `Intake`). Whichever PR opens second rebases on the first.
 - **Abacus 19** starts when 16 merges and rebases on 15 for `workspace/engine-input.ts`.
 - **Mason 20** needs 16's data; **Mason 21** needs 19's output.
-- **Calliste 24** does its server work at once and its copy lines in `Home.tsx` and `Terms.tsx` last, after 20
-  and 21 merge, since both of them edit those files.
+- **Calliste 24** does its server work at once, except item 1 (it reads 21's reveal marker) and any edit to
+  `api/messages.ts` (22 merges first). Its copy lines in `Home.tsx` and `Terms.tsx` come last, after 20 and 21
+  merge, since both of them edit those files.
+- **Until 22 lands,** Kimani opens Noble's report by its `?report=` link (admins already can). If no second
+  builder is named by the time 18 merges, Mason takes 22's items 1 and 2 before 20.
 - **If Kimani names a second builder this week,** it takes 22 then 23 (the platform lane) as soon as 15
-  merges. 22 rebases on 15 for `server/api/comps.ts` and `workspace.ts`. Mason's UI lane then runs 15, 18, 20
-  and 21 alone.
+  merges. 22 rebases on 15 for `server/api/comps.ts` and `workspace.ts`, and whichever of 20, 21 and 22 opens
+  second rebases on the first. Mason's UI lane then runs 15, 18, 20 and 21 alone.
 
 **Files with an owner this round.** `workspace/features.ts` and `subject.ts` belong to Abacus (16). Mason edits
-`Chat.tsx` once (15), then hands it to Calliste. Nobody touches `assets/studio-header.js`. The migrations
-have their timestamps reserved: `20261016000000` (15), `20261016060000` (20, only if needed), `20261016120000`
-(22), `20261017000000` (23).
+`Chat.tsx` once (15), then hands it to Calliste. Nobody touches `assets/studio-header.js`.
+**Migrations.** Reserved: `20261016000000` (15), `20261016120000` (22), `20261017000000` (23). 20, only if
+needed, takes a timestamp later than every migration on `claude/main` when its PR opens (e.g.
+`20261018000000`). If 22 ships items 1 and 2 first, its tables follow in `20261016120100`.
 
 **Design-blocking first.** Before Kimani opens Claude Design, these matter most: 15 (the ★ in the tier control,
 note button, markers, trash and bin, locks, Hubert's markdown), 16 and 20 (filled pickers, neighborhood,
 photos, tag groups), 18's Designed-first tab, and 21's five-row table and target owner. 22 and 23 change
-nothing Design draws, so they go last.
+nothing Design draws, so they go last, except 22's items 1 and 2, which are small and urgent.
 
 ## What waits on Kimani
 
@@ -81,7 +87,7 @@ Casa Answer Sheet.
 | NW-026 | Does ★ also make a comp 1st tier? | Yes: ★ sets 1st; 2nd or ✕ clears it | 15 |
 | NW-028 | The word for "tag" | "Comp tags" | 15 |
 | NW-044 b | An overridden StreetEasy fact counts as | A fact, marked "changed", StreetEasy's value kept | 15 |
-| NW-046 | Note and tags both required? | Practice agents need both; full agents need tags, the note is optional | 15 (applied only if answered) |
+| NW-046 | Note and tags both required? | Practice agents need both; full agents need tags, the note is optional | 15 (applied only if answered). It reverses D-27's "Saving a comp needs a note and a tag for every agent", so 15 changes `CompForm.tsx`'s Save rule to match |
 | NW-012 | The well-kept, not-redone step | "Good" | 16 |
 | NW-045 | Where the six ungrouped tags go | Four to Similarities, two to a "Differences" group, drop nothing | 16 |
 | NW-045, 059 | The size scale | Similar ±10%, smaller/bigger 10–25%, much past 25% | 16 |
@@ -102,18 +108,24 @@ Casa Answer Sheet.
 | NW-085 a | Which good email is the example? | The 100 Barclay sample, drafted by the writer, edited by Noble | phase B |
 | NW-096 | When to start relative to the account move | Existing tracks now in this account, Calliste in Casa's; D-26 questions 1 and 2 before the move | 24 |
 | NW-097 | Recording the next walk-through | Record on Kimani's machine; the activity log (22) as backstop | — |
-| NW-021 | Is a rental-comps report in scope? | Later; keep today's gate | — |
-| NW-102 | Make the email as a Gmail draft? | Later, after Send's design and the Casa Google Cloud project | — |
+| NW-021 | Is a rental-comps report wanted, and when? | Later; today's gate stays | — |
+| NW-102 | Create the email as a Gmail draft, for Casa Workspace accounts, through a Casa-internal Google client? (Answer sheet NB-28) | Yes: set up the Casa Google client now, build it in phase B | phase B (the Gmail draft build) |
 
-Also for Kimani: Surveyor's five-minute StreetEasy checklist if fetches are refused (17); a real co-op
-export to replace the stand-in sample (23); one real invite to a second address after 22 deploys; a
-two-minute paste into Gmail and Apple Mail after 18; `CR_INSPECT_KEY` and `CR_TEST_KEY` set on the Casa side
-(23).
+Also for Kimani:
+
+- Surveyor's five-minute StreetEasy checklist if fetches are refused (17).
+- A real co-op export to replace the stand-in sample (23).
+- One real invite to a second address after 22 deploys.
+- A two-minute paste into Gmail and Apple Mail after 18.
+- `CR_INSPECT_KEY` and `CR_TEST_KEY` set on the Casa side (23).
+- **If NW-102 is a yes:** create the Google Cloud project and the OAuth client under Casa's Workspace, with
+  the consent set to Internal and the `gmail.compose` scope. A checklist comes with the Phase B dispatch. The
+  same Casa Google client also lets Workspace trust the comp report's Google sign-in (Noble's refusal).
 
 ## Phase B: to Claude Design
 
 The brief for it is `08-claude-design-handoff.md`. It doesn't yet cover NW-101 and NW-102, which came after the
-list.
+list; the Send and Done row below does.
 
 | Screen | Items |
 |---|---|
@@ -121,12 +133,18 @@ list.
 | Sort | Card re-layout with facts, features and checks under the photo, Edit off its own row (035, 041); the note's place (036); unit/building split on the card (039 b); features and tags looking different (040 b); column chooser, sideways scroll, pinned Tier (034); Neighborhood column (033 b); transit bullets' place (037 b); the home panel (049); progress row on the title line (050); the compare view (052) |
 | Hubert | Look, presence and persona (024 a); drawer motion, widening, side (025, 042); the confirmation card for proposals (093 e) |
 | Findings | Comps as chips (063 b); setting the target (064); the sale-against-ask chart (071 b); a first-class client and deal section and where client fields are asked (073 b, 074 b); the loop after Findings and the justification step (069 b, 075); the factor dropdown (076); the co-op flow review on the co-op sample (066 b) |
-| Send and Done | Editing what Designed shows (079 b); Full and Short while editing (084 b); where the example email lives (085 b); Done in the progress row, Mark as sent's place (086 b, 101 b) |
+| Send and Done | Editing what Designed shows (079 b); Full and Short while editing (084 b); where the example email lives (085 b); Done in the progress row, Mark as sent's place and Done greyed until it's marked sent (086 b, 101 b); where a "Create Gmail draft" button sits (102) |
 | Platform | Mine / Everyone's in the list (088 b); Share's entry point and who-has-access (089 b); the masthead and report bar on short screens, checking the shared Studio header at 1280x720 (092) |
 
 **Builds that follow the design:** Hubert's persona in a prompt version (024 b, Calliste); sharing
 (089 a, Mason); duplicate and transfer (090 c, Mason); propose-and-confirm tools (093 f, Calliste); then the
 build halves of 034 and 052.
+
+**The Gmail draft (NW-102, Mason, if Kimani says yes).** "Create Gmail draft" on Send puts the Designed email
+into the agent's Drafts, built as it should arrive. The browser asks Google for a short-lived token with the
+`gmail.compose` scope through Casa's internal OAuth client. No Gmail token is stored on our side. Casa
+Workspace accounts only; personal Gmail keeps Copy. It needs Kimani's Google Cloud project and client first (see
+"Also for Kimani"), Send's design, and a dispatch of its own.
 
 ## Phase C: later
 
@@ -135,11 +153,11 @@ build halves of 034 and 052.
 | NW-001 b | Real address search | Units and keeping listings current make it hard; a link does the job |
 | NW-017 b | Nearby neighborhoods in Add comps | Needs 16's neighborhood capture, 17's list and a researched adjacency table |
 | NW-019 | Floors for houses | Waits on the type model (018 a) and a way to price houses |
-| NW-021 | Rental-comps reports | The engine prices sales; a rental report is a new report kind. Today's gate, which Noble liked, stays |
+| NW-021 | Rental-comps reports | The engine prices sales; a rental-comps report is a new report kind. Today's gate stays. |
 | NW-032, 068 c | A first-run walkthrough | Try the ⓘ hints first (15, 20, 21); decide after Design |
 | NW-067 b | Hubert's reason per comp | He's a guide only (D-27.6); Calliste's later work |
 | NW-094 | Hubert reviews the tool | After round one, as a script on the seeded samples (about $1 a run) |
-| NW-102 | Gmail drafts | Needs Casa's own Google Cloud project (D-26), an OAuth consent, a token store and Send's design |
+| NW-083 c | Subject drafts from the writer | Needs the writer's real eval (Dispatch 13, keys) and NW-093 a's answer on who owns the writer; it goes with Calliste's second dispatch. |
 
 ## No action, and process
 
@@ -150,14 +168,14 @@ build halves of 034 and 052.
 - **Process:** 095 is this plan. 100: the dictation isn't in the repo, so there's no word count to give;
   more subagents is Kimani's call. 093 a's roster row and 096's timing are Casanova's, done with this plan.
 
-## The four points no report classified
+## The points no report classified
 
 | Id | Class | What |
 |---|---|---|
-| NW-021 | LATER | Rentals: keep the gate as it is; a rental-comps report waits on whether investor clients are in the pilot |
+| NW-021 | LATER | The engine prices sales; a rental-comps report is a new report kind. Today's gate stays. |
 | NW-095 | NOOP | Kimani's process; this plan follows it |
-| NW-101 a | FIX | Mark as sent goes on the right of Copy, primary after a copy (in 18, with NW-086 a) |
+| NW-101 a | FIX | Mark as sent is its own button, on the right of Copy, primary after a copy (in 18, with NW-086 a) |
 | NW-101 b | DESIGN | Stacked, or set apart with Done greyed until marked sent (with NW-086 b) |
-| NW-102 | LATER | Gmail drafts; see Phase C |
+| NW-102 | BUILD | Gmail drafts: Kimani's call now (NB-28), the build in phase B; see Phase B |
 
 — Casanova

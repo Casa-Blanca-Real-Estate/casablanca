@@ -30,14 +30,24 @@ and give sessions a read-only, redacted, logged view of production that never co
    Identity; every use logged without the key).
    - Named views only, no SQL: reports (stage, counts), one report's workspace (`loadWorkspace`), comps and
      reasons, usage, the access log, the activity log, health.
-   - Redacted by default: `brief.clientName`, `clientNote`, `brief.client`, comp notes, Hubert's message text.
-     `?text=1` returns them, and that call is logged with the report id.
+   - Redacted by default: `brief.clientName`, `clientNote`, `brief.client`, comp notes, Hubert's message text,
+     the deal terms' `financing`, `preApproved` and `preApprovalAmount`, and free-text tags. `?text=1` returns
+     them, and that call is logged with the report id.
    - Its own RLS actor kind with select-only policies. **Not `system`**: several policies admit any system
      actor broadly (`users_select`, `users_update`, `allowlist_select`).
 4. **NW-090 b · a test user for writes.** `CR_TEST_KEY` makes `requireUser` return one fixed user
    (`CR_TEST_USER_EMAIL`, on a reserved domain such as `sessions@test.invalid` that `decide()` refuses for real
-   sign-in). RLS confines it to its own rows. `users.is_test` drops it from lists and counts. An inspect action
-   `copy-to-test` copies a real report into the test user with the client name scrubbed.
+   sign-in). RLS confines it to its own rows. `users.is_test` drops it from lists and counts.
+   - The test user's role is agent at practice level. Its Hubert and writer calls use
+     `CR_EVAL_ANTHROPIC_API_KEY` when it's set, and are capped at $2 a day in `usage`. `is_test` users are left
+     out of `GET /reports?scope=all`.
+   - Copying a real report into the test user (`copy-to-test`) is a test-key action, not an inspect one: it
+     needs both `X-Inspect-Key` (to read the source through the inspect actor) and `X-Test-Key` (to write as
+     the test user), and the write runs as the test user under its own RLS. The copy applies the same
+     redaction as the inspect views by default (client name, `clientNote`, `brief.client`, the deal terms'
+     financial fields, comp notes, Hubert's messages and narratives are left out or replaced with
+     placeholders). Every copy is logged with the source report id. The inspect actor stays select-only, and a
+     test proves it can't insert into any table.
 
 ## Not in scope
 
@@ -55,13 +65,16 @@ production).
   the route is key-gated.
 - A session uses the inspect API with `curl` and the key from its environment. It never reads `NETLIFY_DB_URL`
   or `DATABASE_URL`.
+- Run this dispatch, and any session that holds `CR_INSPECT_KEY` or `CR_TEST_KEY`, only in Casa's Claude
+  account. If Kimani names a second builder, start it in Casa's account too.
 
 ## Definition of done
 
 - Reset gives a clean sample, condo or co-op, with an empty Hubert; the old one is archived and gone from the
   list.
 - With items 3–4 built: a test per view proves redaction, `?text=1` is logged, the actor can't write anything,
-  and the test user can't read a real user's report.
+  `copy-to-test` refuses without both keys and leaves the redacted fields out, and the test user can't read a
+  real user's report.
 - Every suite passes with nothing skipped: `test:engine`, `test:comp-report` on a local Postgres
   (`npm run db:local`), `test`, `test:dev-notebook`, `test:feedback`, `test:agent-pics`; and `typecheck`,
   `typecheck:engine`, `build`.
