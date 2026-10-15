@@ -245,3 +245,7 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 .sh-about-cols ul { margin: 4px 0 0; padding-left: 16px; }
 .sh-about-cols li { margin: 0 0 4px; }
 .sh-about-label { display: block; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--cb-mid); }
+
+/* Busy and error lines over the new-report modal (its backdrop is z-index 58). */
+.sh-modal-notes { position: fixed; top: calc(var(--sh-bar-h) + 12px); left: 50%; transform: translateX(-50%); z-index: 59; width: 560px; display: flex; flex-direction: column; gap: 8px; }
+.sh-modal-notes .sh-note { background: var(--cb-surface); box-shadow: 0 6px 24px rgba(15, 15, 15, .18); }

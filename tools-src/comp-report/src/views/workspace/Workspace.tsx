@@ -328,6 +328,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   }, [save]);
 
   const setState = useCallback((next: WorkspaceState) => {
+    // Two setters in one event each build on the last: the ref moves now, not at the next render.
+    stateRef.current = next;
     setStateState(next);
     save.queue('state', next);
   }, [save]);
@@ -600,6 +602,12 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
           <StartFlow ws={ws} screen={start} onScreen={openStart} onDone={closeStart} />
         </ErrorBoundary>
+      )}
+      {/* Over the modal, a save or a server call says what it's doing, and what went wrong, where it can be seen. */}
+      {start && (busy || actionError) && (
+        <div className="sh-modal-notes">
+          <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
+        </div>
       )}
 
       {drawerOpen && <HubertDrawer ws={ws} />}
