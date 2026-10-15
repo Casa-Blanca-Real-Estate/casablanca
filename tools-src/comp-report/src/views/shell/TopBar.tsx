@@ -87,6 +87,8 @@ export function Shell({ account, onSignOut, children }: { account: Account | nul
   return (
     <BarSlotsContext.Provider value={slots}>
       <TopBar account={account} onSignOut={onSignOut} pillsRef={setPills} menuRef={setMenu} />
+      {/* Narrow windows are a follow-up; this says so where it shows (a media query turns it on). */}
+      <p className="sh-narrow">Narrow windows aren’t laid out yet. Use a wider window for now.</p>
       {children}
     </BarSlotsContext.Provider>
   );

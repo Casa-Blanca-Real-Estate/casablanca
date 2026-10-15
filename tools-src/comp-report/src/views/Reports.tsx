@@ -126,7 +126,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                       onOpen(r.id, undefined, screenFor(r));
                     }}
                   >
-                    <span className="sh-thumb" aria-hidden="true" />
+                    <span className="sh-thumb" aria-hidden="true" title="Photos come later." />
                     <span className="sh-home">
                       <span className="sh-addr">
                         {r.title}
