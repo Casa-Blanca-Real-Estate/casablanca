@@ -138,7 +138,7 @@ email-signatures Google Doc the authority for those, or is there a system of rec
 as FileMaker, that the import should read instead? The session found duplicates, likely typos and
 gaps in the doc, so the answer decides between parsing a doc and doing a proper export.
 
-**Answer →** _type here — the doc, FileMaker, or something else_
+**Answer →** _type here — the doc, FileMaker, or something else_ · Related, answered 2026-10-15 (PP-2): already-filed photos import as **placed**.
 
 ---
 
@@ -209,7 +209,7 @@ small change):
 - **A co-op shows no per-SF figure even with a size** (the engine prices co-ops without $/sq ft), and a
   condo without a size shows none anywhere, the email and Hubert's draft lines included.
 
-**Answer →** _type here — or answer DP-1 to DP-8 on the answer sheet_
+**Answer →** **Kimani, 2026-10-15 (answer sheet): all eight as built** (DP-1 to DP-8), and DP-6 adds free-text tags as well as the prototype's list. Built in #77; free-text tags go with Dispatch 13 phase 2. Mason's case for a Condo default is on the sheet (DP-9) for after Noble.
 
 ---
 

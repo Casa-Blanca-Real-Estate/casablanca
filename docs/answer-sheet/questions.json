@@ -1,16 +1,9 @@
 {
   "repo": "https://github.com/kjcamron/casablanca",
-  "since": "<strong>Updated 2026-10-14, evening:</strong> the design port is dispatched to Mason (Dispatch 14) for Noble's walk-through tomorrow. <strong>New:</strong> the design port's eight changes (DP-1 to DP-8, all being built on the default, so answer only to object) and Noble's way in (TD-11). Everything else is as this afternoon.",
+  "since": "<strong>Updated 2026-10-15:</strong> the design port is live (#77). Your DP answers and PP-2 are recorded. <strong>New:</strong> Mason's two questions from the PR (DP-9, DP-10).",
   "newIds": [
-    "DP-1",
-    "DP-2",
-    "DP-3",
-    "DP-4",
-    "DP-5",
-    "DP-6",
-    "DP-7",
-    "DP-8",
-    "TD-11"
+    "DP-9",
+    "DP-10"
   ],
   "topics": [
     {
@@ -19,176 +12,63 @@
       "prefix": "DP",
       "url": "{repo}/docs/dispatch/14-comp-report-design-port.md",
       "linkLabel": "Open Dispatch 14",
-      "intro": "<p>Your design handoff is newer than the design of record, so Mason builds on it (D-27). These are the places it changes something you'd decided before. Each is being built on the default: <strong>answer only to object</strong>, before the port merges, so Noble sees what you mean.</p>",
+      "intro": "<p>The design port merged in #77 and is live. You confirmed DP-1 to DP-8 as built (DP-6 with free-text tags too). Two questions from Mason's PR:</p>",
       "questions": [
         {
-          "id": "DP-1",
-          "q": "The Gate: new agents can't skip it, and write a why of 100+ characters?",
-          "short": "The Gate's rule",
+          "id": "DP-9",
+          "q": "After Noble: keep Co-op as the default type?",
+          "short": "Co-op default, again",
           "quick": true,
-          "flag": "being built",
-          "context": "<p>D-1 had the agent's call skippable for everyone. The handoff makes it a Gate: <code>practice</code> agents give low, high and a 100+ character why and can't skip; <code>full</code> agents can skip. Admins get a way to view it as a new agent for the demo.</p>",
+          "context": "<p>Mason's finding in #77: the engine counts like for like, so a co-op report counts no condo comps, and most Tribeca homes are condos. Sort and Findings say so and offer <strong>Make this report a condo</strong> in one click, which carries the demo. Options for after: default to Condo, or read the type from the home's listing.</p>",
           "options": [
             [
               "A",
-              "As the handoff: new agents can't skip",
+              "Keep Co-op",
               "",
               true
             ],
             [
               "B",
-              "Skippable for everyone, as D-1"
+              "Default to Condo"
+            ],
+            [
+              "C",
+              "Read it from the listing",
+              "a small build"
             ]
           ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+          "source": "#77"
         },
         {
-          "id": "DP-2",
-          "q": "Tier labels: 1st / 2nd / ✕?",
-          "short": "Tier labels",
+          "id": "DP-10",
+          "q": "A full agent's why on the Gate: optional?",
+          "short": "Gate why for full agents",
           "quick": true,
-          "flag": "being built",
-          "context": "<p>D-20 held Primary / Secondary / Excluded until testing with Noble. The handoff shows 1st / 2nd / ✕, also held until Noble. Copy only, easy to swap.</p>",
+          "context": "<p>The handoff makes it optional for graduated (<code>full</code>) agents, and the build does that. New (<code>practice</code>) agents must write 100+ characters.</p>",
           "options": [
             [
               "A",
-              "1st / 2nd / ✕, as the handoff",
+              "Optional",
               "",
               true
             ],
             [
               "B",
-              "Primary / Secondary / Excluded, as D-20"
+              "Required for everyone"
             ]
           ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
-        },
-        {
-          "id": "DP-3",
-          "q": "Lock Findings until every comp has a tier, a note and a tag?",
-          "short": "Findings locked until every comp is done",
-          "quick": true,
-          "flag": "being built",
-          "context": "<p>02-screens required nothing on Sort. The handoff locks Findings until each comp is tiered, noted and tagged, with yellow-edged rows and a filter to the unfinished ones.</p>",
-          "options": [
-            [
-              "A",
-              "Lock it, as the handoff",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Warn, but let them through"
-            ]
-          ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
-        },
-        {
-          "id": "DP-4",
-          "q": "Co-op as the default type, with no square footage?",
-          "short": "Co-op default",
-          "quick": true,
-          "flag": "being built",
-          "context": "<p>01-design had co-ops as \"next\". The handoff puts the Co-op/Condo toggle in the first modal, default Co-op, and hides every per-SF figure when there's no size. The engine gets the real co-op path.</p>",
-          "options": [
-            [
-              "A",
-              "Co-op default, as the handoff",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Condo default"
-            ]
-          ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
-        },
-        {
-          "id": "DP-5",
-          "q": "The default side for a new report: Buyer?",
-          "short": "Default side",
-          "quick": true,
-          "flag": "being built",
-          "context": "<p>02-screens says buyer first (about 95% of reports). The handoff's screenshots show Seller selected, which may just be how they were captured. Dispatch 14 keeps Buyer.</p>",
-          "options": [
-            [
-              "A",
-              "Buyer, as the design of record",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Seller, as the screenshots"
-            ]
-          ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
-        },
-        {
-          "id": "DP-6",
-          "q": "Tags on comps: the prototype's list, several per comp, at least one required?",
-          "short": "Comp tags",
-          "quick": true,
-          "flag": "being built",
-          "context": "<p>Tags are new with the handoff: required on every comp, shown on rows, filterable on Sort. The prototype carries a fixed list.</p>",
-          "options": [
-            [
-              "A",
-              "The prototype's list, several per comp",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Free text"
-            ]
-          ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
-        },
-        {
-          "id": "DP-7",
-          "q": "\"True estimate\" as the label on Findings, never in the email?",
-          "short": "\"True estimate\" label",
-          "quick": true,
-          "flag": "being built",
-          "context": "<p>The handoff labels the engine's result \"True estimate\". The design's voice rules avoid \"true\" in front of clients. Dispatch 14 uses it on Findings only, never in the email.</p>",
-          "options": [
-            [
-              "A",
-              "On Findings only, as Dispatch 14",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Use \"What the sales support\" instead"
-            ]
-          ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
-        },
-        {
-          "id": "DP-8",
-          "q": "Name the assistant Hubert, everywhere?",
-          "short": "The assistant's name",
-          "quick": true,
-          "flag": "being built",
-          "context": "<p>After the office at 10 Hubert St. Guide only: it answers and suggests, never tiers, writes notes or picks tags, and never names a listing that isn't in the data.</p>",
-          "options": [
-            [
-              "A",
-              "Hubert",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Keep \"the assistant\""
-            ]
-          ],
-          "source": "D-27 · Dispatch 14 · {repo}/docs/comp-report/design-port/README.md"
+          "source": "#77"
         }
+      ],
+      "settled": [
+        "<strong>DP-1 · The Gate's rule</strong>: recorded 2026-10-15.",
+        "<strong>DP-2 · Tier labels</strong>: recorded 2026-10-15.",
+        "<strong>DP-3 · Findings locked until every comp is done</strong>: recorded 2026-10-15.",
+        "<strong>DP-4 · Co-op default</strong>: recorded 2026-10-15.",
+        "<strong>DP-5 · Default side</strong>: recorded 2026-10-15.",
+        "<strong>DP-6 · Comp tags</strong>: recorded 2026-10-15.",
+        "<strong>DP-7 · \"True estimate\" label</strong>: recorded 2026-10-15.",
+        "<strong>DP-8 · The assistant's name</strong>: recorded 2026-10-15."
       ]
     },
     {
@@ -364,28 +244,10 @@
             ]
           ],
           "source": "D-24 in {repo}/docs/decisions.md · #71"
-        },
-        {
-          "id": "PP-2",
-          "q": "Agents whose photos are already filed in SQUARE/ and ROUND/: import them as placed, or as to do?",
-          "short": "Already-filed photos: placed or to do?",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> The roster tracks where each agent's photo is used. For photos already filed in the shared folders, the import can mark their placements done (they read <em>deployed</em>), or leave them for you to tick.</p><p><strong>Why it needs you.</strong> Done is faster; to do is more accurate if some filed photos never went out.</p>",
-          "options": [
-            [
-              "A",
-              "Placed",
-              "they read deployed"
-            ],
-            [
-              "B",
-              "To do",
-              "I'll tick them"
-            ]
-          ],
-          "source": "#71"
         }
+      ],
+      "settled": [
+        "<strong>PP-2 · Already-filed photos: placed or to do?</strong>: recorded 2026-10-15."
       ]
     },
     {
@@ -661,21 +523,6 @@
       "intro": "<p>Settings and errands only you can do. Mark one <strong>Done</strong> when it's done; anything left here is still to do. Never paste a key into a chat.</p>",
       "questions": [
         {
-          "id": "TD-11",
-          "q": "Noble's way in for tomorrow",
-          "short": "Noble's sign-in",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p>If his Google account is on Casa's domain he signs in as an agent already. To show it as a mentor, add him on the comp report's <strong>Access</strong> panel (Reports page, admin only) with the role <code>mentor</code>. Have him, or you, try one sign-in before the walk-through.</p>",
-          "options": [
-            [
-              "A",
-              "Done, he can sign in"
-            ]
-          ],
-          "source": "D-27 · Dispatch 14"
-        },
-        {
           "id": "TD-1",
           "q": "The Jev keys: AI Gateway key on a Casa Vercel account, CR_JEV_ZDR=off and CR_DECIDE_KEY",
           "short": "The Jev keys",
@@ -839,6 +686,9 @@
           ],
           "source": "{repo}/docs/decisions.md"
         }
+      ],
+      "settled": [
+        "<strong>TD-11 · Noble's sign-in</strong>: recorded 2026-10-15."
       ]
     },
     {
@@ -888,7 +738,9 @@
     {
       "id": "RL-7",
       "date": "2026-10-14",
-      "qids": [
+      "qids": [],
+      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/dispatch/14-comp-report-design-port.md\" target=\"_blank\" rel=\"noopener\">Dispatch 14, the design port</a>: what Mason builds for Noble, and what waits.",
+      "settledIds": [
         "DP-1",
         "DP-2",
         "DP-3",
@@ -898,8 +750,7 @@
         "DP-7",
         "DP-8",
         "TD-11"
-      ],
-      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/dispatch/14-comp-report-design-port.md\" target=\"_blank\" rel=\"noopener\">Dispatch 14, the design port</a>: what Mason builds for Noble, and what waits."
+      ]
     },
     {
       "id": "RL-6",
@@ -942,11 +793,13 @@
       "date": "2026-10-14",
       "qids": [
         "PP-1",
-        "PP-2",
         "TD-2",
         "TD-7"
       ],
-      "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/71\" target=\"_blank\" rel=\"noopener\">The profile-pic roster (#71)</a>: every agent's photo status, and what the import needs."
+      "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/71\" target=\"_blank\" rel=\"noopener\">The profile-pic roster (#71)</a>: every agent's photo status, and what the import needs.",
+      "settledIds": [
+        "PP-2"
+      ]
     },
     {
       "id": "RL-2",
