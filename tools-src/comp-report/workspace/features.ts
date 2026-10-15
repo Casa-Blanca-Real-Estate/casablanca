@@ -90,22 +90,40 @@ export function homeFeatures(intake: Intake | undefined): Features {
   return out;
 }
 
-/** The intake with the home's features set from the pickers: the engine reads outdoor space and views from it. */
+/**
+ * The intake with the home's features set from the pickers: the engine reads
+ * outdoor space and views from it. Only the groups the agent changed are
+ * written, so what the pickers can't show (a garden or a patio read from the
+ * listing, a river view) stays as it was; a changed Views group keeps the views
+ * the pickers don't offer.
+ */
 export function withHomeFeatures(intake: Intake, f: Features, asOf: string): Intake {
+  const was = homeFeatures(intake);
+  const changed = (k: FeatureKey) => {
+    const a = f[k];
+    if (a === undefined) return false;
+    const b = was[k] ?? [];
+    return a.length !== b.length || a.some((x) => !b.includes(x));
+  };
   const next: Intake = { ...intake };
   const set = <K extends keyof Intake>(k: K, v: Intake[K] | undefined) => {
     if (v === undefined) delete next[k];
     else next[k] = v;
   };
   const entry = <T,>(value: T) => ({ value, asOf });
-  if (f.outdoor !== undefined) set('outdoorKind', f.outdoor[0] ? entry(LABEL_TO_OUTDOOR[f.outdoor[0]]!) : undefined);
-  if (f.views !== undefined) set('views', f.views.length ? entry(f.views) : undefined);
-  if (f.exposure !== undefined) {
-    set('exposures', f.exposure.length ? entry(f.exposure) : undefined);
+  if (changed('outdoor')) set('outdoorKind', f.outdoor![0] ? entry(LABEL_TO_OUTDOOR[f.outdoor![0]]!) : undefined);
+  if (changed('views')) {
+    const offered = FEATURE_GROUPS[1]!.options.map((o) => o.toLowerCase());
+    const others = (intake.views?.value ?? []).filter((v) => !offered.includes(v.toLowerCase()));
+    const views = [...others, ...f.views!];
+    set('views', views.length ? entry(views) : undefined);
+  }
+  if (changed('exposure')) {
+    set('exposures', f.exposure!.length ? entry(f.exposure!) : undefined);
     delete next.exposure;
   }
-  if (f.condition !== undefined) set('condition', f.condition[0] ? entry(LABEL_TO_CONDITION[f.condition[0]]!) : undefined);
-  if (f.building !== undefined) set('building', f.building.length ? entry(f.building) : undefined);
+  if (changed('condition')) set('condition', f.condition![0] ? entry(LABEL_TO_CONDITION[f.condition![0]]!) : undefined);
+  if (changed('building')) set('building', f.building!.length ? entry(f.building!) : undefined);
   return next;
 }
 

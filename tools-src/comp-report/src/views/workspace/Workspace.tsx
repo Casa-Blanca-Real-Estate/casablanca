@@ -461,7 +461,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       save.queue('propertyType', next);
     },
     side: brief.audience?.value === 'seller' ? 'seller' : 'buyer',
-    sf: hasSF(intake),
+    sf: hasSF(intake, propertyType),
     homeFeatures: features,
     level: me.user.role === 'admin' && viewAsNewAgent ? 'practice' : me.user.capability,
     isAdmin: me.user.role === 'admin',

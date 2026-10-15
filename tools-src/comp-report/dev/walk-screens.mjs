@@ -18,12 +18,18 @@ const errors = [];
 const log = [];
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
-async function context(signedIn = true) {
+async function context(signedIn = true, asNewAgent = false) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
   if (signedIn) await ctx.addInitScript((e) => sessionStorage.setItem('cr-dev-session', e), email);
-  // Dev tools stay off: the walk is what an agent sees.
-  await ctx.addInitScript(() => { try { localStorage.removeItem('cr-build-notes'); localStorage.removeItem('cr-view-as-new-agent'); } catch {} });
+  // Dev tools stay off: the walk is what an agent sees. The Gate is shot as a new agent sees it too.
+  await ctx.addInitScript((asNew) => { try { localStorage.removeItem('cr-build-notes'); localStorage.setItem('cr-view-as-new-agent', asNew ? '1' : '0'); } catch {} }, asNewAgent);
   return ctx;
+}
+// Hubert's drawer, open as the handoff draws it.
+async function openHubert(p) {
+  const pill = p.getByRole('button', { name: /hubert/i }).first();
+  if (await pill.count() && (await pill.getAttribute('aria-pressed')) !== 'true') await pill.click();
+  await p.waitForTimeout(500);
 }
 async function page(ctx, name) {
   const p = await ctx.newPage();
@@ -86,13 +92,21 @@ const ctx = await context(true);
   const p = await page(ctx, '06');
   await p.goto(url(id, 'step=sort'));
   await settle(p);
+  await openHubert(p);
   await shot(p, '06-sort');
   const row = p.locator('[aria-expanded="false"]').first();
   if (await row.count()) { await row.click().catch(() => {}); await shot(p, '06c-sort-expanded'); }
   await p.goto(url(id, 'step=gate'));
   await settle(p);
-  await shot(p, '07-gate');
+  await shot(p, '07b-gate-full-agent');
   await p.close();
+  const newCtx = await context(true, true);
+  const g = await page(newCtx, '07');
+  await g.goto(url(id, 'step=gate'));
+  await settle(g);
+  await openHubert(g);
+  await shot(g, '07-gate');
+  await newCtx.close();
   const empty = seed('empty');
   const q = await page(ctx, '06b');
   await q.goto(url(empty, 'step=sort'));
@@ -106,6 +120,7 @@ const ctx = await context(true);
   const p = await page(ctx, '08');
   await p.goto(url(id, 'step=findings'));
   await settle(p);
+  await openHubert(p);
   await shot(p, '08-findings');
   await p.close();
 }

@@ -142,7 +142,7 @@ export function sameStreet(a: string | null | undefined, b: string | null | unde
 }
 
 /**
- * The comps the Full email lists (email.ts countedComps), in its order, as
+ * The comps the Full email lists (email.ts countedComps), grouped by status, as
  * the designed email shows them: the anchor (★) first, the rest after. When
  * the agent has edited comps out of the text, only the ones still in it show.
  * Each comp's note is the Full draft's own line about it, as edited.
@@ -166,7 +166,10 @@ export function designedComps(
     return { name: addressOf(comp), status, sub: parts.join(' · '), price, note: p?.notes.join(' ') || null, url: urlOf(comp) };
   };
   const anchorRow = shown.find((r) => r.comp.judgment?.anchor) ?? null;
-  return { anchor: anchorRow ? toDesigned(anchorRow) : null, others: shown.filter((r) => r !== anchorRow).map(toDesigned) };
+  // The rest by status, as the handoff groups them (Sold, In contract, Active, Didn't sell); the email's order within each.
+  const rank = (s: EmailStatus) => ['sold', 'in_contract', 'active', 'off_market'].indexOf(s);
+  const others = shown.filter((r) => r !== anchorRow).map((r, i) => ({ r, i })).sort((a, b) => rank(a.r.status) - rank(b.r.status) || a.i - b.i);
+  return { anchor: anchorRow ? toDesigned(anchorRow) : null, others: others.map(({ r }) => toDesigned(r)) };
 }
 
 // ─── The HTML ────────────────────────────────────────────────────────────────

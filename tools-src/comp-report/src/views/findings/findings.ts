@@ -127,8 +127,10 @@ export function hubertTake(a: TakeArgs): string {
   const area = h.find((f) => f.id === 'home.area_sqft')?.value ?? null;
   const prices = `${clientPrice(bracket.low.value)}–${clientPrice(bracket.high.value)}`;
   if (family === 'unit_rate' && area) {
-    const lowRate = psf(bracket.low.value / area);
-    const highRate = psf(bracket.high.value / area);
+    // The engine's own rates, as the card above shows them; derived only if it gave none.
+    const fact = (id: string) => h.find((f) => f.id === id)?.value;
+    const lowRate = psf(fact('range.low_per_sqft') ?? bracket.low.value / area);
+    const highRate = psf(fact('range.high_per_sqft') ?? bracket.high.value / area);
     const rates = lowRate === highRate ? `${lowRate} a sq ft` : `${lowRate}–${highRate} a sq ft`;
     out.push(`${lead}${lead ? 'at' : 'At'} ${rates} on ${home}’s ${sqftWords(area)}, that comes to ${prices}.`);
   } else {

@@ -159,7 +159,9 @@ export function subjectFacts(intake: Intake | undefined, asOf: IsoDate, property
   put('list_price', sourced(i.askingPrice, 'list_price'));
   put('year_built', sourced(i.yearBuilt, 'year_built'));
   put('new_development', sourced(i.newDevelopment, 'new_development'));
-  put('common_charges_monthly', sourced(i.commonCharges, 'common_charges_monthly'));
+  // A co-op's monthly charge is its maintenance (Details labels the same field "Maintenance"): what the engine's carry reads.
+  if (propertyType === 'coop') put('maintenance_monthly', sourced(i.commonCharges, 'maintenance_monthly'));
+  else put('common_charges_monthly', sourced(i.commonCharges, 'common_charges_monthly'));
   put('taxes_monthly', sourced(i.taxes, 'taxes_monthly'));
   put('central_air', sourced(i.centralAir, 'central_air'));
   put('dishwasher', sourced(i.dishwasher, 'dishwasher'));

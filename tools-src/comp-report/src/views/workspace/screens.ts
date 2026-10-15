@@ -73,11 +73,12 @@ export function readinessLine(r: SortReadiness): string {
 
 /**
  * Square footage (the handoff, "No square footage"): with no interior size and
- * no estimate of one — a co-op, usually — every per-SF figure and size column
- * is hidden on every screen.
+ * no estimate of one, every per-SF figure and size column is hidden on every
+ * screen. A co-op never prices by the square foot (the engine refuses $/sq ft
+ * for co-op reports), so it counts as no size whatever the intake says.
  */
-export function hasSF(intake: Intake): boolean {
-  return Boolean(intake.areaSqft && intake.areaSqft.value > 0);
+export function hasSF(intake: Intake, propertyType: 'condo' | 'coop' = 'condo'): boolean {
+  return propertyType === 'condo' && Boolean(intake.areaSqft && intake.areaSqft.value > 0);
 }
 
 /**

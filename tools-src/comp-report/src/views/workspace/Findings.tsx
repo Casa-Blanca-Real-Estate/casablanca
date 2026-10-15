@@ -214,7 +214,8 @@ function Tiles({ ws, o, kind }: { ws: Workspace; o: EngineOutput; kind: ResultKi
       </section>
       {ceiling && (
         <p className="fi-ceiling">
-          The lowest ask that didn’t sell, {ws.sf ? `${psf(ceiling.lowest.value)}/sq ft` : fig(ceiling.lowest)}{ceilingComp ? ` at ${compAddress(ceilingComp)}` : ''}, sits {BAND[ceiling.position]}
+          {/* No size, no per-SF figure: the line names the comp instead. */}
+          The lowest ask that didn’t sell{ws.sf ? `, ${psf(ceiling.lowest.value)}/sq ft` : ''}{ceilingComp ? `${ws.sf ? '' : ','} at ${compAddress(ceilingComp)}` : ''}, sits {BAND[ceiling.position]}
           {' '}({pct(ceiling.versus_sold_median_percent.value)} against the sold median): a ceiling on what buyers would pay.
         </p>
       )}

@@ -18,7 +18,7 @@ const LINKISH = /^(https?:\/\/|www\.|streeteasy)/i;
 
 export const TYPE_LABEL: Record<PropertyType, string> = { coop: 'Co-op', condo: 'Condo' };
 
-export const TARGET_TIP = 'Hidden from Hubert, the assistant, until the math is done, so it can’t steer the range. It’s never in the email, and you can change it on Findings.';
+export const TARGET_TIP = 'Hidden from Hubert, the assistant, so it can’t steer the range. It’s never in the email, and you can change it on Findings.';
 
 /** What's in the home's line: a StreetEasy link (checked), an address typed in, or nothing yet. */
 export type HomeLineValue =

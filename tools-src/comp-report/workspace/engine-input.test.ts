@@ -123,6 +123,12 @@ test('the Co-op/Condo toggle reaches the engine: like for like, and a co-op with
   assert.ok(est.base && est.range, 'a co-op with no size still has a base and a range');
   assert.equal(est.bridge.family, 'adjusted_price');
   assert.ok(out.comps.every((c) => c.per_result.with_estimates.price_per_sqft === null || c.per_result.with_estimates.price_per_sqft === undefined));
+  // A co-op's monthly charge (Details' "Maintenance") is its maintenance, which the engine's carry reads.
+  const charges = { ...noSize, commonCharges: { value: 5200, asOf: AS_OF } };
+  assert.equal(subjectFacts(charges, AS_OF, 'coop').maintenance_monthly?.value, 5200);
+  assert.equal(subjectFacts(charges, AS_OF, 'coop').common_charges_monthly, undefined);
+  assert.equal(subjectFacts(charges, AS_OF, 'condo').common_charges_monthly?.value, 5200);
+  assert.ok(!compute(engineInput({ asOf: AS_OF, intake: charges, comps: coops, propertyType: 'coop' })).gaps.some((g) => g.code === 'subject_carry_missing'));
   // Condo stays the default when a report doesn't say.
   assert.equal(engineInput({ asOf: AS_OF, intake: SAMPLE_INTAKE, comps }).property_type, 'condo');
 });

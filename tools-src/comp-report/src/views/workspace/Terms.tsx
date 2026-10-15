@@ -71,7 +71,7 @@ export function TargetSection({ ws }: StepProps) {
           />
         </label>
       )}
-      <p className="fi-only">Only you see this. Hubert gets it only after the math is done, and it isn’t in the email.</p>
+      <p className="fi-only">Only you see this. Hubert never sees it, and it isn’t in the email.</p>
     </div>
   );
 }
