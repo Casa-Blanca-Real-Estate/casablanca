@@ -11,6 +11,7 @@ import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
 import { Reads } from '../sort/Reads.tsx';
 import { groupRows, passes, sortRows, tagCounts, toRow, type SortState } from '../sort/rows.ts';
 import { SortGroup } from '../sort/SortTable.tsx';
+import { BuildNote, DecisionTag, StubTag } from './bits.tsx';
 import type { StepProps } from './model.ts';
 import '../../styles/sort.css';
 
@@ -124,6 +125,14 @@ export function SortStep({ ws }: StepProps) {
       {groups.map((g) => <SortGroup key={g.id} ws={ws} id={g.id} rows={g.rows} outById={outById} sort={sort} onSort={setSort} />)}
       {shown.length === 0 && (
         <p className="so-nomatch">No comps match that filter. <button type="button" className="link" onClick={clear}>Clear it</button></p>
+      )}
+      {ws.devTools && (
+        <BuildNote>
+          Findings unlocks on ws.readiness (every comp: a tier, a note, a tag; none to confirm). Kara’s checks are the engine’s{' '}
+          <code>comps[].checks</code> (§6.10), folded under each card. The range stays hidden until the Gate <DecisionTag id="D-1" />.{' '}
+          <StubTag>Waits on D-12</StubTag> Jev’s tier suggestions (§7). <StubTag>Later</StubTag> Photos, screenshots read into comps, Hubert’s
+          suggestions from market data.
+        </BuildNote>
       )}
     </div>
   );
