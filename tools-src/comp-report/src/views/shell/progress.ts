@@ -43,6 +43,6 @@ export function progressSteps(i: ProgressInput): StepView[] {
 /** The row's CTA: Findings → on Sort (locked until sorted), Send → on Findings, none elsewhere. */
 export function rowCta(i: ProgressInput): { label: string; target: ScreenId; disabled: boolean } | null {
   if (i.screen === 'sort') return { label: 'Findings →', target: i.revealed ? 'findings' : 'gate', disabled: !(i.ready || i.readOnly) };
-  if (i.screen === 'findings') return { label: 'Send →', target: 'send', disabled: !(i.revealed || i.readOnly) };
+  if (i.screen === 'findings') return { label: 'Send →', target: 'send', disabled: !((i.revealed && i.ready) || i.readOnly) };
   return null;
 }

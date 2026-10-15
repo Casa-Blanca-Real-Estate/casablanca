@@ -29,6 +29,7 @@ import { fromBase64, localToday, type Workspace as WorkspaceModel } from './mode
 import { useLinkReads } from './reads.ts';
 import { SendStep } from './SendStep.tsx';
 import { hasSF, isScreen, sortReadiness, type ScreenId } from './screens.ts';
+import { SortFirst } from './SortFirst.tsx';
 import { SortStep } from './SortStep.tsx';
 import { Center, DevStrip, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
 import { ReportBar } from '../shell/ReportBar.tsx';
@@ -567,6 +568,9 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
 
   // The shell (Dispatch 14): the bar's report pieces, the header and progress row, the screen, and
   // Hubert's drawer beside it. The screens and their routing are final.
+  // Findings stays locked until every comp has a tier, a note and a tag (Dispatch 14): whatever the way in —
+  // the Gate's button, a typed ?step=, the browser's Back — not only the progress row and its button.
+  const sortLocked = !readOnly && !readiness.ready && (screen === 'gate' || screen === 'findings' || screen === 'send');
   const stepFor: Record<ScreenId, StepId> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
   const step = stepFor[screen];
   return (
@@ -591,9 +595,13 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         <section className="sh-screen">
           <ErrorBoundary resetKey={screen} onBack={onBack}>
             {screen === 'sort' && <SortStep ws={ws} />}
-            {screen === 'gate' && <Gate ws={ws} />}
-            {screen === 'findings' && <Findings ws={ws} />}
-            {screen === 'send' && <SendStep ws={ws} />}
+            {sortLocked ? <SortFirst ws={ws} /> : (
+              <>
+                {screen === 'gate' && <Gate ws={ws} />}
+                {screen === 'findings' && <Findings ws={ws} />}
+                {screen === 'send' && <SendStep ws={ws} />}
+              </>
+            )}
             {screen === 'done' && <Done ws={ws} />}
           </ErrorBoundary>
         </section>

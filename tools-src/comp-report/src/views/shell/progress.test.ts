@@ -35,7 +35,9 @@ test('the CTA: Findings on Sort (locked until sorted), Send on Findings, none on
   assert.deepEqual(rowCta(at('sort')), { label: 'Findings →', target: 'gate', disabled: true });
   assert.deepEqual(rowCta(at('sort', { ready: true })), { label: 'Findings →', target: 'gate', disabled: false });
   assert.deepEqual(rowCta(at('sort', { ready: true, revealed: true })), { label: 'Findings →', target: 'findings', disabled: false });
-  assert.deepEqual(rowCta(at('findings', { revealed: true })), { label: 'Send →', target: 'send', disabled: false });
+  assert.deepEqual(rowCta(at('findings', { revealed: true, ready: true })), { label: 'Send →', target: 'send', disabled: false });
+  // A comp untagged after the reveal locks Send again, as the row does.
+  assert.deepEqual(rowCta(at('findings', { revealed: true })), { label: 'Send →', target: 'send', disabled: true });
   assert.equal(rowCta(at('gate')), null);
   assert.equal(rowCta(at('send')), null);
   assert.equal(rowCta(at('done')), null);

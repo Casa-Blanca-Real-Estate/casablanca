@@ -56,3 +56,13 @@ function address(c: (typeof comps)[number]): string {
   const unit = c.record.identity.unit.raw;
   return `${c.record.identity.address.street}${unit ? ` ${unit.startsWith('#') ? unit : `#${unit}`}` : ''}`;
 }
+
+test('no size for the home: Hubert gets no per-SF figure and no comp sizes to quote', () => {
+  const { areaSqft: _size, ...noSize } = SAMPLE_INTAKE;
+  const out = compute(engineInput({ asOf: '2026-09-29', intake: noSize, comps }));
+  const s = numbersSummary({ output: out, comps, intake: noSize, revealed: true });
+  const text = JSON.stringify(s);
+  assert.equal(text.includes('"price_per_sqft"'), false);
+  assert.equal(text.includes('"area_sqft"'), false);
+  assert.ok(JSON.stringify(numbersSummary({ output, comps, intake: SAMPLE_INTAKE, revealed: true })).includes('"price_per_sqft"'), 'with a size, it has them');
+});
