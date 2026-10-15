@@ -13,6 +13,7 @@ import { groupRows, passes, sortRows, tagCounts, toRow, type SortState } from '.
 import { SortGroup } from '../sort/SortTable.tsx';
 import { BuildNote, DecisionTag, StubTag } from './bits.tsx';
 import type { StepProps } from './model.ts';
+import { TypeMismatch } from '../comp/TypeMismatch.tsx';
 import '../../styles/sort.css';
 
 export function SortStep({ ws }: StepProps) {
@@ -79,6 +80,7 @@ export function SortStep({ ws }: StepProps) {
   return (
     <div className="so" {...drop.handlers}>
       {drop.veil}
+      <TypeMismatch ws={ws} />
       <div className="so-toolcol">
         <div className="so-toolbar">
           {addToggle}

@@ -18,6 +18,7 @@ import { Gate } from './Gate.tsx';
 import type { StepProps, Workspace } from './model.ts';
 import { homeName } from './screens.ts';
 import { PricingDetails, TargetSection, targetLabel } from './Terms.tsx';
+import { TypeMismatch } from '../comp/TypeMismatch.tsx';
 import '../../styles/findings.css';
 
 const KINDS: ResultKind[] = ['on_facts', 'with_estimates'];
@@ -60,6 +61,7 @@ function FindingsBody({ ws, o }: { ws: Workspace; o: EngineOutput }) {
   );
   return (
     <div className="fi-root">
+      <TypeMismatch ws={ws} />
       <TopCard ws={ws} o={o} kind={kind} both={both} take={take} />
       <Tiles ws={ws} o={o} kind={kind} />
       <Accordions ws={ws} o={o} kind={kind} both={both} />
