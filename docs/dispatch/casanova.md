@@ -136,6 +136,8 @@ attention, as they hold the security work. The ledger has `casa-r13-1` to `-10`:
   - Surveyor: 17.
   - Calliste: 24, after the move.
 - Hold 22a's merge until NB-23 is answered.
+- Before 23 items 3–4 go out, run one more blockers-only check of 23. The last check found two blockers, fixed in
+  602f408; 22's last check found none.
 - At each merge, update D-27 if NB-8 is A. Dispatch 15 reverses its Save rule.
 - Re-review #41 (Dispatch 01) whenever Kimani wants the profile-pic track back. #45 has a conflict.
 
