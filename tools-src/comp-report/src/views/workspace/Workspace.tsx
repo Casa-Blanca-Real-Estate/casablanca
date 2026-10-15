@@ -19,18 +19,20 @@ import {
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
-import { Hubert } from '../Hubert.tsx';
 import { StartFlow, type StartScreen } from '../newcomp/NewComp.tsx';
-import { About, type StepId } from './About.tsx';
+import type { StepId } from './About.tsx';
 import { BuildNotesContext, useBuildNotesSwitch } from './buildNotes.tsx';
 import { Done } from './Done.tsx';
-import { Findings, LiveNumbers } from './Findings.tsx';
+import { Findings } from './Findings.tsx';
 import { Gate } from './Gate.tsx';
 import { fromBase64, localToday, type Workspace as WorkspaceModel } from './model.ts';
 import { useLinkReads } from './reads.ts';
 import { SendStep } from './SendStep.tsx';
 import { hasSF, isScreen, sortReadiness, type ScreenId } from './screens.ts';
 import { SortStep } from './SortStep.tsx';
+import { Center, DevStrip, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
+import { ReportBar } from '../shell/ReportBar.tsx';
+import { ProgressRow, WorkspaceHeader } from '../shell/WorkspaceHeader.tsx';
 
 type Field = 'title' | 'brief' | 'call' | 'target' | 'state' | 'sampleData' | 'propertyType';
 
@@ -137,14 +139,14 @@ const NO_READS: LinkReadView[] = [];
 function SaveLine({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
   if (status.kind === 'error') {
     return (
-      <span className="save-line error">
+      <span className="sh-save error" role="alert">
         Not saved: {status.message}{' '}
         <button type="button" className="link" onClick={onRetry}>Try again</button>
       </span>
     );
   }
   const text = { idle: 'Saved', pending: 'Unsaved changes…', saving: 'Saving…', saved: 'Saved' }[status.kind];
-  return <span className={`save-line ${status.kind}`} aria-live="polite">{text}</span>;
+  return <span className={`sh-save ${status.kind}`} aria-live="polite">{text}</span>;
 }
 
 export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; onBack: () => void }) {
@@ -547,70 +549,52 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   if (loadError) {
     const missing = loadError instanceof ApiError && loadError.status === 404;
     return (
-      <div className="card">
-        <p className="card-title">{missing ? 'No such report.' : 'This report couldn’t be loaded.'}</p>
-        <p className="muted">{missing ? 'It may belong to someone else, or the link is wrong.' : loadError.message}</p>
-        <div className="row" style={{ marginTop: 14 }}>
-          <button type="button" className="btn" onClick={onBack}>All reports</button>
+      <Center>
+        <div className="sh-card">
+          <h1 className="sh-card-title">{missing ? 'No such report.' : 'This report couldn’t be loaded.'}</h1>
+          <p className="sh-help">{missing ? 'It may belong to someone else, or the link is wrong.' : loadError.message}</p>
+          <div>
+            <button type="button" className="btn primary" onClick={onBack}>All reports</button>
+          </div>
         </div>
-      </div>
+      </Center>
     );
   }
-  if (!ws || !data) return <p className="muted">Loading the report…</p>;
+  if (!ws || !data) return <Center><StateLine>Loading the report…</StateLine></Center>;
 
-  // INTERIM RENDER (groundwork): the shell group restyles it to the handoff — the header, the
-  // progress row with its CTA, the drawer's place. The screens and their routing are final.
+  // The shell (Dispatch 14): the bar's report pieces, the header and progress row, the screen, and
+  // Hubert's drawer beside it. The screens and their routing are final.
   const stepFor: Record<ScreenId, StepId> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
   const step = stepFor[screen];
   return (
     <BuildNotesContext.Provider value={buildNotes}>
-    <div className={`workspace${drawerOpen ? ' with-drawer' : ''}`}>
-      <div className="ws-head">
-        <button type="button" className="link" onClick={onBack}>‹ All reports</button>
-        <div className="ws-title-row">
-          <h2 className="report-title">{data.report.title}</h2>
-          {readOnly && <span className="tag" title={`${data.report.ownerEmail}'s report. Admins can read it; only its owner can change it.`}>Read only</span>}
-        </div>
-        <div className="ws-tools">
-          {!readOnly && <SaveLine status={save.status} onRetry={() => void save.flush()} />}
-          <button type="button" className="btn small-btn" onClick={() => openStart('details')}>The home</button>
-          <button type="button" className="btn small-btn" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(!drawerOpen)}>Hubert</button>
-          {me.user.role === 'admin' && (
-            <label className="check small">
-              <input type="checkbox" checked={buildNotes} onChange={(e) => setBuildNotes(e.target.checked)} />
-              Build notes
-            </label>
-          )}
-        </div>
+      <ReportBar ws={ws} setDevTools={setBuildNotes} />
+      <div className={`sh-page${drawerOpen ? ' with-drawer' : ''}`}>
+        <HubertTab ws={ws} />
+        <WorkspaceHeader
+          ws={ws}
+          onBack={onBack}
+          saveLine={readOnly ? null : <SaveLine status={save.status} onRetry={() => void save.flush()} />}
+        />
+        <ProgressRow ws={ws} />
+
+        {(busy || actionError || ws.devTools) && (
+          <div className="sh-aux">
+            <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
+            {ws.devTools && <DevStrip ws={ws} step={step} fills={SAMPLE_FILLS} />}
+          </div>
+        )}
+
+        <section className="sh-screen">
+          <ErrorBoundary resetKey={screen} onBack={onBack}>
+            {screen === 'sort' && <SortStep ws={ws} />}
+            {screen === 'gate' && <Gate ws={ws} />}
+            {screen === 'findings' && <Findings ws={ws} />}
+            {screen === 'send' && <SendStep ws={ws} />}
+            {screen === 'done' && <Done ws={ws} />}
+          </ErrorBoundary>
+        </section>
       </div>
-
-      <nav className="rail" aria-label="Screens">
-        {(['sort', 'gate', 'findings', 'send', 'done'] as ScreenId[]).map((s) => (
-          <button key={s} type="button" className={`rail-step${s === screen ? ' current' : ''}`} onClick={() => goTo(s)}>
-            <span className="rail-name">{s}</span>
-          </button>
-        ))}
-      </nav>
-
-      {busy && <p className="notice" aria-live="polite">{busy}</p>}
-      {actionError && (
-        <p className="notice error-notice" role="alert">
-          {actionError} <button type="button" className="link" onClick={() => setActionError(null)}>Dismiss</button>
-        </p>
-      )}
-
-      {ws.revealed && screen !== 'findings' && <LiveNumbers ws={ws} />}
-
-      <section className="step">
-        {ws.devTools && <About key={step} step={step} />}
-        <ErrorBoundary resetKey={screen} onBack={onBack}>
-          {screen === 'sort' && <SortStep ws={ws} />}
-          {screen === 'gate' && <Gate ws={ws} />}
-          {screen === 'findings' && <Findings ws={ws} />}
-          {screen === 'send' && <SendStep ws={ws} />}
-          {screen === 'done' && <Done ws={ws} />}
-        </ErrorBoundary>
-      </section>
 
       {start && (
         <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
@@ -618,9 +602,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         </ErrorBoundary>
       )}
 
-      {drawerOpen && <Hubert ws={ws} />}
-      {toastText && <div className="toast" role="status">{toastText}</div>}
-    </div>
+      {drawerOpen && <HubertDrawer ws={ws} />}
+      {toastText && <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">{toastText}</div>}
     </BuildNotesContext.Provider>
   );
 }
