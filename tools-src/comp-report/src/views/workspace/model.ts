@@ -106,6 +106,8 @@ export interface Workspace {
   reached: Reached;
   /** A short confirmation at the bottom of the screen: "Copied. Paste into Gmail." */
   toast: (message: string) => void;
+  /** Back to the reports list (what ← Reports does). */
+  back: () => void;
 }
 
 export interface StepProps {

@@ -486,6 +486,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     setOutcomes: (next: Outcomes) => setState({ ...stateRef.current, outcomes: next }),
     reached,
     toast,
+    back: onBack,
   };
 
   // Values the agent typed (not the sample's), which a sample fill of that step would replace.

@@ -1,6 +1,6 @@
 // Sort's table (the handoff, screen 6; Dispatch 14 item 6), as plain data: one
 // row per comp with what its cells show, the groups by status, the header
-// sort, the filter and the status medians. No React here, so the drawer and
+// sort, and the filter. No React here, so the drawer and
 // Findings can read the same figures the rows show.
 import type { CompOut, ListingStatus, Tier } from '../../../engine/index.ts';
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
@@ -8,7 +8,7 @@ import { psf } from '../../../workspace/format.ts';
 import { noteOf } from '../../../workspace/state.ts';
 import { compAddress, compPrice, compStatus, rowPsf, STATUS_LABEL, STATUS_ORDER } from '../workspace/comps.tsx';
 import { needsOf } from '../workspace/screens.ts';
-import { median, shortPrice, type RowNeed } from './table.ts';
+import type { RowNeed } from './table.ts';
 
 export {
   monthYear, needText, nextSort, passes, shortName, shortPrice, sortRows, tagCounts,
@@ -87,35 +87,3 @@ export function groupRows(rows: Row[]): { id: GroupId; rows: Row[] }[] {
   return GROUP_ORDER.map((id) => ({ id, rows: rows.filter((r) => r.group === id) })).filter((g) => g.rows.length);
 }
 
-// ─── The status tiles (the prototype's statusStatsLive) ──────────────────────
-
-export interface StatusStat {
-  status: ListingStatus;
-  name: string;
-  n: number;
-  /** "$4.45M" without a size; "$2,270" with one. */
-  median: string;
-  /** " median", " ask", " median ask", " last ask"; " / SF" with a size. */
-  unit: string;
-}
-
-/**
- * Count and median per status, from what the rows show: with no square footage,
- * the median price (sale, ask, last ask); with it, the median $/SF (the engine's
- * own where it has one). A status with no rows is left out.
- */
-export function statusStats(rows: Row[], sf: boolean): StatusStat[] {
-  return STATUS_ORDER.flatMap((status) => {
-    const list = rows.filter((r) => r.group === status);
-    if (!list.length) return [];
-    const n = list.length;
-    if (sf) {
-      const m = median(list.flatMap((r) => (r.ppsf === null ? [] : [r.ppsf])));
-      return [{ status, name: STATUS_LABEL[status], n, median: psf(m), unit: m === null ? '' : ' / SF' }];
-    }
-    const m = median(list.flatMap((r) => (r.price === null ? [] : [r.price])));
-    const many = n > 1;
-    const unit = { sold: ' median', in_contract: many ? ' median ask' : ' ask', active: many ? ' median ask' : ' ask', off_market: many ? ' median last ask' : ' last ask' }[status];
-    return [{ status, name: STATUS_LABEL[status], n, median: shortPrice(m), unit: m === null ? '' : unit }];
-  });
-}

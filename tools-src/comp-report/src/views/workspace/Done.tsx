@@ -13,12 +13,6 @@ import '../../styles/send.css';
 import { entry } from './bits.tsx';
 import type { StepProps } from './model.ts';
 
-/** Back to the reports list: the app follows the address (App.tsx listens for popstate). */
-function backToReports() {
-  history.pushState(null, '', location.pathname);
-  dispatchEvent(new PopStateEvent('popstate'));
-}
-
 function Amount({ id, label, hint, value, onChange, today, disabled }: {
   id: string;
   label: string;
@@ -156,7 +150,7 @@ export function Done({ ws }: StepProps) {
       </section>
 
       <div className="se-done-actions">
-        <button type="button" className="btn primary" onClick={backToReports}>Back to reports</button>
+        <button type="button" className="btn primary" onClick={ws.back}>Back to reports</button>
         <button
           type="button"
           className="btn"
