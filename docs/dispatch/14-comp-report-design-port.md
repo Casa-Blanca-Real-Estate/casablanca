@@ -146,7 +146,7 @@ Hubert should see notes and tags where they already see tiers.
 
 ## Handoff — Mason (CR-6), 2026-10-15
 
-**State:** the port is in one PR to `claude/main` (see the roster row). Every screen of the handoff
+**State:** the port is in one PR to `claude/main`, #77. Every screen of the handoff
 works end to end on the dev server, in buyer and seller, co-op and condo; every suite passes.
 
 **Where things are:**

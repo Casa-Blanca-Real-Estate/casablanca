@@ -109,7 +109,7 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 11 | [Comp report — distance, from coordinates (CR-3c)](docs/dispatch/11-comp-report-distance.md) | Mason | Done — merged #62 |
 | 12 | [Profile pics — the roster, the store and the email signature](docs/dispatch/12-profile-pic-tracker.md) | Painter | Phase 1 merged #71. Phase 2 after `CB_PICS_TOKEN` and D-24 |
 | 13 | [Comp report — the writer and QA (CR-5)](docs/dispatch/13-comp-report-writer-and-qa.md) | Mason | Phase 1 merged #76. Its production check and the real eval wait on Kimani; phase 2 after Dispatch 14 |
-| 14 | [Comp report — the design port, for Noble (CR-6)](docs/dispatch/14-comp-report-design-port.md) | Mason | Ready — Ultracode, set agent budget; Noble's walk-through 2026-10-15 |
+| 14 | [Comp report — the design port, for Noble (CR-6)](docs/dispatch/14-comp-report-design-port.md) | Mason | In #77. Before Noble's walk-through: Kimani's list in #77 |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and
