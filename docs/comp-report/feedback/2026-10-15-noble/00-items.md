@@ -309,3 +309,13 @@ StreetEasy link, and stopped at **Send** (he didn't mark it sent). He filled not
   reached, actions), so a walk-through can be reviewed without asking them to run it again.
 - **NW-100 · Kimani (questions for Casanova).** What's his word count and words per minute for this
   dictation? May Casanova request more subagents if needed?
+
+## Added by Kimani after the list (2026-10-15, evening)
+
+- **NW-101 · Kimani.** Reading that Noble "stopped at Send and didn't mark it sent" made it plain:
+  **Mark as sent is the forward step, so it belongs on the right.** Copy and Mark as sent are different
+  actions. Options: swap their places; stack them; or keep them apart, with the way on to Done greyed out
+  until the email is marked sent. Goes with NW-086.
+- **NW-102 · Kimani (question).** Could the tool ask for access to the agent's email and **create the
+  email as a Gmail draft**, so all the agent does is press Send? Kimani has admin access to Casa's
+  Google Workspace and can allow the app there.
