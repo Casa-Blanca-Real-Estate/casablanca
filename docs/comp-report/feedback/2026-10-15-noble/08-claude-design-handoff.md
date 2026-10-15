@@ -1,6 +1,6 @@
 # Claude Design handoff: Noble's walk-through, 2026-10-15
 
-For Claude Design and Kimani. Picks up from `docs/comp-report/design-port/` (README, "Handoff Notes.md") and the build as merged in #77 (Dispatch 14). Source of every point: `00-items.md` (NW-001 to NW-100). Per-topic grounding: `01` to `06` in this folder.
+For Claude Design and Kimani. Picks up from `docs/comp-report/design-port/` (README, "Handoff Notes.md") and the build as merged in #77 (Dispatch 14). Source of every point: `00-items.md` (NW-001 to NW-102). Per-topic grounding: `01` to `06` in this folder.
 
 ## How to read this
 
@@ -50,8 +50,8 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 - "Outdoor space" group renamed "Private outdoor space"; shared outdoor lives with the building's amenities (NW-008 a).
 - Every feature group marked `unit` or `building`, plus which property types it applies to, so a house shows no concierge (NW-039 a).
 - Neighborhood on the intake, shown in the step 1 match line (NW-017 a).
-- Property type gets a label (HDFC, condop, townhouse) with sponsor and HDFC flags; the pricing basis stays condo or co-op (NW-018 a, if Kimani picks option A). Reads also fill "Resale / New development" (NW-018 b).
-- Photo URLs from the read, shown by plain `<img>` (NW-020 a). Only new reads have photos.
+- Reads also fill "Resale / New development" (NW-018 b).
+- Photo URLs from the read, shown only in Sort's card photo area (NW-020 a). Only new reads have photos. The home's photo in the modal, the home panel and photos in the Designed email are Phase B (NW-020 b, NB-3).
 - Size becomes a plain open field when no home was read, with the Estimate toggle beside it (NW-006). Year-built field gets the tile's underline and pencil (NW-013). Link field shows the clean URL after a check (NW-004). Copy fixes for link field, target tip, notes ⓘ (NW-001 a, 003, 015).
 
 ### Design problems
@@ -72,8 +72,8 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 
 ### Open
 - What the target means: one number or a range (NW-002, Kimani). Recommended: one number, relabelled by side. A range needs a Findings design.
-- Type model (NW-018 a) decides whether the type picker has two options or five.
-- Photos in the Designed email: linked or hosted (NW-020 b). Recommended: linked. Design for photos that can fail to load.
+- Type model (NW-018 a) decides whether the type picker has two options or five. If NB-2 = A, Dispatch 16 stores a type label (HDFC, condop, townhouse) and sponsor and HDFC flags as data only; the pricing basis stays condo or co-op. Where the label is shown and edited (step 1, the details, the comp card) is Design's.
+- Photos in the Designed email: linked or hosted (NW-020 b). Recommended: linked. They arrive in Phase B, after Dispatch 20 carries the photo URLs to the client. Design for photos that can fail to load.
 
 ---
 
@@ -93,7 +93,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 - Tag section label (word chosen in NW-028, recommended "Comp tags") (NW-040 a). Tag groups as data: Similarities, Size scale, Floor, Multi-floor (NW-045). Suggested tags "from the data" and contradictions cleared (NW-059, Kimani decides pre-fill or suggest).
 - Neighborhood in the card's facts row (NW-033 a). Subway lines in the Distance section as plain coloured circles (NW-037 a, waits on a station source).
 - Photos in the photo area (NW-020 a). Fact locks with overrides, marked "changed", original kept in "Where it came from" (NW-044 a; Kimani decides how an override counts).
-- Trash in the card actions, hover pencil and trash on the row, Undo toast, "Removed (N)" fold with "Put back" (NW-056, NW-057). Findings CTA repeated at the bottom (NW-053). Admin sample reset (NW-054).
+- Trash in the card actions, Undo toast, "Removed (N)" fold with "Put back" (NW-056). The hover pencil and trash in the row's margins are a design item, below. Findings CTA repeated at the bottom (NW-053). Admin sample reset (NW-054).
 
 ### Design problems
 
@@ -102,6 +102,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 | NW-035, 041 | Card re-layout: StreetEasy link, facts, features and checks go under the photo; Edit leaves its own row. Features visible without editing. |
 | NW-036 | Where the note sits in the re-laid card. |
 | NW-039 b | How the unit and building split shows on the card. |
+| NW-056, 057 | Hover affordances in the row's margins: the edit pencil on the right, the trash on the left, so an agent need not expand a row and hunt for Edit. The trash, Undo and the Removed fold land first; the margins are yours. |
 | NW-040 b | Make features and tags look different. |
 | NW-034 | Column chooser: Price and Tier always on; $/sf, size, date, neighborhood, days on market optional; sideways scroll with Tier pinned. |
 | NW-033 b | A Neighborhood column (after NW-034). |
@@ -112,7 +113,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 
 ### Constraints
 - Only 1st-tier comps enter the statistics; 2nd is context; ✕ is out of every figure. The tier control must say so.
-- The server rejects tags outside the fixed list, so group labels are display only; tag strings do not change.
+- The server accepts the fixed `TAGS` list (Dispatch 16 adds strings for the size scale, Penthouse and the multi-floor group) plus agent-typed free tags (40 characters, fair-housing screened). Group labels are display only. Only list tags count toward "needs a tag".
 - A removed comp keeps tier, note and tags on restore.
 - Link comps not yet confirmed show "Confirm or remove".
 - The lavender outline ("The home has this too") exists in edit mode and the add form (NW-048). Keep it.
@@ -220,10 +221,9 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 ### Lands before you design
 - Order Designed, Full, Short, Text, Designed first by default (NW-079 a). The "Hubert drafts the headline" paragraph is gone (NW-078).
 - Designed email markup fixed: centred wrapper, explicit fonts and no italics, address links dark and plain (NW-080, 081, 082).
-- Subject shown on every tab with its own Copy button, stored apart from the draft; the writer offers three subject options (NW-083 a, c). Headline labelled as also the first line (NW-083 b).
+- Subject shown above Headline on Full, Short and Designed (not the Text tab), with its own Copy button, stored apart from the draft (NW-083 a). Subject options from the writer (NW-083 c) come later, with Calliste. Do not design for them yet. Headline labelled as also the first line (NW-083 b).
 - One renderer produces the formatted HTML for Full and Short copies: bold headline, headings, StreetEasy as a labelled link, bullets (NW-084 a).
-- "Mark as sent" becomes the primary action after a copy, works without a copy, and says why when read-only (NW-086 a).
-- Photos in Designed if the linked-photos decision holds (NW-020).
+- "Mark as sent" becomes the primary action after a copy, works without a copy, and says why when read-only (NW-086 a). It moves to the right of Copy in the same row (NW-101 a), the one button move in Phase A.
 
 ### Design problems
 
@@ -233,7 +233,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 | NW-084 b | How Full and Short look while editing: a formatted preview beside or instead of the textarea, labels instead of raw URLs. A rich editor would break the offset-based issue marks. |
 | NW-085 b | Where the example email link lives and how it opens, on Send and on other screens (a good note on Sort, a good headline). |
 | NW-086 b | Done is not a step in the progress row. Make it a fourth step, or give Send a clearer "I sent it" moment. |
-| NW-101 | Kimani, after the list: **Mark as sent is the forward step, so it belongs on the right**, as its own action, not paired with Copy. Dispatch 18 lands the function with a default (Copy and Mark as sent as two buttons; the way on to Done greyed until marked sent). The arrangement is yours: swap, stack, or separate. |
+| NW-101 | Kimani, after the list: **Mark as sent is the forward step, so it belongs on the right**, as its own action. Dispatch 18 lands Mark as sent as its own primary button on the right of Copy in the same row, after a copy, and working without one. It does not grey Done. Whether to keep them paired, stack them, or set Mark as sent apart with Done greyed until it is marked sent is yours (NW-101 b, NW-086 b). |
 | NW-102 | If Kimani says yes to Gmail drafts (NB-28), Send gains a third way out: **Create Gmail draft** (Casa Workspace accounts only), beside Copy. Where it sits, and how the one-time Google permission prompt reads, is yours. |
 
 ### Constraints
@@ -260,7 +260,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 
 ### Lands before you design
 - Admin and mentor list of every report, with the owner shown in the existing client line, read-only for non-owners (NW-088 a, after Kimani confirms mentors see all).
-- Server-side sample reports (condo, co-op) with a reset that replaces the report (NW-054). Buttons live in the existing Build notes menu.
+- Server-side sample reports (condo, co-op) with a reset that replaces the report (NW-054). Buttons live in the Dev tools strip (`DevStrip`, admins only; the server check changes only if Kimani answers NW-054 for mentors).
 - Sign-in fix, activity and access logs (NW-091, 099): no visual change except a Try again button on the access error.
 - Share, duplicate and transfer need the access model first (NW-089 a, 090 c) and land after this design pass.
 
@@ -270,6 +270,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 |---|---|
 | NW-092 | Make the masthead and report bar work on short laptop screens (a height-aware layout). Check the Studio header at 1280x720. |
 | NW-088 b | How other people's reports sit in the list: Mine / Everyone's, search, sort by agent. |
+| NW-090 c | Entry points for duplicate and transfer (transfer is admin-only at first). The builds follow the design. |
 | NW-089 b | Where Share lives, the people list and who-has-access display, a Shared badge in the list. Sharing is by typed email (agents cannot list teammates). Viewer and editor roles. |
 | NW-032, NW-068 c | Onboarding for a first run (tiers, notes, tags, what Hubert sees and when). LATER: do the ⓘ hints first, decide after this round. |
 | NW-050 | Progress row on the title's line (see Sort). |
@@ -294,8 +295,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 | Fill every picker the read can; neighborhood, rooms, policies, building (NW-011, 017 a, 018 b) | Modal details, comp card, Sort sub line |
 | Building amenities by StreetEasy category; Policies group; unit/building group tags (NW-009 a, 010, 039 a) | Modal, comp card, edit form |
 | Condition scale of six, with ⓘ (NW-012) | Modal, comp card |
-| Type label plus sponsor and HDFC flags (NW-018 a, if option A) | Modal step 1, details, comp card |
-| Photos from the read (NW-020 a) | Sort photo area, home panel, Designed email |
+| Photos from the read (NW-020 a) | Sort photo area |
 | ★ in the tier control; tier ⓘ; yellow needs markers (NW-026, 027, 038) | Sort table and card |
 | Note button, tag label, tag groups, suggested tags (NW-030, 040 a, 045, 059) | Sort card, add form |
 | Fact locks and overrides, "changed" mark (NW-044 a) | Sort card |
@@ -306,7 +306,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 | Target owner toggle; pinned neutral range (NW-070, 069 a) | Findings target accordion |
 | Client and deal fields (NW-074 a) | Findings deal terms, brief |
 | Hubert's wider read, role gates, markdown renderer (NW-023, 093 b, c, 068) | Hubert drawer, chips |
-| Designed email markup; subject on every tab; one HTML renderer; Mark as sent (NW-080 to 084 a, 086 a) | Send, Done |
-| Admin list of all reports; sample reset (NW-088 a, 054) | Reports list, Build notes menu |
+| Designed email markup; subject on Full, Short and Designed; one HTML renderer; Mark as sent on the right of Copy (NW-080 to 084 a, 086 a, 101 a) | Send, Done |
+| Admin list of all reports; sample reset (NW-088 a, 054) | Reports list, Dev tools strip |
 
 Not in this file: NW-021 (rentals) and NW-095 (the process rule above) are not design points.

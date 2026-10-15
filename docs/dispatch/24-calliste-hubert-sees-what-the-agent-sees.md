@@ -26,7 +26,8 @@ definitions, the context sent, role gates, the model-choice policy, AI cost, and
 
 Typed answers from a fixed question list are Arbiter's; free text, conversation, tools and context are yours.
 You meet Arbiter at one read-only function that returns a comp's typed judgments, surfaced later through an
-`assess` tool. Casanova adds your roster row. Keep it current through your PRs (rule 10).
+`assess` tool. Your roster row is already in `docs/dispatch/README.md`; don't edit that file. Say in each PR
+what changed in your track and Casanova updates the row (rule 10, read as "say it in the PR").
 
 ## The goal
 
@@ -38,8 +39,13 @@ version, gated by role on the server.
 
 1. **NW-068 a · the target after the reveal.** `neutralNumbers` (`server/numbers.ts`) reads `reports.target`
    only once the result is revealed and adds a target block to `get_numbers` (with `owner` when Dispatch 21
-   has added it; absent otherwise). "Revealed" means `state.reveal` exists (Dispatch 21).
-   A test proves the range is identical with and without a target. The prompt names §8.5's legitimate levers
+   has added it; absent otherwise). **"Revealed" means `state.reveal` exists (Dispatch 21's server-written
+   marker, a late one included) and `agent_call` is not null,** checked server-side, in one query, on every
+   `get_numbers` call: the rest of the server defines revealed by the call, so Hubert must not see the target
+   once the agent has cleared the call and Findings has re-gated. A test sets `call: null` after a reveal and
+   expects no target block; another expects none for a report with a call and no reveal (an admin reading
+   a report the owner hasn't opened since 21 deployed). A test proves the range is identical with and without
+   a target. The prompt names §8.5's legitimate levers
    and forbids steering the estimate or advising dropping low comps and adding high ones. Deal terms stay out
    (the recommendation: decide them with NW-074's privacy rules). The writer stays blind.
 2. **NW-093 b · a wider read.**
@@ -64,7 +70,8 @@ version, gated by role on the server.
 6. **The chips.** Sort's "Does 5 Franklin have a doorman?" must be answerable; no chip promises what he can't
    do. From Dispatch 14's follow-ups: Hubert's "Fix both" chip reaches Send's deterministic fix. The chip's
    side is yours. If Send needs a hook to take the fix, name it in the PR and Mason adds it (rule 8).
-7. **Dispatch 13's line** "the agent's number and target never reach a model": correct it to D-4 as built.
+7. **Dispatch 13's line** "the agent's number and target never reach a model" no longer matches D-4 as built.
+   Don't edit that brief (Casanova writes it): name the line in your PR, and Casanova corrects it.
 
 ## Not in scope
 
@@ -85,8 +92,8 @@ one). The writer's voice and client profile: your next dispatch, once Dispatch 2
 
 ## Definition of done
 
-- On a new report: before the reveal Hubert has no target; after it he does, and the range is unchanged. A
-  cr6 conversation never gets the target block.
+- On a new report: before the reveal Hubert has no target; after it he does, and the range is unchanged. If the
+  agent then clears the call, he has none again. A cr6 conversation never gets the target block.
 - A practice agent's and a full agent's calls to the same tool return what the gate says (tests).
 - Every suite passes with nothing skipped: `test:engine`, `test:comp-report` on a local Postgres
   (`npm run db:local`), `test`, `test:dev-notebook`, `test:feedback`, `test:agent-pics`; and `typecheck`,

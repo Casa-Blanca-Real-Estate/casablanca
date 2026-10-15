@@ -15,7 +15,7 @@
 | NW-082 | Kimani | Address title arrives as a blue hyperlink | FIX | Mason | A-now |
 | NW-083 a | Both | Subject first, its own field, shown on Designed too, with a Copy subject button | BUILD | Mason | A-now |
 | NW-083 b | Both | Say that the headline is also the email's first line | FIX | Mason | A-now |
-| NW-083 c | Both | Hubert drafts subject lines beside the headline drafts | BUILD | Mason (writer) | A-now, after 083 a |
+| NW-083 c | Both | Hubert drafts subject lines beside the headline drafts | BUILD | Calliste | C-later (with the writer's second dispatch) |
 | NW-084 a | Kimani | Formatted copy for Full and Short: bold headings, "StreetEasy" links, fonts | BUILD | Mason | A-now |
 | NW-084 b | Kimani | How Full and Short look on screen (preview, labels instead of raw URLs) | DESIGN | Claude Design | B-after-design |
 | NW-085 a | Kimani | An example of a good email: which one, who writes it | DECIDE | Kimani | A-now |
@@ -73,7 +73,7 @@ Cannot be verified in this session. Kimani sends the result once to a Gmail addr
 **To do.**
 - **a. BUILD.** Put Subject above Headline on Full, and show it on Short and Designed as well. Give it a **Copy subject** button. Store it as its own `send.subject` (state is free-form JSON, `workspace.ts` saves any object under 64 KB, so no migration), so editing it doesn't create a body draft. Exclude it from the draft fingerprint (`fp`, `useSendEmail.ts:58`). QA keeps reading `subject + text`. Old drafts that carry a subject keep working: read `draft.subject` when `send.subject` is empty.
 - **b. FIX.** Label the headline field "Headline · also the email's first line", with the same hint under it. That answers Noble's "why did it appear" without changing behaviour.
-- **c. BUILD.** The writer also returns three subject options, shown as a drafts menu on the Subject field like the headline's (`HeadlineDrafts`). Edits in `server/writer.ts` and `house-voice.ts`, and the eval set. It needs the writer's real eval run to judge, which waits on keys (Dispatch 13).
+- **c. BUILD.** The writer also returns three subject options, shown as a drafts menu on the Subject field like the headline's (`HeadlineDrafts`). Edits in `server/writer.ts` and `house-voice.ts`, and the eval set. It needs the writer's real eval run to judge, which waits on keys (Dispatch 13). So it is Calliste's, in the writer's second dispatch (Dispatch 24 names it), not Dispatch 18.
 - A Gmail compose link can carry a subject and a plain body, but not HTML, so it can't replace the paste. Not worth building.
 
 ## NW-084 · Full and Short with some formatting

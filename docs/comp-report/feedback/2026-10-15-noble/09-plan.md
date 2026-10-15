@@ -24,7 +24,7 @@ is Claude Design: layout, flow, polish, responsive and motion. Small things keep
 | 19 | The engine for Findings (CR-2.4) | Abacus | `casa-r13-5` | this account | 16 and 15 merged | — |
 | 20 | The new report and the home, filled from the read (CR-7c) | Mason | `casa-r13-6` | this account | 16 and 18 merged; 17 for transit only | part of `casa-r12-1`; DP-6 from `casa-r10-1` |
 | 21 | Findings: plainer, whose target, the client's facts (CR-7d) | Mason | `casa-r13-7` | this account | 19 and 20 merged | — |
-| 22 | Who sees what, the sign-in log, the activity log (CR-7e) | Mason | `casa-r13-8` | this account | 15 merged; after 21 in Mason's queue (items 1 and 2 first if no second builder, see below) | `casa-r12-2`; part of `casa-r12-1` |
+| 22 | Who sees what, the sign-in log, the activity log (CR-7e) | Mason | `casa-r13-8` | this account (Mason); Casa's account if a second builder takes 22 then 23 | 15 merged; after 21 in Mason's queue (items 1 and 2 first if no second builder, see below) | `casa-r12-2`; part of `casa-r12-1` |
 | 23 | Samples that reset, and reading production safely (CR-7f) | Mason | `casa-r13-9` | **Casa's account** (its keys live there; D-26 Q3) | 22 merged; Kimani on NW-090 a and NW-054 | — |
 | 24 | Calliste: Hubert sees what the agent sees (CR-H1) | Calliste (new) | `casa-r13-10` | **Casa's account** | the account move; 15 merged; 22 merged before it edits `api/messages.ts`; item 1 after 21; copy last, after 20 and 21 | part of `casa-r12-1` |
 
@@ -58,8 +58,8 @@ Calliste                 (after the move) 24
 - **Abacus 19** starts when 16 merges and rebases on 15 for `workspace/engine-input.ts`.
 - **Mason 20** needs 16's data; **Mason 21** needs 19's output.
 - **Calliste 24** does its server work at once, except item 1 (it reads 21's reveal marker) and any edit to
-  `api/messages.ts` (22 merges first). Its copy lines in `Home.tsx` and `Terms.tsx` come last, after 20 and 21
-  merge, since both of them edit those files.
+  `api/messages.ts` (22 merges first). Its copy lines in `Home.tsx` and `Terms.tsx` come last, after 20 (`Home.tsx`) and 21 (`Terms.tsx`)
+  merge.
 - **Until 22 lands,** Kimani opens Noble's report by its `?report=` link (admins already can). If no second
   builder is named by the time 18 merges, Mason takes 22's items 1 and 2 before 20.
 - **If Kimani names a second builder this week,** it takes 22 then 23 (the platform lane) as soon as 15
@@ -75,7 +75,7 @@ needed, takes a timestamp later than every migration on `claude/main` when its P
 **Design-blocking first.** Before Kimani opens Claude Design, these matter most: 15 (the ★ in the tier control,
 note button, markers, trash and bin, locks, Hubert's markdown), 16 and 20 (filled pickers, neighborhood,
 photos, tag groups), 18's Designed-first tab, and 21's five-row table and target owner. 22 and 23 change
-nothing Design draws, so they go last, except 22's items 1 and 2, which are small and urgent.
+nothing in the layout Design draws (the list and the Dev tools strip gain content only), so they go last, except 22's items 1 and 2, which are small and urgent.
 
 ## What waits on Kimani
 
@@ -100,13 +100,13 @@ Casa Answer Sheet.
 | NW-070 | Default owner of the target | Client | 21 |
 | NW-074 | Pre-approval: yes/no, or with the amount? | With the amount | 21 |
 | NW-088 a | Mentors see every report, or assigned agents only? | Every report, read-only | 22 |
-| NW-054 | Who may reset samples; is a new link per reset OK? | Admins and mentors; yes | 23 |
+| NW-054 | Who may reset samples; is a new link per reset OK? | Admins and mentors; yes. Built admin-only on the server until he answers; the server check changes with his answer | 23 |
 | NW-090 a | Reading production: inspection API or a database role? Text on request? | The API, redacted, `?text=1` logged | 23 items 3–4 |
 | NW-093 a | Is the writer Calliste's? | Yes; Mason keeps Send and QA | Calliste's second dispatch |
 | NW-093 d | What may Hubert write? Does he see the agent's own number after the reveal? | Propose-and-confirm for facts, features, add-back and email fixes, never tier, note or tag; yes, after the reveal | 24 (`get_call`), phase B |
 | NW-068 a | Deal terms to Hubert after the reveal? | Not yet; decide with NW-074's privacy rules | 24 |
 | NW-085 a | Which good email is the example? | The 100 Barclay sample, drafted by the writer, edited by Noble | phase B |
-| NW-096 | When to start relative to the account move | Existing tracks now in this account, Calliste in Casa's; D-26 questions 1 and 2 before the move | 24 |
+| NW-096 | When to start relative to the account move | Existing tracks now in this account, Calliste in Casa's; D-26 questions 1 and 2 before the move. Recommended overrides the item's own text (move first); costs about a week if he wants that | 15 to 22 (start now on A); 23 and 24 (Casa's account) |
 | NW-097 | Recording the next walk-through | Record on Kimani's machine; the activity log (22) as backstop | — |
 | NW-021 | Is a rental-comps report wanted, and when? | Later; today's gate stays | — |
 | NW-102 | Create the email as a Gmail draft, for Casa Workspace accounts, through a Casa-internal Google client? (Answer sheet NB-28) | Yes: set up the Casa Google client now, build it in phase B | phase B (the Gmail draft build) |
@@ -124,21 +124,21 @@ Also for Kimani:
 
 ## Phase B: to Claude Design
 
-The brief for it is `08-claude-design-handoff.md`. It doesn't yet cover NW-101 and NW-102, which came after the
-list; the Send and Done row below does.
+The brief for it is `08-claude-design-handoff.md`. It covers NW-101 and NW-102 in its Send and Done table.
 
 | Screen | Items |
 |---|---|
-| New report | Home and building split, laundry first-class, New development with the building (NW-008 b, 014, 016); the categorized amenity list (009 b) |
-| Sort | Card re-layout with facts, features and checks under the photo, Edit off its own row (035, 041); the note's place (036); unit/building split on the card (039 b); features and tags looking different (040 b); column chooser, sideways scroll, pinned Tier (034); Neighborhood column (033 b); transit bullets' place (037 b); the home panel (049); progress row on the title line (050); the compare view (052) |
+| New report | Home and building split, laundry first-class, New development with the building (NW-008 b, 014, 016); the categorized amenity list (009 b); where the type label and its sponsor and HDFC flags are shown and edited, if NB-2 = A (018 a) |
+| Sort | Card re-layout with facts, features and checks under the photo, Edit off its own row (035, 041); the note's place (036); unit/building split on the card (039 b); features and tags looking different (040 b); column chooser, sideways scroll, pinned Tier (034); Neighborhood column (033 b); transit bullets' place (037 b); the home panel (049); progress row on the title line (050); the compare view (052); the hover pencil and trash in the row's margins (056, 057) |
 | Hubert | Look, presence and persona (024 a); drawer motion, widening, side (025, 042); the confirmation card for proposals (093 e) |
 | Findings | Comps as chips (063 b); setting the target (064); the sale-against-ask chart (071 b); a first-class client and deal section and where client fields are asked (073 b, 074 b); the loop after Findings and the justification step (069 b, 075); the factor dropdown (076); the co-op flow review on the co-op sample (066 b) |
-| Send and Done | Editing what Designed shows (079 b); Full and Short while editing (084 b); where the example email lives (085 b); Done in the progress row, Mark as sent's place and Done greyed until it's marked sent (086 b, 101 b); where a "Create Gmail draft" button sits (102) |
-| Platform | Mine / Everyone's in the list (088 b); Share's entry point and who-has-access (089 b); the masthead and report bar on short screens, checking the shared Studio header at 1280x720 (092) |
+| Send and Done | Editing what Designed shows (079 b); Full and Short while editing (084 b); where the example email lives (085 b); Done in the progress row, Mark as sent stacked or set apart (101 b), and Done greyed until it's marked sent (086 b); where a "Create Gmail draft" button sits (102) |
+| Platform | Mine / Everyone's in the list (088 b); Share's entry point and who-has-access (089 b); the masthead and report bar on short screens, checking the shared Studio header at 1280x720 (092); duplicate and transfer entry points (090 c) |
 
 **Builds that follow the design:** Hubert's persona in a prompt version (024 b, Calliste); sharing
 (089 a, Mason); duplicate and transfer (090 c, Mason); propose-and-confirm tools (093 f, Calliste); then the
-build halves of 034 and 052.
+build halves of 034 and 052; photos in the Designed email (020 b: Mason, after 20 carries the photo URLs to the client);
+the loop after Findings and the client section (069 b, 073 b, 074 b, 075: Mason for the screens, Calliste for the path-to-target prompt); the masthead for short screens (092: Mason; the shared Studio header only as a separate change); the co-op ladder if Design and Kimani want one (066 b: Abacus).
 
 **The Gmail draft (NW-102, Mason, if Kimani says yes).** "Create Gmail draft" on Send puts the Designed email
 into the agent's Drafts, built as it should arrive. The browser asks Google for a short-lived token with the

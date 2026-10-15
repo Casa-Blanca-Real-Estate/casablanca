@@ -27,9 +27,19 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
    `new_development: false` (today it's unknown); "Sponsor Unit" fills `sponsor_unit` too. Keep raw labels
    when a value is unknown; never reject one.
 2. **NW-020 a · photos.** Add `photos` and `heroImageUrl` to the extract, as the carousel import does
-   (`netlify/functions/streeteasy-import-background.mjs:27-41`, junk filter included). Keep the URLs on the
-   record from `link_reads.extract`; update the "no photos" note in `server/links.ts:8`. Bump
-   `PARSER_VERSION`. Only new reads get photos. No proxy, no copies: display is Mason's (Dispatch 20).
+   (`netlify/functions/streeteasy-import-background.mjs:27-41`, junk filter included). Keep the URLs in
+   `link_reads.extract`; Dispatch 20 sends them to the client and shows them. Update the "no photos" note in
+   `server/links.ts:8`. Bump `PARSER_VERSION`. Only new reads get photos. No proxy, no copies.
+   - **Filter before you store.** The page is third-party text, and the whole extract reaches the browser as
+     `source.extract`. Add and export `cleanPhotoUrls(urls): string[]` in `engine/parser/`: it keeps a URL only
+     if it is `https:`, has no userinfo, and its host is on a short allowlist of StreetEasy's image hosts
+     (a `PHOTO_HOSTS` list, exact host or a dot-suffix match); drops the carousel import's junk matches; removes
+     duplicates; and returns at most 8, hero first. Name the hosts from the fixtures and from a real read's
+     output (if StreetEasy refuses fetches, take them from Surveyor's checklist in 07). A URL on any other host
+     is dropped, not stored. The hero is kept only if it passes. Dispatch 20 runs the same function again
+     before sending photos to the client.
+   - Tests: an `http:` URL, a `data:` or `javascript:` URL, `https://user@evil.example/x.jpg`, a lookalike
+     host (`streeteasy.com.evil.example`), an off-list host, a junk match, nine photos and a duplicate.
 3. **NW-008 a · "Private outdoor space".** Rename the group's label; its key stays `outdoor`.
 4. **NW-009 a · the building's amenities in StreetEasy's categories:** Services and facilities, Wellness and
    recreation, Shared outdoor space, and whatever 07 or 17 add. Data in `workspace/features.ts`, mapped from
@@ -62,7 +72,10 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
     at ±10%, 10–25%, past 25%, matching `size_far_off`; Similar floor within the 3-floor band; 6+ months; New
     development) and tags the facts contradict (an outdoor pick other than None contradicts "No outdoor
     space"; a known floor other than 1 contradicts "First floor"). Lower and Higher floor stay manual. Put the
-    size thresholds in the house method's configuration, not in code. Mason shows them as suggestions in 20
+    size thresholds in the house method's configuration, not in code: a new `size_tag_percent` entry beside
+    `size_percent` in `check_thresholds` (`engine/house-method/production.json`, validated in `load.ts`
+    next to it), holding the ±10% edge; the far edge reads the existing `size_percent`, so the 25 lives in
+    one place. Bump the file's `version`, which stored reports record. No output changes. Mason shows them as suggestions in 20
     (the recommendation for NW-059 b).
 12. **NW-018 a, only if Kimani answers "A".** The report's type stays the pricing basis (condo or co-op). Add
     an intake `kind` label (HDFC, condop, townhouse, house) with sponsor and HDFC as flags, filled from the
@@ -82,11 +95,14 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
 - **No migration.** Features and tags are jsonb and text[]; the intake lives in the workspace state (64 KB
   cap; mind the full-replace PATCH).
 - **Files you own this round:** `workspace/features.ts`, `workspace/subject.ts`, `engine/parser/*`,
-  `engine/types.ts`, `engine/version.ts`. You and Dispatch 15 both edit `workspace/state.ts` (you `Intake`,
+  `engine/types.ts`, `engine/version.ts`, and `engine/house-method/` (the size-scale thresholds only: item
+  11). Dispatch 19 also edits `engine/compute` and rebases on your PR. You and Dispatch 15 both edit `workspace/state.ts` (you `Intake`,
   15 `CompJudgment`): whichever PR opens second rebases on the first. Don't edit `src/views/` or
   `engine-input.ts`; if a new group shows up in an existing picker by itself, that's fine.
 - Firecrawl costs credit and has a daily limit: test with `dev/fake-firecrawl.ts` fixtures, including a page
   with photos, a co-op and a page with no grey line.
+- Until Dispatch 20 shows the groups, the new tag strings appear in the existing flat tag area, unsorted. That
+  is accepted.
 - The read never invents a value. A field the page doesn't show stays unknown.
 
 ## Definition of done
@@ -99,6 +115,7 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
   (`npm run db:local`), `test`, `test:dev-notebook`, `test:feedback`, `test:agent-pics`; and `typecheck`,
   `typecheck:engine`, `build`.
 - The PR lists the new fields and exports Mason needs for Dispatch 20, and every decision built on a
-  recommendation (NW-012's word, NW-045's six tags, the size thresholds, NW-018 a).
+  recommendation (NW-012's word, NW-045's six tags, the size thresholds, NW-018 a). Photo URLs are stored only
+  through `cleanPhotoUrls`, and its tests pass.
 
 — Casanova

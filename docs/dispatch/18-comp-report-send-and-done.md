@@ -3,7 +3,8 @@
 **Dispatched by:** Casanova · 2026-10-15 · **To:** Mason
 **Builds from:** `docs/comp-report/feedback/2026-10-15-noble/04-send-and-done.md` (the code map for NW-078 to
 NW-087), NW-101 in `00-items.md`, and the follow-ups at the end of `docs/dispatch/14-comp-report-design-port.md`.
-**Depends on:** Dispatch 15 merged (Mason's queue order; no shared files).
+**Depends on:** Dispatch 15 merged (Mason's queue order). `workspace/state.ts` is shared with 15 and 16 (different
+interfaces); rebase on whichever merged first.
 **Protocol:** `docs/dispatch/README.md`. Restating rules 3–5: **open a PR to `claude/main` when done; never
 merge; sign "— Mason (CR-7b)"** in the PR, its comments and your commits. Ledger line: `casa-r13-4`. With 20,
 22 and 24, it supersedes `casa-r12-1` (the port's leftovers).
@@ -12,8 +13,9 @@ merge; sign "— Mason (CR-7b)"** in the PR, its comments and your commits. Ledg
 
 Noble copied the Designed email into Gmail and it arrived left-aligned, in italic, with the address as a blue
 link, and he found no way on to Done. Make what an agent pastes look like what they saw, make the subject a
-first-class field, and make the way to Done plain. No layout change: the tabs, the strip and the buttons stay
-where they are.
+first-class field, and make the way to Done plain. No layout change except one: item 9 puts Mark as sent to the
+right of Copy (NW-101 a, which Kimani asked for; today it sits to the left). The tabs, the strip and everything
+else stay where they are.
 
 ## In scope
 
@@ -31,7 +33,7 @@ where they are.
    an inline dark colour and no underline, pointing at the StreetEasy page when known, so Gmail doesn't
    autolink them.
 6. **NW-083 a · the subject.** Subject above Headline on Full, and shown on Short and Designed, with a Copy
-   subject button (today the subject is never copied). Store it as `send.subject`, so editing it no longer
+   subject button (today the subject is never copied). The Text tab stays as it is and gets no subject field. Store it as `send.subject`, so editing it no longer
    freezes the body into a draft; leave it out of the draft fingerprint; fall back to `draft.subject` for old
    drafts.
 7. **NW-083 b.** Label the headline field as also the email's first line (it syncs into the body by design).
@@ -42,7 +44,8 @@ where they are.
    D-27's "Full and Short are plain text" line now reads: the edit model stays plain text, and the copy is
    formatted. Casanova updates `docs/decisions.md`.
 9. **NW-086 a, NW-101 a · the way on to Done.** After a copy, say "Copied. Sent it? Mark it as sent." and make
-   Mark as sent the primary button, **on the right of Copy** in the same row. It is its own button, separate
+   Mark as sent the primary button, **on the right of Copy** in the same row (today it is on the left, in
+   `se-foot-actions`, `SendStep.tsx:114`; swap them, nothing else moves). It is its own button, separate
    from Copy: copying never marks the report sent, and Mark as sent is the forward step. Allow Mark as sent
    without a copy (the recommendation for NW-086 a: a hand copy never sets `copiedAt`); the copy log still
    records only real copies. On a read-only report, say why the button isn't there.
@@ -65,15 +68,26 @@ the plan's Phase C) and the example email itself (NW-085 a, Kimani's call).
   PATCH; check the server's shape validation).
 - `workspace/qa.ts` changes are additive; its tests still pass. Copy stays blocked on a hard compliance
   failure, and waits for a headline (D-21).
-- Gmail strips `background-image`, so the photo blocks arrive flat grey until photos exist. Expected.
+- Gmail strips `background-image`, so the photo blocks arrive flat grey until photos exist. Expected. Photos in the Designed email are Phase B (NW-020 b), after
+  Dispatch 20 carries the photo URLs to the client; not here.
 
 ## Definition of done
 
 - The copied HTML of Designed, Full and Short renders centred, upright, with a dark title and labelled links
   in a browser with no app CSS. Screenshots in the PR. A session can't paste into Gmail, so the PR gives
   Kimani a two-minute check: copy each, paste into Gmail and Apple Mail, send to himself.
-- Edit Full, copy it: the copy keeps its headings and labelled links.
-- An agent who copies by hand can still mark the report sent and reach Done.
+- Edit Full, copy it: the copy keeps its headings and labelled links. A test asserts the renderer's output
+  for an edited Full and an edited Short (bold headline, status headings, bullets, a "StreetEasy" label and
+  no raw URL as link text), and that the plain text and the QA input are unchanged.
+- An agent who copies by hand can still mark the report sent and reach Done. A test: with no `copiedAt`, Mark
+  as sent is enabled, `markSent` stores `sentAt` and opens Done, and the copy log gains no entry. A read-only
+  report shows the reason instead of the button.
+- In the footer, Copy comes first and Mark as sent second, and after a copy Mark as sent is the primary
+  button. Greying the way on to Done stays out (Design's).
+- Editing the subject stores `send.subject` and creates no body draft; the draft fingerprint ignores it; an
+  old draft carrying `draft.subject` still shows it. Editing Full and then Short keeps both drafts. Mark as
+  sent records the tab last copied, not the tab that's open. Tests for each.
+- Default tab is Designed for a report with no stored format, and a stored format still wins. A test.
 - Every suite passes with nothing skipped: `test:engine`, `test:comp-report` on a local Postgres
   (`npm run db:local`), `test`, `test:dev-notebook`, `test:feedback`, `test:agent-pics`; and `typecheck`,
   `typecheck:engine`, `build`. `designed.test.ts` asserts the wrapper, the cell style and the anchors.

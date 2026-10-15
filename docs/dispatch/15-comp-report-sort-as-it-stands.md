@@ -43,11 +43,21 @@ data; don't move the card's sections, the table's columns or the flow. One PR.
    as they are" (`CompCard.tsx:194`) with a lock on each source fact in edit mode. Hover says where it came
    from: "From StreetEasy's export, row 12." or "From its StreetEasy page, read <date>.", then "Unlock to
    correct it." Unlocking turns the fact into an input.
-   - A migration, `20261016000000_comp_report_fact_overrides.sql`, adds `report_comps.fact_overrides jsonb`
-     (the agent's value, who, when per fact; size-checked).
-   - `workspace/engine-input.ts` lays an override over the record as `source: 'agent'`. Build on the
-     recommendation for NW-044 b: **it counts as a fact, marked "changed"**. StreetEasy's value stays in
-     "Where it came from". The checks re-run on the new value.
+   - A migration, `20261016000000_comp_report_fact_overrides.sql`, adds `report_comps.fact_overrides jsonb not
+     null default '{}'` with `check (octet_length(fact_overrides::text) <= 2048)`.
+   - **The keys are a closed list:** `price`, `size`, `date`, `floor`, the four facts the card lets you correct.
+     Each value is `{ value, by, at }`. In `comps.ts`, `compEdits` accepts only those four keys and refuses any
+     other, `__proto__`, `constructor` and `prototype` included. It checks each value with the rules a typed-in
+     comp's matching field gets in `compRecordFromManual` (a whole-dollar price, a size, an ISO date not in the
+     future, a whole floor) and refuses a string where a number belongs. `by` and `at` are stamped from the
+     session and the clock; whatever the body says for them is dropped. A key sent as `null` clears it.
+   - `workspace/engine-input.ts` lays an override over a copy of the record as `source: 'agent'`, by an explicit
+     assignment per key (`price` to `sale_price` for a sold comp and `list_price` otherwise, `size` to
+     `area_sqft`, `date` to `status_date`, `floor` to `floor`). Never a generic path-set: this runs in the
+     shared warm function. Build on the recommendation for NW-044 b: **it counts as a fact, marked
+     "changed"**. StreetEasy's value stays in "Where it came from". The checks re-run on the new value.
+   - It reaches the client as `CompJudgment.factOverrides` (`workspace/state.ts`), filled by `loadJudgments` in
+     `server/api/workspace.ts`; `WorkspaceData`, which `src/api.ts` re-exports, types it.
    - Clearing an override puts StreetEasy's value back.
 10. **NW-053 · the CTA at the bottom.** Repeat the Findings button and its helper/filter line at the end of
     `SortStep`, from the same `rowCta` and `readinessLine`, same disabled state.
@@ -61,12 +71,19 @@ data; don't move the card's sections, the table's columns or the flow. One PR.
     both; full agents need tags and the note is optional" (the recommendation), apply it in `needsOf`
     (`src/views/workspace/screens.ts:27`; the lock is client-side today, so no server change). Change
     `CompForm.tsx`'s Save rule to match, and say in the PR that this reverses D-27's "Saving a comp needs a
-    note and a tag for every agent". If not answered, leave it.
+    note and a tag for every agent"; Casanova updates D-27 item 3 in `docs/decisions.md`, not you. `needsOf`
+    now takes the agent's level (the workspace's `level`, practice or full), and the yellow note marker of
+    item 6 follows it: a full agent's empty note is no longer marked required. If not answered, leave it all
+    as it is and say so in the PR.
 13. **NW-023 · Hubert's markdown.** His replies print raw (`src/views/Chat.tsx:135`, `:145`, in a pre-wrap
     `<p>`). Add a small renderer, `src/views/hubert/markdown.tsx`, that builds React elements: bold, italic,
     inline code, lists, headings as bold lines, `http(s)` links only. No images, no raw HTML; an unclosed
-    marker stays literal while streaming. Hubert's text only; the agent's bubble stays plain. It fixes old
-    transcripts too. Tests for a script tag, a `javascript:` link and half-streamed text. It's in this
+    marker stays literal while streaming. Hubert reads third-party listing text, so a link can point
+    anywhere: render each with `target="_blank" rel="noopener noreferrer nofollow"`, show the destination
+    host beside the label when the label isn't the URL itself, and refuse a URL with userinfo
+    (`https://x@evil.example`), which stays plain text. Hubert's text only; the agent's bubble stays plain. It fixes old
+    transcripts too. Tests for a script tag, a `javascript:` link, a userinfo link, the `rel` and `target` on a good link, the
+    host shown beside a labelled link, and half-streamed text. It's in this
     dispatch because the drawer opens on Sort; Calliste owns `Chat.tsx` from Dispatch 24 on.
 
 ## Not in scope (Claude Design, phase B)
@@ -81,12 +98,14 @@ suggested tags (Dispatch 16 makes the data, 20 shows it), photos (16, 20), sampl
 ## Data and constraints
 
 - **One migration, `20261016000000`.** No other open PR uses it; re-check before you open. Carry the
-  `comp_report_app` grant block. `fact_overrides` follows `can_see_report` for writes, like the other
-  `report_comps` columns.
-- **Files.** Don't edit `workspace/features.ts` or `workspace/subject.ts`: Dispatch 16 owns them this round.
+  `comp_report_app` grant block. `fact_overrides` is written under the same policy as the table's other
+  columns (`can_see_report` today; Dispatch 22 renames it `can_edit_report`).
+- **Files.** You also edit `server/api/workspace.ts` (`loadJudgments`) and `server/api/comps.ts`; Dispatch 22
+  rebases on you for both. Don't edit `workspace/features.ts` or `workspace/subject.ts`: Dispatch 16 owns them
+  this round.
   You and 16 both edit `workspace/state.ts` (you `CompJudgment`, 16 `Intake`): whichever PR opens second
   rebases on the first before review. Dispatch 19 (Abacus) edits `engine-input.ts` after this merges.
-- Tags stay the 18 strings in `TAGS`; the server rejects any other (`isTag`).
+- Don't edit `TAGS` or `isTag`: Dispatch 16 adds strings to them. Don't assert the tag count in a test.
 - The Findings lock is unchanged: every comp needs a tier, a note and a tag, except as item 12 says.
 - `assets/studio-header.js` stays untouched.
 
@@ -97,10 +116,13 @@ suggested tags (Dispatch 16 makes the data, 20 shows it), photos (16, 20), sampl
 - Every suite passes with nothing skipped: `test:engine`, `test:comp-report` on a local Postgres
   (`npm run db:local` first), `test`, `test:dev-notebook`, `test:feedback`, `test:agent-pics`; and
   `typecheck`, `typecheck:engine`, `build`. New tests cover the ★ rule on the server, overrides in the engine
-  input, put-back, and the markdown renderer.
+  input, put-back, and the markdown renderer. The override tests refuse an unknown key, `__proto__` (sent as
+  raw JSON text, not an object literal), `constructor`, `prototype`, and a string where a number belongs;
+  prove that a body's `by` and `at` are ignored; and check `Object.prototype` has no new key afterwards.
 - A Playwright walk of Sort (`dev/walk-screens.mjs`, 1440px): the tier control with ★, a marked incomplete row,
   a card in edit mode with a lock, the Removed fold, a Hubert reply with a list and bold. Screenshots in the PR.
 - The PR description covers rule 6 and lists every decision you built on a recommendation (NW-026, NW-028,
-  NW-044 b, NW-046), so Kimani can overturn one before merge.
+  NW-044 b, and NW-046 only if he answered it "A"; otherwise it is left as it is), so Kimani can overturn one
+  before merge.
 
 — Casanova

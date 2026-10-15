@@ -6,7 +6,9 @@ and fields), `02-sort.md` (tag groups and suggested tags on the card), Abacus's 
 fields and exports), and the follow-ups at the end of `docs/dispatch/14-comp-report-design-port.md`.
 **Depends on:** Dispatch 16 merged (the data this shows) and Dispatch 18 merged (Mason's queue). The transit
 line (item 13) needs Dispatch 17's station data; skip it if that hasn't merged. Dispatch 22 also edits
-`server/api/comps.ts`: whichever of 20, 21 and 22 opens second rebases on the first.
+`server/api/comps.ts` and `server/api/workspace.ts`: whichever of 20, 21 and 22 opens second rebases on the
+first. `CompCard.tsx`, `CompForm.tsx` and `workspace/state.ts` are also Dispatch 15's: 15 merged first
+(through 18's queue), so rebase on it.
 **Protocol:** `docs/dispatch/README.md`. Restating rules 3–5: **open a PR to `claude/main` when done; never
 merge; sign "— Mason (CR-7c)"** in the PR, its comments and your commits. Ledger line: `casa-r13-6`. With 18,
 22 and 24, it supersedes `casa-r12-1`, and it takes the free-text tags (DP-6) out of `casa-r10-1`.
@@ -49,6 +51,14 @@ the existing pickers; how they're laid out is Claude Design's.
 11. **NW-020 a (UI) · photos.** Show the read's photos with a plain `<img>` in Sort's photo area
     (`CompCard.tsx:172`) only. The home's photo in the modal goes to Claude Design. Comps with none keep the
     placeholder.
+    - **Carry them to the client first.** Add `photos?: string[]` to `CompJudgment` (`workspace/state.ts`;
+      `src/api.ts` re-exports it through `WorkspaceData`) and fill it in `loadJudgments`
+      (`server/api/workspace.ts`, which `loadWorkspace` calls) from the listing's extract (the observation's `raw`, which it already selects), through
+      Dispatch 16's `cleanPhotoUrls` again, so a URL that isn't `https:` on a StreetEasy image host never
+      leaves the server. At most 8. The Designed email's photos (phase B, after this) read the same
+      field.
+    - Each `<img>` has `referrerpolicy="no-referrer"` and `loading="lazy"`, and a failed image falls back to
+      the placeholder. Photos are never fetched by the server, proxied or copied.
 12. **NW-039 a (UI), NW-045 (UI), NW-059 a (UI) · groups and tags.**
     - Hide feature groups that don't apply to the type.
     - Show the tag groups under their labels inside the existing tag area; Size and Multi-floor take one choice.
@@ -56,11 +66,21 @@ the existing pickers; how they're laid out is Claude Design's.
       a contradicted tag clears itself when its fact changes, and "First floor" hides when the floor is known
       and isn't 1.
     - **DP-6 · free-text tags:** an agent can add their own tag. Cap it at 40 characters, run it through
-      `workspace/fair-housing.ts` on save (refuse a hard term), and store it as typed. Free-text tags are
+      `workspace/fair-housing.ts` on save (refuse a hard term), and store it NFC-normalised. Free-text tags are
       validated by a new `isFreeTag` in a new `workspace/free-tags.ts`. `isTag` and `features.ts` stay
       untouched, and the server accepts `isTag(t) || isFreeTag(t)` (`server/api/comps.ts`). Only list tags
       count toward "needs a tag" unless Kimani says otherwise; list it among the recommendations in the PR.
       Free-text tags show in the filter.
+    - **`isFreeTag` is strict.** The value is NFC-normalised, then trimmed, on one line, 1 to 40 characters,
+      of letters, digits, spaces and basic punctuation (`. , ' - & / ( ) + %`) only: no `<` or `>`, no control,
+      zero-width or bidi characters. It is refused if it equals a list tag, ignoring case. The server stores
+      the normalised value, and `compEdits` caps a comp at 30 tags and answers 400 before the database's
+      check would.
+    - **Free tags are data, never markup or instructions.** Render them as React text (they are escaped);
+      if Dispatch 18's Designed email shows tags, it HTML-escapes them. They never go into a Jev input
+      (D-12: no text an agent wrote reaches Jev; `server/decide/*` stays as it is). The writer's input
+      (`agent_tags`) and Hubert get them only as quoted data in a data field, never joined into
+      instruction text; if `server/writer.ts` or `assistant.ts` does that, name it in the PR for Calliste.
 13. **NW-037 a (Mason's half) · transit,** if Dispatch 17's data has merged. A pure function in
     `workspace/transit.ts` from the building's geocoded coordinates (`ws.geocodes`) to the nearest stations and
     their lines, and one line in the card's Distance section with plain coloured circles. Transit stays out of
@@ -79,18 +99,24 @@ and the home's photo in the modal (NW-020 a).
 
 ## Data and constraints
 
-- No migration unless free-text tags need one: they fit `report_comps.tags` (text[], at most 30). If a check
-  constraint refuses them, add a migration for it and say why. Its timestamp must be later than every
-  migration on `claude/main` when your PR opens (e.g. `20261018000000_comp_report_free_tags.sql`), because
-  15, 22 and 23 hold `20261016000000`, `20261016120000` and `20261017000000`.
+- No migration: `report_comps.tags` has only a cap of 30 items (`20261015000000_comp_report_design_port.sql`),
+  which free tags fit.
 - Fair-housing screening runs on save, on the server. A tag is free text a client may read in the email.
 - Every stored tag and feature still loads (Dispatch 16's `cleanFeatures` test covers features; add one for
   tags).
+- Photos: URLs are stored and sent only if Dispatch 16's `cleanPhotoUrls` keeps them (item 11). Nothing here
+  fetches an image on the server.
 
 ## Definition of done
 
 - From a fixture link, a new report fills the home without hand-setting a picker that the page shows.
 - A typed-in home asks for its size as a plain field.
+- Tests for free tags: each of a newline, `<script>`, a zero-width space, a bidi override, 41 characters, a
+  list tag in other case, and a fair-housing hard term is refused; a good tag is stored NFC-normalised; a
+  31st tag is a 400. A tag containing markup renders as text, and no Jev input holds an agent's tag.
+- Tests for photos: `loadJudgments` returns only `https:` URLs on the allowlist, at most 8; an off-list host
+  and a userinfo URL in a stored extract never reach the response; the `<img>` carries
+  `referrerpolicy="no-referrer"`.
 - Every suite passes with nothing skipped: `test:engine`, `test:comp-report` on a local Postgres
   (`npm run db:local`), `test`, `test:dev-notebook`, `test:feedback`, `test:agent-pics`; and `typecheck`,
   `typecheck:engine`, `build`.
