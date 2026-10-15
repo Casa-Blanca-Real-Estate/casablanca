@@ -1,170 +1,59 @@
-// New comp (Dispatch 09; `02-screens.md`, New comp): the start, as one guided
-// flow in a modal — the home, its details, then add comps — landing in the
-// workspace on Sort with the comps already in. Everything past the home can be
-// skipped. The target, deal terms and client note come later, when they matter.
+// New report (Dispatch 09, ported to the handoff in Dispatch 14): one guided
+// flow in a modal, three steps — which home, its details, add comps — landing
+// in the workspace on Sort, where Hubert opens by himself the first time.
 //
-// The first screen makes the report. From then on the modal sits over the
+// The first step makes the report. From then on the modal sits over the
 // workspace (?report=…&start=details|comps), so what's entered saves as it's
-// typed and a reload lands back on the same screen.
+// typed and a reload lands back on the same step. The details step is also
+// Edit details, opened from a workspace's ✎: same body, its own header and
+// footer, and Cancel puts back what was there when it opened.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api, linksApi, workspaceApi, type Me, type Report } from '../../api.ts';
-import { checkListingLink, titleFromLink } from '../../../workspace/links.ts';
+import { titleFromLink } from '../../../workspace/links.ts';
 import type { Audience, Brief, Intake } from '../../../workspace/state.ts';
-import { AddComps, CompList, GUIDANCE } from '../workspace/AddComps.tsx';
+import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
+import { readPrice } from '../comp/CompForm.tsx';
+import { AddList, GUIDANCE, ImportNotes } from '../workspace/AddComps.tsx';
 import { entry } from '../workspace/bits.tsx';
+import { useBuildNotesSwitch } from '../workspace/buildNotes.tsx';
 import { localToday, type Workspace } from '../workspace/model.ts';
 import { HomeDetails } from './Details.tsx';
+import { endNewReport, Frame, Info, isNewReport, markNewReport } from './Frame.tsx';
+import { HomeFields, HomeLineInput, homeLineReady, Matched, readHomeLine, targetText, TYPE_LABEL, type PropertyType } from './Home.tsx';
 
 export type StartScreen = 'home' | 'details' | 'comps';
-const SCREENS: { id: StartScreen; n: number; title: string }[] = [
-  { id: 'home', n: 1, title: 'The home' },
-  { id: 'details', n: 2, title: 'The details' },
-  { id: 'comps', n: 3, title: 'Add comps' },
-];
 
-function Frame({ screen, onScreen, onClose, children, footer }: {
-  screen: StartScreen;
-  onScreen?: (s: StartScreen) => void;
-  onClose: () => void;
-  children: ReactNode;
-  footer: ReactNode;
-}) {
-  const dialog = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    dialog.current?.focus();
-    // The page behind stays put while the modal is open.
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = overflow;
-    };
-  }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    addEventListener('keydown', onKey);
-    return () => {
-      removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
-  const current = SCREENS.find((s) => s.id === screen)!;
-  return (
-    <div className="modal-backdrop">
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="new-comp-title" tabIndex={-1} ref={dialog}>
-        <div className="modal-head">
-          <ol className="modal-steps" aria-label="New comp">
-            {SCREENS.map((s) => (
-              <li key={s.id} aria-current={s.id === screen ? 'step' : undefined}>
-                {onScreen && s.id !== screen
-                  ? <button type="button" className="link" onClick={() => onScreen(s.id)}>{s.n} {s.title}</button>
-                  : <span>{s.n} {s.title}</span>}
-              </li>
-            ))}
-          </ol>
-          <button type="button" className="link" onClick={onClose}>Close</button>
-        </div>
-        <h2 id="new-comp-title" className="modal-title">{current.title}</h2>
-        <div className="modal-body">{children}</div>
-        <div className="modal-foot">{footer}</div>
-      </div>
-    </div>
-  );
-}
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-function unitLabel(unit: string): string {
-  const u = unit.trim();
-  return u.startsWith('#') ? u : `#${u}`;
-}
-
-/** The home's link, or its address: one is enough. Buyer or seller, and the client's name. */
-function HomeFields({ link, setLink, address, setAddress, unit, setUnit, audience, setAudience, client, setClient, linkLocked }: {
-  link: string; setLink: (v: string) => void;
-  address: string; setAddress: (v: string) => void;
-  unit: string; setUnit: (v: string) => void;
-  audience: Audience; setAudience: (v: Audience) => void;
-  client: string; setClient: (v: string) => void;
-  linkLocked?: string | null;
-}) {
-  const check = link.trim() ? checkListingLink(link) : null;
-  return (
-    <div className="home-fields">
-      <div className="grid">
-        <label className="field wide">
-          <span className="field-label">The home’s StreetEasy link</span>
-          {linkLocked
-            ? <span className="muted small">{linkLocked}</span>
-            : <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://streeteasy.com/building/…" />}
-          {check && !check.ok
-            ? <span className="field-hint error">Paste a StreetEasy listing link, or type the address. {check.reason}</span>
-            : !linkLocked && <span className="field-hint">Its details fill themselves in; you check them on the next screen. A home that’s off the market is fine.</span>}
-        </label>
-        <label className="field">
-          <span className="field-label">Or its address</span>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. 100 Barclay Street, New York, NY" />
-        </label>
-        <label className="field">
-          <span className="field-label">Unit</span>
-          <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="#17L" />
-        </label>
-      </div>
-      <div className="grid">
-        <div className="field">
-          <span className="field-label">It’s for</span>
-          <div className="segmented" role="radiogroup" aria-label="Buyer or seller">
-            {(['buyer', 'seller'] as const).map((a) => (
-              <button key={a} type="button" role="radio" aria-checked={audience === a} className={audience === a ? 'on' : ''} onClick={() => setAudience(a)}>
-                {a === 'buyer' ? 'A buyer' : 'A seller'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <label className="field">
-          <span className="field-label">The client’s name</span>
-          <input value={client} onChange={(e) => setClient(e.target.value)} placeholder="Optional: used in the email’s greeting" maxLength={120} />
-        </label>
-        <label className="field">
-          <span className="field-label">Property type</span>
-          <select aria-label="Property type" value="condo" onChange={() => undefined}>
-            <option value="condo">Condo</option>
-            <option value="coop" disabled>Co-op (coming soon)</option>
-          </select>
-        </label>
-      </div>
-    </div>
-  );
-}
-
-/** Screen 1, before the report exists: makes it, and hands over to the workspace. */
+/** Step 1, before the report exists: makes it, and hands over to the workspace on step 2. */
 export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (id: string) => void; onClose: () => void }) {
-  const [link, setLink] = useState('');
-  const [address, setAddress] = useState('');
-  const [unit, setUnit] = useState('');
-  const [audience, setAudience] = useState<Audience>('buyer');
+  const [text, setText] = useState('');
+  const [side, setSide] = useState<Audience>('buyer');
   const [client, setClient] = useState('');
+  const [type, setType] = useState<PropertyType>('coop');
+  const [target, setTarget] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const check = link.trim() ? checkListingLink(link) : null;
-  const ready = Boolean((check?.ok || address.trim()) && !(check && !check.ok));
+  const [devTools] = useBuildNotesSwitch(me.user.role === 'admin');
+  const line = readHomeLine(text);
+  const price = readPrice(target);
+  const ready = homeLineReady(line) && !(target.trim() && price === null);
 
   async function create(e?: FormEvent) {
     e?.preventDefault();
-    if (!ready) return;
+    if (!ready || busy) return;
     setBusy('Starting the report…');
     setError(null);
     try {
-      const url = check?.ok ? check.url : null;
-      const title = address.trim()
-        ? `${address.trim().split(',')[0]}${unit.trim() ? ` ${unitLabel(unit)}` : ''}`
-        : (url && titleFromLink(url)) ?? 'A StreetEasy listing';
-      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title } });
+      const url = line.kind === 'link' && line.check.ok ? line.check.url : null;
+      const title = url ? (titleFromLink(url) ?? 'A StreetEasy listing') : line.kind === 'typed' ? line.title : 'A StreetEasy listing';
+      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title, propertyType: type } });
       const today = localToday();
-      const brief: Brief = { audience: entry(audience, today), ...(client.trim() ? { clientName: entry(client.trim(), today) } : {}) };
-      const intake: Intake = {
-        ...(address.trim() ? { address: entry(address.trim(), today) } : {}),
-        ...(unit.trim() ? { unit: entry(unit.trim(), today) } : {}),
-      };
-      await workspaceApi.save(report.id, { brief, state: { intake } });
+      const brief: Brief = { audience: entry(side, today), ...(client.trim() ? { clientName: entry(client.trim(), today) } : {}) };
+      const intake: Intake = line.kind === 'typed'
+        ? { address: entry(line.address, today), ...(line.unit ? { unit: entry(line.unit, today) } : {}) }
+        : {};
+      await workspaceApi.save(report.id, { brief, state: { intake }, ...(price ? { target: { price: entry(price, today) } } : {}) });
       // The workspace starts the read as it opens, and the details fill in when it lands.
       // If the link can't be read (today's limit), the report is made anyway, and the details say why.
       if (url) {
@@ -178,9 +67,10 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
           }
         }
       }
+      markNewReport(report.id);
       onCreated(report.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(message(err));
       setBusy(null);
     }
   }
@@ -190,128 +80,230 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
     setError(null);
     try {
       const sample = await workspaceApi.sample();
-      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title: '100 Barclay Street #17L' } });
+      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title: '100 Barclay Street #17L', propertyType: 'condo' } });
       const brief: Brief = { audience: sample.brief.audience!, ...(sample.send.clientName ? { clientName: sample.send.clientName } : {}) };
       await workspaceApi.save(report.id, { brief, state: { intake: sample.intake }, sampleData: true });
       await workspaceApi.importSample(report.id);
+      markNewReport(report.id);
       onCreated(report.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(message(err));
       setBusy(null);
     }
   }
 
   return (
     <Frame
-      screen="home"
+      step={1}
+      title="New report: which home?"
       onClose={onClose}
       footer={(
         <>
-          {me.user.role === 'admin' && (
-            <button type="button" className="link small" disabled={Boolean(busy)} onClick={() => void useSample()}>
+          {devTools && (
+            <button type="button" className="link nr-back" disabled={Boolean(busy)} onClick={() => void useSample()}>
               Use the 100 Barclay sample
             </button>
           )}
-          <button type="button" className="btn primary" disabled={!ready || Boolean(busy)} onClick={() => void create()}>Next: the details ›</button>
+          <span className="nr-foot-r">
+            {busy && <span className="nr-busy" aria-live="polite">{busy}</span>}
+            <button type="button" className="btn primary" disabled={!ready || Boolean(busy)} onClick={() => void create()}>Next →</button>
+          </span>
         </>
       )}
     >
-      <form onSubmit={create}>
+      <form className="nr-form" onSubmit={create}>
         <HomeFields
-          link={link} setLink={setLink} address={address} setAddress={setAddress} unit={unit} setUnit={setUnit}
-          audience={audience} setAudience={setAudience} client={client} setClient={setClient}
+          line={<HomeLineInput text={text} onText={setText} type={type} disabled={Boolean(busy)} />}
+          side={side}
+          onSide={setSide}
+          client={client}
+          onClient={setClient}
+          type={type}
+          onType={setType}
+          target={target}
+          onTarget={setTarget}
+          onTargetBlur={() => price && setTarget(targetText(price))}
+          disabled={Boolean(busy)}
         />
+        {/* Enter in a field makes the report, as Next does. */}
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
       </form>
-      {busy && <p className="notice" aria-live="polite">{busy}</p>}
-      {error && <p className="notice error-notice" role="alert">{error}</p>}
+      {error && <p className="nr-err" role="alert">{error}</p>}
     </Frame>
   );
 }
 
-/** Screens 1 to 3 for a report that exists, over the workspace. */
+/** Steps 1 to 3 for a report that exists, over the workspace; or Edit details. */
 export function StartFlow({ ws, screen, onScreen, onDone }: {
   ws: Workspace;
   screen: StartScreen;
   onScreen: (s: StartScreen) => void;
   onDone: () => void;
 }) {
-  if (screen === 'home') return <HomeScreen ws={ws} onScreen={onScreen} onDone={onDone} />;
-  if (screen === 'details') return <DetailsScreen ws={ws} onScreen={onScreen} onDone={onDone} />;
+  // A new report's flow, or Edit details from a workspace's ✎ (the details step on its own).
+  const [isNew] = useState(() => screen !== 'details' || isNewReport(ws.reportId));
+  // Leaving the report ends the flow; a reload doesn't (it lands back on the same step).
+  // The clear waits a tick, so StrictMode's mount-unmount-mount doesn't end it.
+  const clearing = useRef(0);
+  useEffect(() => {
+    window.clearTimeout(clearing.current);
+    const id = ws.reportId;
+    return () => {
+      clearing.current = window.setTimeout(() => endNewReport(id), 0);
+    };
+  }, [ws.reportId]);
+
+  // The flow ends in the workspace, on Sort.
+  const finish = () => {
+    endNewReport(ws.reportId);
+    onDone();
+  };
+  // Edit details closes back to the screen it was opened from.
+  const stay = () => ws.go(ws.screen);
+  const close = isNew ? finish : stay;
+
+  if (screen === 'home') return <HomeScreen ws={ws} onScreen={onScreen} onClose={close} />;
+  if (screen === 'details') return <DetailsScreen ws={ws} editing={!isNew} onScreen={onScreen} onClose={close} />;
+  return <CompsScreen ws={ws} onScreen={onScreen} onClose={close} onOpen={finish} />;
+}
+
+/** A server call from inside the modal: the busy line shows in its footer, and a failure says so here (the workspace's error line is behind the scrim). */
+function useRunHere(ws: Workspace) {
+  const [error, setError] = useState<string | null>(null);
+  const run = async (label: string, work: () => Promise<void>): Promise<boolean> => {
+    let failed: string | null = null;
+    setError(null);
+    await ws.run(label, async () => {
+      try {
+        await work();
+      } catch (e) {
+        failed = message(e);
+      }
+    });
+    setError(failed);
+    return failed === null;
+  };
+  return { run, error };
+}
+
+function FootRight({ ws, error, children }: { ws: Workspace; error?: string | null; children: ReactNode }) {
   return (
-    <Frame
-      screen="comps"
-      onScreen={onScreen}
-      onClose={onDone}
-      footer={(
-        <>
-          <button type="button" className="btn" onClick={() => onScreen('details')}>‹ The details</button>
-          <button type="button" className="btn primary" onClick={onDone}>Done: sort the comps ›</button>
-        </>
-      )}
-    >
-      <p className="guidance">{GUIDANCE} <span className="muted">(Kara)</span></p>
-      <AddComps ws={ws} />
-      <CompList ws={ws} />
-    </Frame>
+    <span className="nr-foot-r">
+      {error && <span className="nr-err" role="alert">{error}</span>}
+      {!error && ws.busy && <span className="nr-busy" aria-live="polite">{ws.busy}</span>}
+      {children}
+    </span>
   );
 }
 
-function HomeScreen({ ws, onScreen, onDone }: { ws: Workspace; onScreen: (s: StartScreen) => void; onDone: () => void }) {
+/** "100 Barclay Street #17L": what was typed for the home, to show it back. */
+function typedHome(intake: Intake): string {
+  const unit = intake.unit?.value.trim();
+  return [intake.address?.value.trim(), unit ? (unit.startsWith('#') ? unit : `#${unit}`) : ''].filter(Boolean).join(' ');
+}
+
+/** Step 1 again, for the report made a moment ago: everything saves as it changes. */
+function HomeScreen({ ws, onScreen, onClose }: { ws: Workspace; onScreen: (s: StartScreen) => void; onClose: () => void }) {
   const home = ws.reads.filter((r) => r.purpose === 'subject').at(-1) ?? null;
-  const [link, setLink] = useState('');
+  const locked = Boolean(home && home.status !== 'failed');
+  const [text, setText] = useState(() => (locked ? '' : typedHome(ws.intake)));
+  const [target, setTarget] = useState(() => targetText(ws.target?.price.value));
+  const { run, error } = useRunHere(ws);
   const today = ws.today;
-  const set = (patch: Partial<Intake>) => {
+  const off = ws.readOnly;
+  const line = readHomeLine(text);
+  const price = readPrice(target);
+
+  const onText = (v: string) => {
+    setText(v);
+    const l = readHomeLine(v);
     const next: Intake = { ...ws.intake };
-    for (const [k, v] of Object.entries(patch) as [keyof Intake, Intake[keyof Intake]][]) {
-      if (v === undefined) delete next[k];
-      else (next as Record<string, unknown>)[k] = v;
+    if (l.kind === 'typed') {
+      if (l.address.trim().length < 3) return;
+      next.address = entry(l.address, today);
+      if (l.unit) next.unit = entry(l.unit, today);
+      else delete next.unit;
+    } else {
+      // A link (its page fills the address) or nothing: the typed address goes.
+      if (!next.address && !next.unit) return;
+      delete next.address;
+      delete next.unit;
     }
     ws.setIntake(next);
   };
-  const check = link.trim() ? checkListingLink(link) : null;
+  const onTarget = (v: string) => {
+    setTarget(v);
+    if (!v.trim()) {
+      if (ws.target) ws.setTarget(null);
+      return;
+    }
+    const n = readPrice(v);
+    if (n !== null && n !== ws.target?.price.value) ws.setTarget({ ...(ws.target ?? {}), price: entry(n, today) });
+  };
+  const ready = !(line.kind === 'link' && !line.check.ok) && !(target.trim() && price === null);
 
   async function next() {
-    if (check?.ok) {
-      await ws.run('Reading the home’s page…', async () => {
-        ws.applyLinks(await linksApi.add(ws.reportId, [check.url], 'subject'));
+    if (!ready) return;
+    if (!off && line.kind === 'link' && line.check.ok) {
+      const url = line.check.url;
+      const ok = await run('Reading the home’s page…', async () => {
+        ws.applyLinks(await linksApi.add(ws.reportId, [url], 'subject'));
       });
+      if (!ok) return;
     }
     onScreen('details');
   }
 
+  const i = ws.intake;
+  const meta = home && (home.status === 'queued' || home.status === 'running')
+    ? `${TYPE_LABEL[ws.propertyType]} · reading its StreetEasy page…`
+    : [TYPE_LABEL[ws.propertyType], i.beds && `${i.beds.value} bd`, i.baths && `${i.baths.value} ba`, i.floor && `Fl ${i.floor.value}`].filter(Boolean).join(' · ');
+
   return (
     <Frame
-      screen="home"
-      onScreen={onScreen}
-      onClose={onDone}
-      footer={<button type="button" className="btn primary" disabled={Boolean(check && !check.ok)} onClick={() => void next()}>Next: the details ›</button>}
+      step={1}
+      title="New report: which home?"
+      onClose={onClose}
+      footer={(
+        <FootRight ws={ws} error={error}>
+          <button type="button" className="btn primary" disabled={!ready || Boolean(ws.busy)} onClick={() => void next()}>Next →</button>
+        </FootRight>
+      )}
     >
       <HomeFields
-        link={link}
-        setLink={setLink}
-        linkLocked={home && home.status !== 'failed' ? `Read from ${home.url}` : null}
-        address={ws.intake.address?.value ?? ''}
-        setAddress={(v) => set({ address: v.trim() ? entry(v, today) : undefined })}
-        unit={ws.intake.unit?.value ?? ''}
-        setUnit={(v) => set({ unit: v.trim() ? entry(v, today) : undefined })}
-        audience={ws.brief.audience?.value ?? 'buyer'}
-        setAudience={(v) => ws.setBrief({ ...ws.brief, audience: entry(v, today) })}
+        line={locked ? (
+          <div className="nr-home">
+            <div className="nr-line locked" title={home!.url}>{home!.url.replace(/^https:\/\/(www\.)?/, '')}</div>
+            <Matched name={ws.report.title} meta={meta} />
+          </div>
+        ) : (
+          <HomeLineInput text={text} onText={onText} type={ws.propertyType} disabled={off} />
+        )}
+        side={ws.side}
+        onSide={(a) => ws.setBrief({ ...ws.brief, audience: entry(a, today) })}
         client={ws.brief.clientName?.value ?? ''}
-        setClient={(v) => {
-          const next = { ...ws.brief };
-          if (v.trim()) next.clientName = entry(v, today);
-          else delete next.clientName;
-          ws.setBrief(next);
+        onClient={(v) => {
+          const b = { ...ws.brief };
+          if (v.trim()) b.clientName = entry(v, today);
+          else delete b.clientName;
+          ws.setBrief(b);
         }}
+        type={ws.propertyType}
+        onType={ws.setPropertyType}
+        target={target}
+        onTarget={onTarget}
+        onTargetBlur={() => price && setTarget(targetText(price))}
+        disabled={off}
       />
     </Frame>
   );
 }
 
-function DetailsScreen({ ws, onScreen, onDone }: { ws: Workspace; onScreen: (s: StartScreen) => void; onDone: () => void }) {
+/** Step 2, or Edit details. */
+function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; editing: boolean; onScreen: (s: StartScreen) => void; onClose: () => void }) {
   const home = ws.reads.filter((r) => r.purpose === 'subject').at(-1) ?? null;
-  const filled = (Object.values(ws.intake) as { from?: string }[]).filter((v) => v?.from === 'listing').length;
-  // Why the home's link wasn't read, when it wasn't (the first screen couldn't queue it).
+  const { run, error } = useRunHere(ws);
+  // Why the home's link wasn't read, when it wasn't (step 1 couldn't queue it).
   const [refused] = useState(() => {
     try {
       const key = `cr-home-refused:${ws.reportId}`;
@@ -322,42 +314,98 @@ function DetailsScreen({ ws, onScreen, onDone }: { ws: Workspace; onScreen: (s: 
       return null;
     }
   });
+  // Edit details: what Cancel puts back.
+  const [before] = useState(() => ({ intake: ws.intake, brief: ws.brief, propertyType: ws.propertyType }));
 
-  async function next() {
-    // Moving on confirms what the page gave: the agent has seen it here.
-    if (home && home.status === 'done' && !home.confirmedAt && !ws.readOnly) {
-      await ws.run('Saving…', async () => {
-        ws.applyLinks(await linksApi.confirmHome(ws.reportId, home.id));
-      });
-    }
-    onScreen('comps');
+  /** Moving on confirms what the page gave: the agent has seen it here. */
+  async function confirmHome(): Promise<boolean> {
+    if (!home || home.status !== 'done' || home.confirmedAt || ws.readOnly) return true;
+    return run('Saving…', async () => {
+      ws.applyLinks(await linksApi.confirmHome(ws.reportId, home.id));
+    });
   }
+  const cancel = () => {
+    if (ws.readOnly) return onClose();
+    if (JSON.stringify(ws.intake) !== JSON.stringify(before.intake)) ws.setIntake(before.intake);
+    if (JSON.stringify(ws.brief) !== JSON.stringify(before.brief)) ws.setBrief(before.brief);
+    if (ws.propertyType !== before.propertyType) ws.setPropertyType(before.propertyType);
+    // Closing marks the screen reached, from the workspace state as it was rendered: a tick
+    // later, that state has the details put back, so the close doesn't undo the Cancel.
+    window.setTimeout(onClose, 0);
+  };
+
+  const notices = (
+    <>
+      {home && (home.status === 'queued' || home.status === 'running') && (
+        <p className="nr-note" aria-live="polite">Reading the home’s StreetEasy page… Its details fill in here when it’s read. Type anything you know meanwhile.</p>
+      )}
+      {refused && !home && <p className="nr-note bad" role="alert">The home’s page wasn’t read: {refused} Type the details in.</p>}
+      {home?.status === 'failed' && (
+        <p className="nr-note bad" role="alert">The home’s page couldn’t be read: {home.errorMessage} Type the details in.</p>
+      )}
+    </>
+  );
 
   return (
     <Frame
-      screen="details"
-      onScreen={onScreen}
-      onClose={onDone}
-      footer={(
+      step={2}
+      editing={editing}
+      title={editing ? 'Edit details' : 'New report: the details'}
+      onClose={editing ? cancel : onClose}
+      footer={editing ? (
         <>
-          <button type="button" className="btn" onClick={() => onScreen('home')}>‹ The home</button>
-          <button type="button" className="btn primary" onClick={() => void next()}>Next: add comps ›</button>
+          <button type="button" className="link nr-back" onClick={cancel}>Cancel</button>
+          <FootRight ws={ws} error={error}>
+            <button type="button" className="btn primary" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && onClose())}>
+              {ws.readOnly ? 'Close' : 'Save changes'}
+            </button>
+          </FootRight>
+        </>
+      ) : (
+        <>
+          <button type="button" className="link nr-back" onClick={() => onScreen('home')}>← Back</button>
+          <FootRight ws={ws} error={error}>
+            <button type="button" className="btn primary" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && onScreen('comps'))}>Next →</button>
+          </FootRight>
         </>
       )}
     >
-      {home && (home.status === 'queued' || home.status === 'running') && (
-        <p className="notice" aria-live="polite">Reading the home’s StreetEasy page… Its details fill in here when it’s read. Type anything you know meanwhile.</p>
+      <HomeDetails ws={ws} notices={notices} />
+    </Frame>
+  );
+}
+
+/** Step 3: add comps. The paste bar and its form, the export dropped anywhere on the card, then the rows by status. */
+function CompsScreen({ ws, onScreen, onClose, onOpen }: { ws: Workspace; onScreen: (s: StartScreen) => void; onClose: () => void; onOpen: () => void }) {
+  const [note, setNote] = useState<string | null>(null);
+  const drop = useDropTarget(ws, setNote);
+  const toConfirm = ws.comps.filter((c) => c.unconfirmed).length;
+  const reading = ws.reads.filter((r) => r.purpose === 'comp' && (r.status === 'queued' || r.status === 'running')).length;
+  const count = toConfirm ? `${toConfirm} to confirm` : reading ? `${reading} reading` : ws.comps.length ? 'All confirmed' : '';
+  return (
+    <Frame
+      step={3}
+      title="New report: add comps"
+      onClose={onClose}
+      drop={drop.handlers}
+      veil={drop.veil}
+      footer={(
+        <>
+          <button type="button" className="link nr-back" onClick={() => onScreen('details')}>← Back</button>
+          <FootRight ws={ws}>
+            <span className="nr-confirm-count">{count}</span>
+            <button type="button" className="btn primary" onClick={onOpen}>Open workspace →</button>
+          </FootRight>
+        </>
       )}
-      {home?.status === 'done' && filled > 0 && (
-        <p className="notice" aria-live="polite">
-          {filled} detail{filled === 1 ? '' : 's'} came from StreetEasy, marked below. Check them: anything you change is yours.
-        </p>
-      )}
-      {refused && !home && <p className="notice error-notice" role="alert">The home’s page wasn’t read: {refused} Type the details in.</p>}
-      {home?.status === 'failed' && (
-        <p className="notice error-notice" role="alert">The home’s page couldn’t be read: {home.errorMessage} Type the details in.</p>
-      )}
-      <HomeDetails ws={ws} />
+    >
+      <div className="nr-title-row">
+        <h2 className="nr-h">Add comps</h2>
+        <Info align="left" label="How to choose comps" text={`${GUIDANCE} About three of each status, where there are that many.`} />
+      </div>
+      {ws.readOnly ? <p className="nr-note">Read only: this is another agent’s report.</p> : <AddBar ws={ws} note={note} onNote={setNote} />}
+      <AddList ws={ws} />
+      <ImportNotes ws={ws} />
     </Frame>
   );
 }

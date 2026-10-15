@@ -1,13 +1,20 @@
-// New comp — 2 · The details (`02-screens.md`): what the numbers and the
-// comparisons need to know about the home. The size is the one must; beds,
-// baths, floor, the ask, the charges and the notes show; the rest folds away.
-// Values read from the home's StreetEasy page carry a "From StreetEasy" mark
-// until the agent changes them.
-import { useEffect, useState } from 'react';
+// New report, 2 of 3: the details (the handoff, screen 04), reused as Edit
+// details from a workspace's ✎. The address and where it came from; Buyer or
+// Seller, Co-op or Condo and the client on one line; General (the size, with
+// Estimate, or "Not listed": a co-op with no size is the normal case, and then
+// nothing in the report shows a per-SF figure; beds, baths, floor, the ask, the
+// charges and taxes); About the home (the five pickers and Year built); Notes.
+// The engine's other facts fold away under "More about the home", so nothing
+// it reads is dropped. Everything saves as it's typed.
+import { useState, type ReactNode } from 'react';
 import type { LaundryState } from '../../../engine/index.ts';
-import type { Condition, Entry, Intake, OutdoorChoice } from '../../../workspace/state.ts';
-import { ChoiceInput, entry, Field, NumberInput, TextInput, YesNoInput } from '../workspace/bits.tsx';
+import { withHomeFeatures, type Features } from '../../../workspace/features.ts';
+import type { Entry, Intake } from '../../../workspace/state.ts';
+import { FeaturePicker } from '../comp/Pickers.tsx';
+import { entry } from '../workspace/bits.tsx';
 import type { Workspace } from '../workspace/model.ts';
+import { TYPE_LABEL } from './Home.tsx';
+import { NrNumber } from './inputs.tsx';
 
 const LAUNDRY: { value: LaundryState; label: string }[] = [
   { value: 'installed', label: 'Washer/dryer in the unit' },
@@ -16,177 +23,261 @@ const LAUNDRY: { value: LaundryState; label: string }[] = [
   { value: 'none_listed', label: 'None in the unit (not known if allowed)' },
 ];
 
-const OUTDOOR: { value: OutdoorChoice; label: string }[] = [
-  { value: 'none', label: 'None' },
-  { value: 'balcony', label: 'Balcony' },
-  { value: 'terrace', label: 'Terrace' },
-  { value: 'roof_deck', label: 'Private roof deck' },
-  { value: 'garden', label: 'Garden' },
-  { value: 'patio', label: 'Patio' },
-  { value: 'outdoor_space', label: 'Other private outdoor space' },
-];
+type NumberKey = 'areaSqft' | 'beds' | 'baths' | 'floor' | 'askingPrice' | 'commonCharges' | 'taxes' | 'outdoorSqft' | 'yearBuilt';
+type YesNoKey = 'dishwasher' | 'centralAir' | 'fireplace' | 'corner';
 
-const CONDITION: { value: Condition; label: string }[] = [
-  { value: 'renovated', label: 'Renovated' },
-  { value: 'good', label: 'Good' },
-  { value: 'needs_work', label: 'Needs work' },
-];
-
-export function HomeDetails({ ws }: { ws: Workspace }) {
+export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNode }) {
   const { intake, today, readOnly: off } = ws;
-  const set = <K extends keyof Intake>(key: K) => (value: Intake[K] | undefined) => {
-    const next = { ...intake };
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const set = <K extends keyof Intake>(key: K, value: Intake[K] | undefined) => {
+    const next = { ...ws.intake };
     if (value === undefined) delete next[key];
     else next[key] = value;
     ws.setIntake(next);
   };
-  const from = (k: keyof Intake) => intake[k]?.from === 'listing';
-  const num = (key: 'beds' | 'baths' | 'floor' | 'askingPrice' | 'commonCharges' | 'taxes' | 'outdoorSqft' | 'yearBuilt', label: string, opts: { prefix?: string; integer?: boolean; placeholder?: string } = {}) => (
-    <Field label={label} sample={intake[key]?.sample} from={from(key)}>
-      <NumberInput
-        label={label}
-        value={intake[key]}
-        onChange={set(key)}
-        today={today}
-        disabled={off}
-        integer={opts.integer ?? true}
-        {...(opts.prefix ? { prefix: opts.prefix } : {})}
-        {...(opts.placeholder ? { placeholder: opts.placeholder } : {})}
-      />
-    </Field>
+  const num = (key: NumberKey) => (v: Entry<number> | undefined) => set(key, v);
+  const coop = ws.propertyType === 'coop';
+  const size = intake.areaSqft;
+  const showSize = Boolean(size) || sizeOpen;
+  const fromPage = (Object.values(intake) as ({ from?: string } | undefined)[]).filter((v) => v?.from === 'listing').length;
+  const home = ws.reads.filter((r) => r.purpose === 'subject').at(-1) ?? null;
+
+  const setFeatures = (f: Features) => {
+    const next = withHomeFeatures(ws.intake, f, today);
+    // No outdoor space, no outdoor size.
+    if (!next.outdoorKind || next.outdoorKind.value === 'none') delete next.outdoorSqft;
+    ws.setIntake(next);
+  };
+  const toggleEstimate = () => {
+    if (!size) return;
+    const { estimate, from: _from, ...rest } = size;
+    set('areaSqft', estimate ? rest : { ...rest, estimate: true });
+  };
+  const setClient = (v: string) => {
+    const next = { ...ws.brief };
+    if (v.trim()) next.clientName = entry(v, today);
+    else delete next.clientName;
+    ws.setBrief(next);
+  };
+
+  const tile = (key: 'floor' | 'askingPrice' | 'commonCharges' | 'taxes', label: string, opts: { money?: boolean; monthly?: boolean } = {}) => (
+    <label className="nr-tile">
+      <span className="fh">{label}</span>
+      <span className="nr-tile-line">
+        <NrNumber
+          label={label}
+          value={intake[key]}
+          onChange={num(key)}
+          today={today}
+          disabled={off}
+          placeholder="—"
+          plain={key === 'floor'}
+          {...(opts.money ? { prefix: '$' } : {})}
+          {...(opts.monthly ? { suffix: '/ mo' } : {})}
+        />
+        <span className="nr-pen" aria-hidden="true"><span>✎</span></span>
+      </span>
+    </label>
   );
-  const moreFilled = (['outdoorKind', 'views', 'exposure', 'corner', 'condition', 'laundry', 'dishwasher', 'centralAir', 'fireplace', 'yearBuilt', 'newDevelopment'] as const)
+
+  const moreFilled = (['laundry', 'dishwasher', 'centralAir', 'fireplace', 'corner', 'newDevelopment', 'outdoorSqft'] as const)
     .filter((k) => intake[k] !== undefined).length;
+  const hasOutdoor = Boolean(intake.outdoorKind && intake.outdoorKind.value !== 'none');
 
   return (
-    <div className="details">
-      <div className="grid">
-        <Field
-          label="Interior size (sq ft)"
-          sample={intake.areaSqft?.sample}
-          estimate={intake.areaSqft?.estimate}
-          from={from('areaSqft')}
-          hint={intake.areaSqft ? undefined : 'Without it there’s no $/sq ft value for the home.'}
-        >
-          <NumberInput label="Interior size in square feet" value={intake.areaSqft} onChange={set('areaSqft')} today={today} disabled={off} placeholder="e.g. 1,850" />
-          <label className="check" title="Your estimate counts in “with estimates” only, and the email says so.">
-            <input
-              type="checkbox"
-              checked={Boolean(intake.areaSqft?.estimate)}
-              disabled={off || !intake.areaSqft}
-              onChange={(e) => intake.areaSqft && set('areaSqft')({ ...intake.areaSqft, estimate: e.target.checked || undefined, from: undefined } as Entry<number>)}
-            />
-            My estimate
-          </label>
-        </Field>
-        {num('beds', 'Bedrooms')}
-        {num('baths', 'Bathrooms', { integer: false, placeholder: 'e.g. 2.5' })}
-        {num('floor', 'Floor')}
-        {num('askingPrice', 'Asking price', { prefix: '$' })}
-        {num('commonCharges', 'Common charges (monthly)', { prefix: '$' })}
-        {num('taxes', 'Taxes (monthly)', { prefix: '$' })}
-        <Field label="Notes: what stands out?" sample={intake.notes?.sample} wide>
-          <TextInput
-            label="Notes about the home"
-            multiline
-            value={intake.notes}
-            onChange={set('notes')}
-            today={today}
-            disabled={off}
-            placeholder="Light, views, condition, layout, storage: a line or three."
-          />
-        </Field>
+    <>
+      <div className="nr-titlebar">
+        <h2 className="nr-h">{ws.report.title}</h2>
+        {home && home.status !== 'failed' && (
+          <span
+            className="nr-source"
+            title={fromPage ? `${fromPage} detail${fromPage === 1 ? '' : 's'} came from its StreetEasy page. Check them: anything you change is yours.` : 'Read from its StreetEasy page'}
+          >
+            <span className="nr-dot" aria-hidden="true" />StreetEasy
+          </span>
+        )}
+      </div>
+      {notices}
+
+      <div className="nr-compact">
+        <div className="seg nr-seg small" role="group" aria-label="For a buyer or a seller">
+          {(['buyer', 'seller'] as const).map((a) => (
+            <button
+              key={a}
+              type="button"
+              aria-pressed={ws.side === a}
+              className={ws.side === a ? 'on' : ''}
+              disabled={off}
+              onClick={() => ws.setBrief({ ...ws.brief, audience: entry(a, today) })}
+            >
+              {a === 'buyer' ? 'Buyer' : 'Seller'}
+            </button>
+          ))}
+        </div>
+        <div className="seg nr-seg small" role="group" aria-label="Co-op or condo">
+          {(['coop', 'condo'] as const).map((t) => (
+            <button key={t} type="button" aria-pressed={ws.propertyType === t} className={ws.propertyType === t ? 'on' : ''} disabled={off} onClick={() => ws.setPropertyType(t)}>
+              {TYPE_LABEL[t]}
+            </button>
+          ))}
+        </div>
+        <input
+          className="u-input nr-client"
+          aria-label="Client"
+          value={ws.brief.clientName?.value ?? ''}
+          disabled={off}
+          maxLength={120}
+          placeholder="Client · optional"
+          onChange={(e) => setClient(e.target.value)}
+        />
       </div>
 
-      <details className="more">
-        <summary>More about the home{moreFilled ? ` (${moreFilled} filled)` : ''}</summary>
-        <div className="grid">
-          <Field label="Private outdoor space" sample={intake.outdoorKind?.sample} from={from('outdoorKind')}>
-            <ChoiceInput
-              label="Private outdoor space"
-              value={intake.outdoorKind}
-              choices={OUTDOOR}
-              onChange={(v) => {
-                const next = { ...intake };
-                if (v === undefined) delete next.outdoorKind;
-                else next.outdoorKind = v;
-                if (!v || v.value === 'none') delete next.outdoorSqft;
-                ws.setIntake(next);
-              }}
-              today={today}
+      <section className="nr-sec" aria-label="General">
+        <div className="nr-sec-h">General</div>
+        <div className="nr-sizerow">
+          <div className="nr-size">
+            <span className="fh nr-label-line">
+              Interior size
+              {!ws.sf && <span className="nr-sub">{coop ? '(most co-ops have none: then no per-SF figures anywhere)' : '(without it, no per-SF figures anywhere)'}</span>}
+            </span>
+            {showSize ? (
+              <div className="nr-size-line">
+                <NrNumber
+                  className="nr-big"
+                  label="Interior size in square feet"
+                  value={size}
+                  onChange={num('areaSqft')}
+                  today={today}
+                  disabled={off}
+                  placeholder="0"
+                  suffix="sq ft"
+                  {...(size ? {} : { estimate: true })}
+                  autoFocus={!size}
+                  onFocus={() => setSizeOpen(true)}
+                  onBlur={() => setSizeOpen(false)}
+                />
+              </div>
+            ) : (
+              <div className="nr-size-line empty">
+                <span className="nr-notlisted">Not listed</span>
+                {!off && <button type="button" className="link nr-add-est" onClick={() => setSizeOpen(true)}>+ Add an estimate</button>}
+              </div>
+            )}
+          </div>
+          {size && (
+            <button
+              type="button"
+              className={`nr-est${size.estimate ? ' on' : ''}`}
+              aria-pressed={Boolean(size.estimate)}
               disabled={off}
-              blank="Unknown"
-            />
-          </Field>
-          {intake.outdoorKind && intake.outdoorKind.value !== 'none' && num('outdoorSqft', 'Outdoor size (sq ft)')}
-          <Field label="Views" sample={intake.views?.sample} from={from('views')} hint="Comma-separated: city, water, park…">
-            <ViewsInput value={intake.views} onChange={set('views')} today={today} disabled={off} />
-          </Field>
-          <Field label="Exposure" sample={intake.exposure?.sample}>
-            <TextInput label="Exposure" value={intake.exposure} onChange={set('exposure')} today={today} disabled={off} placeholder="e.g. South and west" />
-          </Field>
-          <Field label="Corner unit" sample={intake.corner?.sample}>
-            <YesNoInput label="Corner unit" value={intake.corner} onChange={set('corner')} today={today} disabled={off} />
-          </Field>
-          <Field label="Condition" sample={intake.condition?.sample}>
-            <ChoiceInput label="Condition" value={intake.condition} choices={CONDITION} onChange={set('condition')} today={today} disabled={off} blank="Not said" />
-          </Field>
-          <Field label="Laundry" sample={intake.laundry?.sample} from={from('laundry')}>
-            <ChoiceInput label="Laundry" value={intake.laundry} choices={LAUNDRY} onChange={set('laundry')} today={today} disabled={off} blank="Unknown" />
-          </Field>
-          <Field label="Dishwasher" sample={intake.dishwasher?.sample} from={from('dishwasher')}>
-            <YesNoInput label="Dishwasher" value={intake.dishwasher} onChange={set('dishwasher')} today={today} disabled={off} />
-          </Field>
-          <Field label="Central air" sample={intake.centralAir?.sample} from={from('centralAir')}>
-            <YesNoInput label="Central air" value={intake.centralAir} onChange={set('centralAir')} today={today} disabled={off} />
-          </Field>
-          <Field label="Working fireplace" sample={intake.fireplace?.sample} from={from('fireplace')} hint="Wood-burning or gas; a decorative one doesn’t count.">
-            <YesNoInput label="Working fireplace" value={intake.fireplace} onChange={set('fireplace')} today={today} disabled={off} />
-          </Field>
-          {num('yearBuilt', 'Year built')}
-          <Field label="New development or resale" sample={intake.newDevelopment?.sample} from={from('newDevelopment')}>
-            <select
-              aria-label="New development or resale"
-              value={intake.newDevelopment === undefined ? '' : intake.newDevelopment.value ? 'new' : 'resale'}
-              disabled={off}
-              onChange={(e) => set('newDevelopment')(e.target.value === '' ? undefined : entry(e.target.value === 'new', today))}
+              title="Your estimate counts in “with estimates” only, and the email says so."
+              onClick={toggleEstimate}
             >
-              <option value="">Unknown</option>
-              <option value="resale">Resale</option>
-              <option value="new">New development</option>
-            </select>
-          </Field>
+              <span className="nr-est-dot" aria-hidden="true" />Estimate
+            </button>
+          )}
+          <label className="nr-small">
+            <span className="nr-small-label">Beds</span>
+            <span className="nr-small-line"><NrNumber className="nr-big" label="Beds" value={intake.beds} onChange={num('beds')} today={today} disabled={off} placeholder="—" /></span>
+          </label>
+          <label className="nr-small">
+            <span className="nr-small-label">Baths</span>
+            <span className="nr-small-line"><NrNumber className="nr-big" label="Baths" value={intake.baths} onChange={num('baths')} today={today} disabled={off} integer={false} placeholder="—" /></span>
+          </label>
+        </div>
+        <div className="nr-fields4">
+          {tile('floor', 'Floor')}
+          {tile('askingPrice', 'Asking price', { money: true })}
+          {tile('commonCharges', coop ? 'Maintenance' : 'Common charges', { money: true, monthly: true })}
+          {tile('taxes', 'Taxes', { money: true, monthly: true })}
+        </div>
+      </section>
+
+      <section className="nr-about" aria-label="About the home">
+        <div className="nr-sec-h">About the home</div>
+        <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} />
+        <label className="nr-feat-row">
+          <span className="fh">Year built</span>
+          <span><NrNumber className="nr-year" label="Year built" value={intake.yearBuilt} onChange={num('yearBuilt')} today={today} disabled={off} placeholder="—" plain /></span>
+        </label>
+      </section>
+
+      <section className="nr-notes" aria-label="Notes">
+        <label className="nr-sec-h" htmlFor="nr-home-notes">Notes</label>
+        <textarea
+          id="nr-home-notes"
+          className="box"
+          rows={3}
+          value={intake.notes?.value ?? ''}
+          disabled={off}
+          maxLength={4000}
+          placeholder="Light, views, condition, layout, storage"
+          onChange={(e) => set('notes', e.target.value.trim() ? entry(e.target.value, today) : undefined)}
+        />
+      </section>
+
+      <details className="nr-more">
+        <summary>More about the home{moreFilled ? <span className="nr-sub"> ({moreFilled} filled)</span> : null}</summary>
+        <div className="nr-more-body">
+          <Choice label="Laundry" value={intake.laundry?.value} options={LAUNDRY} disabled={off} onChange={(v) => set('laundry', v ? entry(v, today) : undefined)} />
+          {(['dishwasher', 'centralAir', 'fireplace', 'corner'] as YesNoKey[]).map((k) => (
+            <YesNo
+              key={k}
+              label={{ dishwasher: 'Dishwasher', centralAir: 'Central air', fireplace: 'Working fireplace', corner: 'Corner unit' }[k]}
+              value={intake[k]?.value}
+              disabled={off}
+              onChange={(v) => set(k, v === undefined ? undefined : entry(v, today))}
+            />
+          ))}
+          <Choice
+            label="New development"
+            value={intake.newDevelopment === undefined ? undefined : intake.newDevelopment.value ? 'new' : 'resale'}
+            options={[{ value: 'resale', label: 'Resale' }, { value: 'new', label: 'New development' }]}
+            disabled={off}
+            onChange={(v) => set('newDevelopment', v ? entry(v === 'new', today) : undefined)}
+          />
+          {hasOutdoor && (
+            <label className="nr-feat-row">
+              <span className="fh">Outdoor size</span>
+              <span><NrNumber className="nr-year" label="Outdoor size in square feet" value={intake.outdoorSqft} onChange={num('outdoorSqft')} today={today} disabled={off} placeholder="—" suffix="sq ft" /></span>
+            </label>
+          )}
         </div>
       </details>
+    </>
+  );
+}
+
+/** One choice of a few, as chips; the chosen one again clears it (not known). */
+function Choice<T extends string>({ label, value, options, onChange, disabled }: {
+  label: string;
+  value: T | undefined;
+  options: { value: T; label: string }[];
+  onChange: (next: T | undefined) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="nr-feat-row" role="group" aria-label={label}>
+      <span className="fh">{label}</span>
+      <span className="chips small">
+        {options.map((o) => (
+          <button key={o.value} type="button" className={`chip${value === o.value ? ' on' : ''}`} aria-pressed={value === o.value} disabled={disabled} onClick={() => onChange(value === o.value ? undefined : o.value)}>
+            {o.label}
+          </button>
+        ))}
+      </span>
     </div>
   );
 }
 
-/** Views as the agent types them ("City, Water"), kept as a list. */
-function ViewsInput({ value, onChange, today, disabled }: {
-  value: Entry<string[]> | undefined;
-  onChange: (next: Entry<string[]> | undefined) => void;
-  today: string;
-  disabled: boolean;
-}) {
-  const external = value?.value.join(', ') ?? '';
-  const [text, setText] = useState(external);
-  const parse = (t: string) => t.split(',').map((v) => v.trim()).filter(Boolean);
-  // A value set from elsewhere (the page, the sample) replaces what's typed; the agent's own typing stays as typed.
-  useEffect(() => {
-    if (parse(text).join(', ') !== external) setText(external);
-  }, [external]);
+function YesNo({ label, value, onChange, disabled }: { label: string; value: boolean | undefined; onChange: (next: boolean | undefined) => void; disabled?: boolean }) {
   return (
-    <input
-      aria-label="Views"
-      value={text}
+    <Choice
+      label={label}
+      value={value === undefined ? undefined : value ? 'yes' : 'no'}
+      options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]}
       disabled={disabled}
-      placeholder="e.g. City, Water"
-      onChange={(e) => {
-        setText(e.target.value);
-        const views = parse(e.target.value);
-        if (views.join(', ') !== external) onChange(views.length ? entry(views, today) : undefined);
-      }}
+      onChange={(v) => onChange(v === undefined ? undefined : v === 'yes')}
     />
   );
 }
