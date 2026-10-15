@@ -115,34 +115,34 @@ overseer (Big Kahuna). Casa's lines are on the Casa Blanca tab.
   storage.
 - **Secrets:** never paste or commit one. They go in Netlify or in the cloud environment's settings.
 
-## Handoff, 2026-10-13
+## Handoff, 2026-10-15
 
-**Main:** `85aab1d`. Open PRs: only Dispatch 01's parked stack (#41–#45).
+**Main:** after round 13's docs (see `git log`). Open PRs: only Dispatch 01's parked stack (#41–#45).
+Production runs #77 (the design port). Noble walked it on 2026-10-15.
+
+**Round 13 is Noble's walk-through.** Everything is in `docs/comp-report/feedback/2026-10-15-noble/`
+(`README.md` is the index). It has 102 items in `00-items.md`, reports 01–07, the Claude Design handoff
+`08`, and the plan `09-plan.md`. Dispatches 15–24 are written and had four review passes. 22 and 23 got the most
+attention, as they hold the security work. The ledger has `casa-r13-1` to `-10`:
+- 15, 16 and 17 are queued.
+- The rest are held, each with what it waits on.
+- `casa-r12-1` and `-r12-2` are dropped as superseded.
+- `casa-r10-1` is held: DP-6 moved to 20, and phase 2's voice and client profile wait on NB-20.
 
 **Waiting on you:**
-- **Re-review #41**, Dispatch 01's cutout fixes from 2026-10-06, when Kimani wants the profile-pic
-  track back. #45 has a conflict.
-- **Abacus's small engine notes:** `distance_miles` on `CompOut`, so the screens stop importing
-  `distanceMiles`.
-- **The project-tracking and notes artifact** Kimani is building on Claude web: point `CLAUDE.md` at
-  it when he shares the link.
+- Merge round 13's PRs in Mason's queue order:
+  - Mason: 15, then 18, 22a, 23 items 1–2, 20, 21, 22b, 23 items 3–4.
+  - Abacus: 16, then 19.
+  - Surveyor: 17.
+  - Calliste: 24, after the move.
+- Hold 22a's merge until NB-23 is answered.
+- At each merge, update D-27 if NB-8 is A. Dispatch 15 reverses its Save rule.
+- Re-review #41 (Dispatch 01) whenever Kimani wants the profile-pic track back. #45 has a conflict.
 
-**Queued, on the ledger with their kickoffs:**
+**Kimani's open items:** the Casa Answer Sheet (version 5) has NB-1 to NB-28 and TD-12 to TD-17. D-28 in
+`docs/decisions.md` lists which answers hold a build. The Casa account move (TD-12, D-26) comes before Calliste,
+before 23 items 3–4, and before any production key.
 
-| Line | Track | Dispatch | State |
-|---|---|---|---|
-| `casa-r6-1` | Mason | 13, the writer and QA (CR-5) | queued |
-| `casa-r6-2` | The Dispatch 01 session | 12, the profile-pic roster | queued |
-| `casa-r6-3` | Arbiter | 10, phase 2 (Jev live) | held, until Kimani's Jev key |
+**Agent budget for this round (Kimani's):** 5 Opus and 30–40 Sonnet or Haiku in total. The triage used the 5
+Opus. Triage, fixes and checks used 24 Sonnet. Ask before going past 40.
 
-**Kimani's open items:** all in `docs/decisions.md`. The ones that unblock work:
-- ~~`DEV_NOTEBOOK_KEY` in the new environment.~~ In and working (2026-10-13). A key reads the team
-  Feedback list without emails (`npm run -s notebook -- --feedback`); Kimani turns what matters into
-  notes with **Make a note** on the notebook page.
-- The Jev key: a new AI Gateway key on his existing Vercel account, set as `AI_GATEWAY_API_KEY` with
-  `CR_JEV_ZDR=off` in Netlify.
-- D-24: the email-signatures doc, or FileMaker, for agents' details.
-
-**Moving the other tracks:** Mason, Abacus, Arbiter and the Dispatch 01 session still run in the old
-environment. Each restarts with the kickoff under "Restarting a track in a new session" in
-`README.md`, when Kimani is ready.
