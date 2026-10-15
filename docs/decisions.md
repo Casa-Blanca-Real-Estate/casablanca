@@ -183,6 +183,12 @@ as **NB-1 to NB-28**, each with its context and a recommended default. The bigge
   Casa account.
 - **NB-28:** Gmail drafts through a Casa-internal Google client (Phase B).
 
+**What waits for your answer, not the default:** NB-1 (NW-002's relabel), NB-2 (the type model, NW-018 a) and
+NB-8 (NW-046, which changes D-27's Save rule) are built only on an A answer. Dispatch 22a doesn't merge until
+NB-23: deploying it lets every mentor read every report. Samples stay admin-only on the server until NB-24.
+Dispatch 21 item 1 builds on NB-19 A (B moves it to Calliste). Dispatch 23 items 3–4 (the inspection and test
+keys) wait on NB-22 and TD-14, and run from Casa's account only.
+
 **Answer →** _on the answer sheet (NB-…), or here_
 
 ---

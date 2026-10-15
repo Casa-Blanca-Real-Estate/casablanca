@@ -119,8 +119,8 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 19 | [Comp report — the engine for Findings (CR-2.4)](docs/dispatch/19-comp-report-engine-for-findings.md) | Abacus | Queued behind 15 and 16 |
 | 20 | [Comp report — the new report, filled from the read (CR-7c)](docs/dispatch/20-comp-report-new-report-from-the-read.md) | Mason | Queued behind 16 and 18 |
 | 21 | [Comp report — Findings, target and client (CR-7d)](docs/dispatch/21-comp-report-findings-target-and-client.md) | Mason | Queued behind 19 and 20 |
-| 22 | [Comp report — access, the sign-in log and the activity log (CR-7e)](docs/dispatch/22-comp-report-access-and-activity-log.md) | Mason, or a second builder | Queued behind 21 |
-| 23 | [Comp report — samples that reset, reading production safely (CR-7f)](docs/dispatch/23-comp-report-samples-and-inspection.md) | Mason, or a second builder | Queued behind 22; Casa account |
+| 22 | [Comp report — access, the sign-in log and the activity log (CR-7e)](docs/dispatch/22-comp-report-access-and-activity-log.md) | Mason, or a second builder | 22a after 18 (merge waits on NB-23); 22b after 21 |
+| 23 | [Comp report — samples that reset, reading production safely (CR-7f)](docs/dispatch/23-comp-report-samples-and-inspection.md) | Mason, or a second builder | Items 1–2 after 22a; items 3–4 from the Casa account, after 22b |
 | 24 | [Calliste — Hubert sees what the agent sees (CR-H1)](docs/dispatch/24-calliste-hubert-sees-what-the-agent-sees.md) | Calliste (new) | Waits on the move to the Casa account |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,

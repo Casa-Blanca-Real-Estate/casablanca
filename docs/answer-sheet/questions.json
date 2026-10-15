@@ -52,7 +52,7 @@
           "short": "The target: one number or a range",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble could not tell what the target means (NW-002): for a buyer, the most the client would pay, or what they hope to pay.</p><p><strong>Why it needs you.</strong> It never moves a number; it is a named price, hidden from the writer and out of the email. A relabel fixes the confusion with a copy change. A range toggle touches the saved target, Findings' marker and QA, and needs a Findings design (it can go to Claude Design with NW-064).</p>",
+          "context": "<p><strong>What this is about.</strong> Noble could not tell what the target means (NW-002): for a buyer, the most the client would pay, or what they hope to pay.</p><p><strong>Why it needs you.</strong> It never moves a number; it is a named price, hidden from the writer and out of the email. A relabel fixes the confusion with a copy change. A range toggle touches the saved target, Findings' marker and QA, and needs a Findings design (it can go to Claude Design with NW-064).</p><p><strong>Waits for you.</strong> The relabel is built only on an A answer (Dispatch 20).</p>",
           "options": [
             [
               "A",
@@ -74,7 +74,7 @@
           "short": "Property types beyond condo and co-op",
           "quick": false,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> The report's type is only condo or co-op, and it drives the pricing (NW-018 a, NW-019). Noble hit HDFC, sponsor units and a townhouse.</p><p><strong>Why it needs you.</strong> Sponsor and HDFC are attributes of a co-op or condo sale, not separate pricing methods, and the listing read already returns both. A: no migration and no engine change. B: a migration plus a pricing answer for each new type. Townhouses and whole houses wait on a pricing answer either way.</p>",
+          "context": "<p><strong>What this is about.</strong> The report's type is only condo or co-op, and it drives the pricing (NW-018 a, NW-019). Noble hit HDFC, sponsor units and a townhouse.</p><p><strong>Why it needs you.</strong> Sponsor and HDFC are attributes of a co-op or condo sale, not separate pricing methods, and the listing read already returns both. A: no migration and no engine change. B: a migration plus a pricing answer for each new type. Townhouses and whole houses wait on a pricing answer either way.</p><p><strong>Waits for you.</strong> The type model (NW-018 a) is built only on an A answer (Dispatch 16).</p>",
           "options": [
             [
               "A",
@@ -208,7 +208,7 @@
           "short": "Note and tags: both required?",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Sort's \"Needs tier, note, tag\" blocks Findings until all are done (NW-046).</p><p><strong>Why it needs you.</strong> The note is the learning part for new agents. Experienced ones may find both a chore. The practice and full levels already exist (D-11, D-27).</p>",
+          "context": "<p><strong>What this is about.</strong> Sort's \"Needs tier, note, tag\" blocks Findings until all are done (NW-046).</p><p><strong>Why it needs you.</strong> The note is the learning part for new agents. Experienced ones may find both a chore. The practice and full levels already exist (D-11, D-27).</p><p><strong>Waits for you.</strong> Built only on an A answer: it changes D-27's Save rule (Dispatch 15).</p>",
           "options": [
             [
               "A",
@@ -475,7 +475,7 @@
           "short": "Who writes the Findings take",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble found it dense (NW-063). Today it is built in code from the engine's output, not by a model.</p><p><strong>Why it needs you.</strong> Every figure must come from the engine, the screen is opened constantly, and a model call adds cost and delay. An \"Ask Hubert about this\" chip can open the drawer instead.</p>",
+          "context": "<p><strong>What this is about.</strong> Noble found it dense (NW-063). Today it is built in code from the engine's output, not by a model.</p><p><strong>Why it needs you.</strong> Every figure must come from the engine, the screen is opened constantly, and a model call adds cost and delay. An \"Ask Hubert about this\" chip can open the drawer instead.</p><p><strong>What it blocks.</strong> Dispatch 21 item 1 builds on A; B moves the item to Calliste.</p>",
           "options": [
             [
               "A",
@@ -538,7 +538,7 @@
           "short": "Sessions reading production",
           "quick": false,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> You want Claude sessions to see what happens in production (NW-090). The rule today is that sessions never connect to the production database.</p><p><strong>Why it needs you.</strong> A key-gated inspection API keeps the rule, redacts client names, notes and Hubert text unless asked (and logs the ask), rotates in one place, and is read-only through the database's own policies. A read-only database role is better for ad hoc SQL but breaks the rule. It needs <code>CR_INSPECT_KEY</code> (TD-14).</p>",
+          "context": "<p><strong>What this is about.</strong> You want Claude sessions to see what happens in production (NW-090). The rule today is that sessions never connect to the production database.</p><p><strong>Why it needs you.</strong> A key-gated inspection API keeps the rule. It is read-only at the database (its own select-only actor), returns named views with client text redacted, and shows client text only for one report at a time, logged before it returns, at most 20 an hour. A separate test key lets a session write, but only as a test user, and copies of real reports are always redacted. A read-only database role is better for ad hoc SQL but breaks the rule. A needs four settings (TD-14) and runs from Casa's account only (Dispatch 23 items 3–4).</p>",
           "options": [
             [
               "A",
@@ -565,7 +565,7 @@
           "short": "What mentors can see",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Admins can open any report by link, but only the owner's reports are listed, and mentors are admitted nowhere (NW-088).</p><p><strong>Why it needs you.</strong> There are two or three mentors; assignment needs someone to maintain it, and we don't build on agent responsiveness. Agents would be told in their welcome copy that mentors can read their reports. Until then: open Noble's report from its <code>?report=</code> link.</p>",
+          "context": "<p><strong>What this is about.</strong> Admins can open any report by link, but only the owner's reports are listed, and mentors are admitted nowhere (NW-088).</p><p><strong>Why it needs you.</strong> There are two or three mentors; assignment needs someone to maintain it, and we don't build on agent responsiveness. Agents would be told in their welcome copy that mentors can read their reports. Until then: open Noble's report from its <code>?report=</code> link.</p><p><strong>What it holds.</strong> Deploying Dispatch 22a gives every mentor read access to every report, so Casanova holds 22a's merge until you answer. B changes one rule, in two places. The sign-in fix (22 item 2) can ship on its own first.</p>",
           "options": [
             [
               "A",
@@ -590,7 +590,7 @@
           "short": "Who may use the sample",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble and Kara review flows and can't use the sample today (NW-054). A co-op sample is added.</p><p><strong>Why it needs you.</strong> Replies and Hubert's transcript can't be deleted, so a truly clean reset means a new report from the same code and the old one archived (new link).</p>",
+          "context": "<p><strong>What this is about.</strong> Noble and Kara review flows and can't use the sample today (NW-054). A co-op sample is added.</p><p><strong>Why it needs you.</strong> Replies and Hubert's transcript can't be deleted, so a truly clean reset means a new report from the same code and the old one archived (new link).</p><p><strong>Until you answer,</strong> the server keeps samples admin-only. A widens it to mentors (Dispatch 23 items 1–2).</p>",
           "options": [
             [
               "A",
@@ -1421,11 +1421,11 @@
         },
         {
           "id": "TD-14",
-          "q": "Make CR_INSPECT_KEY and CR_TEST_KEY",
+          "q": "Make the inspect and test keys (four settings)",
           "short": "The inspect and test keys",
           "quick": true,
           "needsYou": true,
-          "context": "<ol><li>After NB-22 is answered A, make both with <code>openssl rand -hex 32</code>, on the Casa side if the move is done.</li><li>Set them in Netlify (Functions scope) and in the Claude Code cloud environment under their own names. Redeploy.</li></ol><p>Never reuse <code>CR_DECIDE_KEY</code>.</p>",
+          "context": "<ol><li>After NB-22 is answered A, and after the move to Casa's account (TD-12): make <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> with <code>openssl rand -hex 32</code>, each different from the other and from <code>CR_DECIDE_KEY</code>.</li><li>Set <code>CR_TEST_USER_EMAIL</code> to <code>sessions@test.invalid</code>. <code>CR_EVAL_ANTHROPIC_API_KEY</code> is TD-3's key; the test user uses it and never the production one.</li><li>In Netlify, set all four for the Production context only, Functions scope. Redeploy.</li><li>In the Claude Code cloud environment, set the two keys in Casa's account only, never in this one.</li></ol><p>To switch the inspection off: unset <code>CR_INSPECT_KEY</code> and redeploy. The old key works until that deploy is live.</p>",
           "options": [
             [
               "A",
