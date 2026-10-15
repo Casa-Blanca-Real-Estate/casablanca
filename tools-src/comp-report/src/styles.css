@@ -91,7 +91,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 2px s
   border-radius: 0; padding: 12px 22px; cursor: pointer; white-space: nowrap;
 }
 .btn:hover { background: var(--cb-bg); }
-.btn.primary { background: var(--cb-black); color: #fff; border-color: var(--cb-black); padding: 13px 22px; }
+.btn.primary { background: var(--cb-black); color: #fff; border-color: var(--cb-black); padding: 12px 22px; /* 13px in the handoff, less the 1px border */ }
 .btn.primary:hover { background: #2a2a28; }
 .btn:disabled, .btn.primary:disabled { opacity: .35; cursor: default; }
 .btn.quiet { border-color: var(--cb-border); }
