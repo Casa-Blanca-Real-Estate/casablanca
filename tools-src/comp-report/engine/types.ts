@@ -55,6 +55,18 @@ export type EvidenceClass = (typeof EVIDENCE_CLASSES)[number];
 export type PriceBasis = 'sale' | 'ask';
 
 export type PropertyType = 'condo' | 'coop' | 'condop' | 'townhouse' | 'multi_family' | 'other';
+
+/**
+ * How the home is being sold: the third label of the grey line under a
+ * StreetEasy listing's price ("Condo · Turtle Bay · Resale"). StreetEasy's
+ * feed calls it the sale status. A label outside the known set is `other`,
+ * and its text is kept as `sale_kind_label`.
+ */
+export const SALE_KINDS = ['resale', 'new_development', 'sponsor', 'restricted', 'foreclosure', 'auction', 'short_sale', 'other'] as const;
+export type SaleKind = (typeof SALE_KINDS)[number];
+
+/** Pets, as a building's policy tags say: allowed, or not listed. A blank never says "no pets". */
+export type PetsPolicy = 'allowed' | 'not_listed';
 /** Report types: condos in v1; co-ops are the same engine with unit rates switched off (§6.3). */
 export type ReportPropertyType = 'condo' | 'coop';
 
@@ -157,6 +169,10 @@ export interface PropertyFacts {
   sponsor_unit?: Sourced<boolean>;
   /** Income-restricted — HDFC and the like: the price and the buyer's income are capped. */
   income_restricted?: Sourced<boolean>;
+  /** How it's sold, from the listing's grey line: resale, new development, sponsor unit … */
+  sale_kind?: Sourced<SaleKind>;
+  /** The grey line's sale label as the page shows it ("Resale", "Sponsor Unit"), kept whatever it maps to. */
+  sale_kind_label?: Sourced<string>;
   /**
    * Where the building stands, in degrees — for the distance check (§6.10).
    * Neither the export nor a listing page gives it; a geocoder or the agent can.
@@ -188,6 +204,10 @@ export interface PropertyFacts {
   /** Building amenities other than door service, parking and shared outdoor space. */
   amenities?: Sourced<string[]>;
   policies?: Sourced<string[]>;
+  /** From the policy tags: `allowed` when one says so, `not_listed` when the tags name none. */
+  pets?: Sourced<PetsPolicy>;
+  /** From the policy tags: true when one says smoke-free; false is "none listed". */
+  smoke_free?: Sourced<boolean>;
 }
 
 export type FactField = keyof PropertyFacts;
@@ -225,6 +245,18 @@ export interface ListingRecord {
   /** The listing's history, oldest first. */
   history: ListingEvent[];
   description: string | null;
+  /**
+   * The listing's photos, hero first, as cleanPhotoUrls kept them: https on
+   * StreetEasy's image hosts only, at most 8. Linked, never hosted or copied.
+   * Absent on reads from before parser 0.5.0.
+   */
+  photos?: string[];
+  /**
+   * The grey line under the price, as the page shows it: the type, the
+   * neighborhood and the sale label ("Condo", "Turtle Bay", "Resale"). Null
+   * where a part isn't shown. Absent on reads from before parser 0.5.0.
+   */
+  grey_line?: { type: string | null; neighborhood: string | null; sale_kind: string | null };
 }
 
 /** A comparable as the parser produced it — the property's facts as of an import. */

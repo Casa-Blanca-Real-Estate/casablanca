@@ -27,7 +27,7 @@
 // a read. Nothing here is a background job anyone else can trigger: the
 // background function checks the session like every other endpoint.
 import {
-  compRecordFromListing, ParseError, PARSER_VERSION, type CompRecord, type ParseWarning,
+  cleanListingExtract, compRecordFromListing, ParseError, PARSER_VERSION, type CompRecord, type ParseWarning,
 } from '../../engine/index.ts';
 import { withActor, type Queryable } from '../db.ts';
 import type { DecideConfig } from '../decide/config.ts';
@@ -223,11 +223,13 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
       if (!page.ok) {
         outcome = { status: 'failed', error: page.code, message: page.message, asOf: null, extract: null, warnings: [] };
       } else {
-        const { record, warnings } = compRecordFromListing(page.extract, { as_of: asOf, url: claimed.url });
+        // Photo URLs are stored only as cleanPhotoUrls keeps them, whichever reader read the page.
+        const extract = cleanListingExtract(page.extract);
+        const { record, warnings } = compRecordFromListing(extract, { as_of: asOf, url: claimed.url });
         const why = unusable(record, warnings, claimed.purpose);
         outcome = why
-          ? { status: 'failed', ...why, asOf, extract: page.extract, warnings }
-          : { status: 'done', asOf, extract: page.extract, warnings, record };
+          ? { status: 'failed', ...why, asOf, extract, warnings }
+          : { status: 'done', asOf, extract, warnings, record };
       }
     } catch (error) {
       console.error('comp-report: link read failed', error);

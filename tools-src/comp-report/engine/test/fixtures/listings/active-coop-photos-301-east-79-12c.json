@@ -1,0 +1,41 @@
+{
+  "_fixture": "Hand-written in the shape Firecrawl returns for LISTING_EXTRACT_SCHEMA (parser 0.5.0): a co-op with its grey line (\"Co-op · Upper East Side · Resale\"), its photos and the building's policies. Every value is made up, and the photo URLs are invented paths on the provisional PHOTO_HOSTS, with a junk logo, a map and an off-list host mixed in. Not a captured page.",
+  "address": "301 East 79th Street",
+  "unit": "#12C",
+  "city": "New York",
+  "state": "NY",
+  "zip": "10075",
+  "neighborhood": "Upper East Side",
+  "url": "",
+  "status": "For sale",
+  "last_ask": "$1,295,000",
+  "list_date": "Sep 8, 2026",
+  "days_on_market": "43 days",
+  "floor": "12",
+  "interior_size": "",
+  "beds": "2 beds",
+  "baths": "2 baths",
+  "rooms": "5 rooms",
+  "maintenance": "$2,940/mo",
+  "property_type": "Co-op",
+  "sale_kind": "Resale",
+  "building_name": "",
+  "building_units": "212 units",
+  "building_stories": "33 stories",
+  "year_built": "1964",
+  "features": ["Corner unit", "City view", "Dishwasher", "Hardwood floors", "Balcony"],
+  "amenities": ["Full-time doorman", "Elevator", "Live-in super", "Laundry in building", "Bike room", "Storage space", "Garage parking", "Gym", "Courtyard", "Roof deck"],
+  "policies": ["Pets allowed", "Smoke-free", "Pied-a-terre allowed", "Sublets allowed", "Guarantors accepted"],
+  "history": [
+    { "date": "Sep 8, 2026", "event": "Listed", "price": "$1,295,000" }
+  ],
+  "description": "A corner two-bedroom on the twelfth floor with a balcony facing west.",
+  "heroImageUrl": "https://photos.zillowstatic.com/fp/a1b2c3d4e5f60718293a4b5c6d7e8f90-se_extra_large_1500_800.webp",
+  "photos": [
+    "https://photos.zillowstatic.com/fp/a1b2c3d4e5f60718293a4b5c6d7e8f90-se_extra_large_1500_800.webp",
+    "https://photos.zillowstatic.com/fp/0f1e2d3c4b5a69788796a5b4c3d2e1f0-se_extra_large_1500_800.webp",
+    "https://streeteasy.com/static/images/logo-streeteasy.svg",
+    "https://maps.googleapis.com/maps/api/staticmap?center=301+East+79th+Street",
+    "https://photos.zillowstatic.com/fp/99887766554433221100ffeeddccbbaa-se_extra_large_1500_800.webp"
+  ]
+}

@@ -31,7 +31,7 @@ export interface Entry<T> {
 
 export type OutdoorChoice = OutdoorKind | 'none';
 
-/** Unit condition: the handoff's picker (Original, Updated, Renovated, Mint); good and needs_work are CR-3's. */
+/** Unit condition, low to high: Needs work, Original, Well kept (`good`), Updated, Renovated, Mint (NW-012, NB-4; factor 8's scale). */
 export type Condition = 'original' | 'updated' | 'renovated' | 'mint' | 'good' | 'needs_work';
 
 /**
@@ -41,9 +41,13 @@ export type Condition = 'original' | 'updated' | 'renovated' | 'mint' | 'good' |
 export interface Intake {
   address?: Entry<string>;
   unit?: Entry<string>;
+  /** StreetEasy's neighborhood, as the page names it (NW-017 a): "Turtle Bay". Kept as shown, never checked against a list. */
+  neighborhood?: Entry<string>;
   areaSqft?: Entry<number>;
   beds?: Entry<number>;
   baths?: Entry<number>;
+  /** Rooms as New York counts them, halves allowed (NW-011): co-ops price by rooms. */
+  rooms?: Entry<number>;
   floor?: Entry<number>;
   /** The asking price, where it's listed: its $/sq ft shows against the comps. */
   askingPrice?: Entry<number>;
@@ -62,14 +66,36 @@ export interface Intake {
   exposure?: Entry<string>;
   /** Which way the windows face, from the handoff's picker: North, South, East, West. Context; the engine doesn't compare it yet. */
   exposures?: Entry<string[]>;
-  /** The building's features, from the handoff's picker: Doorman, Gym, Pool, Storage, Parking, Roof deck. */
+  /**
+   * The building's features, from the pickers: every option picked in the
+   * building groups (Services and facilities, Wellness and recreation, Shared
+   * outdoor space — workspace/features.ts), by label. Older reports hold the
+   * handoff's six (Doorman, Gym, Pool, Storage, Parking, Roof deck), which keep
+   * their labels.
+   */
   building?: Entry<string[]>;
+  /** The building's policies, from the Policies picker (NW-010): "Pets allowed", "Smoke-free" … */
+  policies?: Entry<string[]>;
   corner?: Entry<boolean>;
   condition?: Entry<Condition>;
   yearBuilt?: Entry<number>;
   /** New development (true) or a resale (false). */
   newDevelopment?: Entry<boolean>;
+  /**
+   * What kind of home it is, as a label (NW-018 a, NB-2 A): the report's type
+   * stays the pricing basis (condo or co-op), and this says more — a condop, a
+   * townhouse, a house. Never an input to the numbers.
+   */
+  kind?: Entry<HomeKind>;
+  /** A sponsor unit: sold by the building's sponsor (NB-2 A). A flag, not a kind. */
+  sponsorUnit?: Entry<boolean>;
+  /** HDFC or another income-restricted co-op: the price and the buyer's income are capped (NB-2 A). A flag, not a kind. */
+  hdfc?: Entry<boolean>;
 }
+
+/** The home's kind label (NB-2 A). The report's type is still condo or co-op. */
+export const HOME_KINDS = ['condo', 'coop', 'condop', 'townhouse', 'house', 'multi_family'] as const;
+export type HomeKind = (typeof HOME_KINDS)[number];
 
 export type Audience = 'buyer' | 'seller';
 

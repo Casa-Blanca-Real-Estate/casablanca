@@ -71,7 +71,18 @@ test('the reader asks Firecrawl for the listing schema, stealth first, and retur
   assert.equal(sent[0]!.auth, 'Bearer fc-key');
   assert.deepEqual((sent[0]!.body.extract as { schema: unknown }).schema, LISTING_EXTRACT_SCHEMA);
   assert.equal(sent[0]!.body.proxy, 'stealth');
-  assert.deepEqual(sent[0]!.body.formats, ['extract', 'markdown'], 'no screenshots, no photos');
+  assert.deepEqual(sent[0]!.body.formats, ['extract', 'markdown'], 'no screenshots, and no images fetched');
+});
+
+test('the reader keeps a photo URL only through cleanPhotoUrls: StreetEasy’s image hosts, https, hero first', async () => {
+  const z = 'https://photos.zillowstatic.com/fp';
+  const { fn } = fakeFetch([page({
+    address: '200 Chambers Street',
+    heroImageUrl: 'https://user@evil.example/hero.jpg',
+    photos: [`${z}/a.webp`, 'http://photos.zillowstatic.com/fp/b.webp', 'https://streeteasy.com.evil.example/c.jpg', `${z}/a.webp`, `${z}/d.webp`],
+  })]);
+  const read = await firecrawlReader({ apiKey: 'k', fetch: fn, backoffMs: [1] }).read('https://streeteasy.com/sale/1');
+  assert.deepEqual(read, { ok: true, extract: { address: '200 Chambers Street', photos: [`${z}/a.webp`, `${z}/d.webp`] } });
 });
 
 test('a quick refusal of the stealth proxy gets a plain request', async () => {
