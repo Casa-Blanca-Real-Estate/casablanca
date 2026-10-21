@@ -1,8 +1,9 @@
-// /.netlify/functions/agent-pics — the profile-pic roster (Dispatch 12, phase 1).
+// /.netlify/functions/agent-pics — the profile-pic roster (Dispatch 12, phases 1–2).
 //
 // Reads every agent in the `cb-agents` store (the agent CMS's records) and
 // writes the photo side of them: the `pic` group and `placements`, which sit
-// outside the CMS's `draft` and `live` (see record.ts for why).
+// outside the CMS's `draft` and `live` (see record.ts for why). Phase 2 stores
+// the photo files themselves, in their own store (files.ts for how and why).
 //
 // SECURITY
 //   Every request needs `Authorization: Bearer <CB_PICS_TOKEN>`, reads included.
@@ -14,16 +15,30 @@
 //   Reads return names and titles, never the CMS's contact details.
 //
 //   GET                       the roster: one row per agent, with the derived status
-//   GET  ?slug=<slug>         one agent's photo side
+//   GET  ?slug=<slug>         one agent's photo side, with its unfinished uploads
 //   POST {action:'update', slug, pic?, placements?, by?}
+//
+//   Files (phase 2):
+//   POST {action:'upload-start', slug, role:'raw'|'output', filename, bytes,
+//         variant?, capturedAt?, width?, height?, by?}      → {upload}: its id and parts
+//   GET  ?slug=&upload=<id>                                → the upload, and the parts received
+//   POST ?slug=&upload=<id>&part=<n>   (the part's bytes)  → stores one part
+//   POST {action:'upload-finish', slug, upload, by?}       → the file goes on the record
+//   POST {action:'upload-abort', slug, upload}             → the parts are deleted
+//   GET  ?slug=&file=<key>&part=<n>                        → one part of a stored file
+//   POST {action:'file-delete', slug, key, by?}            → off the record, and every part deleted
 //
 // Env: CB_PICS_TOKEN (required), CB_CMS_TOKEN (read only to check they differ),
 //      ALLOWED_ORIGIN (optional CORS origin; not a security control).
 import {
-  agentView, applyPatch, clean, INDEX_KEY, PicsError, rosterRow, AGENTS_STORE, type AgentRecord,
+  agentView, applyPatch, clean, INDEX_KEY, PicsError, readPic, rosterRow, AGENTS_STORE, type AgentRecord, type Pic,
 } from './record.ts';
+import {
+  addFile, deleteParts, fileOf, ID_RE, pendingUploads, planUpload, putPart, readPart, readUpload,
+  receivedParts, removeFile, startUpload, storedFile, FILES_STORE, PART_SIZE, type FileBlobs,
+} from './files.ts';
 
-export { AGENTS_STORE };
+export { AGENTS_STORE, FILES_STORE };
 
 /** The part of @netlify/blobs' Store this uses; the tests run it against Blobs' own local server. */
 export interface AgentBlobs {
@@ -35,12 +50,22 @@ export interface AgentBlobs {
 export interface PicsDeps {
   /** `cb-agents`, read with strong consistency: a write must never start from a cached copy. */
   store: AgentBlobs;
+  /** `cb-agent-pics`: the files' bytes, in parts. */
+  files: FileBlobs;
   env: Record<string, string | undefined>;
   now: () => number;
 }
 
 const MAX_BODY = 32 * 1024;
-const BODY_KEYS = ['action', 'slug', 'pic', 'placements', 'by'];
+/** What each action's body may name. Anything else is refused whole, not partly applied. */
+const BODY_KEYS: Record<string, string[]> = {
+  update: ['action', 'slug', 'pic', 'placements', 'by'],
+  'upload-start': ['action', 'slug', 'role', 'filename', 'bytes', 'variant', 'capturedAt', 'width', 'height', 'by'],
+  'upload-finish': ['action', 'slug', 'upload', 'by'],
+  'upload-abort': ['action', 'slug', 'upload', 'by'],
+  'file-delete': ['action', 'slug', 'key', 'by'],
+};
+const ALL_KEYS = [...new Set(Object.values(BODY_KEYS).flat())];
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/;
 const isSlug = (s: unknown): s is string => typeof s === 'string' && SLUG_RE.test(s);
@@ -123,12 +148,54 @@ export async function handlePics(req: Request, deps: PicsDeps): Promise<Response
     const { store } = deps;
     const url = new URL(req.url);
 
+    const slug = (url.searchParams.get('slug') || '').toLowerCase();
+    const uploadId = url.searchParams.get('upload');
+    const partParam = url.searchParams.get('part');
+
+    // One part of an upload: the body is the bytes, not JSON.
+    if (req.method === 'POST' && uploadId !== null && partParam !== null) {
+      if (!isSlug(slug)) return json({ error: 'Bad slug' }, 400);
+      const declared = Number(req.headers.get('content-length') || '0');
+      if (declared > PART_SIZE) return json({ error: 'Body too large' }, 413);
+      const up = await readUpload(deps.files, slug, uploadId);
+      if (!up) return json({ error: 'Not found', message: 'No upload with that id. Start it again.' }, 404);
+      const body = await req.arrayBuffer();
+      if (body.byteLength > PART_SIZE) return json({ error: 'Body too large' }, 413);
+      const n = Number(partParam);
+      await putPart(deps.files, up, n, body);
+      return json({ ok: true, part: n });
+    }
+
     if (req.method === 'GET') {
-      const slug = (url.searchParams.get('slug') || '').toLowerCase();
       if (slug) {
         if (!isSlug(slug)) return json({ error: 'Bad slug' }, 400);
         const rec = await readRecord(store, slug);
-        return rec ? json({ ok: true, agent: agentView(rec) }) : json({ error: 'Not found' }, 404);
+        if (!rec) return json({ error: 'Not found' }, 404);
+
+        if (uploadId !== null) {
+          const up = await readUpload(deps.files, slug, uploadId);
+          if (!up) return json({ error: 'Not found', message: 'No upload with that id.' }, 404);
+          return json({ ok: true, upload: up, received: await receivedParts(deps.files, up) });
+        }
+
+        const fileKey = url.searchParams.get('file');
+        if (fileKey !== null) {
+          const file = fileOf(readPic(rec.pic), fileKey);
+          const n = Number(partParam ?? '0');
+          if (!file) return json({ error: 'Not found', message: 'No stored file with that key.' }, 404);
+          if (!Number.isInteger(n) || n < 0 || n >= file.parts) return json({ error: 'bad-part', message: `part must be 0 to ${file.parts - 1}` }, 400);
+          const bytes = await readPart(deps.files, slug, file.key, n);
+          if (!bytes) return json({ error: 'missing-part', message: `Part ${n} of this file is missing from the store.` }, 500);
+          return new Response(bytes, {
+            status: 200,
+            headers: {
+              ...CORS, 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store',
+              'X-Parts': String(file.parts), 'Access-Control-Expose-Headers': 'X-Parts',
+            },
+          });
+        }
+
+        return json({ ok: true, agent: agentView(rec), uploads: await pendingUploads(deps.files, slug) });
       }
       const slugs = await readIndex(store);
       const records = await Promise.all(slugs.map((s) => readRecord(store, s)));
@@ -145,23 +212,76 @@ export async function handlePics(req: Request, deps: PicsDeps): Promise<Response
       if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Invalid JSON body' }, 400);
       const b = body as Record<string, unknown>;
 
-      const extra = Object.keys(b).filter((k) => !BODY_KEYS.includes(k));
+      const allowed = BODY_KEYS[String(b.action)];
+      const extra = Object.keys(b).filter((k) => !(allowed || ALL_KEYS).includes(k));
       if (extra.length) {
         return json({ error: 'not-writable', message: `This token can't set ${extra.join(', ')}. It writes pic and placements only.` }, 400);
       }
-      if (b.action !== 'update') return json({ error: 'Unknown action' }, 400);
+      if (!allowed) return json({ error: 'Unknown action' }, 400);
       const slug = String(b.slug || '').toLowerCase();
       if (!isSlug(slug)) return json({ error: 'Bad slug' }, 400);
 
       const rec = await readRecord(store, slug);
       // Agents are created in the agent CMS, or by the one-time import — never here.
       if (!rec) return json({ error: 'Not found', message: 'No agent with that slug. Add agents in the agent CMS.' }, 404);
+      const now = deps.now();
+      const by = clean(b.by, 120);
 
-      const { pic, placements } = applyPatch(rec, { pic: b.pic, placements: b.placements }, deps.now(), clean(b.by, 120));
-      // Everything but the two photo groups goes back exactly as it was read.
-      const next: AgentRecord = { ...rec, pic, placements };
-      await store.set(slug, JSON.stringify(next));
-      return json({ ok: true, agent: agentView(next) });
+      /** Write the photo side back. Everything but `pic` goes back exactly as it was read. */
+      const savePic = async (pic: Pic) => {
+        const next: AgentRecord = { ...rec, pic: { ...pic, updatedAt: new Date(now).toISOString(), updatedBy: by } };
+        await store.set(slug, JSON.stringify(next));
+        return next;
+      };
+
+      if (b.action === 'update') {
+        const { pic, placements } = applyPatch(rec, { pic: b.pic, placements: b.placements }, now, by);
+        // Everything but the two photo groups goes back exactly as it was read.
+        const next: AgentRecord = { ...rec, pic, placements };
+        await store.set(slug, JSON.stringify(next));
+        return json({ ok: true, agent: agentView(next) });
+      }
+
+      if (b.action === 'upload-start') {
+        const pending = (await deps.files.list({ prefix: `up/${slug}/` })).blobs.length;
+        const up = planUpload(rec, b, pending, now, by);
+        await startUpload(deps.files, up);
+        return json({ ok: true, upload: up, received: [] });
+      }
+
+      const uploadKey = String(b.upload ?? '');
+      if (b.action === 'upload-abort') {
+        if (!ID_RE.test(uploadKey)) return json({ error: 'Bad upload id' }, 400);
+        // Never the parts of a file the record holds: those go through file-delete.
+        if (fileOf(readPic(rec.pic), uploadKey)) return json({ error: 'stored', message: 'That upload finished. Delete the file instead.' }, 409);
+        await deleteParts(deps.files, slug, uploadKey);
+        return json({ ok: true });
+      }
+
+      if (b.action === 'upload-finish') {
+        const up = await readUpload(deps.files, slug, uploadKey);
+        if (!up) return json({ error: 'Not found', message: 'No upload with that id.' }, 404);
+        const got = await receivedParts(deps.files, up);
+        if (got.length !== up.parts) {
+          const missing = Array.from({ length: up.parts }, (_, i) => i).filter((i) => !got.includes(i));
+          return json({ error: 'incomplete', message: `${missing.length} of ${up.parts} parts haven't arrived.`, missing }, 409);
+        }
+        const { pic, replaced } = addFile(readPic(rec.pic), storedFile(up, now), now);
+        const next = await savePic(pic);
+        // The record holds the file now; the upload note goes, and a replaced output's bytes with it.
+        await deps.files.delete(`up/${slug}/${up.id}`);
+        if (replaced) await deleteParts(deps.files, slug, replaced.key);
+        return json({ ok: true, agent: agentView(next), file: fileOf(readPic(next.pic), up.id) });
+      }
+
+      if (b.action === 'file-delete') {
+        const key = String(b.key ?? '');
+        const { pic, removed } = removeFile(readPic(rec.pic), key);
+        if (!removed) return json({ error: 'Not found', message: 'No stored file with that key.' }, 404);
+        const next = await savePic(pic);
+        await deleteParts(deps.files, slug, removed.key);
+        return json({ ok: true, agent: agentView(next), freed: removed.bytes });
+      }
     }
 
     return json({ error: 'Method not allowed' }, 405);

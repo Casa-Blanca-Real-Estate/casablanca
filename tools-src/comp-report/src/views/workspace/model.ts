@@ -90,7 +90,7 @@ export interface Workspace {
   setViewAsNewAgent: (on: boolean) => void;
   /** Admin dev scaffolding (About this screen, Build notes, Fill with sample): off by default. */
   devTools: boolean;
-  /** Sort → Gate: every comp has a tier, comp tags and (a practice agent) a note, and none waits for a confirm. */
+  /** Sort → Gate: every comp has a tier, tags and (a practice agent) a note, and none waits for a confirm. */
   readiness: SortReadiness;
   /** Sort's filter, shared so the Findings button's helper link can filter to the incomplete rows. */
   sortFilter: { incomplete: boolean; tags: string[] };

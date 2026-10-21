@@ -42,7 +42,7 @@ export function WorkspaceHeader({ ws, onBack, saveLine }: { ws: Workspace; onBac
 }
 
 /**
- * The row's CTA with its helper line: "3 comps need a tier, note or comp tags"
+ * The row's CTA with its helper line: "3 comps need a tier, note or tags"
  * (a link that filters to them) beside a disabled "Findings →". Sort repeats
  * it at the bottom (NW-053), from the same rowCta and readinessLine.
  */

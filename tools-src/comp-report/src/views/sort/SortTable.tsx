@@ -110,7 +110,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
     else reveal();
   }
 
-  /** "Needs tier, note, comp tags": each word goes to its spot. */
+  /** "Needs tier, note, tags": each word goes to its spot. */
   function goTo(need: RowNeed) {
     if (need === 'tier') {
       tierRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();

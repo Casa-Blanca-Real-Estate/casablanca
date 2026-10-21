@@ -754,7 +754,7 @@ the agent card — a useful starting point for what agents expect.
 ### 10.4 The client web page — phase 2, designed for now
 
 A hosted, frozen copy of the same template: unguessable URL, excluded from search, expiring,
-versioned; client view only; listing photos linked, not hosted; open tracking disclosed; brokerage
+versioned; client view only; listing photos hosted by Casa (copied into Blobs at copy time, NB-3, 2026-10-21); open tracking disclosed; brokerage
 disclosures confirmed before it ships.
 
 ## 11. The training gate — post-launch, scaffolded now
@@ -880,7 +880,8 @@ records across agents waits on D-9**; the schema supports it from day one either
   writer is constrained to property and market facts; §9.3 screens; the agent reviews before sending.
   **School zone** is a real price factor but a recognised steering signal: analyst view only, never
   in client copy unless Hannah approves wording.
-- **Listing photos** linked, not hosted. **Client data** private by default, isolated per owner,
+- **Listing photos** copied into Blobs at copy time and served by Casa from an unguessable route (NB-3,
+  2026-10-21: Casa keeps each listing's photos for reference). **Client data** private by default, isolated per owner,
   never sent to Jev.
 - **The property pool.** Re-presenting StreetEasy data in Casa-branded reports is cleared. Records
   are kept and suggested across agents (D-9, A). Public-record closings are public. Listing

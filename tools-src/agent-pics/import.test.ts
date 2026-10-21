@@ -13,6 +13,7 @@ import agentStore from '../../netlify/functions/agent-store.mjs';
 import { handlePics, type AgentBlobs, type PicsDeps } from './api.ts';
 import { execute, parseRows, plan, readExisting, slugFor, type RunOptions } from './import.ts';
 import { AGENTS_STORE } from './record.ts';
+import { FILES_STORE, type FileBlobs } from './files.ts';
 
 const PICS = 'pics-token-0123456789abcdef';
 const CMS = 'cms-token-fedcba9876543210';
@@ -77,6 +78,7 @@ describe('an import run, against both functions', () => {
     delete process.env.NETLIFY_BUILD_HOOK;
     pics = {
       store: getStore({ name: AGENTS_STORE, edgeURL: url, uncachedEdgeURL: url, consistency: 'strong', token: 'local', siteID: 'local-site' }) as unknown as AgentBlobs,
+      files: getStore({ name: FILES_STORE, edgeURL: url, uncachedEdgeURL: url, consistency: 'strong', token: 'local', siteID: 'local-site' }) as unknown as FileBlobs,
       env: { CB_PICS_TOKEN: PICS, CB_CMS_TOKEN: CMS },
       now: () => Date.parse('2026-10-14T15:00:00Z'),
     };

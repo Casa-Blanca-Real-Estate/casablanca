@@ -3,11 +3,14 @@
 // it as it is (table.test.ts).
 import type { CompRecord, Tier } from '../../../engine/index.ts';
 
-/** What a row still needs before Findings unlocks: a tier, a note, comp tags, or a confirm for a comp read from its page. */
+/** What a row still needs before Findings unlocks: a tier, a note, tags, or a confirm for a comp read from its page. */
 export type RowNeed = 'tier' | 'note' | 'tag' | 'confirm';
 
-/** The word for each need, as the row says it (NB-5: "Comp tags", Dispatch 15). */
-export const NEED_WORD: Record<Exclude<RowNeed, 'confirm'>, string> = { tier: 'tier', note: 'note', tag: 'comp tags' };
+/** The word for each need, as the row says it (NB-5: plain "Tags", with an ⓘ on the card, the form and the filter). */
+/** The ⓘ beside "Tags" (NB-5, answer C): what a tag is. */
+export const TAG_INFO = 'Tags say how a comp compares to the home: what’s the same (same building, similar size) and what’s different (smaller, lower floor, no outdoor space). Every comp needs at least one.';
+
+export const NEED_WORD: Record<Exclude<RowNeed, 'confirm'>, string> = { tier: 'tier', note: 'note', tag: 'tags' };
 
 // ─── What the cells say ──────────────────────────────────────────────────────
 
@@ -27,7 +30,7 @@ export function monthYear(date: string | null | undefined): string {
   return `${MONTHS[Number(date.slice(5, 7)) - 1]} ${date.slice(0, 4)}`;
 }
 
-/** "Needs tier, note, comp tags"; a comp read from its page: "Confirm or remove". */
+/** "Needs tier, note, tags"; a comp read from its page: "Confirm or remove". */
 export function needText(needs: RowNeed[]): string {
   if (needs.includes('confirm')) return 'Confirm or remove';
   return needs.length ? `Needs ${needs.map((n) => NEED_WORD[n as Exclude<RowNeed, 'confirm'>]).join(', ')}` : '';

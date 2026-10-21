@@ -24,7 +24,8 @@ import type { Workspace } from '../workspace/model.ts';
 import { homeName } from '../workspace/screens.ts';
 import { photoImg, tagChip } from './elements.ts';
 import { More } from './More.tsx';
-import { countText, monthYear, PRICE_LABEL, shortPrice, sizeText, type Row } from './rows.ts';
+import { Info } from '../newcomp/Frame.tsx';
+import { countText, monthYear, PRICE_LABEL, shortPrice, sizeText, TAG_INFO, type Row } from './rows.ts';
 
 /** The comp's features: the agent's, else what its source says (outdoor space, views, a doorman). */
 export function compFeatures(row: Row): Features {
@@ -154,7 +155,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
     ? `From StreetEasy’s export${c.record.origin?.row ? `, row ${c.record.origin.row}` : ''}.`
     : `From its StreetEasy page${c.record.origin?.as_of ? `, read ${isoDay(c.record.origin.as_of)}` : ''}.`;
 
-  // The row's "Needs note" and "Needs comp tags" open the card there.
+  // The row's "Needs note" and "Needs tags" open the card there.
   useEffect(() => {
     if (!start || !canEdit) return;
     if (start.what === 'note') {
@@ -489,9 +490,9 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
         </div>
 
         <div className="so-tagsec" ref={tagsRef}>
-          <span className="so-features-title so-tagsec-title">{sq(needs.has('tag'))}Comp tags</span>
+          <span className="so-features-title so-tagsec-title">{sq(needs.has('tag'))}Tags <Info text={TAG_INFO} label="What a tag is" align="left" /></span>
           {editing ? (
-            <TagPicker value={draft!.tags} onChange={(v) => set('tags', v)} label="Comp tags" hidden={firstFloorHidden(draft!.floor)} suggested={suggested} />
+            <TagPicker value={draft!.tags} onChange={(v) => set('tags', v)} label="Tags" hidden={firstFloorHidden(draft!.floor)} suggested={suggested} />
           ) : (
             <div className="so-tags">
               {shownTags.map(tagChip)}
@@ -499,7 +500,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
                 <DataChip key={d.tag} d={d} disabled={saving} onAdd={() => void addSuggested(d.tag)} />
               ))}
               {!shownTags.length && !suggested.length && (canEdit
-                ? <button type="button" className="link so-tag-start" onClick={startEdit}>+ Add comp tags</button>
+                ? <button type="button" className="link so-tag-start" onClick={startEdit}>+ Add tags</button>
                 : <span className="so-fnone">None yet</span>)}
             </div>
           )}

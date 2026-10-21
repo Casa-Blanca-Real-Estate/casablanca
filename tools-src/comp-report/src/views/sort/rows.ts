@@ -11,7 +11,7 @@ import { needsOf, type Level } from '../workspace/screens.ts';
 import type { RowNeed } from './table.ts';
 
 export {
-  monthYear, NEED_WORD, needText, nextSort, passes, shortName, shortPrice, sortRows, tagCounts,
+  monthYear, NEED_WORD, needText, TAG_INFO, nextSort, passes, shortName, shortPrice, sortRows, tagCounts,
   type Filter, type RowNeed, type SortKey, type SortState,
 } from './table.ts';
 

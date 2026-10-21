@@ -1,6 +1,6 @@
 // One comp's form (the handoff, "Type one in" / "Edit comp", Dispatch 14):
 // address, photo, status, price, size, floor, date, why it's a comp, tags and
-// features. Shared by New report 3 of 3 and Sort. Save waits for a comp tag,
+// features. Shared by New report 3 of 3 and Sort. Save waits for a tag,
 // and a note from a practice agent (NB-8); size shows only when the home has a
 // size (no per-SF figure otherwise).
 //
@@ -16,7 +16,8 @@ import { noteOf } from '../../../workspace/state.ts';
 import { compAddress, compPrice, compStatus, STATUS_LABEL, STATUS_ORDER } from '../workspace/comps.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { homeName, noteRequired } from '../workspace/screens.ts';
-import { useCloseGuard } from '../newcomp/Frame.tsx';
+import { Info, useCloseGuard } from '../newcomp/Frame.tsx';
+import { TAG_INFO } from '../sort/table.ts';
 import { FeaturePicker, TagPicker } from './Pickers.tsx';
 import '../../styles/compform.css';
 
@@ -112,11 +113,11 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
     () => (comp?.judgment ? ws.tagSuggestions[comp.judgment.reportCompId] ?? [] : []),
     [comp?.judgment, ws.tagSuggestions],
   );
-  // NB-8: a practice agent saves with a note and comp tags; a full agent with the tags (the note is optional).
+  // NB-8: a practice agent saves with a note and tags; a full agent with the tags (the note is optional).
   const needNote = noteRequired(ws.level);
   // Only the list's tags count: an agent's own tag is extra (Dispatch 20).
   const missing = (needNote && !d.note.trim()) || !d.tags.some(isTag);
-  const need = missing ? (needNote ? 'Add a note and a comp tag to save' : 'Add a comp tag to save') : !factsFixed && !address.trim() ? 'Add the address to save' : '';
+  const need = missing ? (needNote ? 'Add a note and a tag to save' : 'Add a tag to save') : !factsFixed && !address.trim() ? 'Add the address to save' : '';
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -219,8 +220,8 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
         <textarea className="box cf-note" rows={2} maxLength={2000} value={d.note} onChange={(e) => set('note', e.target.value)} placeholder={`What makes it comparable to ${home}, or not`} />
       </label>
       <div className="cf-block">
-        <span className="fh">Comp tags <span className="opt">(pick at least one from the list)</span></span>
-        <TagPicker value={d.tags} onChange={(v) => set('tags', v)} label="Comp tags" hidden={hidden} suggested={suggested} />
+        <span className="fh cf-tags-head">Tags <span className="opt">(pick at least one from the list)</span> <Info text={TAG_INFO} label="What a tag is" align="left" /></span>
+        <TagPicker value={d.tags} onChange={(v) => set('tags', v)} label="Tags" hidden={hidden} suggested={suggested} />
       </div>
       <div className="cf-block">
         <span className="fh">Features <span className="opt">(lavender outline: {home} has it too)</span></span>

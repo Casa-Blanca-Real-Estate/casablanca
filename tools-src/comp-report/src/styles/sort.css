@@ -189,9 +189,11 @@
 .so-card .feature-row { grid-template-columns: 110px minmax(0, 1fr); border-top-color: var(--cb-line); }
 .so-card .feature-row .chip { padding: 4px 9px; }
 
-/* Comp tags: labelled, with the yellow marker when the comp still needs one (NW-040 a). */
+/* Tags: labelled, with the yellow marker when the comp still needs one (NW-040 a). */
 .so-tagsec { display: flex; flex-direction: column; gap: 8px; }
-.so-tagsec-title { display: flex; align-items: center; gap: 6px; }
+.so-tagsec-title { position: relative; display: flex; align-items: center; gap: 6px; }
+.so-filter-wrap { position: relative; display: inline-flex; align-items: center; }
+.so-filter-wrap .nr-tip, .so-tagsec-title .nr-tip { top: 22px; }
 .so-tag-start { font-size: 12px; }
 .so-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .so-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.4; background: var(--cb-surface); border: 1px solid var(--cb-border); padding: 5px 10px; }

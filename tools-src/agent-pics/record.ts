@@ -6,8 +6,10 @@
 // record's top level:
 //
 //   pic         the photo: whether an original is in Drive, when the set was
-//               last generated, notes. Phase 2 adds the stored raws and outputs,
-//               phase 3 the signature photo; their places are reserved here.
+//               last generated, notes, and (phase 2) the files stored for it:
+//               originals and the ten generated outputs. The bytes live in their
+//               own store (files.ts); the record keeps what they are. Phase 3
+//               adds the signature photo; its place is reserved here.
 //   placements  the five places a photo goes (docs/dispatch/12 §3), each
 //               todo / done / na, stamped when it flips
 //
@@ -45,24 +47,53 @@ export interface Placement {
 }
 export type Placements = Record<PlacementKey, Placement>;
 
-/** A stored original (phase 2). Nothing writes these yet. */
-export interface RawFile {
+/** The ten generated variants, by the id the generator names its files with (and Drive files them under). */
+export const VARIANTS = [
+  'R1_Logo', 'R2_Logo', 'R3_Blank', 'R4_Clean',
+  'SQ1_GrayLogo', 'SQ2_Clean', 'SQ3_Name', 'SQ4_ColorName', 'SQ5_ColorClean', 'SQ6_ColorLogo',
+] as const;
+export type Variant = (typeof VARIANTS)[number];
+
+/**
+ * What a stored file is (docs/dispatch/12 §5.5):
+ *   archive  a camera original (NEF). No browser decodes it: stored, listed, downloaded, never previewed.
+ *   working  a JPEG or PNG original: what the cutout re-runs against.
+ *   output   one of the ten generated variants.
+ */
+export const FILE_KINDS = ['archive', 'working', 'output'] as const;
+export type FileKind = (typeof FILE_KINDS)[number];
+
+/** A file whose bytes are in the files store, in `parts` pieces. Written by the server only. */
+export interface StoredFile {
   key: string;
+  kind: FileKind;
   filename: string;
+  type: string;
   bytes: number;
+  parts: number;
   uploadedAt: string;
+  /** When the photo was taken, from its EXIF, or ''. */
+  capturedAt: string;
   width: number | null;
   height: number | null;
+  /** Outputs only. */
+  variant: string;
 }
+/** A stored original: an archive or a working file. */
+export type RawFile = StoredFile;
 
 export interface Pic {
   /** An original exists in Drive's `@ Profile Pic RAWS`. Until phase 2 stores raws, this is how "raw" is known. */
   rawInDrive: boolean;
   /** When the current set was generated (ISO), or ''. */
   generatedAt: string;
-  /** Server-managed (phase 2). */
+  /** Server-managed (phase 2): the stored originals, archives and working files. */
   raws: RawFile[];
-  /** Server-managed (phase 2): stored output keys, by variant id (SQ1_GrayLogo…). */
+  /** The working file the cutout re-runs against, or ''. Settable, to one of `raws`' working files. */
+  workingKey: string;
+  /** Server-managed (phase 2): the stored outputs, at most one per variant. */
+  outputs: StoredFile[];
+  /** Derived from `outputs`: the variant ids stored, round and square. */
   variants: { round: string[]; square: string[] };
   /** Server-managed (phase 3): the 180×180 for the email signature. */
   sigPhotoKey: string;
@@ -76,7 +107,7 @@ export const PIC_STATUSES = ['none', 'raw', 'generated', 'deployed'] as const;
 export type PicStatus = (typeof PIC_STATUSES)[number];
 
 /** The fields a CB_PICS_TOKEN write may set. Everything else in `pic` is the server's. */
-export const WRITABLE_PIC = ['rawInDrive', 'generatedAt', 'notes'] as const;
+export const WRITABLE_PIC = ['rawInDrive', 'generatedAt', 'notes', 'workingKey'] as const;
 export const WRITABLE_PLACEMENT = ['state', 'note'] as const;
 
 export const MAX_NOTES = 2000;
@@ -135,33 +166,51 @@ export function parseDate(v: unknown, now: number, field: string): string {
   return new Date(t).toISOString();
 }
 
-function cleanRaw(v: unknown): RawFile | null {
+const count = (n: unknown) => (Number.isInteger(n) && (n as number) >= 0 ? (n as number) : 0);
+const dim = (n: unknown) => (Number.isInteger(n) && (n as number) > 0 ? (n as number) : null);
+
+function cleanFile(v: unknown, kinds: readonly FileKind[]): StoredFile | null {
   if (!isObject(v)) return null;
   const key = clean(v.key, 200);
   if (!key) return null;
-  const dim = (n: unknown) => (Number.isInteger(n) && (n as number) > 0 ? (n as number) : null);
+  // A phase-1 raw had no kind; an original is a working file unless it says otherwise.
+  const kind = kinds.includes(v.kind as FileKind) ? (v.kind as FileKind) : kinds[kinds.length - 1]!;
   return {
     key,
+    kind,
     filename: clean(v.filename, 200),
-    bytes: Number.isInteger(v.bytes) && (v.bytes as number) >= 0 ? (v.bytes as number) : 0,
+    type: clean(v.type, 100),
+    bytes: count(v.bytes),
+    parts: count(v.parts),
     uploadedAt: storedDate(v.uploadedAt),
+    capturedAt: storedDate(v.capturedAt),
     width: dim(v.width),
     height: dim(v.height),
+    variant: kind === 'output' ? clean(v.variant, 40) : '',
   };
 }
 
-const keyList = (v: unknown): string[] =>
-  (Array.isArray(v) ? v : []).map((k) => clean(k, 200)).filter(Boolean).slice(0, 40);
+export const MAX_RAWS = 50;
 
 /** The record's `pic` group, whole and well-formed whatever is stored (a record the CMS made has none). */
 export function readPic(v: unknown): Pic {
   const p = isObject(v) ? v : {};
-  const variants = isObject(p.variants) ? p.variants : {};
+  const raws = (Array.isArray(p.raws) ? p.raws : []).map((r) => cleanFile(r, ['archive', 'working']))
+    .filter((r): r is RawFile => r !== null).slice(0, MAX_RAWS);
+  const outputs = (Array.isArray(p.outputs) ? p.outputs : []).map((r) => cleanFile(r, ['output']))
+    .filter((r): r is StoredFile => r !== null && VARIANTS.includes(r.variant as Variant)).slice(0, VARIANTS.length);
+  const workingKey = clean(p.workingKey, 200);
   return {
     rawInDrive: p.rawInDrive === true,
     generatedAt: storedDate(p.generatedAt),
-    raws: (Array.isArray(p.raws) ? p.raws : []).map(cleanRaw).filter((r): r is RawFile => r !== null).slice(0, 50),
-    variants: { round: keyList(variants.round), square: keyList(variants.square) },
+    raws,
+    // Only ever one of the working files; a stale key reads as none.
+    workingKey: raws.some((r) => r.key === workingKey && r.kind === 'working') ? workingKey : '',
+    outputs,
+    variants: {
+      round: outputs.filter((o) => o.variant.startsWith('R')).map((o) => o.variant),
+      square: outputs.filter((o) => o.variant.startsWith('SQ')).map((o) => o.variant),
+    },
     sigPhotoKey: clean(p.sigPhotoKey, 200),
     notes: clean(p.notes, MAX_NOTES),
     updatedAt: storedDate(p.updatedAt),
@@ -191,12 +240,18 @@ export function placementView(p: Placement, generatedAt: string): PlacementView 
 
 const resolved = (v: PlacementView) => v === 'done' || v === 'na';
 
+/** When an original's photo is from: taken, if its EXIF said, or else when it was stored. */
+export const photoTime = (r: RawFile): number => time(r.capturedAt || r.uploadedAt);
+
 /**
- * none → raw → generated → deployed. A raw stored after the last generate puts
- * the agent back at `raw`; a placement done before it doesn't count.
+ * none → raw → generated → deployed. A working photo newer than the last
+ * generate puts the agent back at `raw`; a placement done before it doesn't
+ * count. "Newer" goes by when the photo was taken, when its EXIF says, so
+ * storing last year's originals doesn't undo a photo that's out there. An
+ * archive never does: it's kept, not cut out.
  */
 export function picStatus(pic: Pic, placements: Placements): PicStatus {
-  const latestRaw = Math.max(-Infinity, ...pic.raws.map((r) => time(r.uploadedAt)).filter(Number.isFinite));
+  const latestRaw = Math.max(-Infinity, ...pic.raws.filter((r) => r.kind === 'working').map(photoTime).filter(Number.isFinite));
   const generated = time(pic.generatedAt);
   if (Number.isFinite(generated) && !(latestRaw > generated)) {
     return PLACEMENTS.every((k) => resolved(placementView(placements[k], pic.generatedAt))) ? 'deployed' : 'generated';
@@ -238,6 +293,13 @@ export function applyPatch(record: AgentRecord, patch: Patch, now: number, by: s
     }
     if ('generatedAt' in p) pic.generatedAt = parseDate(p.generatedAt, now, 'pic.generatedAt');
     if ('notes' in p) pic.notes = clean(p.notes, MAX_NOTES);
+    if ('workingKey' in p) {
+      const key = typeof p.workingKey === 'string' ? p.workingKey : null;
+      if (key === null || (key && !pic.raws.some((r) => r.key === key && r.kind === 'working'))) {
+        throw new PicsError(400, 'bad-request', 'pic.workingKey must be one of this agent’s stored JPEG or PNG originals, or empty');
+      }
+      pic.workingKey = key;
+    }
   }
 
   if (patch.placements !== undefined) {
@@ -278,6 +340,13 @@ export interface RosterRow {
   status: PicStatus;
   rawInDrive: boolean;
   raws: number;
+  /** Stored camera originals, and JPEG/PNG working files. */
+  archives: number;
+  working: number;
+  /** Stored outputs, of ten. */
+  outputs: number;
+  /** Everything stored for this agent, in bytes: what they cost to keep. */
+  bytes: number;
   generatedAt: string;
   /** Placements resolved for the current photo, of five. */
   placed: number;
@@ -299,6 +368,10 @@ export function rosterRow(record: AgentRecord): RosterRow {
     status: picStatus(pic, placements),
     rawInDrive: pic.rawInDrive,
     raws: pic.raws.length,
+    archives: pic.raws.filter((r) => r.kind === 'archive').length,
+    working: pic.raws.filter((r) => r.kind === 'working').length,
+    outputs: pic.outputs.length,
+    bytes: [...pic.raws, ...pic.outputs].reduce((n, f) => n + f.bytes, 0),
     generatedAt: pic.generatedAt,
     placed: PLACEMENTS.filter((k) => resolved(views[k])).length,
     placements: views,

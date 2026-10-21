@@ -22,7 +22,7 @@ export function isScreen(s: string | null): s is ScreenId {
   return s === 'sort' || s === 'gate' || s === 'findings' || s === 'send' || s === 'done';
 }
 
-/** What a comp still needs before Findings unlocks: a tier, at least one comp tag, and a note for a practice agent. */
+/** What a comp still needs before Findings unlocks: a tier, at least one tag, and a note for a practice agent. */
 export type Need = 'tier' | 'note' | 'tag';
 
 /** The agent's level: practice (new) or full (graduated). */
@@ -30,7 +30,7 @@ export type Level = 'practice' | 'full';
 
 /**
  * NB-8 (NW-046, Kimani's A, 2026-10-21): a practice agent needs a note and
- * comp tags on every comp; a full agent needs the tags, and the note is theirs
+ * tags on every comp; a full agent needs the tags, and the note is theirs
  * to write or not. This reverses D-27's "a note and a tag for every agent".
  */
 export const noteRequired = (level: Level) => level === 'practice';
@@ -73,17 +73,17 @@ export function sortReadiness(comps: WorkspaceComp[], level: Level): SortReadine
   };
 }
 
-/** What every comp needs, in a phrase: "a tier, a note and comp tags", or "a tier and comp tags". */
+/** What every comp needs, in a phrase: "a tier, a note and tags", or "a tier and tags". */
 export function needsPhrase(r: Pick<SortReadiness, 'noteRequired'>): string {
-  return r.noteRequired ? 'a tier, a note and comp tags' : 'a tier and comp tags';
+  return r.noteRequired ? 'a tier, a note and tags' : 'a tier and tags';
 }
 
-/** "3 comps need a tier, note or comp tags" — the helper link under the Findings button. */
+/** "3 comps need a tier, note or tags" — the helper link under the Findings button. */
 export function readinessLine(r: SortReadiness): string {
   if (r.ready) return '';
   if (!r.counted) return 'Add comps to sort';
   const parts: string[] = [];
-  const what = r.noteRequired ? 'a tier, note or comp tags' : 'a tier or comp tags';
+  const what = r.noteRequired ? 'a tier, note or tags' : 'a tier or tags';
   if (r.incomplete.length) parts.push(`${r.incomplete.length} comp${r.incomplete.length === 1 ? ' needs' : 's need'} ${what}`);
   if (r.toConfirm.length) parts.push(`${r.toConfirm.length} to confirm`);
   return parts.join(' · ');
