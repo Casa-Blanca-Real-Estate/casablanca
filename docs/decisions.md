@@ -10,7 +10,7 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-10-15 by Casanova.
+Last updated 2026-10-21 by Casakwassa.
 
 **What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
 pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dispatch 10's phase 2.
@@ -65,15 +65,11 @@ each was applied.
   can propose the sort; the button is yours, because notes are.
 - [ ] **Later — build the house glossary with Noble and the mentors.** The draft is ready:
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
-- [ ] **Now — the Jev keys** (#75 is merged). Make the AI Gateway key on **a Casa-owned Vercel account**, not
-  MindBinder's (D-26: no rotating it later; Vercel's free plan is non-commercial, and zero retention needs Pro), then:
-  1. **In Netlify (Functions scope),** set `AI_GATEWAY_API_KEY` to it and `CR_JEV_ZDR=off`.
-  2. **Also set `CR_DECIDE_KEY`** to any random string of 32 characters or more
-     (a password manager's will do). Put the same value in the Claude Code environment as `CR_DECIDE_KEY`. It lets
-     Arbiter run the go/no-go call and the labelled batch, and read the results, without a sign-in.
-  3. **Redeploy.** Leave `CR_JEV_MODE` alone: you turn it to `watch` after Arbiter's go/no-go call passes.
-- [ ] **Soon — change the credential in the email-signatures doc.** The profile-pic session flagged it
-  to you directly.
+- [x] ~~The Jev keys.~~ Done 2026-10-21: `AI_GATEWAY_API_KEY` (Casa's Vercel team) and `CR_DECIDE_KEY` in Netlify and
+  the cloud environment. Production reads them: the decide readout shows `jevKey` and `sessionKey` true, and zero
+  retention on. `CR_JEV_ZDR` stays unset as long as the Vercel team is on Pro. `CR_JEV_MODE` stays off until
+  Arbiter's go/no-go call passes.
+- [x] ~~Change the credential in the email-signatures doc.~~ Done (Kimani, 2026-10-20).
 - [ ] **Later — for Noble, the thresholds that flag most comps:**
   - the floor band (±3, from Frankie's email) flags 8 of Hannah's 11 comps;
   - Kara's ½ mile flags 6 of the sample's 11, five of them Primary.
@@ -95,23 +91,18 @@ each was applied.
   - **Your caption tracker** (a Claude artifact, linked from the carousel builders): it may become part
     of the studio later.
 - [x] ~~Noble's way in.~~ Done 2026-10-15: invited by email, signed in with a password (his Google sign-in was refused; see NB-28).
-- [ ] **Next week — the Casa account move** (D-26), then tell Casanova; new tracks (Calliste) start there (TD-12).
-- [ ] **Soon — `CR_INSPECT_KEY` and `CR_TEST_KEY`** for Dispatch 23, made on the Casa side (TD-14).
+- [x] ~~The Casa account move.~~ Done 2026-10-20/21: the repo is `Casa-Blanca-Real-Estate/casablanca`, sessions run in the Casa Blanca Claude account, and the keys are on Casa accounts (the Key Maker tracks them). D-26's open questions remain below.
+- [ ] **Soon — the last of TD-14:** the three settings are in Netlify (Production). Still to do: add `CR_INSPECT_KEY` and
+  `CR_TEST_KEY` to the cloud environment too. They do nothing until Dispatch 23 items 3–4 land.
 - [ ] **Soon — a co-op and its StreetEasy export** for the co-op sample (TD-15); **test an invite end to end** (TD-16);
   **Noble on the size-scale bands** (TD-17); **record the next walk-through** (TD-13).
 - [ ] **Soon — swap the Anthropic key in Make** (TD-18). The connection "My Anthropic Claude connection" feeds
   the live **Mailchimp ISO Blast Automation** (its three Claude steps). Give it its own key from Casa's Anthropic
   workspace, update the connection, check one run, then revoke the old key.
-- [ ] **Soon — `CB_PICS_TOKEN` for the profile-pic roster** (#71 is merged). Make it on the Key Maker
-  (https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS, not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it
-  isn't configured.
+- [x] ~~`CB_PICS_TOKEN` and `CB_CMS_TOKEN`.~~ Done 2026-10-21. Production now answers 401, not 503, for the roster and the CMS.
 - [ ] **Soon — read the writer's house voice and its eval drafts** (Dispatch 13, phase 1's PR). The
-  style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. **The eval's real
-  drafts need an Anthropic key in the Casa cloud environment:** in the session's title bar, open the
-  cloud environment menu, then **Edit**, and add `CR_EVAL_ANTHROPIC_API_KEY` (under Network secrets
-  where it's offered, otherwise as an environment variable). Its own name, so the session itself
-  never takes it up. A new session picks it up, and Mason runs the
-  eval (well under a dollar). Don't paste the key into a chat.
+  style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. `CR_EVAL_ANTHROPIC_API_KEY` is in the
+  cloud environment (2026-10-21), so Mason can run the real eval in a new session (well under a dollar).
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---

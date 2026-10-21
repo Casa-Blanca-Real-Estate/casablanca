@@ -1,6 +1,6 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-21:</strong> the sheet moved to the Casa Blanca Claude account. <strong>New:</strong> TD-18, the Anthropic key in Make. Noble's 28 questions (NB-1 to NB-28) and TD-12 to TD-17 are still open. Tokens for the studio's own secrets now come from the <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a>, with no terminal needed.",
+  "since": "<strong>Updated 2026-10-21:</strong> the sheet moved to the Casa Blanca Claude account. Done today: the Jev keys, the profile-pic and CMS tokens, the eval key, the email-signatures credential and the account move. <strong>New:</strong> TD-18, the Anthropic key in Make. Noble's 28 questions (NB-1 to NB-28) are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
   "newIds": [
     "NB-1",
     "NB-2",
@@ -30,7 +30,6 @@
     "NB-26",
     "NB-27",
     "NB-28",
-    "TD-12",
     "TD-13",
     "TD-14",
     "TD-15",
@@ -1227,51 +1226,6 @@
       "intro": "<p>Settings and errands only you can do. Mark one <strong>Done</strong> when it's done; anything left here is still to do. Never paste a key into a chat.</p>",
       "questions": [
         {
-          "id": "TD-1",
-          "q": "The Jev keys: AI Gateway key on a Casa Vercel account, CR_JEV_ZDR=off and CR_DECIDE_KEY",
-          "short": "The Jev keys",
-          "quick": true,
-          "needsYou": true,
-          "context": "<ol><li>Make the AI Gateway key on <strong>a Casa-owned Vercel account</strong>, not MindBinder's.</li><li>In Netlify (Functions scope): <code>AI_GATEWAY_API_KEY</code>, <code>CR_JEV_ZDR=off</code>, and <code>CR_DECIDE_KEY</code> (any random 32+ characters).</li><li>Put the same <code>CR_DECIDE_KEY</code> in the Claude Code cloud environment.</li><li>Redeploy. Leave <code>CR_JEV_MODE</code> alone until Arbiter's go/no-go call passes.</li></ol>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "#75"
-        },
-        {
-          "id": "TD-2",
-          "q": "CB_PICS_TOKEN for the profile-pic roster",
-          "short": "CB_PICS_TOKEN",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p>Make it on the <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> (not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it isn't configured.</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "#71"
-        },
-        {
-          "id": "TD-3",
-          "q": "CR_EVAL_ANTHROPIC_API_KEY in the Casa cloud environment",
-          "short": "The writer's eval key",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p>From a Casa Anthropic account if you can (AC-1). In the session's title bar: the cloud environment menu, then <strong>Edit</strong>; add it under its own name so sessions never take it up. Mason then runs the eval and posts real drafts (well under a dollar).</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "#76"
-        },
-        {
           "id": "TD-4",
           "q": "Label the 30 listings for Jev's calibration",
           "short": "Label Jev's 30 listings",
@@ -1326,21 +1280,6 @@
           "source": "Dispatch 05 · {repo}/docs/decisions.md"
         },
         {
-          "id": "TD-7",
-          "q": "Change the credential in the email-signatures doc",
-          "short": "The signatures doc credential",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p>Painter flagged it to you directly. Remove it from the doc and rotate it before anyone parses that doc for the roster import (PP-1).</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "#71"
-        },
-        {
           "id": "TD-8",
           "q": "Delete the samplepics branch",
           "short": "Delete samplepics",
@@ -1391,21 +1330,6 @@
           "source": "{repo}/docs/decisions.md"
         },
         {
-          "id": "TD-12",
-          "q": "Move to the Casa Claude account, then tell Casanova",
-          "short": "The Casa account move",
-          "quick": false,
-          "needsYou": true,
-          "context": "<p>Early next week (NW-096). Answer AC-1 and AC-2 first. Dispatches wait on the move (NB-25). Make any new keys on the Casa side first time.</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "NW-096 · {repo}/docs/casa-accounts-transfer.md"
-        },
-        {
           "id": "TD-13",
           "q": "Record the next walk-through with Noble",
           "short": "Record the next walk-through",
@@ -1422,11 +1346,11 @@
         },
         {
           "id": "TD-14",
-          "q": "Make the inspect and test keys (four settings)",
+          "q": "Add the inspect and test keys to the cloud environment",
           "short": "The inspect and test keys",
           "quick": true,
           "needsYou": true,
-          "context": "<ol><li>After NB-22 is answered A, and after the move to Casa's account (TD-12): make <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> on the <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a>, each different from the other and from <code>CR_DECIDE_KEY</code>.</li><li>Set <code>CR_TEST_USER_EMAIL</code> to <code>sessions@test.invalid</code>. <code>CR_EVAL_ANTHROPIC_API_KEY</code> is TD-3's key; the test user uses it and never the production one.</li><li>In Netlify, set all four for the Production context only, Functions scope. Redeploy.</li><li>In the Claude Code cloud environment, set the two keys in Casa's account only, never in this one.</li></ol><p>To switch the inspection off: unset <code>CR_INSPECT_KEY</code> and redeploy. The old key works until that deploy is live.</p>",
+          "context": "<p>The three settings are in Netlify (Production). What's left: add <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> to this Claude Code environment, with the same values as in Netlify (they're in your password manager). They do nothing until Dispatch 23 items 3–4 land. To switch the inspection off, unset <code>CR_INSPECT_KEY</code> in Netlify and redeploy.</p>",
           "options": [
             [
               "A",
@@ -1497,7 +1421,12 @@
         }
       ],
       "settled": [
-        "<strong>TD-11 · Noble's sign-in</strong>: recorded 2026-10-15."
+        "<strong>TD-11 · Noble's sign-in</strong>: recorded 2026-10-15.",
+        "<strong>TD-1 · The Jev keys</strong>: done 2026-10-21.",
+        "<strong>TD-2 · CB_PICS_TOKEN</strong>: done 2026-10-21.",
+        "<strong>TD-3 · The eval key</strong>: done 2026-10-21.",
+        "<strong>TD-7 · The email-signatures credential</strong>: done 2026-10-21.",
+        "<strong>TD-12 · The Casa account move</strong>: done 2026-10-21."
       ]
     },
     {
@@ -1603,10 +1532,12 @@
         "CR-3",
         "CR-1",
         "CR-2",
-        "TD-3",
         "TD-5"
       ],
-      "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/76\" target=\"_blank\" rel=\"noopener\">The writer and QA (#76)</a>: Claude drafts the comp email in Casa's voice; the house voice is quoted at the end."
+      "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/76\" target=\"_blank\" rel=\"noopener\">The writer and QA (#76)</a>: Claude drafts the comp email in Casa's voice; the house voice is quoted at the end.",
+      "settledIds": [
+        "TD-3"
+      ]
     },
     {
       "id": "RL-5",
@@ -1626,23 +1557,25 @@
       "id": "RL-4",
       "date": "2026-10-14",
       "qids": [
-        "TD-1",
         "TD-4",
         "CR-4"
       ],
-      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/comp-report/jev-calibration.md\" target=\"_blank\" rel=\"noopener\">Jev's calibration</a>: how to label the 30 listings, and what the go/no-go call checks (#75)."
+      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/comp-report/jev-calibration.md\" target=\"_blank\" rel=\"noopener\">Jev's calibration</a>: how to label the 30 listings, and what the go/no-go call checks (#75).",
+      "settledIds": [
+        "TD-1"
+      ]
     },
     {
       "id": "RL-3",
       "date": "2026-10-14",
       "qids": [
-        "PP-1",
-        "TD-2",
-        "TD-7"
+        "PP-1"
       ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/71\" target=\"_blank\" rel=\"noopener\">The profile-pic roster (#71)</a>: every agent's photo status, and what the import needs.",
       "settledIds": [
-        "PP-2"
+        "PP-2",
+        "TD-2",
+        "TD-7"
       ]
     },
     {
