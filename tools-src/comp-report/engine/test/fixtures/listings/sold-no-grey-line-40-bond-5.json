@@ -1,0 +1,29 @@
+{
+  "_fixture": "Hand-written in the shape Firecrawl returns for LISTING_EXTRACT_SCHEMA (parser 0.5.0): a sold condo whose page shows no grey line — no type, neighborhood or sale label — and no photos or policies. Every value is made up. Not a captured page.",
+  "address": "40 Bond Street",
+  "unit": "#5",
+  "city": "New York",
+  "state": "NY",
+  "zip": "10012",
+  "neighborhood": "",
+  "status": "Sold",
+  "sale_price": "$6,100,000",
+  "sale_date": "Jul 14, 2026",
+  "last_ask": "$6,450,000",
+  "floor": "5",
+  "interior_size": "2,960 ft²",
+  "beds": "3 beds",
+  "baths": "3.5 baths",
+  "common_charges": "$4,210/mo",
+  "taxes": "$3,980/mo",
+  "property_type": "",
+  "sale_kind": "",
+  "year_built": "2007",
+  "features": ["Washer/dryer", "Central air"],
+  "amenities": ["Full-time doorman", "Gym", "Swimming pool"],
+  "policies": [],
+  "history": [
+    { "date": "07/14/2026", "event": "Sold", "price": "$6,100,000" }
+  ],
+  "description": ""
+}

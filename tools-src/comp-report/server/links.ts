@@ -5,8 +5,11 @@
 // The page is read with the extract schema and prompt Abacus wrote for it
 // (engine/parser/listing.ts): values as the page shows them, empty when it
 // doesn't. The engine turns the extract into a comp record; nothing here reads
-// a number. No photos are fetched or stored: a comp is its link and its facts.
-import { LISTING_EXTRACT_PROMPT, LISTING_EXTRACT_SCHEMA } from '../engine/index.ts';
+// a number. Photos are links only (NW-020 a): the extract's photo URLs are
+// cleaned before the read is returned (and stored), keeping https URLs on
+// StreetEasy's image hosts (cleanListingExtract). No image is fetched, proxied
+// or copied.
+import { cleanListingExtract, LISTING_EXTRACT_PROMPT, LISTING_EXTRACT_SCHEMA } from '../engine/index.ts';
 import type { Role } from './db.ts';
 
 export { checkListingLink, MAX_LINKS_PER_REQUEST, titleFromLink, type LinkCheck, type LinkPurpose } from '../workspace/links.ts';
@@ -130,7 +133,7 @@ export function firecrawlReader(opts: {
         if (!extract || typeof extract !== 'object' || Array.isArray(extract) || !hasAnything(extract as Record<string, unknown>)) {
           return { ok: false, code: 'unreadable', message: 'Nothing could be read from that page. Type the comp in instead.' };
         }
-        return { ok: true, extract: extract as Record<string, unknown> };
+        return { ok: true, extract: cleanListingExtract(extract as Record<string, unknown>) };
       }
     },
   };

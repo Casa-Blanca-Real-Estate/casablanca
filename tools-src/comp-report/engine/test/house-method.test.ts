@@ -37,6 +37,7 @@ test('production: every magnitude, weight, bound and threshold is null', () => {
   assert.deepEqual(hm.check_thresholds, {
     sale_age_months: { noted: 3, old: 6, market_moved: 12, basis: "Kara's rule, pending Noble" },
     size_percent: { value: 25, basis: "Kara's rule, pending Noble" },
+    size_tag_percent: { value: 10, basis: "The size scale's inner edge for the tags (NW-045, NB-10): recommended default, pending Noble" },
     floor_band_floors: { value: 3, basis: "Frankie's band (floors 2–8 around a 5th-floor home), pending Noble" },
     distance_miles: { noted: 0.25, far: 0.5, basis: "Kara's rule, pending Noble" },
   });

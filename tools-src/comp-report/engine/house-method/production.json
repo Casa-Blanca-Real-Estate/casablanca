@@ -2,7 +2,7 @@
   "about": "The Casa Blanca house method: every magnitude, weight, bound and threshold the engine uses. Every valuation value is null — to be determined. Noble sets them, informed by the CR-R research; until he does, an applicable factor is \"considered, not calculated\" and moves no number. A production file with any valuation value needs approval.by and approval.at. The comparability checks' thresholds are configuration, not valuations: they carry the mentors' rules until Noble sets his. See ../README.md.",
   "id": "casa-blanca-house-method",
   "kind": "production",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "approval": null,
   "lines": {
     "interior_size": {
@@ -349,6 +349,10 @@
     "size_percent": {
       "value": 25,
       "basis": "Kara's rule, pending Noble"
+    },
+    "size_tag_percent": {
+      "value": 10,
+      "basis": "The size scale's inner edge for the tags (NW-045, NB-10): recommended default, pending Noble"
     },
     "floor_band_floors": {
       "value": 3,

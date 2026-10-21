@@ -27,7 +27,7 @@ export {
 } from './parser/property-key.ts';
 /** Comps from a StreetEasy link (read by the server with Firecrawl) and comps typed in by the agent (§6.2). */
 export {
-  compRecordFromListing, confirmListingRecord, LISTING_EXTRACT_PROMPT, LISTING_EXTRACT_SCHEMA,
+  compRecordFromListing, confirmListingRecord, readSaleKind, LISTING_EXTRACT_PROMPT, LISTING_EXTRACT_SCHEMA,
   type ListingExtract, type ListingRead, type ListingReadOptions,
 } from './parser/listing.ts';
 export { compRecordFromManual, type ManualCompFields, type ManualReadOptions, type ManualValue } from './parser/manual.ts';
@@ -38,7 +38,9 @@ export {
 } from './house-method/load.ts';
 export { isTestRuntime } from './house-method/runtime.ts';
 /** For building a subject's facts from listing tags — and a floor from its unit label — exactly as the parser builds a comp's. */
-export { deriveFromAmenities, deriveFromFeatures, floorFromUnitLabel, normalizeTag, parkingKind, viewKind } from './parser/derive.ts';
+export { deriveFromAmenities, deriveFromFeatures, deriveFromPolicies, floorFromUnitLabel, normalizeTag, parkingKind, viewKind } from './parser/derive.ts';
+/** A listing's photos, kept only on StreetEasy's image hosts (NW-020 a): the server cleans an extract before storing it. */
+export { cleanListingExtract, cleanPhotoUrls, MAX_PHOTOS, PHOTO_HOSTS } from './parser/photos.ts';
 export { FACT_CHECKS } from './facts-schema.ts';
 
 /**

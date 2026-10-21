@@ -19,10 +19,11 @@ import { isIsoDate, parseMonthNameDate, type IsoDate } from '../util/dates.ts';
 import { compareStrings } from '../util/numbers.ts';
 import { PARSER_VERSION } from '../version.ts';
 import type {
-  CompRecord, Confidence, FactField, ListingEvent, ListingStatus, PropertyFacts, Sourced,
+  CompRecord, Confidence, FactField, ListingEvent, ListingStatus, PropertyFacts, SaleKind, Sourced,
 } from '../types.ts';
 import { ParseError, type ParseWarning } from './errors.ts';
 import { identify, normalizeCity, parseAddressLine, parseStreetEasyUrl } from './property-key.ts';
+import { cleanPhotoUrls } from './photos.ts';
 import { LISTING_TAG_NAMES, tagFacts, unitLabelSuggestions } from './tag-facts.ts';
 import {
   isBlank, readArea, readCount, readDate, readFloor, readHalfCount, readMoney, readPropertyType, readTags, type Read,
@@ -46,7 +47,7 @@ export const LISTING_EXTRACT_SCHEMA = {
     city: text('The city in the listing\'s or building\'s full address, e.g. "New York" or "Brooklyn".'),
     state: text('The state, e.g. "NY".'),
     zip: text('The ZIP code, e.g. "10007".'),
-    neighborhood: text('The neighborhood, e.g. "Tribeca".'),
+    neighborhood: text('The neighborhood: the grey line\'s middle label under the price, e.g. "Tribeca".'),
     url: text('The listing\'s StreetEasy URL, if the page shows it.'),
     status: text('The status label, e.g. "Sold", "In contract", "For sale", "Off market", "No longer available".'),
     sale_price: text('The closing price, e.g. "$4,650,000". Only if the page says it sold.'),
@@ -65,7 +66,8 @@ export const LISTING_EXTRACT_SCHEMA = {
     common_charges: text('Monthly common charges, e.g. "$3,120".'),
     taxes: text('Monthly real estate taxes.'),
     maintenance: text('Monthly maintenance, for a co-op.'),
-    property_type: text('The property type as labelled: Condo, Co-op, Condop or Townhouse.'),
+    property_type: text('The type: the grey line\'s first label under the price, e.g. Condo, Co-op, Condop, Townhouse.'),
+    sale_kind: text('The grey line\'s last label under the price, e.g. "Resale", "Sponsor Unit", "New Development".'),
     building_name: text('The building\'s name, if it has one.'),
     building_units: text('Units in the building.'),
     building_stories: text('Stories in the building.'),
@@ -89,6 +91,8 @@ export const LISTING_EXTRACT_SCHEMA = {
       },
     },
     description: text('The home\'s full description, every paragraph.'),
+    photos: tags('URLs of the property photos in the gallery, hero first. No logos, icons, headshots, maps, floor plans or ads.'),
+    heroImageUrl: text('The full https:// URL of the first, large property photo.'),
   },
 } as const;
 
@@ -160,6 +164,23 @@ export function readYesNo(s: string): Read<boolean> {
 function readListingPropertyType(s: string) {
   const lead = /^(condominium|condo|co-?op(erative)?|condop|townhouse|house|multi[- ]?family)\b/i.exec(s.trim());
   return readPropertyType(lead ? lead[1]! : s);
+}
+
+/**
+ * The grey line's sale label → how it's sold. A label it doesn't know is
+ * `other`; the caller keeps the label as shown either way.
+ */
+export function readSaleKind(label: string): SaleKind | null {
+  const t = label.trim().toLowerCase();
+  if (t === '') return null;
+  if (/\bre-?sale\b/.test(t)) return 'resale';
+  if (/\bsponsor\b/.test(t)) return 'sponsor';
+  if (/\bnew (development|dev)\b|\bnew construction\b/.test(t)) return 'new_development';
+  if (/\bforeclos/.test(t)) return 'foreclosure';
+  if (/\bauction\b/.test(t)) return 'auction';
+  if (/\bshort sale\b/.test(t)) return 'short_sale';
+  if (/\brestricted\b|\bhdfc\b|\bincome[- ]restricted\b/.test(t)) return 'restricted';
+  return 'other';
 }
 
 // ─── Status: the label, and the listing's history ────────────────────────────
@@ -375,6 +396,26 @@ export function compRecordFromListing(extract: unknown, options: ListingReadOpti
   read('new_development', 'new_development', readYesNo);
   read('sponsor_unit', 'sponsor_unit', readYesNo);
   read('income_restricted', 'income_restricted', readYesNo);
+  // The grey line's sale label (NW-018 b). "Resale" says it isn't new development, and "Sponsor
+  // Unit" that it's a sponsor unit, where the page's own flag doesn't say; a flag the page does
+  // give stands, and a disagreement is said. The label is kept as shown, whatever it maps to.
+  const saleLabel = str('sale_kind');
+  const saleKind = isBlank(saleLabel) ? null : readSaleKind(saleLabel);
+  if (saleKind) {
+    put('sale_kind', saleKind, false, saleKind === 'other' ? `"${saleLabel}" isn't a sale kind the tool knows — kept as shown` : null, 'sale_kind');
+    put('sale_kind_label', saleLabel, false, null, 'sale_kind');
+    const implied: [FactField, boolean, string] | null = saleKind === 'resale' ? ['new_development', false, 'a resale']
+      : saleKind === 'new_development' ? ['new_development', true, 'new development']
+        : saleKind === 'sponsor' ? ['sponsor_unit', true, 'a sponsor unit'] : null;
+    if (implied) {
+      const [field, value, words] = implied;
+      const given = facts[field as 'new_development' | 'sponsor_unit'];
+      if (!given) put(field, value, false, `the grey line says "${saleLabel}": ${words}`, 'sale_kind');
+      else if (given.value !== value) {
+        warnings.push({ code: 'value_adjusted', column: 'sale_kind', message: `the grey line says "${saleLabel}" but the page's ${field.replace('_', ' ')} flag says otherwise — the flag stands` });
+      }
+    }
+  }
   read('days_on_market', 'days_on_market', readListingCount);
   read('list_price', 'last_ask', readMoney);
   read('original_list_price', 'original_ask', readMoney);
@@ -442,6 +483,9 @@ export function compRecordFromListing(extract: unknown, options: ListingReadOpti
   const suggestions = unitLabelSuggestions(identity.unit.raw, facts, 'listing', asOf);
 
   const description = typeof ex['description'] === 'string' ? ex['description'].trim() : '';
+  // Photos only through cleanPhotoUrls: https on StreetEasy's image hosts, hero first, at most 8.
+  const photos = cleanPhotoUrls([ex['heroImageUrl'], ...(Array.isArray(ex['photos']) ? ex['photos'] : [])]);
+  const greyPart = (key: string) => (isBlank(str(key)) ? null : str(key));
   const record: CompRecord = {
     identity,
     status: {
@@ -464,6 +508,8 @@ export function compRecordFromListing(extract: unknown, options: ListingReadOpti
       on_confirm: onConfirm,
       history,
       description: description || null,
+      photos,
+      grey_line: { type: greyPart('property_type'), neighborhood: greyPart('neighborhood'), sale_kind: greyPart('sale_kind') },
     },
   };
   if (suggestions.length > 0) record.suggestions = suggestions;

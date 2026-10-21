@@ -44,13 +44,14 @@ test('the extract schema: every value is text as the page shows it, and every fi
 
 test('every scalar field of the schema is read: each yields a value or a warning naming it', () => {
   const props = LISTING_EXTRACT_SCHEMA.properties as Record<string, { type: string }>;
-  const scalar = Object.entries(props).filter(([name, p]) => p.type === 'string' && !['address', 'unit', 'city', 'state', 'zip', 'neighborhood', 'url', 'status', 'building_name', 'description', 'interior_size_approximate'].includes(name)).map(([name]) => name);
+  const scalar = Object.entries(props).filter(([name, p]) => p.type === 'string' && !['address', 'unit', 'city', 'state', 'zip', 'neighborhood', 'url', 'status', 'building_name', 'description', 'interior_size_approximate', 'sale_kind', 'heroImageUrl'].includes(name)).map(([name]) => name);
   const junk = Object.fromEntries(scalar.map((name) => [name, 'xyzzy']));
   const { record, warnings } = compRecordFromListing({ address: '1 Test Street', city: 'New York', state: 'NY', status: 'Sold', ...junk }, { as_of: READ_ON, url: 'https://streeteasy.com/sale/1' });
   for (const name of scalar) {
     assert.ok(warnings.some((w) => w.column === name), `${name} was read (and refused)`);
   }
-  // Only the property type reads junk as a value — "other", with a note, as the export does.
+  // Only the property type reads junk as a value — "other", with a note, as the export does. (The
+  // grey line's sale label is never refused either: listing-read.test.ts.)
   assert.deepEqual(Object.keys(record.facts), ['property_type']);
 });
 

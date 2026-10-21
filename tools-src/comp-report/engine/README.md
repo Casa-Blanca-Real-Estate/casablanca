@@ -733,6 +733,7 @@ against `all_null`. Each says whose rule it is:
 |---|---|---|
 | `sale_age_months` | noted past 3, old past 6, the market has moved past 12 | Kara's rule, pending Noble |
 | `size_percent` | 25 | Kara's rule, pending Noble |
+| `size_tag_percent` | 10 | The size scale's inner edge for the tags (NW-045, NB-10): recommended default, pending Noble. No check reads it; `workspace/derived-tags.ts` does (Similar size within it, Smaller or Bigger out to `size_percent`, Much past it). Must be below `size_percent` |
 | `floor_band_floors` | 3 | Frankie's band (floors 2–8 around a 5th-floor home), pending Noble |
 | `distance_miles` | noted past 0.25, far past 0.5 | Kara's rule, pending Noble |
 
@@ -783,7 +784,7 @@ left out and said so. Amortisation uses exact integer powers, so every runtime a
 ## Versioning and determinism
 
 - `ENGINE_VERSION` (0.4.1) — bump when any output could change for the same input.
-  `PARSER_VERSION` (0.4.0) — bump when any parsed record could change; every import records it.
+  `PARSER_VERSION` (0.5.0) — bump when any parsed record could change; every import records it.
   `PROPERTY_KEY_VERSION` (`pk1`) — bump when key rules change. The house method has its own
   `version`, and its `hash`.
 - **Deterministic**: comps are processed in id order; statistics sum in that order; object keys

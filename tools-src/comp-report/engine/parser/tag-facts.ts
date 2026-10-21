@@ -7,7 +7,7 @@
 // approximate.
 
 import type { CompRecord, FactField, IsoDate, PropertyFacts, Source, UnitTypeTag } from '../types.ts';
-import { deriveFromAmenities, deriveFromFeatures, floorFromUnitLabel, unitLabelSuggestsPenthouse } from './derive.ts';
+import { deriveFromAmenities, deriveFromFeatures, deriveFromPolicies, floorFromUnitLabel, unitLabelSuggestsPenthouse } from './derive.ts';
 
 export interface TagFact {
   field: FactField;
@@ -89,7 +89,12 @@ export function tagFacts(
       : `no other amenities listed among ${A}`);
   }
   if (tags.policies.length > 0) {
-    add('policies', tags.policies.map((p) => p.toLowerCase()).sort(), true, `from ${names.policies}`);
+    const P = names.policies;
+    add('policies', tags.policies.map((p) => p.toLowerCase()).sort(), true, `from ${P}`);
+    // A blank never says "no pets": only the tags that are there say anything (NW-010).
+    const p = deriveFromPolicies(tags.policies);
+    add('pets', p.pets, p.pets === 'allowed', p.pets === 'allowed' ? `from ${P}` : `no pet policy listed among ${P}; whether pets are allowed isn't known`);
+    add('smoke_free', p.smoke_free, p.smoke_free, p.smoke_free ? `from ${P}` : `smoke-free not listed among ${P}`);
   }
   return out;
 }
