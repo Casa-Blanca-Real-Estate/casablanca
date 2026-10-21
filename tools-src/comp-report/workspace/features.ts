@@ -15,7 +15,7 @@
 // labels and the server refuses unknown tags.
 import type { CompRecord, PropertyType, ReportPropertyType } from '../engine/index.ts';
 import { deriveFromPolicies, normalizeTag, parkingKind } from '../engine/index.ts';
-import type { Condition, Intake, OutdoorChoice } from './state.ts';
+import type { Condition, HomeKind, Intake, OutdoorChoice } from './state.ts';
 
 // ─── Tags ───────────────────────────────────────────────────────────────────
 
@@ -105,7 +105,7 @@ export const FEATURE_GROUPS: readonly FeatureGroup[] = [
   { key: 'outdoor', label: 'Private outdoor space', options: ['None', 'Balcony', 'Terrace', 'Private roof', 'Garden', 'Patio'], single: true, scope: 'unit' },
   { key: 'views', label: 'Views', options: ['Water', 'City', 'Open', 'Partial', 'Courtyard'], single: false, scope: 'unit' },
   { key: 'exposure', label: 'Exposure', options: ['North', 'South', 'East', 'West'], single: false, scope: 'unit' },
-  { key: 'condition', label: 'Unit condition', options: ['Needs work', 'Original', 'Good', 'Updated', 'Renovated', 'Mint'], single: true, scope: 'unit' },
+  { key: 'condition', label: 'Unit condition', options: ['Needs work', 'Original', 'Well kept', 'Updated', 'Renovated', 'Mint'], single: true, scope: 'unit' },
   { key: 'corner', label: 'Corner', options: ['Corner unit'], single: false, scope: 'unit', types: APARTMENT },
   {
     key: 'building', label: 'Services and facilities', single: false, scope: 'building',
@@ -184,11 +184,11 @@ export function sharedCount(home: Features, comp: Features): number {
 
 // ─── Condition (NW-012) ─────────────────────────────────────────────────────
 
-/** The ⓘ beside the condition scale. "Good" is NB-4's recommended word (not "Well kept"). */
-export const CONDITION_INFO = 'Original: never redone, as built. Good: well kept, not redone. Needs work: dated or worn, a fixer-upper or gut.';
+/** The ⓘ beside the condition scale. "Well kept" is Kimani's word for the stored `good` state (NB-4 B). */
+export const CONDITION_INFO = 'Original: never redone, as built. Well kept: looked after, not redone. Needs work: dated or worn, a fixer-upper or gut.';
 
 const CONDITION_TO_LABEL: Record<Condition, string> = {
-  needs_work: 'Needs work', original: 'Original', good: 'Good', updated: 'Updated', renovated: 'Renovated', mint: 'Mint',
+  needs_work: 'Needs work', original: 'Original', good: 'Well kept', updated: 'Updated', renovated: 'Renovated', mint: 'Mint',
 };
 const LABEL_TO_CONDITION = Object.fromEntries(Object.entries(CONDITION_TO_LABEL).map(([k, v]) => [v, k])) as Record<string, Condition>;
 
@@ -394,4 +394,39 @@ export function typeFromListing(record: CompRecord): PageType | null {
   if (!t) return null;
   const label = record.listing?.grey_line?.type ?? null;
   return { value: t.value, label, asReportType: t.value === 'condo' || t.value === 'coop' ? t.value : null };
+}
+
+// ─── The home's kind (NW-018 a, NB-2 A) ─────────────────────────────────────
+
+/**
+ * The page's kind label: its type, with a house told apart from a townhouse
+ * by the grey line's own word ("House", "Single-family home"). Null when the
+ * page shows no type, or one the tool doesn't know.
+ */
+export function kindFromListing(record: CompRecord): HomeKind | null {
+  const t = record.facts.property_type?.value;
+  if (!t || t === 'other') return null;
+  const label = (record.listing?.grey_line?.type ?? '').trim().toLowerCase();
+  if (t === 'townhouse' && /^(house|single[- ]family|one[- ]family)\b/.test(label)) return 'house';
+  return t;
+}
+
+const KIND_LABEL: Record<HomeKind, string> = {
+  condo: 'Condo', coop: 'Co-op', condop: 'Condop', townhouse: 'Townhouse', house: 'House', multi_family: 'Multi-family',
+};
+
+/**
+ * The home's kind in words, its flags first: "HDFC co-op", "Sponsor unit ·
+ * Condo", "Townhouse". Null when the intake says nothing of it.
+ */
+export function homeKindLabel(intake: Intake | undefined): string | null {
+  const kind = intake?.kind?.value;
+  const hdfc = intake?.hdfc?.value === true;
+  const sponsor = intake?.sponsorUnit?.value === true;
+  const base = kind ? KIND_LABEL[kind] : null;
+  const parts: string[] = [];
+  if (sponsor) parts.push('Sponsor unit');
+  if (hdfc) parts.push(base ? `HDFC ${base.toLowerCase()}` : 'HDFC');
+  else if (base) parts.push(base);
+  return parts.length ? parts.join(' · ') : null;
 }

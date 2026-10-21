@@ -1,10 +1,10 @@
 // The tags the data settles (NW-059 a, Dispatch 16): from a comp, the home and
 // the engine's checks, the tags the facts support and the tags they
-// contradict. Data only: Mason shows the supported ones as one-click
-// suggestions marked "from the data", and clears the contradicted ones, in
-// Dispatch 20 (NB-9's recommendation: suggest, never pre-fill — tags are the
-// agent's). Lower and Higher floor stay manual (Kimani: they depend on the
-// building's height).
+// contradict. Kimani's NB-9 answer is C: for a full agent the supported tags
+// are pre-filled; for a practice agent they're one-click suggestions marked
+// "from the data"; contradicted tags clear for both (withDerivedTags). Mason
+// shows it in Dispatch 20. Lower and Higher floor stay manual (Kimani: they
+// depend on the building's height).
 //
 // The size scale's edges are the house method's, not code: within
 // `size_tag_percent` a comp is Similar size; out to `size_percent` (the same 25
@@ -12,7 +12,7 @@
 import {
   productionHouseMethod, type CheckThresholds, type CompOut, type CompRecord, type EngineOutput, type PropertyFacts, type Sourced,
 } from '../engine/index.ts';
-import type { Features, Tag } from './features.ts';
+import { tagGroupOf, type Features, type Tag } from './features.ts';
 
 export interface DerivedTag {
   tag: Tag;
@@ -97,4 +97,27 @@ export function derivedTags(input: DerivedTagsInput): DerivedTags {
   }
 
   return { supported, contradicted };
+}
+
+/**
+ * A comp's tags with what the data settles applied, by the agent's level
+ * (NB-9 C): contradicted tags come off for everyone; a full agent gets the
+ * supported tags added (a one-choice group's other tag gives way), a practice
+ * agent gets them back as suggestions instead. A tag already there is never
+ * suggested again. Apply it when the data first settles a comp (Dispatch 20
+ * decides when), so a tag the agent removed isn't put back on every render.
+ */
+export function withDerivedTags(
+  tags: readonly string[], derived: DerivedTags, level: 'practice' | 'full',
+): { tags: string[]; suggested: DerivedTag[] } {
+  const off = new Set<string>(derived.contradicted.map((d) => d.tag));
+  let next = tags.filter((t) => !off.has(t));
+  const fresh = derived.supported.filter((d) => !next.includes(d.tag) && !off.has(d.tag));
+  if (level === 'practice') return { tags: next, suggested: fresh };
+  for (const d of fresh) {
+    const g = tagGroupOf(d.tag);
+    if (g.single) next = next.filter((t) => !(g.tags as readonly string[]).includes(t));
+    next = [...next, d.tag];
+  }
+  return { tags: next, suggested: [] };
 }

@@ -9,7 +9,7 @@
 // a corner unit, beside what it filled before. The page's type is returned as
 // data, never written over the report's.
 import { compRecordFromListing, confirmListingRecord, type Confidence, type IsoDate, type Sourced } from '../engine/index.ts';
-import { intakeFeaturesFromRecord, typeFromListing, type PageType } from './features.ts';
+import { intakeFeaturesFromRecord, kindFromListing, typeFromListing, type PageType } from './features.ts';
 import type { Entry, Intake, OutdoorChoice } from './state.ts';
 
 export interface HomeFromListing {
@@ -77,6 +77,11 @@ export function homeFromListing(extract: unknown, opts: { asOf: IsoDate; url: st
   fill('views', facts.views);
   fill('yearBuilt', facts.year_built);
   fill('newDevelopment', facts.new_development);
+  // The kind label and its flags (NB-2 A): the report's type stays the agent's pricing basis.
+  const kind = kindFromListing(record);
+  if (kind) fill('kind', facts.property_type, kind);
+  fill('sponsorUnit', facts.sponsor_unit);
+  fill('hdfc', facts.income_restricted);
   if (facts.outdoor_private && next.outdoorKind === undefined) {
     const kinds = facts.outdoor_kinds?.value ?? [];
     const kind: OutdoorChoice | undefined = facts.outdoor_private.value ? kinds[0] ?? 'outdoor_space' : 'none';

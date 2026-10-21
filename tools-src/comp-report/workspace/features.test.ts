@@ -122,13 +122,13 @@ test('groups by type: no concierge, gym or policies for a townhouse; an unknown 
   assert.equal(groupsFor('other').length, FEATURE_GROUPS.length);
 });
 
-test('the condition scale: six steps low to high, good and needs_work under their own labels, and the ⓘ', () => {
-  assert.deepEqual(FEATURE_GROUPS.find((g) => g.key === 'condition')!.options, ['Needs work', 'Original', 'Good', 'Updated', 'Renovated', 'Mint']);
-  assert.deepEqual(homeFeatures({ condition: { value: 'good', asOf: AS_OF } }).condition, ['Good']);
+test('the condition scale: six steps low to high, good ("Well kept", NB-4 B) and needs_work under their own labels, and the ⓘ', () => {
+  assert.deepEqual(FEATURE_GROUPS.find((g) => g.key === 'condition')!.options, ['Needs work', 'Original', 'Well kept', 'Updated', 'Renovated', 'Mint']);
+  assert.deepEqual(homeFeatures({ condition: { value: 'good', asOf: AS_OF } }).condition, ['Well kept']);
   assert.deepEqual(homeFeatures({ condition: { value: 'needs_work', asOf: AS_OF } }).condition, ['Needs work']);
-  assert.equal(withHomeFeatures({}, { condition: ['Good'] }, AS_OF).condition?.value, 'good');
+  assert.equal(withHomeFeatures({}, { condition: ['Well kept'] }, AS_OF).condition?.value, 'good');
   assert.equal(withHomeFeatures({}, { condition: ['Needs work'] }, AS_OF).condition?.value, 'needs_work');
-  assert.match(CONDITION_INFO, /^Original: never redone, as built\. Good: well kept, not redone\. Needs work: dated or worn, a fixer-upper or gut\.$/);
+  assert.match(CONDITION_INFO, /^Original: never redone, as built\. Well kept: looked after, not redone\. Needs work: dated or worn, a fixer-upper or gut\.$/);
 });
 
 test('tag groups: every tag in one group, size an ordered one-choice scale, new tags accepted', () => {
@@ -209,4 +209,28 @@ test('comps get the same pickers from their records — a link’s, and a stored
   assert.ok(f.building?.includes('Doorman') && f.building.includes('Concierge'), JSON.stringify(f));
   assert.ok(f.wellness?.includes('Gym'), JSON.stringify(f));
   assert.deepEqual(f.policies, ['Pets allowed']);
+});
+
+test('the home’s kind label and its flags (NB-2 A): filled from the read, the report’s type untouched', async () => {
+  const { homeKindLabel, kindFromListing } = await import('./features.ts');
+  const coop = homeFromListing(listingFixture(COOP), { asOf: '2026-10-21', url: COOP_URL }, {});
+  assert.equal(coop.intake.kind?.value, 'coop');
+  assert.equal(coop.intake.kind?.from, 'listing');
+  assert.equal(coop.intake.sponsorUnit, undefined, 'a resale says nothing about a sponsor');
+  assert.equal(homeKindLabel(coop.intake), 'Co-op');
+
+  const read = (extra: Record<string, unknown>) => homeFromListing(
+    { address: '1 Test Street', city: 'New York', state: 'NY', status: 'For sale', ...extra }, { asOf: '2026-10-21', url: 'https://streeteasy.com/sale/1' }, {},
+  ).intake;
+  const house = read({ property_type: 'House' });
+  assert.equal(house.kind?.value, 'house', 'StreetEasy’s "House", told apart from a townhouse');
+  assert.equal(read({ property_type: 'Townhouse' }).kind?.value, 'townhouse');
+  assert.equal(read({ property_type: 'Two-family home' }).kind?.value, 'multi_family');
+  const hdfc = read({ property_type: 'Co-op', income_restricted: 'yes' });
+  assert.deepEqual([hdfc.kind?.value, hdfc.hdfc?.value, homeKindLabel(hdfc)], ['coop', true, 'HDFC co-op']);
+  const sponsor = read({ property_type: 'Condo', sale_kind: 'Sponsor unit' });
+  assert.deepEqual([sponsor.sponsorUnit?.value, homeKindLabel(sponsor)], [true, 'Sponsor unit · Condo']);
+  assert.equal(read({ property_type: 'Mansion' }).kind, undefined, 'a type the tool doesn’t know sets no kind');
+  assert.equal(homeKindLabel({}), null);
+  assert.equal(kindFromListing(compRecordFromListing({ address: '1 Test Street' }, { as_of: '2026-10-21' }).record), null);
 });

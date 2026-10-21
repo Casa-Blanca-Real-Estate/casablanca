@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { compute, parseExport, productionHouseMethod, type EngineOutput } from '../engine/index.ts';
 import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
 import { SAMPLE_INTAKE, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
-import { derivedTags, sizeTag } from './derived-tags.ts';
+import { derivedTags, sizeTag, withDerivedTags } from './derived-tags.ts';
 import { engineInput, workspaceComps } from './engine-input.ts';
 import type { Features } from './features.ts';
 
@@ -72,4 +72,16 @@ test('6+ months from the engine’s sale-age check, and only past six months', (
   const chambers = tagsFor('200 chambers', '10A', later);
   assert.ok(chambers.supported.includes('6+ months'));
   assert.match(chambers.d.supported.find((t) => t.tag === '6+ months')!.because, /months ago/);
+});
+
+test('NB-9 C: pre-filled for a full agent, suggested to a practice agent; contradictions clear for both', () => {
+  const derived = {
+    supported: [{ tag: 'Bigger' as const, because: '12% bigger than the home' }, { tag: 'Same building' as const, because: 'x' }],
+    contradicted: [{ tag: 'First floor' as const, because: 'on floor 10' }],
+  };
+  const had = ['Same building', 'Smaller', 'First floor', 'Renovated'];
+  assert.deepEqual(withDerivedTags(had, derived, 'full'), { tags: ['Same building', 'Renovated', 'Bigger'], suggested: [] }, 'Bigger replaces Smaller: Size is one choice');
+  const practice = withDerivedTags(had, derived, 'practice');
+  assert.deepEqual(practice.tags, ['Same building', 'Smaller', 'Renovated']);
+  assert.deepEqual(practice.suggested.map((d) => d.tag), ['Bigger'], 'a tag already there isn’t suggested');
 });
