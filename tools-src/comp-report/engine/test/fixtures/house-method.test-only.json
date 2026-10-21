@@ -350,6 +350,10 @@
       "value": 25,
       "basis": "Kara's rule, pending Noble"
     },
+    "size_tag_percent": {
+      "value": 10,
+      "basis": "The size scale's inner edge for the tags (NW-045, NB-10): recommended default, pending Noble"
+    },
     "floor_band_floors": {
       "value": 3,
       "basis": "Frankie's band (floors 2–8 around a 5th-floor home), pending Noble"

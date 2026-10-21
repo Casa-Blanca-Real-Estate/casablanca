@@ -3,7 +3,7 @@
 // refuses one). Money is whole dollars; areas whole square feet.
 
 import { isIsoDate } from './util/dates.ts';
-import { LAUNDRY_STATES, type FactField } from './types.ts';
+import { LAUNDRY_STATES, SALE_KINDS, type FactField } from './types.ts';
 
 export type Check = (v: unknown) => boolean;
 
@@ -41,6 +41,8 @@ export const FACT_CHECKS: Record<FactField, { check: Check; expects: string }> =
   new_development: { check: bool, expects: 'true or false' },
   sponsor_unit: { check: bool, expects: 'true or false' },
   income_restricted: { check: bool, expects: 'true or false' },
+  sale_kind: { check: oneOf(...SALE_KINDS), expects: 'a sale kind' },
+  sale_kind_label: { check: (v) => typeof v === 'string' && v.trim() !== '', expects: 'the label as shown' },
   coordinates: {
     check: (v) => isObj(v) && Object.keys(v).length === 2 && latLng(v['lat'], 90) && latLng(v['lng'], 180),
     expects: '{ lat, lng } in degrees',
@@ -63,4 +65,6 @@ export const FACT_CHECKS: Record<FactField, { check: Check; expects: string }> =
   finishes: { check: strings, expects: 'a list of tags' },
   amenities: { check: strings, expects: 'a list of tags' },
   policies: { check: strings, expects: 'a list of tags' },
+  pets: { check: oneOf('allowed', 'not_listed'), expects: 'allowed or not_listed' },
+  smoke_free: { check: bool, expects: 'true or false' },
 };

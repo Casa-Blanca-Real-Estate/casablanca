@@ -9,7 +9,7 @@
 // The parser records it as approximate, because a listing agent types these
 // tags and may leave one out, and the agent can correct it.
 
-import type { LaundryState, OutdoorKind, ServiceFacts, UnitTypeTag } from '../types.ts';
+import type { LaundryState, OutdoorKind, PetsPolicy, ServiceFacts, UnitTypeTag } from '../types.ts';
 
 export function normalizeTag(tag: string): string {
   return tag.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -157,6 +157,29 @@ export function deriveFromAmenities(amenities: readonly string[]): AmenityFacts 
     outdoor_shared: outdoorShared,
     amenities: [...rest].sort(),
   };
+}
+
+export interface PolicyFacts {
+  /** `allowed` when a tag says pets (or cats, or dogs) are allowed; otherwise `not_listed`, never "no pets". */
+  pets: PetsPolicy;
+  /** True when a tag says smoke-free; false means none says so. */
+  smoke_free: boolean;
+}
+
+const PETS_ALLOWED = /\bpets?\b.*\b(allowed|ok|okay|welcome|permitted|friendly)\b|\bpet[- ]friendly\b|\b(cats?|dogs?)\b.*\b(allowed|ok|okay|welcome|permitted)\b/;
+const NOT = /\bno\b|\bnot\b/;
+const SMOKE_FREE = /\bsmoke[- ]?free\b|\bno smoking\b|\bnon[- ]?smoking\b/;
+
+/** Building Policies → pets and smoke-free. Policies say what's allowed; a missing tag only says nothing. */
+export function deriveFromPolicies(policies: readonly string[]): PolicyFacts {
+  let pets: PetsPolicy = 'not_listed';
+  let smokeFree = false;
+  for (const raw of policies) {
+    const tag = normalizeTag(raw);
+    if (PETS_ALLOWED.test(tag) && !NOT.test(tag)) pets = 'allowed';
+    if (SMOKE_FREE.test(tag)) smokeFree = true;
+  }
+  return { pets, smoke_free: smokeFree };
 }
 
 /** "PHA", "PH-2" → looks like a penthouse. Inferred, so the agent confirms it. */

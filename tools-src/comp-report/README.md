@@ -83,7 +83,9 @@ Three ways in, one list (`docs/comp-report/02-screens.md`):
   `LISTING_EXTRACT_SCHEMA`, and turns the extract into a comp record (`compRecordFromListing`). It
   records the property, what the page said as an observation (`property_observations.raw` holds
   the extract), and the comp in the report, **unconfirmed**. It counts in neither result until the
-  agent confirms the row (`PATCH /comps {confirmed: true}`). No photos are fetched. A failed read
+  agent confirms the row (`PATCH /comps {confirmed: true}`). No image is fetched: the page's photo
+  URLs are kept as links, only through `cleanPhotoUrls` (https, StreetEasy's image hosts, at most 8;
+  `engine/parser/photos.ts`), before the extract is stored. A failed read
   says why and offers "type it in".
 - **The export**, as before (`POST /api/comp-report/imports`).
 - **Typed in**: `POST /api/comp-report/comps {manual}` (`compRecordFromManual`).

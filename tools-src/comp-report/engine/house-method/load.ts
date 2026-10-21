@@ -57,6 +57,12 @@ export interface CheckThresholds {
   sale_age_months: { noted: number; old: number; market_moved: number; basis: string };
   /** Size far off: more than this many percent bigger or smaller than the home. */
   size_percent: { value: number; basis: string };
+  /**
+   * The size scale's inner edge (NW-045): within this many percent, a comp is
+   * "Similar size"; out to size_percent, "Smaller" or "Bigger"; past it, "Much".
+   * Only the tags the data settles read it (workspace/derived-tags.ts); no check does.
+   */
+  size_tag_percent: { value: number; basis: string };
   /** Floor far off: more than this many floors above or below the home's — its floor band. */
   floor_band_floors: { value: number; basis: string };
   /** Distance: noted past `noted` miles, "far for Manhattan" past `far`. */
@@ -228,7 +234,7 @@ function readCheckThresholds(raw: unknown, issues: string[]): CheckThresholds | 
   if (!isObject(raw)) { issues.push(`${where} must be an object`); return null; }
   const before = issues.length;
   const known: Record<string, string[]> = {
-    sale_age_months: ['noted', 'old', 'market_moved'], size_percent: ['value'], floor_band_floors: ['value'], distance_miles: ['noted', 'far'],
+    sale_age_months: ['noted', 'old', 'market_moved'], size_percent: ['value'], size_tag_percent: ['value'], floor_band_floors: ['value'], distance_miles: ['noted', 'far'],
   };
   for (const key of Object.keys(raw)) if (key !== 'about' && !(key in known)) issues.push(`${where}.${key} is not a check threshold`);
   const out: Record<string, Record<string, number | string>> = {};
@@ -255,6 +261,10 @@ function readCheckThresholds(raw: unknown, issues: string[]): CheckThresholds | 
   }
   const size = out['size_percent'];
   if (size && typeof size['value'] === 'number' && size['value'] > 100) issues.push(`${where}.size_percent.value is a percentage, at most 100`);
+  const sizeTag = out['size_tag_percent'];
+  if (sizeTag && size && typeof sizeTag['value'] === 'number' && typeof size['value'] === 'number' && !(sizeTag['value'] < size['value'])) {
+    issues.push(`${where}: size_tag_percent.value < size_percent.value`);
+  }
   const miles = out['distance_miles'];
   if (miles && typeof miles['noted'] === 'number' && typeof miles['far'] === 'number' && !(miles['noted'] < miles['far'])) {
     issues.push(`${where}.distance_miles: noted < far`);

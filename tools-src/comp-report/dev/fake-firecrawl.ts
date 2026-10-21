@@ -46,6 +46,8 @@ export const PAGES: Record<string, Record<string, unknown> | 'wall'> = {
   'https://streeteasy.com/building/20-pine-street-new_york/617': fixture('active-20-pine-617.json'),
   'https://streeteasy.com/building/111-fulton-street-new_york/309': fixture('off-market-111-fulton-309.json'),
   'https://streeteasy.com/building/99-john-street-new_york/612': fixture('junk-values.json'),
+  'https://streeteasy.com/building/301-east-79-street-new_york/12c': fixture('active-coop-photos-301-east-79-12c.json'),
+  'https://streeteasy.com/building/40-bond-street-new_york/5': fixture('sold-no-grey-line-40-bond-5.json'),
   'https://streeteasy.com/building/blocked-street-new_york/1a': 'wall',
 };
 
