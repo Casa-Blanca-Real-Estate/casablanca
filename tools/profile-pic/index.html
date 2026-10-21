@@ -693,12 +693,31 @@ main.roster-mode > :not(.view-tabs):not(#rosterView):not(#lightbox){ display: no
 .ro-check input{ width: 16px; height: 16px; accent-color: var(--cb-black); }
 .ro-places{ display: flex; flex-wrap: wrap; gap: 6px; }
 .ro-empty{ text-align: center; color: var(--cb-mid); padding: 28px 12px !important; }
+/* Files (phase 2): originals and outputs stored against the agent */
+.ro-files{ display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.ro-file{ display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: var(--radius-sm); font-size: var(--text-small); }
+.ro-file .ro-fmain{ min-width: 0; }
+.ro-file .ro-fname{ font-weight: 800; overflow-wrap: anywhere; margin-right: 6px; }
+.ro-file .ro-row{ gap: 6px; justify-content: flex-end; }
+.ro-file .ro-btn{ padding: 6px 10px; }
+.ro-file.pending{ border-style: dashed; }
+.ro-outs{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 6px; }
+.ro-out{ padding: 6px 8px; background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: var(--radius-sm); font-size: 10px; font-weight: 800; letter-spacing: 0.05em; cursor: pointer; text-align: left; font-family: inherit; color: var(--cb-black); }
+.ro-out:hover{ border-color: var(--cb-lavender); }
+.ro-out.missing{ color: var(--cb-mid); border-style: dashed; cursor: default; }
+.ro-out span{ display: block; font-weight: 400; color: var(--cb-mid); margin-top: 2px; letter-spacing: 0; }
+.ro-progress{ font-size: var(--text-small); color: var(--cb-black); }
+#roSave{ margin-top: 12px; }
+#roSave select.ro-input{ flex: 1; }
 @media (max-width: 560px){
   .ro-counts{ grid-template-columns: repeat(2, 1fr); }
   .ro-table .ro-wide{ display: none; }
   .ro-table .ro-of{ display: none; }
   .ro-table th:nth-child(1){ width: 46%; } .ro-table th:nth-child(2){ width: 32%; } .ro-table th:nth-child(4){ width: 22%; }
   .ro-detail-grid{ grid-template-columns: 1fr; }
+  .ro-outs{ grid-template-columns: repeat(2, 1fr); }
+  .ro-file{ grid-template-columns: 1fr; }
+  .ro-file .ro-row{ justify-content: flex-start; }
 }
 </style>
 </head>
@@ -862,7 +881,7 @@ main.roster-mode > :not(.view-tabs):not(#rosterView):not(#lightbox){ display: no
   </div>
 
   <div style="height:1px;background:var(--cb-border);"></div>
-  <p class="footer-note">Files never leave your device. Nothing is uploaded.</p>
+  <p class="footer-note">Files stay on your device unless you save them to the roster.</p>
 
 
   <!-- Roster (Dispatch 12): who needs a photo, and whose photo hasn't been deployed.
@@ -892,7 +911,8 @@ main.roster-mode > :not(.view-tabs):not(#rosterView):not(#lightbox){ display: no
         </tr></thead>
         <tbody id="roRows"></tbody>
       </table>
-      <p class="ro-note">The status is worked out, never typed: <b>none</b>, then <b>raw</b> once an original exists, <b>generated</b>, and <b>deployed</b> when all five placements are done or don't apply. A placement done before the latest photo was generated counts as not done. Add agents in the <a href="../agent-cms/">Agent CMS</a>. The one-time import of the whole roster waits on your answer to D-24.</p>
+      <p class="ro-note" id="roTotal"></p>
+      <p class="ro-note">The status is worked out, never typed: <b>none</b>, then <b>raw</b> once an original exists, <b>generated</b>, and <b>deployed</b> when all five placements are done or don't apply. A placement done before the latest photo was generated counts as not done, and a JPEG or PNG taken after it puts the agent back at raw. Add agents in the <a href="../agent-cms/">Agent CMS</a>; the rest of the roster arrives with the one-time import from the signatures doc.</p>
     </div>
     <p class="ro-note" id="roStatus" role="status" aria-live="polite"></p>
   </section>
@@ -1257,6 +1277,18 @@ function initDropZone() {
   });
 }
 initDropZone();
+
+// Dispatch 12, phase 2: the roster opens an agent's stored working file here, to re-cut it.
+window.cbGen = {
+  load(file, first, last) {
+    photoFile = file; bgBlob = null; bwCanvas = null;
+    document.getElementById('firstName').value = first || '';
+    document.getElementById('lastName').value  = last || '';
+    setDropCompact(file);
+    generateBtn.disabled = false;
+    generateBtn.textContent = skipAI.checked ? 'Generate Versions' : 'Remove Background & Generate';
+  },
+};
 
 // ── Sliders ──
 vertSlider.addEventListener('input', () => {
@@ -1681,7 +1713,7 @@ function renderAll() {
     const isFeatured = (i === 4);  // SQ1_GrayLogo is the primary output
 
     // Stash for zip + tab switching
-    window._outputBlobs.push({ dataURL, dlName, label: out.label, desc: out.desc, ext: out.ext, isFeatured });
+    window._outputBlobs.push({ dataURL, dlName, label: out.label, desc: out.desc, ext: out.ext, isFeatured, id: out.id, mime: out.mime });
 
     // Thumbnail for grid
     const thumbSz = isFeatured ? 300 : 200;
@@ -1758,6 +1790,9 @@ function renderAll() {
   }
   dlAllBtn.textContent = `Download All (${outputs.length} files)`;
   dlAllBtn.onclick = () => downloadAllZip(zipName, window._outputBlobs);
+
+  // Dispatch 12, phase 2: offer to store this set against the agent in the roster.
+  if (window.cbPicsOffer) window.cbPicsOffer({ first: firstName, last: lastName, blobs: window._outputBlobs });
 }
 
 function rebuildTabs() {
@@ -1832,6 +1867,8 @@ function switchToAgent(id) {
   }
   dlAllBtn.textContent = 'Download All (' + agent.blobs.length + ' files)';
   dlAllBtn.onclick = () => downloadAllZip(agent.zipName, agent.blobs);
+  const [kFirst, ...kLast] = agent.key.split('_');
+  if (window.cbPicsOffer) window.cbPicsOffer({ first: kFirst, last: kLast.join(' '), blobs: agent.blobs });
 
   rebuildTabs();
   outputsLabel.style.display = 'block';
@@ -1858,7 +1895,9 @@ function removeAgent(id) {
 async function downloadAllZip(zipName, blobs) {
   blobs = blobs || window._outputBlobs;
   if (!blobs || !blobs.length) return;
-  const dlAllBtn = document.getElementById('dlAllBtn');
+  // The roster zips a stored set too, when the generator may have no button on screen.
+  const dlAllBtn = document.getElementById('dlAllBtn') || document.createElement('button');
+  const dlAllText = dlAllBtn.textContent;
   dlAllBtn.textContent = 'Building zip…';
   dlAllBtn.disabled = true;
 
@@ -1885,21 +1924,29 @@ async function downloadAllZip(zipName, blobs) {
   a.click();
   URL.revokeObjectURL(a.href);
 
-  dlAllBtn.textContent = `Download All (${blobs.length} files)`;
+  dlAllBtn.textContent = dlAllText;
   dlAllBtn.disabled = false;
   showToast('✓ ZIP downloaded');
 }
+window.cbZip = downloadAllZip;
 
 </script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   ROSTER (Dispatch 12, phase 1) — who needs a photo, and whose photo
+   ROSTER (Dispatch 12, phases 1–2) — who needs a photo, and whose photo
    hasn't been deployed. docs/dispatch/12-profile-pic-tracker.md.
 
    Reads every agent in the agent store through agent-pics, and writes
    only the photo side of a record: whether an original is in Drive,
    when the set was generated, and notes. The status is derived on the
    server. Agents are created in the Agent CMS, never here.
+
+   Phase 2 stores the files: originals (a NEF is kept, never decoded; a
+   JPEG or PNG is a working file the cutout can re-run against) and the
+   ten outputs, saved from the generator. Netlify takes about 6 MB a
+   request, so a file goes up in the server's part size, one part per
+   request, and resumes: picking the same file again sends only the parts
+   that didn't arrive. Downloads come back the same way and are joined here.
 
    The token (CB_PICS_TOKEN) lives in sessionStorage for this tab only.
    All data-derived DOM is built with textContent, never innerHTML.
@@ -1912,7 +1959,7 @@ async function downloadAllZip(zipName, blobs) {
     ['streeteasy','StreetEasy'],['businessCard','Business card']];
   var STATUS_ORDER={none:0,raw:1,generated:2,deployed:3};
   var FILTERS=[['all','All agents'],['needs','Need a photo'],['undeployed','Generated, not deployed'],['deployed','Deployed']];
-  var S={roster:null,filter:'all',sort:'name',dir:1,open:null,detail:{},loading:false};
+  var S={roster:null,filter:'all',sort:'name',dir:1,open:null,detail:{},uploads:{},busy:{},loading:false,offer:null,genSlug:''};
 
   function $(id){return document.getElementById(id);}
   function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
@@ -1933,7 +1980,7 @@ async function downloadAllZip(zipName, blobs) {
 
   function api(opts){
     opts=opts||{};
-    var url=API+(opts.slug?'?slug='+encodeURIComponent(opts.slug):'');
+    var url=API+(opts.slug?'?slug='+encodeURIComponent(opts.slug)+(opts.query?'&'+opts.query:''):'');
     return fetch(url,{method:opts.body?'POST':'GET',cache:'no-store',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok()},
       body:opts.body?JSON.stringify(opts.body):undefined})
@@ -1982,6 +2029,8 @@ async function downloadAllZip(zipName, blobs) {
     return api().then(function(d){
       S.roster=d.roster||[];S.loading=false;say('');
       $('roBody').hidden=false;render();
+      if(S.open&&!S.detail[S.open])fetchDetail(S.open);
+      if(S.offer)window.cbPicsOffer(S.offer);
     },function(e){S.loading=false;if(e.message!=='unauthorized'&&e.message!=='not-configured')say(e.message);});
   }
   $('roRefresh').addEventListener('click',function(){S.detail={};load();});
@@ -2036,10 +2085,12 @@ async function downloadAllZip(zipName, blobs) {
     var list=sorted(S.roster.filter(function(a){
       return inFilter(a,S.filter)&&(!q||a.name.toLowerCase().indexOf(q)!==-1||a.slug.indexOf(q)!==-1);
     }));
+    var total=S.roster.reduce(function(n,a){return n+(a.bytes||0);},0);
+    $('roTotal').textContent=total?'Stored across the roster: '+fmtBytes(total)+', for '+(function(n){return n===1?'1 agent':n+' agents';})(S.roster.filter(function(a){return a.bytes;}).length)+'.':'';
     var body=$('roRows');body.textContent='';
     if(!list.length){
       var tr=el('tr'),td=el('td','ro-empty');td.colSpan=5;
-      td.textContent=S.roster.length?'No agents match.':'No agents in the store yet. Add them in the Agent CMS, or wait for the one-time import (D-24).';
+      td.textContent=S.roster.length?'No agents match.':'No agents in the store yet. Add them in the Agent CMS, or run the one-time import from the signatures doc.';
       tr.appendChild(td);body.appendChild(tr);return;
     }
     list.forEach(function(a){
@@ -2059,7 +2110,9 @@ async function downloadAllZip(zipName, blobs) {
   function row(a){
     var tr=el('tr','ro-agent');tr.tabIndex=0;tr.setAttribute('aria-expanded',String(S.open===a.slug));
     var td=el('td');td.appendChild(el('span','ro-name',a.name));if(a.title)td.appendChild(el('span','ro-sub',a.title));tr.appendChild(td);
-    td=el('td');td.appendChild(pill(a.status));if(a.site==='archived'){var g=el('span','ro-pill left','left');g.title='Archived in the Agent CMS';td.appendChild(g);}tr.appendChild(td);
+    td=el('td');td.appendChild(pill(a.status));if(a.site==='archived'){var g=el('span','ro-pill left','left');g.title='Archived in the Agent CMS';td.appendChild(g);}
+    if(a.archives&&!a.working){var nw=el('span','ro-pill left','no working file');nw.title='A camera original is stored, but no JPEG or PNG for the cutout to run on';td.appendChild(nw);}
+    tr.appendChild(td);
     tr.appendChild(el('td','ro-wide',day(a.generatedAt)));
     td=el('td');td.appendChild(dots(a));td.appendChild(el('span','ro-sub ro-inline ro-of',a.placed+' of 5'));tr.appendChild(td);
     tr.appendChild(el('td','ro-wide',when(a.updatedAt)));
@@ -2070,7 +2123,7 @@ async function downloadAllZip(zipName, blobs) {
   }
 
   function fetchDetail(slug){
-    api({slug:slug}).then(function(d){S.detail[slug]=d.agent;if(S.open===slug)render();},function(e){say(e.message);});
+    return api({slug:slug}).then(function(d){S.detail[slug]=d.agent;S.uploads[slug]=d.uploads||[];if(S.open===slug)render();},function(e){say(e.message);});
   }
 
   function detail(a){
@@ -2103,6 +2156,8 @@ async function downloadAllZip(zipName, blobs) {
     cell.appendChild(el('span','ro-sub','Ticking placements comes in the placements phase. Until then they read as stored.'));
     grid.appendChild(cell);
 
+    grid.appendChild(filesCell(a,full));
+
     cell=el('div','full');cell.appendChild(el('span','section-label','Notes'));
     var notes=el('textarea','ro-input');notes.maxLength=2000;notes.value=a.notes||'';notes.setAttribute('aria-label','Notes');
     cell.appendChild(notes);grid.appendChild(cell);
@@ -2128,6 +2183,314 @@ async function downloadAllZip(zipName, blobs) {
     });
     return tr;
   }
+
+  /* ── files (phase 2) ── */
+  var VARIANTS=['R1_Logo','R2_Logo','R3_Blank','R4_Clean','SQ1_GrayLogo','SQ2_Clean','SQ3_Name','SQ4_ColorName','SQ5_ColorClean','SQ6_ColorLogo'];
+  var ARCHIVE_EXT=/\.(nef|nrw|dng|cr2|cr3|arw|raf|orf|rw2)$/i;
+  function fmtBytes(n){
+    if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(0)+' KB';
+    if(n<1073741824)return (n/1048576).toFixed(1)+' MB';return (n/1073741824).toFixed(2)+' GB';
+  }
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  function failed(r,what){
+    return r.json().catch(function(){return {};}).then(function(d){
+      if(r.status===401){setTok('');connect('That token was rejected. Paste CB_PICS_TOKEN again.');}
+      var e=new Error((d&&d.message)||(d&&d.error)||(what+' failed ('+r.status+')'));e.status=r.status;throw e;
+    });
+  }
+  /* A network blip or a 5xx is retried with backoff; a refusal (4xx) is not. */
+  function retrying(fn){
+    var tries=0;
+    function go(){return fn().catch(function(e){
+      if(e.status&&e.status<500&&e.status!==429)throw e;
+      if(++tries>=4)throw e;
+      return sleep(1000*Math.pow(2,tries)).then(go);
+    });}
+    return go();
+  }
+  function partURL(slug,q){return API+'?slug='+encodeURIComponent(slug)+'&'+q;}
+
+  /* The EXIF date a photo was taken, from a JPEG's APP1 or a TIFF-based camera file (NEF is one). '' when there's none. */
+  function exifDate(buf){
+    try{
+      var v=new DataView(buf),tiff=-1,o=2;
+      if(v.byteLength<12)return '';
+      if(v.getUint16(0)===0xFFD8){
+        while(o+10<v.byteLength&&v.getUint8(o)===0xFF){
+          var mk=v.getUint8(o+1),len=v.getUint16(o+2);
+          if(mk===0xE1&&v.getUint32(o+4)===0x45786966){tiff=o+10;break;}
+          if(mk===0xDA)break;o+=2+len;
+        }
+      }else tiff=0;
+      if(tiff<0||tiff+8>v.byteLength)return '';
+      var bo=v.getUint16(tiff),le=bo===0x4949;if(!le&&bo!==0x4D4D)return '';
+      var u16=function(p){return v.getUint16(p,le);},u32=function(p){return v.getUint32(p,le);};
+      if(u16(tiff+2)!==42)return '';
+      var tag=function(ifd,want){var p=tiff+ifd;if(p+2>v.byteLength)return null;var n=u16(p);
+        for(var i=0;i<n;i++){var e=p+2+i*12;if(e+12>v.byteLength)return null;if(u16(e)===want)return e;}return null;};
+      var ascii=function(e){var cnt=u32(e+4),off=cnt>4?tiff+u32(e+8):e+8,t='';
+        for(var i=0;i<cnt&&off+i<v.byteLength;i++){var c=v.getUint8(off+i);if(!c)break;t+=String.fromCharCode(c);}return t;};
+      var ifd0=u32(tiff+4),when='',ex=tag(ifd0,0x8769);
+      if(ex){var d=tag(u32(ex+8),0x9003);if(d)when=ascii(d);}
+      if(!when){var d0=tag(ifd0,0x0132);if(d0)when=ascii(d0);}
+      var m=/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(when);if(!m)return '';
+      var t=new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]);return isNaN(t)?'':t.toISOString();
+    }catch(e){return '';}
+  }
+  function describe(file){
+    var meta={capturedAt:'',width:null,height:null};
+    return file.slice(0,512*1024).arrayBuffer().then(function(buf){meta.capturedAt=exifDate(buf);})
+    .then(function(){
+      if(ARCHIVE_EXT.test(file.name)||!window.createImageBitmap)return;
+      return createImageBitmap(file).then(function(b){meta.width=b.width;meta.height=b.height;b.close&&b.close();},function(){});
+    }).then(function(){return meta;},function(){return meta;});
+  }
+
+  /*
+   * Upload one file in parts. An unfinished upload of the same name, size and
+   * variant is resumed: the server says which parts it has, and only the rest go.
+   */
+  function uploadFile(slug,file,opts,progress){
+    var name=String(file.name).replace(/[<>\\\/]/g,'_').trim();
+    var same=(S.uploads[slug]||[]).filter(function(u){
+      return u.filename===name&&u.bytes===file.size&&(u.variant||'')===(opts.variant||'');})[0];
+    var begin=same
+      ?api({slug:slug,query:'upload='+same.id})
+      :describe(file).then(function(meta){
+        return api({body:{action:'upload-start',slug:slug,role:opts.role,variant:opts.variant||undefined,filename:file.name,
+          bytes:file.size,capturedAt:meta.capturedAt||undefined,width:meta.width||undefined,height:meta.height||undefined,by:whoami()}});
+      });
+    return begin.then(function(d){
+      var up=d.upload,have={};(d.received||[]).forEach(function(n){have[n]=true;});
+      var done=Object.keys(have).length,n=0;
+      if(progress)progress(done,up.parts,!!same);
+      function next(){
+        while(n<up.parts&&have[n])n++;
+        if(n>=up.parts)return Promise.resolve();
+        var i=n++,blob=file.slice(i*up.partSize,Math.min(file.size,(i+1)*up.partSize));
+        return retrying(function(){
+          return fetch(partURL(slug,'upload='+up.id+'&part='+i),{method:'POST',cache:'no-store',
+            headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/octet-stream'},body:blob})
+          .then(function(r){if(!r.ok)return failed(r,'Part '+(i+1));});
+        }).then(function(){done++;if(progress)progress(done,up.parts,!!same);return next();});
+      }
+      return next().then(function(){
+        return api({body:{action:'upload-finish',slug:slug,upload:up.id,by:whoami()}});
+      });
+    }).then(function(d){
+      S.uploads[slug]=(S.uploads[slug]||[]).filter(function(u){return !same||u.id!==same.id;});
+      took(slug,d.agent);return d;
+    });
+  }
+
+  /* A stored file, fetched a part at a time and joined. */
+  function downloadFile(slug,f,progress){
+    var parts=[];
+    function get(i){
+      if(i>=f.parts)return Promise.resolve();
+      return retrying(function(){
+        return fetch(partURL(slug,'file='+encodeURIComponent(f.key)+'&part='+i),{cache:'no-store',headers:{'Authorization':'Bearer '+tok()}})
+        .then(function(r){return r.ok?r.arrayBuffer():failed(r,'Download');});
+      }).then(function(b){parts.push(b);if(progress)progress(i+1,f.parts);return get(i+1);});
+    }
+    return get(0).then(function(){return new Blob(parts,{type:f.type||'application/octet-stream'});});
+  }
+  function saveBlob(blob,name){
+    var u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},30000);
+  }
+  /* A server answer carrying the agent: keep the roster row and the open detail in step. */
+  function took(slug,agent){
+    if(!agent)return;
+    var i=S.roster?S.roster.findIndex(function(x){return x.slug===slug;}):-1;
+    if(i!==-1)S.roster[i]=agent;S.detail[slug]=agent;
+  }
+
+  function filesCell(a,full){
+    var cell=el('div','full');
+    cell.appendChild(el('span','section-label','Stored files'+(a.bytes?' · '+fmtBytes(a.bytes):'')));
+    if(!full){cell.appendChild(el('span','ro-sub','Loading files…'));return cell;}
+    var pic=full.pic,busy=S.busy[a.slug];
+
+    /* originals */
+    var list=el('div','ro-files');cell.appendChild(list);
+    pic.raws.slice().reverse().forEach(function(f){
+      var row=el('div','ro-file'),main=el('div','ro-fmain'),acts=el('div','ro-row');
+      row.appendChild(main);row.appendChild(acts);
+      main.appendChild(el('span','ro-fname',f.filename));
+      if(f.kind==='archive')main.appendChild(el('span','ro-pill','original, download only'));
+      else if(f.key===pic.workingKey)main.appendChild(el('span','ro-pill generated','cutout source'));
+      else{var use=el('button','ro-btn ghost','Use for cutout');use.type='button';acts.appendChild(use);
+        use.onclick=function(){use.disabled=true;
+          api({body:{action:'update',slug:a.slug,pic:{workingKey:f.key},by:whoami()}}).then(function(d){took(a.slug,d.agent);render();},
+            function(e){use.disabled=false;say(e.message);});};}
+      var facts=[fmtBytes(f.bytes)];
+      if(f.width&&f.height)facts.push(f.width+'×'+f.height);
+      facts.push(f.capturedAt?'taken '+when(f.capturedAt):'stored '+when(f.uploadedAt));
+      main.appendChild(el('span','ro-sub',facts.join(' · ')));
+      acts.appendChild(dlButton(a,f));
+      acts.appendChild(delButton(a,f));
+      list.appendChild(row);
+    });
+    if(!pic.raws.length)list.appendChild(el('span','ro-sub','No originals stored yet.'));
+    else if(!pic.raws.some(function(r){return r.kind==='working';}))
+      list.appendChild(el('span','ro-sub','No working file: the camera original can’t be cut out in a browser. Add the JPEG or PNG export so the generator can re-run.'));
+
+    (S.uploads[a.slug]||[]).forEach(function(u){
+      var row=el('div','ro-file pending'),main=el('div','ro-fmain'),acts=el('div','ro-row');
+      row.appendChild(main);row.appendChild(acts);
+      main.appendChild(el('span','ro-fname',u.filename));
+      main.appendChild(el('span','ro-sub','Unfinished: '+u.received+' of '+u.parts+' parts, '+fmtBytes(u.bytes)+'. Add the same file again to finish it.'));
+      var x=el('button','ro-btn ghost','Discard');x.type='button';acts.appendChild(x);
+      x.onclick=function(){x.disabled=true;
+        api({body:{action:'upload-abort',slug:a.slug,upload:u.id,by:whoami()}}).then(function(){return fetchDetail(a.slug);},
+          function(e){x.disabled=false;say(e.message);});};
+      list.appendChild(row);
+    });
+
+    var add=el('div','ro-row');add.style.marginTop='8px';
+    var inp=el('input');inp.type='file';inp.multiple=true;inp.hidden=true;
+    inp.accept='.nef,.nrw,.dng,.cr2,.cr3,.arw,.raf,.orf,.rw2,.jpg,.jpeg,.png,image/jpeg,image/png';
+    var pick=el('button','ro-btn ghost','Add originals');pick.type='button';pick.disabled=!!busy;pick.onclick=function(){inp.click();};
+    var prog=el('span','ro-progress',busy||'');prog.setAttribute('role','status');
+    add.appendChild(pick);add.appendChild(inp);add.appendChild(prog);cell.appendChild(add);
+    inp.onchange=function(){var files=Array.prototype.slice.call(inp.files);if(files.length)addOriginals(a,files);};
+
+    /* outputs */
+    var head=el('div','ro-row');head.style.marginTop='14px';
+    head.appendChild(el('span','section-label','Generated files · '+pic.outputs.length+' of 10'));
+    if(pic.outputs.length){var all=el('button','ro-btn ghost','Download all');all.type='button';head.appendChild(all);
+      all.onclick=function(){downloadOutputs(a,pic,all);};}
+    cell.appendChild(head);
+    var outs=el('div','ro-outs');cell.appendChild(outs);
+    VARIANTS.forEach(function(v){
+      var f=pic.outputs.filter(function(o){return o.variant===v;})[0];
+      var b=el('button','ro-out'+(f?'':' missing'),v);b.type='button';
+      b.appendChild(el('span',null,f?fmtBytes(f.bytes):'not stored'));
+      if(f){b.title='Download '+f.filename;b.onclick=function(){b.disabled=true;
+        downloadFile(a.slug,f).then(function(blob){saveBlob(blob,f.filename);b.disabled=false;},function(e){b.disabled=false;say(e.message);});};}
+      else b.disabled=true;
+      outs.appendChild(b);
+    });
+    if(!pic.outputs.length)cell.appendChild(el('span','ro-sub','None stored. Generate in the Generator, then save the set to this agent.'));
+
+    var w=pic.raws.filter(function(r){return r.key===pic.workingKey;})[0];
+    if(w){
+      var open=el('button','ro-btn','Re-cut in the generator');open.type='button';open.style.marginTop='12px';
+      open.onclick=function(){openInGenerator(a,w,open);};
+      cell.appendChild(open);
+    }
+    return cell;
+  }
+
+  function dlButton(a,f){
+    var b=el('button','ro-btn ghost','Download');b.type='button';
+    b.onclick=function(){b.disabled=true;
+      downloadFile(a.slug,f,function(i,n){b.textContent=n>1?i+' of '+n:'Download';})
+      .then(function(blob){saveBlob(blob,f.filename);b.disabled=false;b.textContent='Download';},
+        function(e){b.disabled=false;b.textContent='Download';say(e.message);});};
+    return b;
+  }
+  function delButton(a,f){
+    var b=el('button','ro-btn ghost','Delete');b.type='button';
+    b.onclick=function(){
+      if(!confirm('Delete '+f.filename+'? It frees '+fmtBytes(f.bytes)+' and can’t be undone.'))return;
+      b.disabled=true;
+      api({body:{action:'file-delete',slug:a.slug,key:f.key,by:whoami()}}).then(function(d){
+        took(a.slug,d.agent);toast('Deleted. '+fmtBytes(d.freed||0)+' freed');render();
+      },function(e){b.disabled=false;say(e.message);});
+    };
+    return b;
+  }
+
+  function addOriginals(a,files){
+    var i=0;
+    function next(){
+      if(i>=files.length){S.busy[a.slug]='';say('');render();toast(files.length===1?'Stored':'Stored '+files.length+' files');return fetchDetail(a.slug);}
+      var f=files[i++],label=(files.length>1?'File '+i+' of '+files.length+': ':'');
+      return uploadFile(a.slug,f,{role:'raw'},function(done,parts,resumed){
+        S.busy[a.slug]=label+(resumed?'resuming ':'')+f.name+' · '+Math.round(100*done/parts)+'%';
+        var p=document.querySelector('.ro-detail .ro-progress');if(p)p.textContent=S.busy[a.slug];
+      }).then(next);
+    }
+    S.busy[a.slug]='Starting…';render();
+    next().catch(function(e){S.busy[a.slug]='';say(e.message+' Add the same file again to resume.');fetchDetail(a.slug);});
+  }
+
+  function downloadOutputs(a,pic,btn){
+    btn.disabled=true;var blobs=[],i=0;
+    function next(){
+      if(i>=pic.outputs.length)return Promise.resolve();
+      var f=pic.outputs[i++];btn.textContent=i+' of '+pic.outputs.length;
+      return downloadFile(a.slug,f).then(function(b){return new Promise(function(res){
+        var r=new FileReader();r.onload=function(){blobs.push({dataURL:r.result,dlName:f.filename});res();};r.readAsDataURL(b);});}).then(next);
+    }
+    next().then(function(){
+      var zip=a.name.replace(/[^A-Za-z0-9]+/g,'_')+'_PP.zip';
+      return window.cbZip?window.cbZip(zip,blobs):Promise.all(blobs.map(function(b){return fetch(b.dataURL).then(function(r){return r.blob();}).then(function(x){saveBlob(x,b.dlName);});}));
+    }).then(function(){btn.disabled=false;btn.textContent='Download all';},function(e){btn.disabled=false;btn.textContent='Download all';say(e.message);});
+  }
+
+  function openInGenerator(a,f,btn){
+    btn.disabled=true;
+    downloadFile(a.slug,f,function(i,n){btn.textContent='Fetching '+i+' of '+n+'…';}).then(function(blob){
+      var parts=a.name.trim().split(/\s+/);
+      var file=new File([blob],f.filename,{type:f.type||'image/jpeg'});
+      S.genSlug=a.slug;
+      window.cbGen.load(file,parts[0]||'',parts.slice(1).join(' '));
+      btn.disabled=false;btn.textContent='Re-cut in the generator';
+      showView(false);window.scrollTo(0,0);toast('Loaded '+f.filename+'. Generate when ready');
+    },function(e){btn.disabled=false;btn.textContent='Re-cut in the generator';say(e.message);});
+  }
+
+  /* firstname-lastinitial, as the agent store has it: "Rikki Tauber" → rikki-t. */
+  function slugFor(first,last){
+    var w=(first+' '+last).normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9\s-]/g,'').split(/\s+/).filter(Boolean);
+    return w.length<2?(w[0]||''):w[0]+'-'+w[w.length-1][0];
+  }
+
+  /* The generator's offer: store this set of ten against an agent. */
+  window.cbPicsOffer=function(set){
+    S.offer=set;
+    var dl=document.getElementById('dlAllBtn');if(!dl)return;
+    var box=$('roSave');
+    if(!box){box=el('div','ro-card');box.id='roSave';dl.parentNode.insertBefore(box,dl.nextSibling);}
+    box.textContent='';
+    box.appendChild(el('span','section-label','Save to the roster'));
+    if(!tok()){
+      box.appendChild(el('p','ro-note','Store these ten against the agent, so a re-download never means a re-run. It needs the roster token.'));
+      var c=el('button','ro-btn ghost','Connect the roster');c.type='button';c.style.marginTop='8px';
+      c.onclick=function(){showView(true);};box.appendChild(c);return;
+    }
+    if(!S.roster){box.appendChild(el('p','ro-note','Loading the roster…'));if(!S.loading)load();return;}
+    var r=el('div','ro-row');r.style.marginTop='8px';
+    var sel=el('select','ro-input');sel.setAttribute('aria-label','Agent');
+    sel.appendChild(el('option',null,'Pick an agent…')).value='';
+    var guess=S.genSlug||slugFor(set.first,set.last);
+    S.roster.slice().sort(function(x,y){return x.name.localeCompare(y.name);}).forEach(function(a){
+      var o=el('option',null,a.name+(a.outputs?' · has '+a.outputs+' stored':''));o.value=a.slug;if(a.slug===guess)o.selected=true;sel.appendChild(o);
+    });
+    var go=el('button','ro-btn','Save '+set.blobs.length+' files');go.type='button';go.disabled=!sel.value;
+    sel.onchange=function(){go.disabled=!sel.value;};
+    var prog=el('span','ro-progress');prog.setAttribute('role','status');
+    r.appendChild(sel);r.appendChild(go);box.appendChild(r);box.appendChild(prog);
+    box.appendChild(el('p','ro-note','Saving replaces the set stored for that agent, and stamps today as its generate date.'));
+    go.onclick=function(){
+      var slug=sel.value,agent=S.roster.filter(function(a){return a.slug===slug;})[0];if(!agent)return;
+      go.disabled=true;sel.disabled=true;var i=0;
+      function next(){
+        if(i>=set.blobs.length)return Promise.resolve();
+        var b=set.blobs[i++];prog.textContent='Saving '+i+' of '+set.blobs.length+'…';
+        return fetch(b.dataURL).then(function(r){return r.blob();}).then(function(blob){
+          return uploadFile(slug,new File([blob],b.dlName,{type:b.mime||blob.type}),{role:'output',variant:b.id});
+        }).then(next);
+      }
+      next().then(function(){
+        prog.textContent='Saved '+set.blobs.length+' files to '+agent.name+'.';toast('Saved to '+agent.name);
+        go.disabled=false;sel.disabled=false;render();
+      },function(e){prog.textContent=e.message;go.disabled=false;sel.disabled=false;});
+    };
+  };
 
   if(location.hash==='#roster')showView(true);
 })();
