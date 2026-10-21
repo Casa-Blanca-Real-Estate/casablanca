@@ -11,6 +11,9 @@ this folder is authoritative; Kimani pastes a short kickoff into the new session
    dispatch has phases. Don't sit on finished work.
 4. **Never merge.** Only **Casanova** or **Kimani** merges. The single exception is Kimani telling your
    session directly to merge something — say so in the PR when that happens.
+   A merge isn't a release either: production publishes from `release`, which Casanova or Kimani moves
+   with the `release to production` workflow. Never run it from a dispatch — each production deploy
+   is metered. Check your work on the deploy preview, which is free.
 5. **Sign your work with your session name** — at the end of every PR description and every PR comment
    (`— Mason (CR-1)`), and in the body of your commits. The platform's own attribution lines still
    apply alongside it.
