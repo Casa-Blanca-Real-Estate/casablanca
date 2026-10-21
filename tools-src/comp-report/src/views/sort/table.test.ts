@@ -14,8 +14,8 @@ test('prices and dates read as the handoff writes them', () => {
 });
 
 test('a row says what it needs; a comp read from its page is confirmed or removed first', () => {
-  assert.equal(needText(['tier', 'note', 'tag']), 'Needs tier, note, comp tags');
-  assert.equal(needText(['tier', 'tag']), 'Needs tier, comp tags');
+  assert.equal(needText(['tier', 'note', 'tag']), 'Needs tier, note, tags');
+  assert.equal(needText(['tier', 'tag']), 'Needs tier, tags');
   assert.equal(needText(['note']), 'Needs note');
   assert.equal(needText(['confirm']), 'Confirm or remove');
   assert.equal(needText([]), '');

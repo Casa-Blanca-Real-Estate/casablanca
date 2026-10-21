@@ -18,7 +18,8 @@ import { compPrice, listingUrl } from '../workspace/comps.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { homeName } from '../workspace/screens.ts';
 import { More } from './More.tsx';
-import { countText, monthYear, PRICE_LABEL, shortPrice, sizeText, type Row } from './rows.ts';
+import { Info } from '../newcomp/Frame.tsx';
+import { countText, monthYear, PRICE_LABEL, shortPrice, sizeText, TAG_INFO, type Row } from './rows.ts';
 
 /** The comp's features: the agent's, else what its source says (outdoor space, views, a doorman). */
 export function compFeatures(row: Row): Features {
@@ -145,7 +146,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
     ? `From StreetEasy’s export${c.record.origin?.row ? `, row ${c.record.origin.row}` : ''}.`
     : `From its StreetEasy page${c.record.origin?.as_of ? `, read ${isoDay(c.record.origin.as_of)}` : ''}.`;
 
-  // The row's "Needs note" and "Needs comp tags" open the card there.
+  // The row's "Needs note" and "Needs tags" open the card there.
   useEffect(() => {
     if (!start || !canEdit) return;
     if (start.what === 'note') {
@@ -462,13 +463,13 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
         </div>
 
         <div className="so-tagsec" ref={tagsRef}>
-          <span className="so-features-title so-tagsec-title">{sq(needs.has('tag'))}Comp tags</span>
-          <div className="so-tags" role={editing ? 'group' : undefined} aria-label={editing ? 'Comp tags' : undefined}>
+          <span className="so-features-title so-tagsec-title">{sq(needs.has('tag'))}Tags <Info text={TAG_INFO} label="What a tag is" align="left" /></span>
+          <div className="so-tags" role={editing ? 'group' : undefined} aria-label={editing ? 'Tags' : undefined}>
             {shownTags.map((t) => (
               <span key={t} className="so-tag">
                 {t}
                 {editing && (
-                  <button type="button" className="so-tag-x" aria-label={`Remove the comp tag ${t}`} onClick={() => set('tags', draft!.tags.filter((x) => x !== t))}>×</button>
+                  <button type="button" className="so-tag-x" aria-label={`Remove the tag ${t}`} onClick={() => set('tags', draft!.tags.filter((x) => x !== t))}>×</button>
                 )}
               </span>
             ))}
@@ -476,7 +477,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
               <button key={t} type="button" className="so-tag-add" onClick={() => set('tags', [...draft!.tags, t])}>+ {t}</button>
             ))}
             {!editing && !shownTags.length && (canEdit
-              ? <button type="button" className="link so-tag-start" onClick={startEdit}>+ Add comp tags</button>
+              ? <button type="button" className="link so-tag-start" onClick={startEdit}>+ Add tags</button>
               : <span className="so-fnone">None yet</span>)}
           </div>
         </div>

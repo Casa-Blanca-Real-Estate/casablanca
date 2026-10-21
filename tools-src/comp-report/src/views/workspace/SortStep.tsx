@@ -1,5 +1,5 @@
 // Sort (the handoff, screen 6; Dispatch 14 item 6): the comps grouped by
-// status, each taking the agent's tier (★, 1st, 2nd, ✕), note and comp tags.
+// status, each taking the agent's tier (★, 1st, 2nd, ✕), note and tags.
 // Findings stays locked until every comp has what it needs (a tier and comp
 // tags, and a practice agent's note) and none waits for a confirm (the shell's
 // button, from ws.readiness, repeated at the bottom); a row still missing any
@@ -13,6 +13,8 @@ import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
 import { Reads } from '../sort/Reads.tsx';
 import { groupRows, passes, sortRows, tagCounts, toRow, type SortState } from '../sort/rows.ts';
 import { SortGroup } from '../sort/SortTable.tsx';
+import { TAG_INFO } from '../sort/table.ts';
+import { Info } from '../newcomp/Frame.tsx';
 import { BuildNote, DecisionTag, StubTag } from './bits.tsx';
 import type { StepProps, Workspace } from './model.ts';
 import { TypeMismatch } from '../comp/TypeMismatch.tsx';
@@ -99,11 +101,14 @@ export function SortStep({ ws }: StepProps) {
               <span className="so-need-sq" aria-hidden="true" />{toFinish} to finish
             </button>
           )}
-          {/* Filter shows once some comp has a comp tag: before that it has nothing to offer (NW-028). */}
+          {/* Filter shows once some comp has a tag: before that it has nothing to offer (NW-028). */}
           {tags.length > 0 && (
-            <button type="button" className="so-filter" aria-expanded={filterOpen} onClick={() => setFilterOpen(!filterOpen)}>
-              Filter by comp tags <span aria-hidden="true">{filterOpen ? '▴' : '▾'}</span>
-            </button>
+            <span className="so-filter-wrap">
+              <button type="button" className="so-filter" aria-expanded={filterOpen} onClick={() => setFilterOpen(!filterOpen)}>
+                Filter by tags <span aria-hidden="true">{filterOpen ? '▴' : '▾'}</span>
+              </button>
+              <Info text={TAG_INFO} label="What a tag is" align="left" />
+            </span>
           )}
           {filtered && <button type="button" className="link so-clear" onClick={clear}>Clear</button>}
           <span className="so-count" aria-live="polite">
@@ -111,7 +116,7 @@ export function SortStep({ ws }: StepProps) {
           </span>
         </div>
         {filterOpen && tags.length > 0 && (
-          <div className="so-tagchips" role="group" aria-label="Filter by comp tags">
+          <div className="so-tagchips" role="group" aria-label="Filter by tags">
             {tags.map(({ tag, n }) => {
               const on = filter.tags.includes(tag);
               return (
@@ -139,7 +144,7 @@ export function SortStep({ ws }: StepProps) {
       <StepCta ws={ws} className="sh-cta so-bottom-cta" />
       {ws.devTools && (
         <BuildNote>
-          Findings unlocks on ws.readiness (every comp: a tier and comp tags, and a note at the practice level; none to confirm). Kara’s checks are the engine’s{' '}
+          Findings unlocks on ws.readiness (every comp: a tier and tags, and a note at the practice level; none to confirm). Kara’s checks are the engine’s{' '}
           <code>comps[].checks</code> (§6.10), folded under each card. The range stays hidden until the Gate <DecisionTag id="D-1" />.{' '}
           <StubTag>Waits on D-12</StubTag> Jev’s tier suggestions (§7). <StubTag>Later</StubTag> Photos, screenshots read into comps, Hubert’s
           suggestions from market data.
