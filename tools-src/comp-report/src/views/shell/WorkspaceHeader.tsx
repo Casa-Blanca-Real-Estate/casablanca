@@ -41,12 +41,32 @@ export function WorkspaceHeader({ ws, onBack, saveLine }: { ws: Workspace; onBac
   );
 }
 
+/**
+ * The row's CTA with its helper line: "3 comps need a tier, note or comp tags"
+ * (a link that filters to them) beside a disabled "Findings →". Sort repeats
+ * it at the bottom (NW-053), from the same rowCta and readinessLine.
+ */
+export function StepCta({ ws, className = 'sh-cta' }: { ws: Workspace; className?: string }) {
+  const input = { screen: ws.screen, revealed: ws.revealed, ready: ws.readiness.ready, readOnly: ws.readOnly };
+  const cta = rowCta(input);
+  if (!cta) return null;
+  const filterIncomplete = ws.readiness.incomplete.length > 0;
+  const helper = ws.screen === 'sort' ? readinessLine(ws.readiness) : '';
+  return (
+    <span className={className}>
+      {helper && cta.disabled && (
+        filterIncomplete
+          ? <button type="button" className="link sh-helper" onClick={() => ws.setSortFilter({ incomplete: true, tags: [] })}>{helper}</button>
+          : <span className="sh-helper plain">{helper}</span>
+      )}
+      <button type="button" className="btn primary" disabled={cta.disabled} onClick={() => ws.go(cta.target)}>{cta.label}</button>
+    </span>
+  );
+}
+
 export function ProgressRow({ ws }: { ws: Workspace }) {
   const input = { screen: ws.screen, revealed: ws.revealed, ready: ws.readiness.ready, readOnly: ws.readOnly };
   const steps = progressSteps(input);
-  const cta = rowCta(input);
-  const filterIncomplete = ws.readiness.incomplete.length > 0;
-  const helper = ws.screen === 'sort' ? readinessLine(ws.readiness) : '';
   return (
     <nav className="sh-steps" aria-label="Progress">
       {steps.map((s, i) => (
@@ -67,16 +87,7 @@ export function ProgressRow({ ws }: { ws: Workspace }) {
           </button>
         </Fragment>
       ))}
-      {cta && (
-        <span className="sh-cta">
-          {helper && cta.disabled && (
-            filterIncomplete
-              ? <button type="button" className="link sh-helper" onClick={() => ws.setSortFilter({ incomplete: true, tags: [] })}>{helper}</button>
-              : <span className="sh-helper plain">{helper}</span>
-          )}
-          <button type="button" className="btn primary" disabled={cta.disabled} onClick={() => ws.go(cta.target)}>{cta.label}</button>
-        </span>
-      )}
+      <StepCta ws={ws} />
     </nav>
   );
 }

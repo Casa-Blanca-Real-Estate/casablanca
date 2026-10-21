@@ -226,6 +226,11 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 
 .toast.sh-toast { left: auto; right: 24px; bottom: 24px; transform: none; font-size: 13px; }
 .toast.sh-toast.with-drawer { right: calc(var(--sh-drawer-w) + 24px); }
+.toast.sh-toast { display: flex; align-items: center; gap: 16px; }
+.sh-toast-action {
+  font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: inherit;
+  background: none; border: none; border-bottom: 1px solid var(--cb-lavender); border-radius: 0; padding: 0; cursor: pointer;
+}
 
 /* ─── Dev tools (admins, off by default): Fill with sample, About this screen ── */
 .sh-dev { display: flex; flex-direction: column; gap: 8px; padding: 8px 14px; background: var(--cb-surface); border: 1px dashed var(--cb-lavender); font-size: 12px; }

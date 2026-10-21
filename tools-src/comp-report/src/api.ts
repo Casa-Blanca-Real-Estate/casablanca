@@ -161,6 +161,8 @@ export interface CompEdit {
   confirmed?: true;
   /** Take it out of the report (true), or put it back (false). */
   removed?: boolean;
+  /** Corrections to the source's facts (Dispatch 15): a value sets one, null puts the source's back. */
+  factOverrides?: { price?: number | null; size?: number | null; date?: string | null; floor?: number | null };
 }
 
 export const workspaceApi = {

@@ -3,8 +3,11 @@
 // it as it is (table.test.ts).
 import type { CompRecord, Tier } from '../../../engine/index.ts';
 
-/** What a row still needs before Findings unlocks: a tier, a note, a tag, or a confirm for a comp read from its page. */
+/** What a row still needs before Findings unlocks: a tier, a note, comp tags, or a confirm for a comp read from its page. */
 export type RowNeed = 'tier' | 'note' | 'tag' | 'confirm';
+
+/** The word for each need, as the row says it (NB-5: "Comp tags", Dispatch 15). */
+export const NEED_WORD: Record<Exclude<RowNeed, 'confirm'>, string> = { tier: 'tier', note: 'note', tag: 'comp tags' };
 
 // ─── What the cells say ──────────────────────────────────────────────────────
 
@@ -24,10 +27,10 @@ export function monthYear(date: string | null | undefined): string {
   return `${MONTHS[Number(date.slice(5, 7)) - 1]} ${date.slice(0, 4)}`;
 }
 
-/** "Needs tier, note, tag"; a comp read from its page: "Confirm or remove". */
+/** "Needs tier, note, comp tags"; a comp read from its page: "Confirm or remove". */
 export function needText(needs: RowNeed[]): string {
   if (needs.includes('confirm')) return 'Confirm or remove';
-  return needs.length ? `Needs ${needs.join(', ')}` : '';
+  return needs.length ? `Needs ${needs.map((n) => NEED_WORD[n as Exclude<RowNeed, 'confirm'>]).join(', ')}` : '';
 }
 
 /** "200 Chambers St #10A" → "200 Chambers": how the handoff names a comp in a sentence. */

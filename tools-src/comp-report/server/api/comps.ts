@@ -16,17 +16,20 @@
 //         the handoff's list, its features, or take it out of the report or
 //         put it back. A tier, or a changed note on a tiered comp, still
 //         appends a reason (§12): before a note exists, its text is
-//         "(no note yet)"
+//         "(no note yet)". (Dispatch 15) The ★ comp is 1st tier: starring a
+//         comp makes it 1st, and giving the ★ comp 2nd or ✕ takes the star off.
+//         factOverrides {price?, size?, date?, floor?}: the agent's corrections
+//         to the source's facts, a value each, or null to put the source's back
 //   POST  {reportId, manual, note?, tags?, features?}: a typed-in comp saves its note, tags and features with it
 // Each returns the whole workspace. Only the report's owner can change it.
-import { compRecordFromManual, ParseError, PARSER_VERSION, type ManualCompFields } from '../../engine/index.ts';
+import { compRecordFromManual, FACT_CHECKS, ParseError, PARSER_VERSION, type ManualCompFields } from '../../engine/index.ts';
 import { withActor, type Queryable } from '../db.ts';
 import { newYorkToday } from '../links.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { SAMPLE_TIERS } from '../sample/barclay-17l.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
 import { cleanFeatures, isTag } from '../../workspace/features.ts';
-import { NO_NOTE_YET } from '../../workspace/state.ts';
+import { NO_NOTE_YET, OVERRIDE_KEYS, type FactOverride, type OverrideKey } from '../../workspace/state.ts';
 import { asUser, requirePool } from './reports.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
 
@@ -35,9 +38,53 @@ const REASON_TYPES = ['property', 'client', 'method'];
 const MAX_REASON = 1000;
 const MAX_NOTE = 2000;
 
+/** Each correctable fact's rule: the one a typed-in comp's matching field gets (compRecordFromManual). */
+const OVERRIDE_RULES: Record<OverrideKey, { ok: (v: unknown, today: string) => boolean; says: string }> = {
+  price: { ok: (v) => typeof v === 'number' && FACT_CHECKS.sale_price.check(v), says: 'The price is whole dollars above zero.' },
+  size: { ok: (v) => typeof v === 'number' && FACT_CHECKS.area_sqft.check(v), says: 'The size is whole square feet above zero.' },
+  date: { ok: (v, today) => typeof v === 'string' && FACT_CHECKS.status_date.check(v) && v <= today, says: 'The date is YYYY-MM-DD, and not in the future.' },
+  floor: { ok: (v) => typeof v === 'number' && FACT_CHECKS.floor.check(v), says: 'The floor is a whole number.' },
+};
+
+interface OverrideEdits {
+  /** Each set from the closed list only: built by assignment per key, never from the body's own object. */
+  set: Partial<Record<OverrideKey, FactOverride>>;
+  clear: OverrideKey[];
+}
+
+/**
+ * The agent's corrections to the source's facts (Dispatch 15, NW-044 a). Only
+ * the four keys, each a value or { value } (anything else in it is dropped),
+ * or null to clear. `by` and `at` come from the session and the clock.
+ */
+function overrideEdits(raw: unknown, by: string, now: Date): OverrideEdits {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new HttpError(400, 'bad_fact', 'Send the corrections as an object.');
+  const keys = Object.keys(raw);
+  for (const k of keys) {
+    if (!(OVERRIDE_KEYS as readonly string[]).includes(k)) throw new HttpError(400, 'bad_fact', 'Only the price, size, date and floor can be corrected.');
+  }
+  const out: OverrideEdits = { set: {}, clear: [] };
+  const today = newYorkToday(now);
+  const at = now.toISOString();
+  for (const key of OVERRIDE_KEYS) {
+    if (!Object.hasOwn(raw, key)) continue;
+    const given = (raw as Record<OverrideKey, unknown>)[key];
+    if (given === null) {
+      out.clear.push(key);
+      continue;
+    }
+    const value = given && typeof given === 'object' && !Array.isArray(given) && Object.hasOwn(given, 'value')
+      ? (given as { value: unknown }).value
+      : given;
+    if (!OVERRIDE_RULES[key].ok(value, today)) throw new HttpError(400, 'bad_fact', OVERRIDE_RULES[key].says);
+    out.set[key] = { value: value as number | string, by, at };
+  }
+  return out;
+}
+
 /** The agent's edits to a comp, validated: undefined where not given. */
-function compEdits(body: Record<string, unknown>) {
-  const out: { note?: string | null; tags?: string[]; features?: Record<string, string[]> } = {};
+function compEdits(body: Record<string, unknown>, by = '', now = new Date()) {
+  const out: { note?: string | null; tags?: string[]; features?: Record<string, string[]>; overrides?: OverrideEdits } = {};
   if (body.note !== undefined) {
     if (body.note !== null && typeof body.note !== 'string') throw new HttpError(400, 'bad_note', 'The note is text.');
     const note = typeof body.note === 'string' ? body.note.trim() : '';
@@ -52,6 +99,7 @@ function compEdits(body: Record<string, unknown>) {
     if (!body.features || typeof body.features !== 'object' || Array.isArray(body.features)) throw new HttpError(400, 'bad_features', 'Send the features as an object.');
     out.features = cleanFeatures(body.features) as Record<string, string[]>;
   }
+  if (body.factOverrides !== undefined) out.overrides = overrideEdits(body.factOverrides, by, now);
   return out;
 }
 
@@ -61,6 +109,10 @@ async function saveEdits(tx: Queryable, reportId: string, reportCompId: string, 
   if (edits.note !== undefined) { values.push(edits.note); sets.push(`note = $${values.length}`); }
   if (edits.tags !== undefined) { values.push(edits.tags); sets.push(`tags = $${values.length}::text[]`); }
   if (edits.features !== undefined) { values.push(JSON.stringify(edits.features)); sets.push(`features = $${values.length}::jsonb`); }
+  if (edits.overrides) {
+    values.push(JSON.stringify(edits.overrides.set), edits.overrides.clear);
+    sets.push(`fact_overrides = (fact_overrides || $${values.length - 1}::jsonb) - $${values.length}::text[]`);
+  }
   if (sets.length) await tx.query(`update comp_report.report_comps set ${sets.join(', ')} where report_id = $1 and id = $2`, values);
 }
 
@@ -195,7 +247,7 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
     }
 
     if (req.method === 'POST' && body.manual !== undefined) {
-      const edits = compEdits(body);
+      const edits = compEdits(body, user.email, new Date());
       return json(await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
         const before = await noteAndTier(tx, reportId, body.manual);
@@ -223,6 +275,7 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
       return json(await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
         await recordReason(tx, reportId, reportCompId, tier, reason, reasonType, false);
+        if (tier !== 'primary') await setAnchor(tx, reportId, reportCompId, false); // the ★ comp is 1st tier
         return loadWorkspace(tx, user, reportId);
       }));
     }
@@ -236,10 +289,12 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
     if (confirmed !== undefined && confirmed !== true) throw new HttpError(400, 'bad_confirmed', 'A confirmation can only be given.');
     if (removed !== undefined && typeof removed !== 'boolean') throw new HttpError(400, 'bad_removed', 'removed is true or false.');
     if (body.tier !== undefined && (typeof body.tier !== 'string' || !TIERS.includes(body.tier))) throw new HttpError(400, 'bad_tier', 'The tier is primary, secondary or excluded.');
-    const tier = body.tier as string | undefined;
-    const edits = compEdits(body);
+    if (anchor === true && body.tier !== undefined && body.tier !== 'primary') throw new HttpError(400, 'bad_anchor', 'The ★ comp is 1st tier.');
+    if (anchor === true && removed === true) throw new HttpError(400, 'bad_anchor', 'A removed comp can’t be the ★.');
+    let tier = body.tier as string | undefined;
+    const edits = compEdits(body, user.email, new Date());
     if (reviewed === undefined && anchor === undefined && confirmed === undefined && removed === undefined && tier === undefined
-      && edits.note === undefined && edits.tags === undefined && edits.features === undefined) {
+      && edits.note === undefined && edits.tags === undefined && edits.features === undefined && edits.overrides === undefined) {
       throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
     }
     return json(await withActor(pool, asUser(user), async (tx) => {
@@ -248,6 +303,8 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
         'select tier, note, removed_at from comp_report.report_comps where report_id = $1 and id = $2', [reportId, reportCompId],
       )).rows[0];
       if (!current) throw new HttpError(404, 'not_found', 'No such comp in this report.');
+      // Starring a comp makes it 1st tier (NB-6): a tier change, so it appends a reason like any other.
+      if (anchor === true) tier = 'primary';
       if (removed === true) {
         await tx.query(
           `update comp_report.report_comps set removed_at = now(), removed_by = comp_report.actor(), is_anchor = false
@@ -282,6 +339,8 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
       }
       if (reviewed !== undefined) await setReviewed(tx, reportId, reportCompId, reviewed);
       if (anchor !== undefined) await setAnchor(tx, reportId, reportCompId, anchor);
+      // 2nd or ✕ takes the star off: the ★ comp is 1st tier.
+      else if (tier !== undefined && tier !== 'primary') await setAnchor(tx, reportId, reportCompId, false);
       return loadWorkspace(tx, user, reportId);
     }));
   });
