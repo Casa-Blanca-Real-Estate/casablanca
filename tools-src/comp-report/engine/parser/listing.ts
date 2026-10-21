@@ -160,9 +160,16 @@ export function readYesNo(s: string): Read<boolean> {
   return { value: null, approx: false, note: `"${s}" is not yes or no` };
 }
 
-/** "Condo", "Co-op", "Condo in Tribeca" → the type; the rest of the label isn't the type. */
+/**
+ * "Condo", "Co-op", "Condo in Tribeca" → the type; the rest of the label isn't
+ * the type. StreetEasy's grey line calls a townhouse "House", and a two- or
+ * three-family house "Two-family home" (Dispatch 17's probe).
+ */
 function readListingPropertyType(s: string) {
-  const lead = /^(condominium|condo|co-?op(erative)?|condop|townhouse|house|multi[- ]?family)\b/i.exec(s.trim());
+  const t = s.trim();
+  if (/^(two|three|four|2|3|4)[- ]family\b/i.test(t)) return readPropertyType('multi-family');
+  if (/^(one|single|1)[- ]family\b/i.test(t)) return readPropertyType('single-family');
+  const lead = /^(condominium|condo|co-?op(erative)?|condop|townhouse|house|multi[- ]?family)\b/i.exec(t);
   return readPropertyType(lead ? lead[1]! : s);
 }
 

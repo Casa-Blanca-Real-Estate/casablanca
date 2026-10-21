@@ -8,13 +8,12 @@
 // "listing photos linked, not hosted").
 
 /**
- * StreetEasy's image hosts: an exact host, or any subdomain of one. PROVISIONAL
- * — written from what StreetEasy is known to serve photos from (Zillow's photo
- * CDN, and StreetEasy's own image subdomains), not yet from a captured read.
- * Dispatch 17 (Surveyor) confirms the list from fixtures and a live read; take
- * its list here when it lands.
+ * StreetEasy's image hosts: an exact host, or any subdomain of one. Dispatch
+ * 17's live probe (2026-10-21) saw every photo on photos.zillowstatic.com, on
+ * all seven pages it read. PROVISIONAL until Dispatch 17's list lands in the
+ * repo; take its list here then.
  */
-export const PHOTO_HOSTS: readonly string[] = ['photos.zillowstatic.com', 'streeteasy.com'];
+export const PHOTO_HOSTS: readonly string[] = ['photos.zillowstatic.com'];
 
 /** At most this many photos are kept, hero first. */
 export const MAX_PHOTOS = 8;

@@ -43,7 +43,7 @@ test('the grey line: "Resale" reads as not new development, and the label is kep
 
 test('the grey line: each sale label maps, "Sponsor Unit" fills sponsor_unit, and an unknown label is kept, never refused', () => {
   const kinds: [string, string][] = [
-    ['Resale', 'resale'], ['Sponsor Unit', 'sponsor'], ['New Development', 'new_development'], ['Foreclosure', 'foreclosure'],
+    ['Resale', 'resale'], ['Sponsor Unit', 'sponsor'], ['Sponsor unit', 'sponsor'], ['Restricted sale', 'restricted'], ['New Development', 'new_development'], ['Foreclosure', 'foreclosure'],
     ['Auction Sale', 'auction'], ['Short Sale', 'short_sale'], ['Restricted Sale', 'restricted'], ['Estate sale', 'other'],
   ];
   for (const [label, kind] of kinds) assert.equal(readSaleKind(label), kind, label);
@@ -61,6 +61,15 @@ test('the grey line: each sale label maps, "Sponsor Unit" fills sponsor_unit, an
   assert.equal(odd.record.facts.sale_kind?.value, 'other');
   assert.equal(odd.record.facts.sale_kind_label?.value, 'Estate sale');
   assert.match(odd.record.facts.sale_kind!.note!, /kept as shown/);
+});
+
+test('the grey line’s type as StreetEasy writes it: "House" and "Two-family home" (Dispatch 17’s probe)', () => {
+  assert.equal(read({ property_type: 'House' }).record.facts.property_type?.value, 'townhouse');
+  assert.equal(read({ property_type: 'Two-family home' }).record.facts.property_type?.value, 'multi_family');
+  assert.equal(read({ property_type: 'Single-family home' }).record.facts.property_type?.value, 'townhouse');
+  const hdfc = read({ property_type: 'Co-op', sale_kind: 'Restricted sale' }).record;
+  assert.deepEqual([hdfc.facts.property_type?.value, hdfc.facts.sale_kind?.value], ['coop', 'restricted']);
+  assert.equal(hdfc.facts.income_restricted, undefined, 'a restricted sale isn’t read as HDFC by itself');
 });
 
 test('the grey line: the page’s own flag stands where the label disagrees, and says so', () => {
@@ -91,9 +100,9 @@ test('photos: hero first, only StreetEasy’s image hosts, junk and other hosts 
 
 test('cleanPhotoUrls keeps a URL only if it is https, has no userinfo or port, and is on PHOTO_HOSTS', () => {
   const ok = `${Z}/abc-se_large_800_400.webp`;
-  assert.deepEqual(PHOTO_HOSTS, ['photos.zillowstatic.com', 'streeteasy.com']);
+  assert.deepEqual(PHOTO_HOSTS, ['photos.zillowstatic.com']);
   assert.deepEqual(cleanPhotoUrls([ok]), [ok]);
-  assert.deepEqual(cleanPhotoUrls(['https://cdn-img1.streeteasy.com/nyc/image/12/345.jpg']), ['https://cdn-img1.streeteasy.com/nyc/image/12/345.jpg'], 'a subdomain of a listed host');
+  assert.deepEqual(cleanPhotoUrls(['https://cdn-img1.streeteasy.com/nyc/image/12/345.jpg']), [], 'StreetEasy’s own domain isn’t an image host');
   const refused = [
     'http://photos.zillowstatic.com/fp/abc.webp', // not https
     'data:image/png;base64,iVBORw0KGgo=',
@@ -103,6 +112,8 @@ test('cleanPhotoUrls keeps a URL only if it is https, has no userinfo or port, a
     'https://photos.zillowstatic.com@evil.example/x.jpg',
     'https://photos.zillowstatic.com:8443/fp/x.jpg', // a port
     'https://streeteasy.com.evil.example/x.jpg', // a lookalike
+    'https://photos.zillowstatic.com.evil.example/x.jpg',
+    'https://evilphotos.zillowstatic.com/x.jpg', // a suffix without the dot
     'https://evilstreeteasy.com/x.jpg', // a suffix without the dot
     'https://images.example.com/x.jpg', // off the list
     'https://streeteasy.com\\@evil.example/x.jpg',
