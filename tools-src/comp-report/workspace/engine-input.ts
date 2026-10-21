@@ -2,13 +2,14 @@
 // in the browser, where the numbers recompute the instant a tier or a fact
 // changes, and in the functions, for the assistant's read-only summary (§5).
 import {
-  compRecordFromListing, compRecordFromManual, confirmListingRecord, FACT_CHECKS, identify,
+  compRecordFromListing, compRecordFromManual, confirmListingRecord, deriveFromPolicies, FACT_CHECKS, identify, normalizeTag,
   type CompInput, type CompRecord, type DealTerms, type EngineInput, type FactField, type IsoDate,
   type ManualCompFields, type NamedPrice, type OutdoorKind, type ParsedExport, type PropertyFacts, type ReportPropertyType, type Sourced,
 } from '../engine/index.ts';
 import {
   noteOf, type CallState, type CompJudgment, type CompSource, type DealTermsState, type Entry, type FactOverride, type FactOverrides, type Intake, type TargetState,
 } from './state.ts';
+import { homeFeatures } from './features.ts';
 
 /** An import, parsed: the browser and the server parse the stored file with the same parser. */
 export interface ParsedImport {
@@ -243,6 +244,7 @@ export function subjectFacts(intake: Intake | undefined, asOf: IsoDate, property
   put('area_sqft', sourced(i.areaSqft, 'area_sqft'));
   put('beds', sourced(i.beds, 'beds'));
   put('baths', sourced(i.baths, 'baths'));
+  put('rooms', sourced(i.rooms, 'rooms'));
   put('floor', sourced(i.floor, 'floor'));
   put('list_price', sourced(i.askingPrice, 'list_price'));
   put('year_built', sourced(i.yearBuilt, 'year_built'));
@@ -267,6 +269,53 @@ export function subjectFacts(intake: Intake | undefined, asOf: IsoDate, property
       if (!none) put('outdoor_area_sqft', sourced(i.outdoorSqft, 'outdoor_area_sqft'));
     }
   }
+  Object.assign(facts, buildingFacts(i));
+  return facts;
+}
+
+/**
+ * StreetEasy's own words for the picker options it names differently
+ * (07-streeteasy-taxonomy.md), so the home's amenities and policies read like
+ * a comp's tags. Every other option is StreetEasy's word already.
+ */
+const SE_WORDS: Readonly<Record<string, string>> = {
+  Storage: 'storage space', Pool: 'swimming pool',
+  'Pied-à-terre allowed': 'pied-a-terre allowed', 'Co-purchasing allowed': 'co-purchase allowed', 'Gifting allowed': 'gifts allowed',
+};
+const seWord = (label: string) => normalizeTag(SE_WORDS[label] ?? label);
+/** Services and facilities the engine reads as their own facts, not as amenities. */
+const OWN_FACT = new Set(['Doorman', 'Concierge', 'Parking']);
+
+/**
+ * The home's Building and Policies pickers (Dispatch 16) as the engine's
+ * subject facts (NW-077 b), the way the parser reads a comp's tags: door
+ * service and concierge, parking, shared outdoor space, the other amenities,
+ * and the policies with pets and smoke-free. A picked option is there; one not
+ * picked isn't, because the agent saw the whole list. A group never opened
+ * (no entry) stays unknown.
+ */
+function buildingFacts(i: Intake): PropertyFacts {
+  const facts: PropertyFacts = {};
+  const building = i.building;
+  if (building) {
+    const picked = new Set(building.value);
+    const sourcing = how(building);
+    const shared = homeFeatures(i).shared_outdoor ?? [];
+    const sharedSet = new Set(shared);
+    facts.service = { ...sourcing, value: { doorman: picked.has('Doorman') ? 'hours_unspecified' : 'none_listed', concierge: picked.has('Concierge') } };
+    facts.parking = { ...sourcing, value: picked.has('Parking') ? ['parking'] : [] };
+    facts.outdoor_shared = { ...sourcing, value: shared.length > 0 };
+    facts.amenities = { ...sourcing, value: [...new Set(building.value.filter((o) => !OWN_FACT.has(o) && !sharedSet.has(o)).map(seWord))].sort() };
+  }
+  const policies = i.policies;
+  if (policies) {
+    const sourcing = how(policies);
+    const p = deriveFromPolicies(policies.value);
+    facts.policies = { ...sourcing, value: [...new Set(policies.value.map(seWord))].sort() };
+    facts.pets = { ...sourcing, value: p.pets };
+    facts.smoke_free = { ...sourcing, value: p.smoke_free };
+  }
+  for (const field of Object.keys(facts) as FactField[]) if (!FACT_CHECKS[field].check(facts[field]!.value)) delete facts[field];
   return facts;
 }
 

@@ -12,7 +12,8 @@ one in Node produce the same output hash.
 
 **Version 0.4.1** — design v0.5, CR-2.2 phase 2: the engine for a buyer's argument. Didn't sell,
 the mentors' checks, the differences between comps, the price table and the headline's facts.
-0.4.1 adds each comp's `distance_miles`. Nothing here has been piloted yet.
+0.4.1 adds each comp's `distance_miles`. 0.5.0 (CR-2.4) is the engine for Findings: the five-row
+price table, no $/sqft gaps on a co-op, and gaps an agent can act on. Nothing here has been piloted yet.
 
 ---
 
@@ -503,6 +504,12 @@ words for the row, and a seed for the notes' quick-pick chips), `message`, `sugg
   an adjusted price, it spans the same comps' $/sqft and says so. `price_table_unavailable_because`
   when there's none: a co-op, no interior size for the home, fewer than two primary sold comps with a
   $/sqft, or all at one rate.
+  - `five_rows` (0.5.0, NW-065 a) — the same span in five evenly spaced rows, for Findings: `step`
+    (`low`, `quarter`, `middle`, `three_quarter`, `high`), `per_sqft`, `price`, `comp_ids`. Low and
+    high are the span's ends, named by their comp (no comp for a narrowed end), and their prices are
+    the range's ends exactly. The three between are low + ¼, ½ and ¾ of (high − low), each rounded to
+    the whole dollar, times the home's size. The middle is the midpoint, not the median comp: the base
+    stays the median. The email, the writer and QA still read `rows` until NW-065 b is decided.
 - `pairs` (§6.6) — the differences between comps. Evidence only: nothing here moves a number.
   - `pairs[]` — every included comp against every other of its status, sold first, then in contract,
     active and didn't sell. Each: `evidence_class`, `basis`, `higher` and `lower` (by $/sqft where
@@ -597,7 +604,14 @@ modelling.
 ### `gaps`, `warnings`, `pending_confirmation`
 
 - **`gaps`** — inputs the calculation needs and doesn't have: `{ code, message, target, field,
-  results }`. Codes: `subject_area_missing`, `subject_area_estimate_only`, `no_primary_sold_comps`,
+  results, fillable }`. The messages are shown to the agent, so they say "the home", not "the
+  subject". `fillable` (0.5.0, NW-077 b) is true when the agent can close the gap on a screen that
+  exists: a fact about the home that Details or its Building and Policies pickers ask for, a comp's
+  price, size or floor (Sort's edit), a link comp's confirm. It's false for what follows from another
+  gap (no base, no range, no primary sold comp) and for facts no form asks (unit type, the building's
+  size). A comp raises gaps only where it counts in a result (a 2nd-tier or ✕ comp raises none; an
+  unconfirmed link comp asks for its confirm when it's 1st tier). A co-op report raises no gap about
+  interior size (NW-066 a). The home's size is asked once, not again as a missing fact. Codes: `subject_area_missing`, `subject_area_estimate_only`, `no_primary_sold_comps`,
   `base_unavailable`, `range_unavailable`, `comp_area_missing`, `comp_price_missing`,
   `comp_floor_missing`, `subject_fact_missing` (with the field to ask for), `subject_carry_missing`
   (per result: an estimated carry fills "with estimates" and leaves the gap "on the facts"),
@@ -973,6 +987,22 @@ didn't sell is now the fourth evidence status.
     `report_comps.evidence_class` is checked against `sold`, `in_contract` and `active`. The export
     never yields `off_market`, so nothing breaks today.
 
+### New in 0.5.0 — the engine for Findings (CR-2.4), for Casanova to confirm or change
+
+33. **The five rows sit inside `price_table`** (`five_rows`), so they exist exactly when the table does.
+    The low and high rates aren't rounded (they're the comps' own); the three between are.
+34. **`fillable` is the engine's list of the home's fields a screen asks** (`FILLABLE_SUBJECT_FIELDS`
+    in `compute/index.ts`). A new field on Details goes on it too.
+35. **The home's pickers reach the engine** (`workspace/engine-input.ts`, `buildingFacts`): Doorman →
+    door service of unstated hours, Concierge → concierge, Parking → parking, any shared outdoor option
+    → shared outdoor space, the other building and wellness options → amenities in StreetEasy's words
+    (Storage → "storage space", Pool → "swimming pool"), and Policies → policies, pets and smoke-free.
+    An option not picked isn't there; a group never opened stays unknown. `intake.rooms` → `rooms`
+    (no factor compares rooms yet).
+36. **An amenity StreetEasy tags that the picker doesn't offer** (Verizon Fios, say) makes a comp's
+    amenities read as more than the home's. No house-method value applies to amenities today, so it
+    moves no number; it shows in the comparison.
+
 ### New in 0.4.1 — `distance_miles`, for Casanova to confirm or change
 
 From Mason's note on #62: the screens worked out a row's miles by importing `distanceMiles` from
@@ -1034,6 +1064,6 @@ engine/
     figure.ts, labels.ts  figures with provenance; how a property is named
     output.ts           the output's types
   util/                 dates without Date, canonical JSON, SHA-256, UTF-8, arithmetic
-  test/                 166 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
+  test/                 183 tests; fixtures: Hannah's export as CSV and three XLSX workbooks,
                         six listing extracts (listings/), and the test-only house method
 ```
