@@ -123,6 +123,13 @@
   .whatsnew .dot{position:absolute;top:-4px;right:-9px;width:6px;height:6px;background:var(--accent);display:none}
   .whatsnew.unseen .dot{display:block}
   .hdr-div{width:1px;height:16px;background:var(--hdr-div)}
+  /* Which deploy this is, for the developers: release (live), claude/main, or a preview. */
+  .buildtag{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--hdr-muted);text-decoration:none;white-space:nowrap}
+  .buildtag:hover{color:#fff}
+  .buildtag i{width:6px;height:6px;background:var(--hdr-muted);flex:0 0 auto}
+  .buildtag.is-staging i{background:var(--accent)}
+  .buildtag.is-staging{color:var(--accent);border:1px solid var(--accent);padding:4px 8px}
   .acct{display:flex;align-items:center;gap:9px;background:none;border:0;padding:0;cursor:pointer}
   .acct:hover{opacity:.8}
   .acct-tile{width:24px;height:24px;background:var(--accent);color:var(--plum);font-size:9.5px;font-weight:800;
@@ -373,6 +380,7 @@
   @media (max-width:560px){
     .hdr-r{flex-wrap:wrap;row-gap:14px}
     .search{flex:1 1 100%;width:auto}
+    .hdr-grp{flex-wrap:wrap;row-gap:10px}
     .rail{height:150px}
   }
   @media (prefers-reduced-motion:reduce){
@@ -403,6 +411,8 @@
                autocomplete="off" spellcheck="false">
       </div>
       <div class="hdr-grp">
+        <a class="buildtag" id="buildTag" target="_blank" rel="noopener" hidden></a>
+        <span class="hdr-div" id="buildDiv" aria-hidden="true" hidden></span>
         <button class="whatsnew" id="whatsnewBtn" type="button">What&rsquo;s new<span class="dot"></span></button>
         <span class="hdr-div" aria-hidden="true"></span>
         <button class="acct" id="devBtn" type="button">
@@ -954,6 +964,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(dn&&dn.
     $('crCard').hidden=!on;
     /* The dev notebook: for its developers (docs/dev-notebook/README.md). The page itself signs in with Google. */
     $('dnCard').hidden=!(dnSignedIn() || currentEmail()==='creative@email.casa-blanca.com');
+    showBuild(dnSignedIn() || currentEmail()==='creative@email.casa-blanca.com');
     /* Every tool in this tab is team-only — signed out it would render an empty tab. */
     $('webTab').hidden=!on;
     /* Sign out while it's open: showTab moves the aria-current highlight too, but it also
@@ -961,6 +972,30 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(dn&&dn.
     if(booted && !tabOpen(state.tab)) showTab('home');
     /* Skipped during boot — the boot sequence renders both itself, once. */
     if(booted){ renderChangelog(); renderList(); }
+  }
+  /* The build marker: which branch and commit this deploy is, read from the comp report's
+     build.json (written by every Netlify build, docs/dispatch/casanova.md step 8). Production
+     publishes from `release`; claude/main and the previews are the free deploys. */
+  var buildInfo=null, buildOn=false;
+  function showBuild(on){
+    var tag=$('buildTag'), div=$('buildDiv');
+    buildOn=on;
+    if(!on){tag.hidden=true;div.hidden=true;return;}
+    function paint(b){
+      if(!buildOn||!b||!b.commit){tag.hidden=true;div.hidden=true;return;}
+      var live=b.context==='production', sha=String(b.commit).slice(0,7);
+      var when=b.builtAt?new Date(b.builtAt).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+      tag.className='buildtag'+(live?'':' is-staging');
+      tag.innerHTML='<i aria-hidden="true"></i>'+esc((live?'Live · ':'')+(b.branch||b.context)+' · '+sha);
+      tag.title=(live?'Production':'Not live: '+b.context)+' — '+(b.branch||'?')+' @ '+sha+(when?', built '+when:'');
+      tag.href='https://github.com/Casa-Blanca-Real-Estate/casablanca/commit/'+encodeURIComponent(b.commit);
+      tag.hidden=false;div.hidden=false;
+    }
+    if(buildInfo){paint(buildInfo);return;}
+    fetch('tools/comp-report/build.json',{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(b){buildInfo=b;paint(b);})
+      .catch(function(){paint(null);});
   }
   function openLogin(){err.textContent='';input.value='';loginModal.classList.add('open');setTimeout(function(){input.focus();},40);}
   function closeLogin(){loginModal.classList.remove('open');}

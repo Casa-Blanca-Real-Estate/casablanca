@@ -64,8 +64,15 @@ environment. Keep it current: it's how the next one starts.
    initdb fails under the scratchpad, whose parent folders are root-only. Stop the cluster when done.
 7. **Check that `package.json`, the lockfile, `netlify.toml` and the edge functions are unchanged,**
    or review those changes properly.
-8. **Push to `claude/main`, then verify production** at https://casa-blanca-creative-studio.netlify.app:
-   - `/tools/comp-report/build.json`: its `commit` is the pushed one. Poll it; a deploy takes about a
+8. **Push to `claude/main`.** That isn't live any more (from 2026-10-21): Netlify publishes production
+   from `release`, and a merge costs no deploy. **Release** when Kimani asks, before a demo, or about
+   once a day when something user-facing has merged: run the `release to production` workflow
+   (`.github/workflows/release.yml`, a workflow_dispatch on `claude/main`). It fast-forwards `release`
+   to `claude/main` once its checks are green; each release is one production deploy, out of a budget
+   Netlify meters (15 credits each). Batch merges into one release; never release just to check
+   something — the `claude/main` branch deploy and the deploy previews are free. Then verify
+   production at https://casa-blanca-creative-studio.netlify.app:
+   - `/tools/comp-report/build.json`: its `commit` is the released one. Poll it; a deploy takes about a
      minute.
    - `/api/comp-report/health` returns 200, and shows the database `ready` and `leastPrivilege: true`.
    - Every new endpoint refuses a signed-out caller: 401 (or 405 for a method it doesn't take).
@@ -110,6 +117,11 @@ https://claude.ai/artifact/HR14yufem1YH1TxqqiWksA — Casa's own, in the Casa Bl
 - **Never read or connect to `DATABASE_URL`.** The old cloud environment carried MindBinder's database
   in it. Casa reads `NETLIFY_DB_URL` (production) and `CR_LOCAL_DATABASE_URL` or
   `CR_TEST_DATABASE_URL` (local).
+- **Netlify deploys are metered** (credit plan, 2026-10): each successful production deploy is 15
+  credits; deploy previews, branch deploys, failed and cancelled builds are free. Production is the
+  `release` branch; `netlify/ignore-build.sh` cancels a production build whose changes are only
+  docs (`docs/`, `.github/`, `*.md`). The agent CMS's build hook must target `release`, or a publish
+  never goes live.
 - **Netlify:** environment variable changes need a redeploy. Deploy previews sit behind Netlify's
   visitor login, so they answer 401, not 404. Function logs are readable only by Kimani, in Netlify.
 - **The Artifact tool reaches every artifact Kimani makes, in Code, web or Cowork.** A session can
