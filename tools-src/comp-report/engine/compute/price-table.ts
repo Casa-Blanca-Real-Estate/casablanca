@@ -8,12 +8,16 @@
 // Frankie steps. It widens until no more than ten steps fall inside the range,
 // and narrows until at least two do. The increment is presentation: every row
 // is exact arithmetic, and nothing in the table moves a number.
+//
+// Beside those rows, five evenly spaced ones (NW-065 a): the low and high ends,
+// a quarter, the middle and three-quarters of the way between, so Findings has
+// a table it can explain in one sentence.
 
 import { roundHalfAway } from '../util/numbers.ts';
 import type { Confidence, IsoDate, ReportPropertyType, Sourced } from '../types.ts';
 import { weakest } from './facts.ts';
 import { dollarsText, figure } from './figure.ts';
-import type { Figure, PriceTable, PriceTableRow, Result } from './output.ts';
+import type { Figure, PriceTable, PriceTableFiveRow, PriceTableRow, Result } from './output.ts';
 
 const INCREMENTS = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000];
 /** The largest increment no more than this share of the low end, in percent. */
@@ -103,12 +107,40 @@ export function priceTable(args: {
   const span = (rate: number, end: Figure | null, which: 'lowest' | 'highest', comp: RateEntry) => end
     ? figure(rate, 'usd_per_sqft', end.confidence, `the ${which === 'lowest' ? 'low' : 'high'} end of the agent's narrowed range ÷ the home's ${sqft} sq ft`, asOf)
     : figure(rate, 'usd_per_sqft', comp.confidence, `the ${which} $/sqft among ${entries.length} primary sold comps: ${comp.label}`, asOf);
+  const low = span(ends.low, ends.lowEnd, 'lowest', lowest);
+  const high = span(ends.high, ends.highEnd, 'highest', highest);
+
+  // The five-row table (NW-065 a): the ends are the range's own, exactly; the three rows between are
+  // evenly spaced rates, each to the whole dollar, times the home's size.
+  const rangeEnd = (end: Figure | null, rate: number, which: 'low' | 'high') => {
+    if (end) return end;
+    const own = range && args.leadFamily === 'unit_rate' ? range[which] : null;
+    return own && own.value === roundHalfAway(rate * sqft) ? own : null;
+  };
+  const endRow = (step: 'low' | 'high', rate: Figure, end: Figure | null, comp: RateEntry): PriceTableFiveRow => ({
+    step, per_sqft: rate,
+    price: rangeEnd(end, rate.value, step) ?? priceOf(rate.value, `${comp.label}'s ${comp.own ? 'own' : 'adjusted'} $/sqft`, comp.confidence),
+    comp_ids: end ? [] : sorted.filter((e) => e.value === comp.value).map((e) => e.id).sort(),
+  });
+  const between = ([['quarter', 1, 'a quarter'], ['middle', 2, 'halfway'], ['three_quarter', 3, 'three-quarters of the way']] as const).map(([step, quarters, words]): PriceTableFiveRow => {
+    const rate = roundHalfAway(ends.low + (quarters / 4) * (ends.high - ends.low));
+    const confidence = weakest(low.confidence, high.confidence);
+    return {
+      step,
+      per_sqft: figure(rate, 'usd_per_sqft', confidence, `${words} from the lowest $/sqft to the highest, to the whole dollar`, asOf),
+      price: priceOf(rate, `${dollarsText(rate)}/sq ft`, confidence),
+      comp_ids: [],
+    };
+  });
+  const fiveRows = [endRow('low', low, ends.lowEnd, lowest), ...between, endRow('high', high, ends.highEnd, highest)];
+
   return {
     table: {
       rows: ordered,
+      five_rows: fiveRows,
       increment,
-      low: span(ends.low, ends.lowEnd, 'lowest', lowest),
-      high: span(ends.high, ends.highEnd, 'highest', highest),
+      low,
+      high,
       subject_area: area,
       basis: `The home's ${sqft} sq ft × each step: the ${entries.length} primary sold comps' own $/sqft, and round steps of ${dollarsText(increment)} between the lowest and the highest${args.leadFamily === 'adjusted_price' ? '. The range leads with adjusted prices, so the table spans the same comps\' $/sqft instead' : ''}${ends.lowEnd || ends.highEnd ? ", inside the agent's narrowed range" : ''}.`,
     },

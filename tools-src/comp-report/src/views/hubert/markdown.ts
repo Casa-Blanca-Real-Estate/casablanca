@@ -136,6 +136,16 @@ function inline(text: string, key: string, links = true): ReactNode[] {
   return out;
 }
 
+/** A short note's inline markdown (Hubert's progress notes): bold, italic, code and links, lines kept. */
+export function renderInline(text: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  text.replace(/\r\n?/g, '\n').trim().split('\n').forEach((line, i) => {
+    if (i) out.push(createElement('br', { key: `br${i}` }));
+    out.push(...inline(line, `n${i}`));
+  });
+  return out;
+}
+
 // ─── Blocks ─────────────────────────────────────────────────────────────────
 
 const HEADING = /^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$/;

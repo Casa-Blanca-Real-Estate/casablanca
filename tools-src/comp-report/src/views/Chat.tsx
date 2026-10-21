@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError, streamTurn, type HubertEmailEdit, type ShownMessage } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
-import { HubertText } from './hubert/markdown.tsx';
+import { HubertNote, HubertText } from './hubert/markdown.tsx';
 
 interface Live {
   text: string;
@@ -137,7 +137,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         {error && <p className="hb-notice" role="alert">{error}</p>}
         {messages.filter((m) => !m.toolResultsOnly).map((m) => (
           <div key={`${m.seq}-${m.createdAt}`} className={`hb-msg ${m.role}${m.inContext ? '' : ' dim'}`}>
-            {m.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
+            {m.progress.map((p, i) => <HubertNote key={i} text={p} />)}
             {m.role === 'assistant' && looked(m.tools) && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
             {m.role === 'assistant' && m.tools.includes('edit_email') && <p className="hb-progress">Changed the email on Send.</p>}
             {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
@@ -148,7 +148,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         ))}
         {live && (
           <div className="hb-msg assistant" aria-live="polite">
-            {live.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
+            {live.progress.map((p, i) => <HubertNote key={i} text={p} />)}
             {looked(live.tools) && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
             {live.tools.includes('edit_email') && <p className="hb-progress">Changing the email…</p>}
             {live.text ? <HubertText text={live.text} /> : !live.note && <p className="hb-progress">Thinking…</p>}

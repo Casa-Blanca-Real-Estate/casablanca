@@ -1,6 +1,6 @@
 // Small pieces of the shell: the centred frame for sign-in and the states, the loading line, the busy
 // and error lines, the Hubert drawer's box and its tab, and the admin's dev strip.
-import type { ReactNode } from 'react';
+import { useEffect, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import type { Workspace } from '../workspace/model.ts';
 import type { StepId } from '../workspace/About.tsx';
 import { About } from '../workspace/About.tsx';
@@ -80,10 +80,89 @@ export function DevStrip({ ws, step, fills }: { ws: Workspace; step: StepId; fil
   );
 }
 
-/** The drawer's box: fixed under the bar at the right, 380px wide. Hubert fills it. */
+// The drawer's width: 380px (the handoff) until the agent drags its left edge. Kept per browser, and
+// set on --sh-drawer-w, so the page's margin, the tab and the toast move with it.
+const DRAWER_KEY = 'cr-hubert-width';
+const DRAWER_DEFAULT = 380;
+const DRAWER_MIN = 320;
+// Up to 900px, and no wider than leaves the screen beside it 960px (the email preview overflows under
+// that), but always at least the 380px it opens at.
+const drawerMax = () => Math.max(DRAWER_DEFAULT, Math.min(900, window.innerWidth - 960));
+const clampWidth = (w: number) => Math.round(Math.min(drawerMax(), Math.max(DRAWER_MIN, w)));
+
+function savedWidth(): number {
+  try {
+    const n = Number(localStorage.getItem(DRAWER_KEY));
+    return n > 0 ? clampWidth(n) : DRAWER_DEFAULT;
+  } catch {
+    return DRAWER_DEFAULT;
+  }
+}
+
+/** The drawer's box: fixed under the bar at the right, 380px wide until resized. Hubert fills it. */
 export function HubertDrawer({ ws }: { ws: Workspace }) {
+  const [width, setWidth] = useState(savedWidth);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sh-drawer-w', `${width}px`);
+    try {
+      if (width === DRAWER_DEFAULT) localStorage.removeItem(DRAWER_KEY);
+      else localStorage.setItem(DRAWER_KEY, String(width));
+    } catch {
+      // Private mode: the width lasts as long as the page.
+    }
+  }, [width]);
+
+  // A narrower window pulls a wide drawer back in.
+  useEffect(() => {
+    const fit = () => setWidth((w) => clampWidth(w));
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+
+  function start(e: PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  }
+  function move(e: PointerEvent<HTMLDivElement>) {
+    if (dragging) setWidth(clampWidth(window.innerWidth - e.clientX));
+  }
+  function stop(e: PointerEvent<HTMLDivElement>) {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    setDragging(false);
+  }
+  function key(e: KeyboardEvent<HTMLDivElement>) {
+    const step = e.shiftKey ? 80 : 20;
+    if (e.key === 'ArrowLeft') setWidth((w) => clampWidth(w + step));
+    else if (e.key === 'ArrowRight') setWidth((w) => clampWidth(w - step));
+    else if (e.key === 'Home') setWidth(clampWidth(drawerMax()));
+    else if (e.key === 'End') setWidth(DRAWER_MIN);
+    else return;
+    e.preventDefault();
+  }
+
   return (
-    <aside className="hubert-drawer">
+    <aside className={`hubert-drawer${dragging ? ' resizing' : ''}`}>
+      <div
+        className="hubert-resize"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize Hubert’s panel"
+        aria-valuenow={width}
+        aria-valuemin={DRAWER_MIN}
+        aria-valuemax={drawerMax()}
+        tabIndex={0}
+        title="Drag to resize. Double-click to reset."
+        onPointerDown={start}
+        onPointerMove={move}
+        onPointerUp={stop}
+        onPointerCancel={stop}
+        onDoubleClick={() => setWidth(DRAWER_DEFAULT)}
+        onKeyDown={key}
+      />
       <Hubert ws={ws} />
     </aside>
   );

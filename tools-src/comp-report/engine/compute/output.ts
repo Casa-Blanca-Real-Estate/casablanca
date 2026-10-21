@@ -259,8 +259,25 @@ export interface PriceTableRow {
   comp_ids: string[];
 }
 
+/** One row of the five-row table (NW-065 a): the ends, the quarters and the middle of the span. */
+export interface PriceTableFiveRow {
+  step: 'low' | 'quarter' | 'middle' | 'three_quarter' | 'high';
+  per_sqft: Figure;
+  /** The range's end exactly at low and high; the home's size × the rate between them. */
+  price: Figure;
+  /** The comp whose rate sets the end (low and high); empty for a narrowed end and the steps between. */
+  comp_ids: string[];
+}
+
 export interface PriceTable {
   rows: PriceTableRow[];
+  /**
+   * Five evenly spaced rows across the same span (NW-065 a): low, a quarter,
+   * the middle (the midpoint, not the median comp), three-quarters, high.
+   * Findings reads these; the email, the writer and QA read `rows` until
+   * NW-065 b is decided.
+   */
+  five_rows: PriceTableFiveRow[];
   /** The round step, in $/sqft. */
   increment: number;
   /** The $/sqft span the table covers. */
@@ -541,10 +558,18 @@ export interface DealTermsOut {
 
 export interface Gap {
   code: string;
+  /** Says "the home", never "the subject": the screen shows it. */
   message: string;
   target: string | null;
   field: string | null;
   results: ResultKind[];
+  /**
+   * The agent can close it on a screen that exists (NW-077 b): a fact about
+   * the home that Details or its pickers ask for, a comp's price, size or
+   * floor (Sort's edit), or a link comp's confirm. False for what follows
+   * from another gap (no base, no range) and for facts no form asks.
+   */
+  fillable: boolean;
 }
 
 export interface Warning {

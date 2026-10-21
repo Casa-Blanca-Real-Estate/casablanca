@@ -258,7 +258,7 @@ test('deterministic: the same input gives the same output and hash; comp order d
   tampered.results.on_facts.base!.value += 1;
   assert.equal(verifyOutputHash(tampered), false);
   assert.match(a.meta.inputs_hash, /^sha256:[0-9a-f]{64}$/);
-  assert.equal(a.meta.engine_version, '0.4.1');
+  assert.equal(a.meta.engine_version, '0.5.0');
   assert.deepEqual(a.meta.parser_versions, ['0.5.0']);
 });
 

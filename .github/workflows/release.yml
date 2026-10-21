@@ -1,0 +1,90 @@
+# Promotes claude/main to `release`, the branch Netlify publishes to
+# production. Merges land on claude/main and cost nothing; this is the one
+# step that puts them live, and each run that moves `release` is one
+# production deploy (15 credits) — unless everything since the last release
+# is docs, which netlify/ignore-build.sh cancels.
+#
+# Run it from GitHub: Actions → "release to production" → Run workflow.
+# A Claude session can run it too (it's a workflow_dispatch).
+#
+# It only fast-forwards: `release` never carries a commit claude/main doesn't
+# have. It refuses a commit whose checks failed or are still running.
+name: release to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'What to release (a branch or commit on claude/main)'
+        default: 'claude/main'
+        required: true
+
+permissions:
+  contents: write
+  checks: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: resolve what's being released
+        id: target
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          sha=$(git rev-parse --verify -q "origin/$REF^{commit}" \
+             || git rev-parse --verify "$REF^{commit}")
+          git merge-base --is-ancestor "$sha" origin/claude/main \
+            || { echo "::error::$sha isn't on claude/main. Only merged work is released."; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: its checks passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.target.outputs.sha }}
+        # "promote" is this job: it runs on claude/main's tip too.
+        run: |
+          runs=$(gh api "repos/${{ github.repository }}/commits/$SHA/check-runs" --paginate \
+            --jq '.check_runs[] | select(.name != "promote") | "\(.status) \(.conclusion // "-") \(.name)"')
+          echo "$runs"
+          [ -n "$runs" ] || { echo "::warning::No checks ran on ${SHA:0:7}."; exit 0; }
+          if echo "$runs" | grep -qvE '^completed (success|skipped|neutral) '; then
+            echo "::error::Some checks on ${SHA:0:7} failed or are still running. Wait for them, or fix them, then run this again."
+            exit 1
+          fi
+
+      - name: move release
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          if git rev-parse --verify -q origin/release >/dev/null; then
+            if [ "$(git rev-parse origin/release)" = "$SHA" ]; then
+              echo "Already live: release is at ${SHA:0:7}. Nothing to do, no deploy." | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            git merge-base --is-ancestor origin/release "$SHA" \
+              || { echo "::error::release has commits that aren't on claude/main. Bring them into claude/main first."; exit 1; }
+            range="origin/release..$SHA"
+          else
+            range="$SHA~10..$SHA"
+          fi
+          {
+            echo "## Released ${SHA:0:7} to production"
+            echo
+            echo '```'
+            git log --first-parent --format='%h %s' "$range"
+            echo '```'
+            if [ -z "$(git diff --name-only "$range" | grep -vE '^(docs/|\.github/)|\.md$')" ]; then
+              echo
+              echo "Docs only, so Netlify will skip the build: no deploy, no credits."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          git push origin "$SHA:refs/heads/release"

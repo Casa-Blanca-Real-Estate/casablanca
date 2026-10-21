@@ -1,4 +1,4 @@
-/* Hubert's drawer (the handoff: 380px, white, a #dddbd5 left edge and a soft shadow).
+/* Hubert's drawer (the handoff: 380px, resizable from its left edge, white, a #dddbd5 left edge and a soft shadow).
    The shell's box places it (fixed, right, full height); .hb fills that box. Prefix hb-. */
 .hb {
   height: 100%; width: 100%; display: flex; flex-direction: column; min-height: 0;
@@ -14,12 +14,13 @@
 }
 .hb-close:hover { color: var(--cb-black); }
 
-/* The conversation: Hubert left on the page tone, the agent right in ink. */
+/* The conversation: Hubert left on the page tone, the agent right in ink. The bubbles widen with the
+   drawer: 300px and 260px at its 380px. */
 .hb-body { flex: 1; min-height: 0; overflow: auto; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
 .hb-bubble, .hb-msg.assistant {
-  align-self: flex-start; background: var(--cb-bg); padding: 12px 14px; font-size: 13px; line-height: 1.5; max-width: 300px; box-sizing: content-box;
+  align-self: flex-start; background: var(--cb-bg); padding: 12px 14px; font-size: 13px; line-height: 1.5; max-width: calc(100% - 36px); box-sizing: content-box;
 }
-.hb-msg.user { align-self: flex-end; background: var(--cb-black); color: #fff; padding: 10px 12px; font-size: 13px; line-height: 1.45; max-width: 260px; box-sizing: content-box; }
+.hb-msg.user { align-self: flex-end; background: var(--cb-black); color: #fff; padding: 10px 12px; font-size: 13px; line-height: 1.45; max-width: calc(100% - 76px); box-sizing: content-box; }
 .hb-msg.dim { opacity: .55; }
 .hb-msg p { margin: 0; }
 .hb-text { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -10,6 +10,11 @@
   # the last good deploy stays live.
   command = "npm run build"
   publish = "."
+  # Production publishes from the `release` branch, not claude/main — merges
+  # land on claude/main and go live when they're promoted (the "release to
+  # production" workflow). On top of that, a production build whose changes
+  # are only docs is cancelled before it builds: see netlify/ignore-build.sh.
+  ignore = "bash netlify/ignore-build.sh"
 
 [functions]
   directory = "netlify/functions"

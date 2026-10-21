@@ -212,3 +212,48 @@ test('the Removed fold reads every removed comp, oldest removal first, with its 
   assert.equal(out[0]!.record.facts.floor?.value, 3);
   assert.equal(out[2]!.origin, 'manual');
 });
+
+test('the home’s Building and Policies pickers are the engine’s service, parking, shared outdoor, amenities and policies (NW-077 b)', () => {
+  const at = '2026-09-29';
+  const facts = subjectFacts({
+    ...SAMPLE_INTAKE,
+    rooms: { value: 5.5, asOf: at },
+    building: { value: ['Doorman', 'Elevator', 'Storage', 'Gym', 'Pool', 'Roof deck'], asOf: at },
+    policies: { value: ['Pets allowed', 'Pied-à-terre allowed'], asOf: at },
+  }, AS_OF);
+  assert.deepEqual(facts.service?.value, { doorman: 'hours_unspecified', concierge: false });
+  assert.deepEqual(facts.parking?.value, []);
+  assert.equal(facts.outdoor_shared?.value, true);
+  // StreetEasy's words, so the home reads like a comp's tags.
+  assert.deepEqual(facts.amenities?.value, ['elevator', 'gym', 'storage space', 'swimming pool']);
+  assert.deepEqual(facts.policies?.value, ['pets allowed', 'pied-a-terre allowed']);
+  assert.equal(facts.pets?.value, 'allowed');
+  assert.equal(facts.smoke_free?.value, false);
+  assert.equal(facts.rooms?.value, 5.5);
+  assert.deepEqual([facts.service?.source, facts.service?.confidence], ['agent', 'exact']);
+  // A group never opened stays unknown.
+  const bare = subjectFacts(SAMPLE_INTAKE, AS_OF);
+  for (const f of ['service', 'parking', 'outdoor_shared', 'amenities', 'policies', 'pets'] as const) assert.equal(bare[f], undefined, f);
+});
+
+test('on the sample, filling the pickers closes their gaps and leaves the range where it was', () => {
+  const comps = workspaceComps(imports, sampleJudgments());
+  const size = { ...SAMPLE_INTAKE, areaSqft: { value: 2000, asOf: AS_OF } };
+  const before = compute(engineInput({ asOf: AS_OF, intake: size, comps }));
+  const after = compute(engineInput({ asOf: AS_OF, comps, intake: {
+    ...size,
+    yearBuilt: { value: 2018, asOf: AS_OF },
+    building: { value: ['Doorman', 'Concierge', 'Gym', 'Roof deck'], asOf: AS_OF },
+    policies: { value: ['Pets allowed'], asOf: AS_OF },
+  } }));
+  for (const k of ['on_facts', 'with_estimates'] as const) {
+    assert.deepEqual([after.results[k].range?.low.value, after.results[k].base?.value, after.results[k].range?.high.value],
+      [before.results[k].range?.low.value, before.results[k].base?.value, before.results[k].range?.high.value]);
+  }
+  const fields = (o: typeof before) => o.gaps.filter((g) => g.target === 'subject').map((g) => g.field).sort();
+  assert.deepEqual(fields(before), ['amenities', 'outdoor_shared', 'parking', 'policies', 'service', 'unit_type', 'year_built']);
+  assert.deepEqual(fields(after), ['unit_type']);
+  assert.equal(after.gaps.find((g) => g.field === 'unit_type')!.fillable, false);
+  // 101 Leonard #5B is 2nd tier: its missing floor is no gap.
+  assert.ok(!before.gaps.some((g) => g.target === 'pk1|ny|new york|101 leonard st|5B'));
+});
