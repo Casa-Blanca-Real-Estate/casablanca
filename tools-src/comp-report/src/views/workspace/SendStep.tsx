@@ -28,6 +28,7 @@ import { footOf } from '../send/drafts.ts';
 import { IssuesPanel } from '../send/IssuesPanel.tsx';
 import type { SendIssue } from '../send/issues.ts';
 import { useSendEmail, type SendModel } from '../send/useSendEmail.ts';
+import { Info } from '../newcomp/Frame.tsx';
 import '../../styles/send.css';
 import { BuildNote, entry, StubTag, TextInput } from './bits.tsx';
 import type { StepProps, Workspace } from './model.ts';
@@ -399,27 +400,19 @@ interface Offered {
   before: Pick<SendState, LineKey>;
 }
 
-/** The message "Ask Hubert" sends: the agent's own lines, for feedback only. */
-export function feedbackAsk(send: SendState): string {
-  const lines = LINE_KEYS.map((k) => (send[k]?.value.trim() ? `${LINE_NAME[k]}: ${send[k]!.value.trim()}` : null)).filter(Boolean);
-  return [
-    'How do my lines for the email read? Feedback only, please: don’t change anything yet.',
-    ...(lines.length ? ['', ...lines] : []),
-  ].join('\n');
-}
-
 /**
  * The agent's own lines, first-class (dn_mviipah6rs3v): the email is written
  * from them, so they lead, open. Hubert helps on request: drafts the empty
- * ones from the agent's notes, tidies the wording (clarity and grammar, the
- * same points and numbers), or gives feedback in the drawer. Each of his
- * changes can be undone, and a line he wrote says so until the agent edits it.
+ * ones from the agent's notes (at the top), and tidies the wording once
+ * they're written (at the bottom: clarity and grammar, the same points and
+ * numbers). Feedback is asked in the drawer. Each of his changes can be
+ * undone, and a line he wrote says so until the agent edits it.
  */
 function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
   const off = m.off;
   const [busy, setBusy] = useState<'draft' | 'rewrite' | null>(null);
   const [offered, setOffered] = useState<Offered | null>(null);
-  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const [note, setNote] = useState<{ job: 'draft' | 'rewrite'; text: string; error?: boolean } | null>(null);
   const written = LINE_KEYS.filter((k) => m.send[k]?.value.trim());
   const locked = off || busy !== null;
 
@@ -446,7 +439,7 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
       const keys = LINE_KEYS.filter((k) => r.lines[k]);
       const kept = r.dropped.length ? ` ${r.dropped.map((k) => LINE_NAME[k]).join(' and ')} would have needed a figure you haven’t given, so it’s left to you.` : '';
       if (!keys.length) {
-        setNote({ text: (job === 'draft' ? 'Your notes don’t say enough to draft these. They’re yours to write.' : 'Your lines already read well: nothing to change.') + kept });
+        setNote({ job, text: (job === 'draft' ? 'Your notes don’t say enough to draft these. They’re yours to write.' : 'Your lines already read well: nothing to change.') + kept });
         return;
       }
       const before: Offered['before'] = { chosen: m.send.chosen, consider: m.send.consider, nextStep: m.send.nextStep };
@@ -455,9 +448,9 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
       ws.setSend(next);
       setOffered({ job, lines: r.lines, before });
       const names = keys.map((k) => `“${LINE_NAME[k]}”`).join(keys.length === 2 ? ' and ' : ', ');
-      setNote({ text: `${job === 'draft' ? `Drafted from your notes: ${names}.` : `Tidied: ${names}.`} Read it over: it’s yours to change.${kept}` });
+      setNote({ job, text: `${job === 'draft' ? `Drafted from your notes: ${names}.` : `Tidied: ${names}.`} Read it over: it’s yours to change.${kept}` });
     } catch (e) {
-      setNote({ text: e instanceof ApiError || e instanceof Error ? e.message : String(e), error: true });
+      setNote({ job, text: e instanceof ApiError || e instanceof Error ? e.message : String(e), error: true });
     } finally {
       setBusy(null);
     }
@@ -492,31 +485,20 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
     <section className="panel se-lines" aria-label="Your lines">
       {/* A div, not a header: the studio's nav styles every header:first-of-type. */}
       <div className="se-lines-head">
-        <div>
-          <div className="se-sec"><span className="se-sec-n">01</span>Your lines</div>
-          <p className="se-hint">The email is written from these, in your words. Write them, or have Hubert draft them from your notes and tidy them after.</p>
+        <div className="se-sec se-lines-title">
+          <span className="se-sec-n">01</span>Your lines
+          <Info label="About your lines" align="left" text="The email is written from these, in your words. Write them, or have Hubert draft them from your notes, then tidy the wording at the end." />
         </div>
         {!off && (
           <div className="se-lines-actions">
             <button type="button" className="btn small-btn se-help" disabled={locked || written.length === LINE_KEYS.length} title={written.length === LINE_KEYS.length ? 'Every line is already yours' : 'Fills the empty lines from your tiers, tags and notes'} onClick={() => void help('draft')}>
               <span className="se-star" aria-hidden="true">✦</span>{busy === 'draft' ? 'Drafting…' : 'Draft from my notes'}
             </button>
-            <button type="button" className="btn small-btn se-help" disabled={locked || !written.length} title={written.length ? 'Clarity and grammar only: the same points and numbers' : 'Write a line first'} onClick={() => void help('rewrite')}>
-              <span className="se-star" aria-hidden="true">✦</span>{busy === 'rewrite' ? 'Tidying…' : 'Tidy the wording'}
-            </button>
-            <button type="button" className="btn small-btn" disabled={!written.length} title={written.length ? 'Opens Hubert with your lines: feedback, no changes' : 'Write a line first'} onClick={() => ws.askHubert(feedbackAsk(m.send))}>
-              Ask Hubert for feedback
-            </button>
           </div>
         )}
       </div>
 
-      {note && (
-        <p className={`se-lines-note${note.error ? ' error' : ''}`} role="status">
-          {note.text}
-          {offered && !note.error && <>{' '}<button type="button" className="link" onClick={undo}>Undo</button></>}
-        </p>
-      )}
+      {note?.job === 'draft' && <LinesNote note={note} onUndo={offered ? undo : null} />}
 
       <div className="se-lines-grid">
         <label className="se-field">
@@ -532,6 +514,15 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
       {line('consider', 'Buildings that trade higher or lower, carrying costs, recent activity in the building. One a line.', 3)}
       {line('nextStep', ws.side === 'seller' ? 'Where you’d list it, and why' : 'What you’d offer, and on what terms', 3)}
 
+      {!off && (
+        <div className="se-lines-actions se-lines-tidy">
+          <button type="button" className="btn small-btn se-help" disabled={locked || !written.length} title={written.length ? 'Clarity and grammar only: the same points and numbers' : 'Write a line first'} onClick={() => void help('rewrite')}>
+            <span className="se-star" aria-hidden="true">✦</span>{busy === 'rewrite' ? 'Tidying…' : 'Tidy the wording'}
+          </button>
+        </div>
+      )}
+      {note?.job === 'rewrite' && <LinesNote note={note} onUndo={offered ? undo : null} />}
+
       <div className="se-lines-foot">
         <label className="se-field se-client-note">
           <span className="fh">About the client <span className="opt">(for you)</span></span>
@@ -545,5 +536,15 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
         )}
       </div>
     </section>
+  );
+}
+
+/** What Draft or Tidy did, beside the button that did it, with Undo. */
+function LinesNote({ note, onUndo }: { note: { text: string; error?: boolean }; onUndo: (() => void) | null }) {
+  return (
+    <p className={`se-lines-note${note.error ? ' error' : ''}`} role="status">
+      {note.text}
+      {onUndo && !note.error && <>{' '}<button type="button" className="link" onClick={onUndo}>Undo</button></>}
+    </p>
   );
 }

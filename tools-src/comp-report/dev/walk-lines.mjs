@@ -31,6 +31,10 @@ await p.goto(`${base}/tools/comp-report/?report=${id}&step=send`);
 await p.waitForSelector('.se-lines');
 await p.waitForTimeout(800);
 await shot('01-your-lines-first');
+await p.getByRole('button', { name: 'About your lines' }).hover();
+check(await p.locator('.se-lines-title .nr-tip').isVisible(), 'the hint behind the ⓘ shows on hover');
+await shot('01b-hint');
+await p.mouse.move(0, 0);
 
 await p.getByRole('button', { name: /Draft from my notes/ }).click();
 await p.waitForSelector('.se-lines-note');
@@ -48,8 +52,9 @@ await shot('03-tidied');
 await p.locator('.se-lines-note .link', { hasText: 'Undo' }).click();
 check((await field('The next step').inputValue()) === 'i would open at $3.8M  and ask for a quick close', 'Undo puts the agent’s words back');
 
-await p.getByRole('button', { name: 'Ask Hubert for feedback' }).click();
+await p.locator('.sh-pill', { hasText: 'Hubert' }).click();
 await p.waitForSelector('.hb');
+await p.locator('.hb-chip', { hasText: 'How do my lines read?' }).click();
 await p.waitForFunction(() => /get_email returned/.test(document.querySelector('.hb-body')?.textContent ?? ''), null, { timeout: 15_000 });
 check(await p.waitForFunction(() => /Checked the email/.test(document.querySelector('.hb-body')?.textContent ?? ''), null, { timeout: 5_000 }).then(() => true, () => false), 'Hubert says he read the email');
 await shot('04-hubert-feedback');

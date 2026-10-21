@@ -22,7 +22,7 @@ const looked = (tools: string[]) => [...new Set(tools.filter((t) => t !== 'edit_
 
 const MAX_INPUT_PX = 120;
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, pending, onPendingTaken }: {
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -36,9 +36,6 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   beforeAsk?: () => Promise<void>;
   /** An edit Hubert made to the email: Send applies it. */
   onEmailEdit?: (edit: HubertEmailEdit) => void;
-  /** A question a screen asked for the agent (Send's "Ask Hubert"), sent once the drawer is free. */
-  pending?: { id: number; text: string } | null;
-  onPendingTaken?: (id: number) => void;
 }) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -125,15 +122,6 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
       await load().catch(() => undefined);
     }
   }
-
-  // A screen's question: sent as the agent's own message once nothing else is answering. Once each.
-  const taken = useRef<number | null>(null);
-  useEffect(() => {
-    if (!pending || live || waiting || readOnly || taken.current === pending.id) return;
-    taken.current = pending.id;
-    onPendingTaken?.(pending.id);
-    void ask(pending.text);
-  }, [pending, live, waiting, readOnly]);
 
   function submit(e: FormEvent) {
     e.preventDefault();

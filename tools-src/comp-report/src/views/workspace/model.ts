@@ -108,11 +108,6 @@ export interface Workspace {
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
-  /** Asks Hubert for the agent, from a screen's button (Send's "Ask Hubert"): opens the drawer and sends it. */
-  askHubert: (message: string) => void;
-  /** The question waiting for the drawer to send it, and its taking. */
-  hubertAsk: { id: number; text: string } | null;
-  takeHubertAsk: (id: number) => void;
   /** Hubert's edits to the email, waiting for Send to apply them (server/hubert-email.ts). */
   hubertEdits: HubertEmailEdit[];
   queueHubertEdit: (edit: HubertEmailEdit) => void;

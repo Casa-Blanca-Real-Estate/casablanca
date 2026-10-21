@@ -148,8 +148,6 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onAction={onAction}
         beforeAsk={ws.flush}
         onEmailEdit={ws.queueHubertEdit}
-        pending={ws.hubertAsk}
-        onPendingTaken={ws.takeHubertAsk}
       />
     </aside>
   );

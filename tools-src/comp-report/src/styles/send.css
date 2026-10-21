@@ -44,8 +44,10 @@ label.se-label, .se-label {
 .se-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .se-lines { padding: 20px 28px 24px; display: flex; flex-direction: column; gap: 16px; }
 .se-lines-head { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-.se-lines-head .se-hint { margin-top: 6px; max-width: 64ch; font-size: 13px; }
+.se-lines-title { position: relative; }
+.se-lines-title .nr-tip { top: 24px; }
 .se-lines-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.se-lines-tidy { justify-content: flex-end; }
 .btn.se-help { display: inline-flex; align-items: center; gap: 6px; }
 .btn.se-help .se-star { font-size: 13px; }
 .se-lines-note {

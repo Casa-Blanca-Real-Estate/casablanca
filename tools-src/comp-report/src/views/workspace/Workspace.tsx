@@ -168,7 +168,6 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
-  const [hubertAsk, setHubertAsk] = useState<{ id: number; text: string } | null>(null);
   const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
   const today = useMemo(localToday, []);
   const save = useAutosave(reportId);
@@ -518,12 +517,6 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     removed,
     drawerOpen,
     setDrawerOpen,
-    askHubert: (text) => {
-      setDrawerOpen(true);
-      setHubertAsk({ id: Date.now(), text });
-    },
-    hubertAsk,
-    takeHubertAsk: (id) => setHubertAsk((a) => (a?.id === id ? null : a)),
     hubertEdits,
     queueHubertEdit: (edit) => setHubertEdits((list) => [...list, edit]),
     takeHubertEdits: (n) => setHubertEdits((list) => list.slice(n)),

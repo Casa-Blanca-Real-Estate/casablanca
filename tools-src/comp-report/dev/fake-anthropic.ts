@@ -180,7 +180,7 @@ function echo(body: Block): Script {
       delayMs: 15,
     };
   }
-  if (/\bfeedback\b|\bthe email\b/i.test(said)) {
+  if (/\bfeedback\b|\bthe email\b|\bmy lines\b/i.test(said)) {
     return {
       content: [
         { type: 'thinking', thinking: 'Reading the email (fake API).', signature: 'fake-signature' },
