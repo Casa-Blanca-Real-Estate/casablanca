@@ -40,7 +40,12 @@ const WALL = 'Pardon Our Interruption. As you were browsing something about your
 
 export const PAGES: Record<string, Record<string, unknown> | 'wall'> = {
   'https://streeteasy.com/building/100-barclay-street-new_york/17l': SUBJECT_17L,
-  'https://streeteasy.com/building/200-chambers-street-new_york/10a': fixture('sold-200-chambers-10a.json'),
+  // Photos added here for local walks (Dispatch 20): on StreetEasy's image host, as a real read gives them.
+  'https://streeteasy.com/building/200-chambers-street-new_york/10a': {
+    ...fixture('sold-200-chambers-10a.json'),
+    heroImageUrl: 'https://photos.zillowstatic.com/fp/dev-200-chambers-10a-1-se_large_800_400.webp',
+    photos: [2, 3].map((n) => `https://photos.zillowstatic.com/fp/dev-200-chambers-10a-${n}-se_large_800_400.webp`),
+  },
   'https://streeteasy.com/building/5-franklin-place-new_york/14a': fixture('sold-5-franklin-14a-approx-size.json'),
   'https://streeteasy.com/building/111-fulton-street-new_york/315': fixture('in-contract-111-fulton-315.json'),
   'https://streeteasy.com/building/20-pine-street-new_york/617': fixture('active-20-pine-617.json'),

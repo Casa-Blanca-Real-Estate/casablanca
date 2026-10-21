@@ -221,6 +221,12 @@ export interface WorkspaceState {
   outcomes?: Outcomes;
   /** Hubert's drawer has opened on Sort once: it opens by default only the first time (the handoff). */
   hubertSeen?: boolean;
+  /**
+   * The tags the data has offered each comp, by report comp id (NB-9 C,
+   * workspace/settle-tags.ts): a full agent's are pre-filled once, so one the
+   * agent took off isn't put back.
+   */
+  tagsOffered?: Record<string, string[]>;
 }
 
 export type ReasonType = 'property' | 'client' | 'method';
@@ -262,6 +268,12 @@ export interface CompJudgment {
    * as the agent's fact, marked "changed"; the source's value stays on record.
    */
   factOverrides?: FactOverrides;
+  /**
+   * A listing comp's photos, hero first (NW-020 a, Dispatch 20): https URLs on
+   * StreetEasy's image hosts only, at most 8, as the server's cleanPhotoUrls
+   * kept them. Shown with a plain <img>; never fetched, proxied or copied.
+   */
+  photos?: string[];
 }
 
 /** The source facts the agent can correct on a comp's card: a closed list, checked by the server. */

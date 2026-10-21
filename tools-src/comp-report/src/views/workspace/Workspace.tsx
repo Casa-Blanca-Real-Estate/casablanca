@@ -13,6 +13,7 @@ import { compute, EngineInputError, parseExport, type EngineOutput } from '../..
 import { ApiError, geocodeApi, workspaceApi, type CompEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
+import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
   isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type Outcomes, type Reached, type SendState, type TargetState, type WorkspaceState,
@@ -352,6 +353,29 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     return next;
   }, [reportId]);
 
+  // The tags the data settles (NB-9 C): contradicted tags come off; a full agent's supported tags are
+  // pre-filled once each, a practice agent sees them as chips. Saved in one call; one at a time.
+  const settled = useMemo(
+    () => (output && !readOnly ? settleTags({ comps, output, level, offered: state.tagsOffered }) : null),
+    [output, comps, level, state.tagsOffered, readOnly],
+  );
+  const settling = useRef<string | null>(null);
+  useEffect(() => {
+    if (!settled) return;
+    if (settled.offeredChanged) setState({ ...stateRef.current, tagsOffered: settled.offered });
+    if (!settled.edits.length) return;
+    const key = JSON.stringify(settled.edits);
+    if (settling.current === key) return;
+    settling.current = key;
+    const next = compChain.current.then(async () => {
+      const d = await workspaceApi.setTags(reportId, settled.edits);
+      setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads, geocodes: d.geocodes } : d));
+    });
+    compChain.current = next.catch(() => {
+      settling.current = null;
+    });
+  }, [settled, reportId, setState]);
+
   // The furthest screen reached, for the reports list's Stage.
   const reached: Reached = state.reached ?? 'sort';
   const goTo = useCallback((next: ScreenId) => {
@@ -483,6 +507,11 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     sortFilter,
     setSortFilter,
     editComp,
+    tagSuggestions: settled?.suggestions ?? {},
+    setTitle: (title) => {
+      setData((d) => (d ? { ...d, report: { ...d.report, title } } : d));
+      save.queue('title', title);
+    },
     suggestions,
     removed,
     drawerOpen,

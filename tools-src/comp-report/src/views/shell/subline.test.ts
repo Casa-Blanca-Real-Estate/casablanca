@@ -24,3 +24,10 @@ test('no square footage says so; an estimate and a missing client are handled', 
 test('a half bath and nothing else known', () => {
   assert.equal(homeSubLine({ side: 'seller', brief: {}, send: {}, sf: false, intake: { baths: e(2.5) } }), 'Seller · No sq ft · 2.5 ba');
 });
+
+test('the neighborhood, after the client (NW-033 a)', () => {
+  assert.equal(
+    homeSubLine({ side: 'buyer', brief: {}, send: {}, sf: false, intake: { neighborhood: e('Turtle Bay'), beds: e(1) } }),
+    'Buyer · Turtle Bay · No sq ft · 1 bd',
+  );
+});

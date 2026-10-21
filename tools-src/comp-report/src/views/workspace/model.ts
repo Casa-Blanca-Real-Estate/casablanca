@@ -4,6 +4,7 @@
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
 import type { CompEdit, GeocodeView, LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
+import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
 import type { CompJudgment, Outcomes, Reached } from '../../../workspace/state.ts';
 import type { ScreenId, SortReadiness } from './screens.ts';
@@ -94,6 +95,10 @@ export interface Workspace {
   /** Sort's filter, shared so the Findings button's helper link can filter to the incomplete rows. */
   sortFilter: { incomplete: boolean; tags: string[] };
   setSortFilter: (next: { incomplete: boolean; tags: string[] }) => void;
+  /** A practice agent's "from the data" tag chips, by report comp id (NB-9 C): one click adds one. */
+  tagSuggestions: Record<string, DerivedTag[]>;
+  /** The report's title (step 1's typed address retitles it). */
+  setTitle: (title: string) => void;
   /** One comp's edits, saved in order with the others; the server returns the workspace. */
   editComp: (reportCompId: string, edit: CompEdit) => Promise<void>;
   /** Export rows the agent took out: the only sales Hubert may point back to. */

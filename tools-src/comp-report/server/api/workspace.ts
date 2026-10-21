@@ -12,7 +12,7 @@
 //
 // The owner or an admin can read a report; only its owner can change it.
 // Every query is scoped by owner as well as by row-level security (§12).
-import type { ParseWarning } from '../../engine/index.ts';
+import { cleanListingExtract, cleanPhotoUrls, type ParseWarning } from '../../engine/index.ts';
 import { loadGeocodes, reportBuildings, type GeocodeView } from '../buildings.ts';
 import type { CompJudgment, CompSource } from '../../workspace/state.ts';
 import { withActor, type Queryable } from '../db.ts';
@@ -121,7 +121,7 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
 
   const source = (c: (typeof comps)[number]): CompSource => {
     if (c.source === 'listing' && c.raw && c.as_of) {
-      return { kind: 'listing', extract: c.raw, asOf: c.as_of, url: c.links?.[0] ?? null, readId: c.read_id, confirmedAt: c.confirmed_at ? iso(c.confirmed_at) : null };
+      return { kind: 'listing', extract: cleanExtract(c.raw), asOf: c.as_of, url: c.links?.[0] ?? null, readId: c.read_id, confirmedAt: c.confirmed_at ? iso(c.confirmed_at) : null };
     }
     if (c.source === 'agent' && c.raw && c.as_of) return { kind: 'manual', fields: c.raw, asOf: c.as_of };
     return { kind: 'export', importId: c.import_id };
@@ -143,7 +143,27 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     features: c.features ?? {},
     removedAt: c.removed_at ? iso(c.removed_at) : null,
     factOverrides: c.fact_overrides ?? {},
+    photos: c.source === 'listing' ? listingPhotos(c.raw) : [],
   }));
+}
+
+/**
+ * A stored extract as it leaves the server: its photos cleaned again
+ * (cleanListingExtract), so one stored before Dispatch 16 cleaned them on the
+ * way in, with an off-list host or a userinfo URL, never reaches the browser.
+ */
+function cleanExtract(raw: unknown): unknown {
+  return isObject(raw) ? cleanListingExtract(raw) : raw;
+}
+
+/**
+ * A listing comp's photos for Sort's card (NW-020 a, Dispatch 20): from the
+ * stored extract, hero first, through cleanPhotoUrls once more: https on
+ * StreetEasy's image hosts only, at most 8. Linked, never fetched here.
+ */
+export function listingPhotos(raw: unknown): string[] {
+  if (!isObject(raw)) return [];
+  return cleanPhotoUrls([raw['heroImageUrl'], ...(Array.isArray(raw['photos']) ? raw['photos'] : [])]);
 }
 
 /** The report's link reads, oldest first, less the failed ones the agent cleared away. */
@@ -164,7 +184,7 @@ export async function loadReads(tx: Queryable, reportId: string): Promise<LinkRe
   const at = (d: Date | null) => (d ? iso(d) : null);
   return rows.map((r) => ({
     id: r.id, purpose: r.purpose, url: r.url, status: r.status, error: r.error, errorMessage: r.error_message,
-    reportCompId: r.report_comp_id, asOf: r.as_of, extract: r.extract, warnings: r.warnings ?? [],
+    reportCompId: r.report_comp_id, asOf: r.as_of, extract: r.extract ? cleanListingExtract(r.extract) : null, warnings: r.warnings ?? [],
     confirmedAt: at(r.confirmed_at), createdAt: iso(r.created_at), startedAt: at(r.started_at), finishedAt: at(r.finished_at),
   }));
 }

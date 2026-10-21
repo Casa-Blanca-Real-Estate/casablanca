@@ -1,4 +1,5 @@
-// The workspace header's sub line (the handoff): "Seller · Jordan and Sam · No sq ft · 3 bd · 3 ba · Fl 17".
+// The workspace header's sub line (the handoff): "Seller · Jordan and Sam · Tribeca · No sq ft · 3 bd · 3 ba · Fl 17".
+// The neighborhood is StreetEasy's, as the read or the agent gave it (NW-033 a, Dispatch 20).
 // A part with no value is left out; the size says "No sq ft" when the home has none.
 import type { Brief, Intake, SendState } from '../../../workspace/state.ts';
 import { sqft } from '../../../workspace/format.ts';
@@ -15,6 +16,7 @@ export function homeSubLine(input: { side: 'buyer' | 'seller'; brief: Brief; sen
   return [
     side === 'seller' ? 'Seller' : 'Buyer',
     clientNameOf(brief, send),
+    intake.neighborhood?.value.trim() ?? '',
     size,
     count(intake.beds?.value, 'bd'),
     count(intake.baths?.value, 'ba'),

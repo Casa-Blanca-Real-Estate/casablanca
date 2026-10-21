@@ -2,12 +2,13 @@
 // under the comp's card: Kara's checks (the engine's flags, §6.10), the
 // distance and where it came from (Dispatch 11), where the comp came from,
 // every fact with its source, the import's notes and the history of reasons.
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CompOut, ParseWarning } from '../../../engine/index.ts';
-import type { Distance } from '../../../workspace/distance.ts';
+import { milesLabel, type Distance } from '../../../workspace/distance.ts';
 import { MAPPED_BY, type WorkspaceComp } from '../../../workspace/engine-input.ts';
 import { isoDay, TIER_LABEL } from '../../../workspace/format.ts';
 import { factLines, usualSource } from '../../../workspace/sort.ts';
+import { loadSubway, nearestStations, NEAR_MILES, type SubwayData } from '../../../workspace/transit.ts';
 import type { Workspace } from '../workspace/model.ts';
 
 /** Where the comp came from, in a line. */
@@ -32,6 +33,38 @@ function DistanceLine({ d }: { d: Distance }) {
   return <p className="so-more-mid">{d.why}</p>;
 }
 
+/**
+ * The subway near the comp's building (NW-037 a, Dispatch 20): the nearest
+ * stations and their lines, from where its building is mapped. Context only:
+ * it never reaches the numbers.
+ */
+function SubwayLine({ at }: { at: { lat: number; lng: number } }) {
+  const [data, setData] = useState<SubwayData | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadSubway().then((d) => live && setData(d), () => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  const near = useMemo(() => (data ? nearestStations(at, data) : null), [data, at]);
+  if (!near) return null;
+  if (!near.length) return <p className="so-more-mid">No subway station within {NEAR_MILES} mi.</p>;
+  return (
+    <p className="so-subway">
+      {near.map((s) => (
+        <span key={`${s.name}|${s.lines.map((l) => l.line).join('')}`} className="so-station">
+          {s.lines.map((l) => (
+            <span key={l.line} className="so-bullet" style={{ background: l.color, color: l.textColor }} role="img" aria-label={`${l.line} train`}>{l.line}</span>
+          ))}
+          <span className="so-station-name">{s.name}</span>
+          <span className="so-more-mid">{milesLabel(s.miles)}</span>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 export function More({ ws, c, out, distance }: { ws: Workspace; c: WorkspaceComp; out: CompOut | undefined; distance: Distance | null }) {
   const j = c.judgment;
   // Without a size for the home, no size column anywhere: the comp's own size stays out too.
@@ -48,6 +81,8 @@ export function More({ ws, c, out, distance }: { ws: Workspace; c: WorkspaceComp
       ? ws.reads.find((r) => r.id === c.readId)?.warnings ?? []
       : [];
   const reasons = j?.reasons ?? [];
+  const key = c.record.identity.building_key;
+  const at = key ? ws.locations.get(key) : undefined;
 
   return (
     <details className="so-more">
@@ -67,10 +102,11 @@ export function More({ ws, c, out, distance }: { ws: Workspace; c: WorkspaceComp
             </ul>
           </section>
         )}
-        {distance && (
+        {(distance || at) && (
           <section>
             <h5>Distance</h5>
-            <DistanceLine d={distance} />
+            {distance && <DistanceLine d={distance} />}
+            {at && <SubwayLine at={at} />}
           </section>
         )}
         <section>

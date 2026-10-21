@@ -203,3 +203,22 @@ button.nr-act.nr-act-quiet { color: var(--cb-mid); }
 .nr-row-form { padding: 4px 0 12px; }
 .nr-import-notes { font-size: 12px; }
 .nr-import-notes summary { cursor: pointer; color: var(--cb-mid); }
+
+/* Escape or ✕ with a comp half-typed (Dispatch 20): ask before it's lost. */
+.nr-ask {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 36px; font-size: 13px;
+  background: var(--cb-highlight); border-top: 1px solid var(--cb-border);
+}
+.nr-ask > span:first-child { font-weight: 800; margin-right: auto; }
+
+/* Year built and the neighborhood (Dispatch 20, NW-013, NW-017 a): the tile's underline and ✎, as Floor has. */
+.nr-year-line { max-width: 280px; font-size: 14px; }
+.nr-modal input.nr-text {
+  font: inherit; font-size: 14px; font-weight: 800; color: var(--cb-black); background: transparent; border: none; border-radius: 0;
+  padding: 0; min-width: 0; flex: 1; text-transform: none; letter-spacing: normal;
+}
+.nr-modal input.nr-text::placeholder { color: var(--cb-sand); font-weight: 400; }
+/* The page's type isn't the report's (NW-011): say so, with the switch. */
+.nr-type-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.nr-type-note > span { flex: 1; min-width: 240px; }
+.nr-notes .nr-label-line .nr-tip { top: 26px; }

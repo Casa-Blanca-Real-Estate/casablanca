@@ -91,7 +91,7 @@ describe('the design port’s data', { skip: skipWithoutDatabase }, () => {
     const reasons = await reasonsOf(chambers);
     assert.equal(reasons.length, before + 1);
     assert.deepEqual(reasons.at(-1), { tier: 'primary', reason: 'Closest match, high floor.' });
-    assert.equal((await comps('tok-kimani-000000', 'PATCH', { reportCompId: chambers, tags: ['Not a tag'] })).body.error, 'bad_tags');
+    assert.equal((await comps('tok-kimani-000000', 'PATCH', { reportCompId: chambers, tags: ['<Not a tag>'] })).body.error, 'bad_tags'); // Not the list's, nor a tag of the agent's own (Dispatch 20)
   });
 
   test('a tier before a note records “(no note yet)”; the note then appends the real one', async () => {
