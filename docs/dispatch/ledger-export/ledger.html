@@ -364,7 +364,7 @@ dialog.drawer .toast { left: auto; right: calc(min(460px, 100vw) / 2); transform
   // Casa Blanca's ledger, split from the shared one on 2026-10-21. Lines keep project "casa" and ids
   // prefixed "casa-", so they read the same as before the split; a line with no project is Casa's too.
   var PROJECTS = {
-    casa: { name: "Casa Blanca", repo: "https://github.com/kjcamron/casablanca", branch: "claude/main", lead: "Casanova", crew: "Mason, Abacus, Calliste…", prefix: "casa-", example: "casa-r13-1", sample: "Mason" }
+    casa: { name: "Casa Blanca", repo: "https://github.com/Casa-Blanca-Real-Estate/casablanca", branch: "claude/main", lead: "Casanova", crew: "Mason, Abacus, Calliste…", prefix: "casa-", example: "casa-r13-1", sample: "Mason" }
   };
   var PROJECT_ORDER = ["casa"];
   function projectOf(d) { return d && PROJECTS[d.project] ? d.project : "casa"; }

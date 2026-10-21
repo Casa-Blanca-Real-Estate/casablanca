@@ -26,5 +26,5 @@ aren't in this export: re-export them (or mark them again) after the switch.
    Casanova (or Kimani) marks the Casa lines there `dropped` with a note pointing at the new ledger, or
    deletes them — MindBinder's lines stay untouched either way.
 
-The page links PRs to `github.com/kjcamron/casablanca`. GitHub redirects after the repo transfer; to point it
-at the new org directly, change `repo` in `PROJECTS` near the top of the script.
+The page links PRs to `github.com/Casa-Blanca-Real-Estate/casablanca`, where the repo moved; change `repo` in
+`PROJECTS` near the top of the script if it moves again.
