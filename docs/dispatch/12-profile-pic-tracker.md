@@ -182,6 +182,29 @@ Phase 1 ships without a single upload and is already useful: it answers "who sti
 9. **Deleting has to be real.** At this size, "remove this raw" must actually free the blob, and the
    roster needs to show what an agent is costing. Storage nobody can see is storage nobody prunes.
 
+> **Phase 2, as built (2026-10-21).** Where it differs from, or settles, the list above:
+> - **The limits, confirmed.** Netlify Blobs caps an object at **5 GB**, so the store isn't the
+>   ceiling; the request is. Netlify's pricing page lists **no charge for Blobs storage** on the
+>   credit plans; **bandwidth is 20 credits/GB** (≈$0.13/GB at the Pro pack rate) and compute
+>   10 credits per GB-hour. So keeping 10–50 GB costs nothing listed today, and what costs is
+>   *downloading* it: a full re-download of 50 GB would be about 1,000 credits. Re-check before a
+>   bulk upload; the page is the authority, not this note.
+> - **Files stay in parts.** 3 MiB each (≈4.2 MB base64'd, under the ~6 MB request ceiling), in
+>   their own store, `cb-agent-pics` (`f/<slug>/<id>/<0000>`), never in `cb-agents`. A response
+>   has the same ceiling, so a download comes back a part at a time and the browser joins them;
+>   assembling one blob server-side would serve no reader. Uploads resume: picking the same file
+>   again sends only the missing parts. Code: `tools-src/agent-pics/files.ts`.
+> - **The record** keeps what's stored: `pic.raws` (kind `archive` or `working`), `pic.outputs`
+>   (one per variant id), and `pic.workingKey`, the working file the cutout re-runs against (the
+>   first JPEG/PNG, changeable). `pic.variants` is derived from `outputs`.
+> - **Saving the ten from the generator stamps `generatedAt`**, so the hand-typed date is only for
+>   sets made before phase 2.
+> - **The status rule for stored photos:** a working file puts the agent back at `raw` only if it
+>   was *taken* after the last generate (EXIF date; the upload time when there's none). An archive
+>   never does. So backfilling old originals doesn't undo a photo that's already placed.
+> - **Not done:** archiving or deleting an agent in the CMS leaves its files in `cb-agent-pics`.
+>   Delete the files first; a sweep is a follow-up if it's ever needed.
+
 ### Phase 3 — the email signature
 
 8. **Generate the 180×180** as an eleventh output in the generator. He's making it by hand today.

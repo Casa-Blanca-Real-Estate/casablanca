@@ -11,6 +11,7 @@ import { getStore } from '@netlify/blobs';
 import { BlobsServer } from '@netlify/blobs/server';
 import { handlePics, type AgentBlobs, type PicsDeps } from './api.ts';
 import { PLACEMENTS, AGENTS_STORE } from './record.ts';
+import { FILES_STORE, type FileBlobs } from './files.ts';
 
 const PICS = 'pics-token-0123456789abcdef';
 const CMS = 'cms-token-fedcba9876543210';
@@ -38,6 +39,7 @@ describe('the profile-pic roster API', () => {
   let server: BlobsServer;
   let dir: string;
   let store: AgentBlobs;
+  let files: FileBlobs;
   let deps: PicsDeps;
   let now = Date.parse('2026-10-14T15:00:00Z');
 
@@ -47,7 +49,8 @@ describe('the profile-pic roster API', () => {
     const { port } = await server.start();
     const url = `http://localhost:${port}`;
     store = getStore({ name: AGENTS_STORE, edgeURL: url, uncachedEdgeURL: url, consistency: 'strong', token: 'local', siteID: 'local-site' }) as unknown as AgentBlobs;
-    deps = { store, env: { CB_PICS_TOKEN: PICS, CB_CMS_TOKEN: CMS }, now: () => now };
+    files = getStore({ name: FILES_STORE, edgeURL: url, uncachedEdgeURL: url, consistency: 'strong', token: 'local', siteID: 'local-site' }) as unknown as FileBlobs;
+    deps = { store, files, env: { CB_PICS_TOKEN: PICS, CB_CMS_TOKEN: CMS }, now: () => now };
   });
   after(async () => {
     await server?.stop();

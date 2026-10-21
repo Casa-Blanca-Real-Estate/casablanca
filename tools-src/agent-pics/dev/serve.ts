@@ -17,6 +17,7 @@ import { getStore } from '@netlify/blobs';
 import { BlobsServer } from '@netlify/blobs/server';
 import { handlePics, type AgentBlobs } from '../api.ts';
 import { AGENTS_STORE } from '../record.ts';
+import { FILES_STORE, type FileBlobs } from '../files.ts';
 
 const REPO = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 const TYPES: Record<string, string> = {
@@ -84,6 +85,7 @@ process.env.CB_CMS_TOKEN = CMS_TOKEN;
 const { default: agentStore } = await import('../../../netlify/functions/agent-store.mjs');
 
 const store = getStore({ name: AGENTS_STORE, consistency: 'strong' }) as unknown as AgentBlobs;
+const files = getStore({ name: FILES_STORE, consistency: 'strong' }) as unknown as FileBlobs;
 const records = seed(Date.now());
 for (const r of records) await store.set(r.slug, JSON.stringify(r));
 await store.set('_index', JSON.stringify(records.map((r) => r.slug)));
@@ -93,7 +95,7 @@ createServer(async (req, res) => {
   const path = new URL(req.url || '/', origin).pathname;
   let response: Response | null = null;
   if (path === '/.netlify/functions/agent-pics') {
-    response = await handlePics(await toRequest(req, origin), { store, env: { CB_PICS_TOKEN: PICS_TOKEN, CB_CMS_TOKEN: CMS_TOKEN }, now: () => Date.now() });
+    response = await handlePics(await toRequest(req, origin), { store, files, env: { CB_PICS_TOKEN: PICS_TOKEN, CB_CMS_TOKEN: CMS_TOKEN }, now: () => Date.now() });
   } else if (path === '/.netlify/functions/agent-store') {
     response = await agentStore(await toRequest(req, origin));
   }
