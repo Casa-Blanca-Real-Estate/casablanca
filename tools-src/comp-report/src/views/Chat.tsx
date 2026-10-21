@@ -3,7 +3,7 @@
 // endpoint: one model call per request, the server owns the transcript (§8.3
 // rule 6). The conversation is the report's, the same on every screen.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { api, ApiError, streamTurn, type ShownMessage } from '../api.ts';
+import { api, ApiError, streamTurn, type HubertEmailEdit, type ShownMessage } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
 import { HubertText } from './hubert/markdown.tsx';
 
@@ -16,13 +16,13 @@ interface Live {
 
 const empty: Live = { text: '', progress: [], tools: [], note: null };
 
-/** What Hubert looked at, in words: his tools read the report and its numbers. */
-const TOOL_WORDS: Record<string, string> = { get_numbers: 'the numbers', get_report: 'the report' };
-const looked = (tools: string[]) => [...new Set(tools.map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
+/** What Hubert looked at, in words: his tools read the report, its numbers and the email; one changes the email. */
+const TOOL_WORDS: Record<string, string> = { get_numbers: 'the numbers', get_report: 'the report', get_email: 'the email' };
+const looked = (tools: string[]) => [...new Set(tools.filter((t) => t !== 'edit_email').map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
 
 const MAX_INPUT_PX = 120;
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction }: {
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, pending, onPendingTaken }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -32,6 +32,13 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   /** The screen's two preset questions (an action chip runs `onAction` instead of asking). */
   chips?: Chip[];
   onAction?: (chip: Chip) => void;
+  /** Before each request: the screen's unsaved edits are saved, so Hubert reads what the agent sees. */
+  beforeAsk?: () => Promise<void>;
+  /** An edit Hubert made to the email: Send applies it. */
+  onEmailEdit?: (edit: HubertEmailEdit) => void;
+  /** A question a screen asked for the agent (Send's "Ask Hubert"), sent once the drawer is free. */
+  pending?: { id: number; text: string } | null;
+  onPendingTaken?: (id: number) => void;
 }) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -92,8 +99,10 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         let current: Live = { ...empty };
         setLive(current);
         let again = false;
+        await beforeAsk?.().catch(() => undefined);
         for await (const ev of streamTurn(reportId, message)) {
-          if (ev.type === 'text') current = { ...current, text: current.text + ev.text };
+          if (ev.type === 'email_edit') onEmailEdit?.(ev.edit);
+          else if (ev.type === 'text') current = { ...current, text: current.text + ev.text };
           else if (ev.type === 'progress') current = { ...current, progress: [...current.progress, ev.text] };
           else if (ev.type === 'tool') current = { ...current, tools: [...current.tools, ev.name] };
           else if (ev.type === 'done') again = ev.stopReason === 'tool_use';
@@ -117,6 +126,15 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
     }
   }
 
+  // A screen's question: sent as the agent's own message once nothing else is answering. Once each.
+  const taken = useRef<number | null>(null);
+  useEffect(() => {
+    if (!pending || live || waiting || readOnly || taken.current === pending.id) return;
+    taken.current = pending.id;
+    onPendingTaken?.(pending.id);
+    void ask(pending.text);
+  }, [pending, live, waiting, readOnly]);
+
   function submit(e: FormEvent) {
     e.preventDefault();
     void ask(draft);
@@ -132,7 +150,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         {messages.filter((m) => !m.toolResultsOnly).map((m) => (
           <div key={`${m.seq}-${m.createdAt}`} className={`hb-msg ${m.role}${m.inContext ? '' : ' dim'}`}>
             {m.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
-            {m.role === 'assistant' && m.tools.length > 0 && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
+            {m.role === 'assistant' && looked(m.tools) && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
+            {m.role === 'assistant' && m.tools.includes('edit_email') && <p className="hb-progress">Changed the email on Send.</p>}
             {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
             {!m.inContext && m.role === 'assistant' && (
               <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
@@ -142,7 +161,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         {live && (
           <div className="hb-msg assistant" aria-live="polite">
             {live.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
-            {live.tools.length > 0 && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
+            {looked(live.tools) && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
+            {live.tools.includes('edit_email') && <p className="hb-progress">Changing the email…</p>}
             {live.text ? <HubertText text={live.text} /> : !live.note && <p className="hb-progress">Thinking…</p>}
             {live.note && <p className="hb-text">{live.note}</p>}
           </div>

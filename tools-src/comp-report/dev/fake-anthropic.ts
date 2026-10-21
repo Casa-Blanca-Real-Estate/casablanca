@@ -11,6 +11,13 @@
 // and the tool's result once it comes back; and a refusal when the message
 // starts with "refuse".
 //
+// On Send (2026-10-21): "change the next step to …" (or the headline, the
+// subject, how I chose the comps, things to consider, signed) gets an
+// edit_email call; a message asking for feedback gets a get_email call. A
+// lines request (server/lines.ts) gets lines: a draft from the comps' own
+// notes, with no figure of its own, or the agent's lines tidied — first
+// letters capitalised, a full stop, "i" made "I".
+//
 // A writer request (CR-5: structured output, the report as JSON) gets a draft
 // in the writer's shape, citing only the report's own figures — unless the
 // agent's next step starts with "refuse" (a refusal) or "invent" (a draft
@@ -108,8 +115,43 @@ export function fakeWriterDraft(body: Block): Script {
   };
 }
 
+/** Lines for Send (server/lines.ts): drafted from the comps' notes, or tidied. */
+export function fakeLines(body: Block): Script {
+  const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;
+  const text = messages[0]?.content.map((b) => String(b.text ?? '')).join('') ?? '';
+  const sentence = (s: string) => {
+    const t = s.trim().replace(/\s+/g, ' ').replace(/\bi\b/g, 'I');
+    return t ? `${t[0]!.toUpperCase()}${t.slice(1)}${/[.!?]$/.test(t) ? '' : '.'}` : '';
+  };
+  let out = { chosen: '', consider: '', next_step: '' };
+  const lines = /<lines>\n([\s\S]*)\n<\/lines>/.exec(text);
+  if (lines) {
+    const got = (JSON.parse(lines[1]!) as { lines: typeof out }).lines;
+    out = { chosen: sentence(got.chosen), consider: got.consider.split('\n').map(sentence).filter(Boolean).join('\n'), next_step: sentence(got.next_step) };
+  } else {
+    const report = JSON.parse(/<report>\n([\s\S]*)\n<\/report>/.exec(text)?.[1] ?? '{}') as {
+      comps?: Array<{ agent_note?: string | null; tier?: string }>;
+      agent_stated?: { how_the_comps_were_chosen?: string; things_to_consider?: string; next_step?: string };
+    };
+    const notes = (report.comps ?? []).map((c) => c.agent_note?.replace(/\d[\d,.]*/g, '').trim()).filter((n): n is string => Boolean(n));
+    out = {
+      chosen: report.agent_stated?.how_the_comps_were_chosen ? '' : 'I kept to the sales I tiered 1st, the closest to the home, and used the rest as a check.',
+      consider: report.agent_stated?.things_to_consider ? '' : notes.slice(0, 2).map(sentence).join('\n'),
+      next_step: '',
+    };
+  }
+  return { content: [{ type: 'text', text: JSON.stringify(out) }], stopReason: 'end_turn', delayMs: 5 };
+}
+
+const FIELD_WORDS: Record<string, string> = {
+  'next step': 'next_step', headline: 'headline', subject: 'subject', 'how i chose the comps': 'chosen',
+  'things to consider': 'consider', signed: 'signed', 'sign-off': 'signed',
+};
+
 function echo(body: Block): Script {
-  if ((body.output_config as Block | undefined)?.format) return fakeWriterDraft(body);
+  const format = (body.output_config as Block | undefined)?.format as { schema?: { properties?: Block } } | undefined;
+  if (format?.schema?.properties && !('headlines' in format.schema.properties)) return fakeLines(body);
+  if (format) return fakeWriterDraft(body);
   const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;
   const last = [...messages].reverse().find((m) => m.role === 'user');
   const result = last?.content.find((b) => b.type === 'tool_result');
@@ -126,6 +168,27 @@ function echo(body: Block): Script {
   const said = last?.content.filter((b) => b.type === 'text').map((b) => String(b.text)).join(' ') ?? '';
   if (/^\s*refuse\b/i.test(said)) {
     return { content: [], stopReason: 'refusal', stopDetails: { type: 'refusal', category: null, explanation: null }, delayMs: 15 };
+  }
+  const change = /^\s*change (?:the |my )?(next step|headline|subject|how i chose the comps|things to consider|signed|sign-off) to:?\s*([\s\S]+)$/i.exec(said);
+  if (change) {
+    return {
+      content: [
+        { type: 'thinking', thinking: 'Changing the email as asked (fake API).', signature: 'fake-signature' },
+        { type: 'tool_use', id: `toolu_fake_${++toolCalls}_${Date.now()}`, name: 'edit_email', input: { changes: [{ field: FIELD_WORDS[change[1]!.toLowerCase()], text: change[2]!.trim() }], body_edits: [] } },
+      ],
+      stopReason: 'tool_use',
+      delayMs: 15,
+    };
+  }
+  if (/\bfeedback\b|\bthe email\b/i.test(said)) {
+    return {
+      content: [
+        { type: 'thinking', thinking: 'Reading the email (fake API).', signature: 'fake-signature' },
+        { type: 'tool_use', id: `toolu_fake_${++toolCalls}_${Date.now()}`, name: 'get_email', input: {} },
+      ],
+      stopReason: 'tool_use',
+      delayMs: 15,
+    };
   }
   if (/\bnumbers\b/i.test(said)) {
     return {

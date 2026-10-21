@@ -89,7 +89,10 @@ export interface ShownMessage {
   createdAt: string;
 }
 
+export type { HubertEmailEdit } from '../server/hubert-email.ts';
+
 export type TurnEvent =
+  | { type: 'email_edit'; edit: import('../server/hubert-email.ts').HubertEmailEdit }
   | { type: 'start'; model: string }
   | { type: 'progress'; text: string }
   | { type: 'text'; text: string }
@@ -262,4 +265,16 @@ export const narrativesApi = {
   /** Logs what was copied, with QA's results and the agent's answers (§9.1). */
   copied: (reportId: string, email: EmailToLog, qa: unknown, acknowledgments: Acknowledgment[]) =>
     api<{ narrative: Narrative }>('/api/comp-report/narratives', { method: 'POST', body: { reportId, action: 'copy', ...email, qa, acknowledgments } }),
+};
+
+/** The agent's lines on Send (server/api/lines.ts): drafted from their notes, or tidied. Nothing is saved; Send offers them. */
+export interface LinesOffer {
+  lines: Partial<Record<'chosen' | 'consider' | 'nextStep', string>>;
+  /** Lines that cited a figure the agent never gave: left as they were. */
+  dropped: ('chosen' | 'consider' | 'nextStep')[];
+}
+
+export const linesApi = {
+  ask: (reportId: string, job: 'draft' | 'rewrite', result: EmailToLog['result']) =>
+    api<LinesOffer>('/api/comp-report/lines', { method: 'POST', body: { reportId, job, result } }),
 };

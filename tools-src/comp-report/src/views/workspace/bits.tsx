@@ -120,8 +120,9 @@ export function NumberInput({ label, value, onChange, today, integer = true, dis
   );
 }
 
-export function TextInput({ label, value, onChange, today, disabled, placeholder, multiline }: {
+export function TextInput({ label, value, onChange, today, disabled, placeholder, multiline, rows = 2 }: {
   label: string;
+  rows?: number;
   value: Entry<string> | undefined;
   onChange: (next: Entry<string> | undefined) => void;
   today: string;
@@ -136,7 +137,7 @@ export function TextInput({ label, value, onChange, today, disabled, placeholder
     disabled,
     onChange: (e: { target: { value: string } }) => onChange(e.target.value === '' ? undefined : entry(e.target.value, today)),
   };
-  return multiline ? <textarea rows={2} {...props} /> : <input {...props} />;
+  return multiline ? <textarea rows={rows} {...props} /> : <input {...props} />;
 }
 
 export function ChoiceInput<T extends string>({ label, value, choices, onChange, today, disabled, blank = 'Not given' }: {

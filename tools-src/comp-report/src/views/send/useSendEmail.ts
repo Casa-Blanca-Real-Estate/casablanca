@@ -7,7 +7,7 @@
 // actions — edit, fix, answer, write, copy (logged), mark as sent, reopen.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
-import { ApiError, narrativesApi, type NarrativeView } from '../../api.ts';
+import { ApiError, narrativesApi, type HubertEmailEdit, type NarrativeView } from '../../api.ts';
 import { buildEmail, countedComps, hasHomeSize, headlineDrafts, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
 import { clientPrice, psf } from '../../../workspace/format.ts';
 import { draftChecks, ledgerFor, qaRecord, qaStatus, syncHeadline, type Acknowledgment } from '../../../workspace/qa.ts';
@@ -206,6 +206,60 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     ws.setSend(setSubject(send, value, ws.today));
   };
 
+  /**
+   * Hubert's edits (server/hubert-email.ts), applied as one change the way the
+   * agent's own typing would be: the lines and subject set, the body's passages
+   * replaced in this length's draft, the headline synced into each current
+   * draft. Returns what couldn't be applied (the agent changed it meanwhile).
+   */
+  const applyHubert = (edits: HubertEmailEdit[]): { applied: number; missed: string[] } => {
+    if (off) return { applied: 0, missed: ['This report is read-only.'] };
+    let next: SendState = { ...send };
+    let all = drafts;
+    let applied = 0;
+    const missed: string[] = [];
+    let newHeadline: string | undefined;
+    const LINE = { chosen: 'chosen', consider: 'consider', next_step: 'nextStep', signed: 'signOff' } as const;
+    for (const e of edits) {
+      for (const c of e.changes) {
+        if (c.field === 'headline') newHeadline = c.text;
+        else if (c.field === 'subject') next.subject = entry(c.text, ws.today);
+        else if (c.text) next[LINE[c.field]] = entry(c.text, ws.today);
+        else delete next[LINE[c.field]];
+        applied++;
+      }
+      if (!e.bodyEdits.length) continue;
+      if (e.length !== length) {
+        const word = (l: EmailLength | null) => (l === 'text' ? 'text message' : `${l ?? 'other'} email`);
+        missed.push(`Hubert edited the ${word(e.length)}, and the ${word(length)} is open now. Ask him again here.`);
+        continue;
+      }
+      const mineNow = all[length];
+      let body = mineNow ? mineNow.body : shown.text;
+      for (const b of e.bodyEdits) {
+        if (body.split(b.find).length !== 2) {
+          missed.push(`“${b.find.slice(0, 48)}${b.find.length > 48 ? '…' : ''}” changed before Hubert’s edit reached it.`);
+          continue;
+        }
+        body = body.replace(b.find, () => b.replace);
+        applied++;
+      }
+      next = withDraft(next, all, length, { body, basedOn: mineNow?.basedOn ?? basedOn, at: now(), parentId: mineNow ? mineNow.parentId ?? null : parentId });
+      all = next.drafts ?? {};
+    }
+    if (newHeadline !== undefined && newHeadline !== headline) {
+      next.headline = entry(newHeadline, ws.today);
+      for (const len of LENGTHS) {
+        const d = all[len];
+        if (!d || d.basedOn !== bodyPrint(emailFor(len).text)) continue;
+        next = withDraft(next, all, len, { ...d, body: syncHeadline(d.body, send.headline?.value, newHeadline), basedOn: bodyPrint(emailFor(len, newHeadline).text) });
+        all = next.drafts ?? {};
+      }
+    }
+    if (applied) ws.setSend(next);
+    return { applied, missed };
+  };
+
   /** Back to the draft or the template, for this length only. */
   const discard = () => {
     if (off) return;
@@ -385,6 +439,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     edit,
     editSubject,
     discard,
+    applyHubert,
     setSend,
     setHeadline,
     fix,

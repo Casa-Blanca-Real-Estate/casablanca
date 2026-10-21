@@ -139,7 +139,18 @@ export function Hubert({ ws }: { ws: Workspace }) {
         <span className="hb-name">Hubert</span>
         <button type="button" className="hb-close" aria-label="Close Hubert" title="Close" onClick={() => ws.setDrawerOpen(false)}>›</button>
       </div>
-      <Chat reportId={ws.reportId} readOnly={ws.readOnly} onCount={ws.setMessageCount} intro={opening} chips={s.chips} onAction={onAction} />
+      <Chat
+        reportId={ws.reportId}
+        readOnly={ws.readOnly}
+        onCount={ws.setMessageCount}
+        intro={opening}
+        chips={s.chips}
+        onAction={onAction}
+        beforeAsk={ws.flush}
+        onEmailEdit={ws.queueHubertEdit}
+        pending={ws.hubertAsk}
+        onPendingTaken={ws.takeHubertAsk}
+      />
     </aside>
   );
 }

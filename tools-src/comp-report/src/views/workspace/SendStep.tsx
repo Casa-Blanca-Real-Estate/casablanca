@@ -11,9 +11,17 @@
 // email in the house voice in the background, the template stands in when it
 // fails, the agent's lines feed both, an out-of-date draft says so, and every
 // copy is logged with QA's checks and the agent's answers.
+//
+// The agent's lines come first (dev note dn_mviipah6rs3v, 2026-10-21): they're
+// how the email is written, so they lead the main column, open, with Hubert's
+// help beside them — draft the empty ones from the agent's notes, tidy the
+// wording, ask him for feedback — and Undo. And Hubert reads the email and
+// changes its words when asked: Send writes down what it shows (send.seen),
+// and applies his checked edits here, as the agent's own typing would be.
 import { useEffect, useRef, useState } from 'react';
+import { ApiError, linesApi } from '../../api.ts';
 import type { ResultKind } from '../../../engine/index.ts';
-import type { Entry } from '../../../workspace/state.ts';
+import type { Entry, SendState } from '../../../workspace/state.ts';
 import { AnnotatedText, revealMark, type TextMark } from '../send/AnnotatedText.tsx';
 import { COPY_LABEL, FORMATS, LENGTH_WORD, sentDay } from '../send/copy.ts';
 import { footOf } from '../send/drafts.ts';
@@ -21,7 +29,7 @@ import { IssuesPanel } from '../send/IssuesPanel.tsx';
 import type { SendIssue } from '../send/issues.ts';
 import { useSendEmail, type SendModel } from '../send/useSendEmail.ts';
 import '../../styles/send.css';
-import { BuildNote, StubTag, TextInput } from './bits.tsx';
+import { BuildNote, entry, StubTag, TextInput } from './bits.tsx';
 import type { StepProps, Workspace } from './model.ts';
 
 const marksOf = (issues: SendIssue[], where: 'body' | 'headline'): TextMark[] =>
@@ -42,6 +50,26 @@ export function SendStep({ ws }: StepProps) {
   const m = useSendEmail(ws);
   const [pending, setPending] = useState<SendIssue | null>(null);
   const format = m.ready ? m.format : null;
+
+  // What Send shows, written down for Hubert (get_email): the open tab and its plain text.
+  const seenKey = m.ready && !m.off ? JSON.stringify([m.format, m.length, m.shown.subject, m.send.headline?.value ?? '', m.shown.text]) : null;
+  useEffect(() => {
+    if (!seenKey || !m.ready) return;
+    const s = m.send.seen;
+    if (s && JSON.stringify([s.format, s.length, s.subject, s.headline, s.text]) === seenKey) return;
+    m.setSend({ seen: { format: m.format, length: m.length, subject: m.shown.subject, headline: m.send.headline?.value ?? '', text: m.shown.text, at: new Date().toISOString() } });
+  }, [seenKey]);
+
+  // Hubert's edits, applied as they arrive (or when Send opens after he made them), with Undo.
+  const edits = ws.hubertEdits;
+  useEffect(() => {
+    if (!edits.length || !m.ready) return;
+    ws.takeHubertEdits(edits.length);
+    const before = ws.send;
+    const { applied, missed } = m.applyHubert(edits);
+    if (applied) ws.toast(missed.length ? `Hubert changed the email. ${missed[0]}` : 'Hubert changed the email.', { label: 'Undo', run: () => ws.setSend(before) });
+    else if (missed.length) ws.toast(missed[0]!);
+  }, [edits, m.ready]);
 
   // Show from Designed (or for the headline from Short or Text) opens Full first, then finds the mark.
   useEffect(() => {
@@ -78,12 +106,14 @@ export function SendStep({ ws }: StepProps) {
         <div className="se-side">
           <IssuesPanel issues={m.issues} canChange={!m.off} onShow={show} onFix={() => m.fix()} onAnswer={m.answer} />
           {m.both && <WhichResult m={m} />}
-          <YourLines ws={ws} m={m} />
         </div>
+
+        <div className="se-main">
+        <YourLines ws={ws} m={m} />
 
         <section className="panel se-card" aria-label="The email">
           <header className="se-card-head">
-            <div className="se-sec"><span className="se-sec-n">01</span>Email</div>
+            <div className="se-sec"><span className="se-sec-n">02</span>Email</div>
             <span className="se-status" role="status">
               <span className="se-star" aria-hidden="true">✦</span>
               {m.writing
@@ -115,6 +145,7 @@ export function SendStep({ ws }: StepProps) {
             QA’s fixes are deterministic (<code>workspace/qa.ts</code>); Designed reads the Full draft’s plain text back (<code>send/designed.ts</code>).
           </BuildNote>
         </section>
+        </div>
       </div>
     </div>
   );
@@ -357,10 +388,42 @@ function WhichResult({ m }: { m: SendModel }) {
   );
 }
 
-/** The agent's own lines: the template's words, and what the writer works from. Folded. */
+type LineKey = 'chosen' | 'consider' | 'nextStep';
+const LINE_KEYS: LineKey[] = ['chosen', 'consider', 'nextStep'];
+const LINE_NAME: Record<LineKey, string> = { chosen: 'How I chose the comps', consider: 'Things to consider', nextStep: 'The next step' };
+
+/** What Hubert last put in the lines, for Undo and the mark beside each one he wrote. */
+interface Offered {
+  job: 'draft' | 'rewrite';
+  lines: Partial<Record<LineKey, string>>;
+  before: Pick<SendState, LineKey>;
+}
+
+/** The message "Ask Hubert" sends: the agent's own lines, for feedback only. */
+export function feedbackAsk(send: SendState): string {
+  const lines = LINE_KEYS.map((k) => (send[k]?.value.trim() ? `${LINE_NAME[k]}: ${send[k]!.value.trim()}` : null)).filter(Boolean);
+  return [
+    'How do my lines for the email read? Feedback only, please: don’t change anything yet.',
+    ...(lines.length ? ['', ...lines] : []),
+  ].join('\n');
+}
+
+/**
+ * The agent's own lines, first-class (dn_mviipah6rs3v): the email is written
+ * from them, so they lead, open. Hubert helps on request: drafts the empty
+ * ones from the agent's notes, tidies the wording (clarity and grammar, the
+ * same points and numbers), or gives feedback in the drawer. Each of his
+ * changes can be undone, and a line he wrote says so until the agent edits it.
+ */
 function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
   const off = m.off;
-  const setText = (key: 'chosen' | 'consider' | 'nextStep' | 'signOff') => (v: Entry<string> | undefined) => {
+  const [busy, setBusy] = useState<'draft' | 'rewrite' | null>(null);
+  const [offered, setOffered] = useState<Offered | null>(null);
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const written = LINE_KEYS.filter((k) => m.send[k]?.value.trim());
+  const locked = off || busy !== null;
+
+  const setText = (key: LineKey | 'signOff') => (v: Entry<string> | undefined) => {
     const next = { ...m.send };
     if (v) next[key] = v;
     else delete next[key];
@@ -372,48 +435,115 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
     else delete brief[key];
     ws.setBrief(brief);
   };
+
+  async function help(job: 'draft' | 'rewrite') {
+    if (locked) return;
+    setBusy(job);
+    setNote(null);
+    try {
+      await ws.flush(); // the server reads the lines the agent sees
+      const r = await linesApi.ask(ws.reportId, job, m.result);
+      const keys = LINE_KEYS.filter((k) => r.lines[k]);
+      const kept = r.dropped.length ? ` ${r.dropped.map((k) => LINE_NAME[k]).join(' and ')} would have needed a figure you haven’t given, so it’s left to you.` : '';
+      if (!keys.length) {
+        setNote({ text: (job === 'draft' ? 'Your notes don’t say enough to draft these. They’re yours to write.' : 'Your lines already read well: nothing to change.') + kept });
+        return;
+      }
+      const before: Offered['before'] = { chosen: m.send.chosen, consider: m.send.consider, nextStep: m.send.nextStep };
+      const next: SendState = { ...m.send };
+      for (const k of keys) next[k] = entry(r.lines[k]!, ws.today);
+      ws.setSend(next);
+      setOffered({ job, lines: r.lines, before });
+      const names = keys.map((k) => `“${LINE_NAME[k]}”`).join(keys.length === 2 ? ' and ' : ', ');
+      setNote({ text: `${job === 'draft' ? `Drafted from your notes: ${names}.` : `Tidied: ${names}.`} Read it over: it’s yours to change.${kept}` });
+    } catch (e) {
+      setNote({ text: e instanceof ApiError || e instanceof Error ? e.message : String(e), error: true });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function undo() {
+    if (!offered || off) return;
+    const next: SendState = { ...m.send };
+    for (const k of LINE_KEYS) {
+      if (!(k in offered.lines)) continue;
+      const was = offered.before[k];
+      if (was) next[k] = was;
+      else delete next[k];
+    }
+    ws.setSend(next);
+    setOffered(null);
+    setNote(null);
+  }
+
+  const mark = (k: LineKey) => (offered && offered.lines[k] && m.send[k]?.value === offered.lines[k]
+    ? <span className="se-line-mark"><span className="se-star" aria-hidden="true">✦</span>{offered.job === 'draft' ? 'Drafted from your notes' : 'Tidied'}</span>
+    : null);
+
+  const line = (k: LineKey, placeholder: string, rows: number) => (
+    <label className="se-field se-line">
+      <span className="se-line-head"><span className="fh">{LINE_NAME[k]}</span>{mark(k)}</span>
+      <TextInput label={LINE_NAME[k]} multiline rows={rows} value={m.send[k]} onChange={setText(k)} today={ws.today} disabled={locked} placeholder={placeholder} />
+    </label>
+  );
+
   return (
-    <details className="panel se-panel se-lines">
-      <summary>Your lines for the email</summary>
-      <p className="se-hint">The template uses them as they are; Hubert drafts from them and keeps your next step’s meaning and numbers.</p>
-      <label className="se-field">
-        <span className="fh">To</span>
-        <TextInput label="Client name" value={ws.brief.clientName ?? m.send.clientName} onChange={setBrief('clientName')} today={ws.today} disabled={off} placeholder="Client name" />
-      </label>
-      <label className="se-field">
-        <span className="fh">How you chose the comps</span>
-        <TextInput label="How you chose the comps" multiline value={m.send.chosen} onChange={setText('chosen')} today={ws.today} disabled={off} placeholder="e.g. I focused on lower floors and homes close in size." />
-      </label>
-      <label className="se-field">
-        <span className="fh">Things to consider</span>
-        <TextInput label="Things to consider" multiline value={m.send.consider} onChange={setText('consider')} today={ws.today} disabled={off} placeholder="Buildings that trade higher or lower, carrying costs, recent activity in the building" />
-      </label>
-      <label className="se-field">
-        <span className="fh">The next step</span>
-        <TextInput
-          label="The next step"
-          multiline
-          value={m.send.nextStep}
-          onChange={setText('nextStep')}
-          today={ws.today}
-          disabled={off}
-          placeholder={ws.side === 'seller' ? 'Where you’d list it, and why' : 'What you’d offer, and on what terms'}
-        />
-      </label>
-      <label className="se-field">
-        <span className="fh">Signed</span>
-        <TextInput label="Signed" value={m.send.signOff} onChange={setText('signOff')} today={ws.today} disabled={off} placeholder={ws.agentName || 'Your name'} />
-      </label>
-      <label className="se-field">
-        <span className="fh">About the client <span className="opt">(for you)</span></span>
-        <TextInput label="Client note" value={ws.brief.clientNote} onChange={setBrief('clientNote')} today={ws.today} disabled={off} />
-        <span className="se-hint">What matters to them. It isn’t quoted in the email, and Hubert doesn’t see it.</span>
-      </label>
-      {!off && m.done && !m.writing && (
-        <button type="button" className="link" onClick={() => m.setSend({ useTemplate: !m.send.useTemplate, draft: undefined, drafts: undefined })}>
-          {m.send.useTemplate ? 'Use Hubert’s draft' : 'Use the template instead'}
-        </button>
+    <section className="panel se-lines" aria-label="Your lines">
+      {/* A div, not a header: the studio's nav styles every header:first-of-type. */}
+      <div className="se-lines-head">
+        <div>
+          <div className="se-sec"><span className="se-sec-n">01</span>Your lines</div>
+          <p className="se-hint">The email is written from these, in your words. Write them, or have Hubert draft them from your notes and tidy them after.</p>
+        </div>
+        {!off && (
+          <div className="se-lines-actions">
+            <button type="button" className="btn small-btn se-help" disabled={locked || written.length === LINE_KEYS.length} title={written.length === LINE_KEYS.length ? 'Every line is already yours' : 'Fills the empty lines from your tiers, tags and notes'} onClick={() => void help('draft')}>
+              <span className="se-star" aria-hidden="true">✦</span>{busy === 'draft' ? 'Drafting…' : 'Draft from my notes'}
+            </button>
+            <button type="button" className="btn small-btn se-help" disabled={locked || !written.length} title={written.length ? 'Clarity and grammar only: the same points and numbers' : 'Write a line first'} onClick={() => void help('rewrite')}>
+              <span className="se-star" aria-hidden="true">✦</span>{busy === 'rewrite' ? 'Tidying…' : 'Tidy the wording'}
+            </button>
+            <button type="button" className="btn small-btn" disabled={!written.length} title={written.length ? 'Opens Hubert with your lines: feedback, no changes' : 'Write a line first'} onClick={() => ws.askHubert(feedbackAsk(m.send))}>
+              Ask Hubert for feedback
+            </button>
+          </div>
+        )}
+      </div>
+
+      {note && (
+        <p className={`se-lines-note${note.error ? ' error' : ''}`} role="status">
+          {note.text}
+          {offered && !note.error && <>{' '}<button type="button" className="link" onClick={undo}>Undo</button></>}
+        </p>
       )}
-    </details>
+
+      <div className="se-lines-grid">
+        <label className="se-field">
+          <span className="fh">To</span>
+          <TextInput label="Client name" value={ws.brief.clientName ?? m.send.clientName} onChange={setBrief('clientName')} today={ws.today} disabled={locked} placeholder="Client name" />
+        </label>
+        <label className="se-field">
+          <span className="fh">Signed</span>
+          <TextInput label="Signed" value={m.send.signOff} onChange={setText('signOff')} today={ws.today} disabled={locked} placeholder={ws.agentName || 'Your name'} />
+        </label>
+      </div>
+      {line('chosen', 'e.g. I focused on lower floors and homes close in size.', 2)}
+      {line('consider', 'Buildings that trade higher or lower, carrying costs, recent activity in the building. One a line.', 3)}
+      {line('nextStep', ws.side === 'seller' ? 'Where you’d list it, and why' : 'What you’d offer, and on what terms', 3)}
+
+      <div className="se-lines-foot">
+        <label className="se-field se-client-note">
+          <span className="fh">About the client <span className="opt">(for you)</span></span>
+          <TextInput label="Client note" value={ws.brief.clientNote} onChange={setBrief('clientNote')} today={ws.today} disabled={locked} />
+          <span className="se-hint">What matters to them. It isn’t quoted in the email, and Hubert doesn’t see it.</span>
+        </label>
+        {!off && m.done && !m.writing && (
+          <button type="button" className="link" onClick={() => m.setSend({ useTemplate: !m.send.useTemplate, draft: undefined, drafts: undefined })}>
+            {m.send.useTemplate ? 'Use Hubert’s draft' : 'Use the template instead'}
+          </button>
+        )}
+      </div>
+    </section>
   );
 }

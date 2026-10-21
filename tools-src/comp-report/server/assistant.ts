@@ -8,6 +8,7 @@
 // (get_numbers). CR-4 builds the real assistant on it.
 import type Anthropic from '@comp-report/anthropic-sdk';
 import type { Queryable } from './db.ts';
+import { emailFor, editEmail, EMAIL_FIELDS } from './hubert-email.ts';
 import { numbersFor } from './numbers.ts';
 
 export const ASSISTANT = {
@@ -41,6 +42,57 @@ const GET_NUMBERS: Anthropic.Beta.BetaToolUnion = {
     'their own call or skipped it, both results — base, range, evidence by status, sale-to-last-ask, carry and the bridge. ' +
     "It never includes the agent's call or any target price. The numbers change as the agent works, so call it whenever you discuss them.",
   input_schema: { type: 'object', properties: {}, additionalProperties: false },
+  strict: true,
+  eager_input_streaming: true,
+};
+
+// Send (dev notes dn_mviipah6rs3v, dn_mvij3r5x4g0f, 2026-10-21): Hubert reads the email the agent
+// sees and changes its words when they ask. Never its styling: there is none in what he edits, only
+// the plain text the designed email is laid out from.
+const GET_EMAIL: Anthropic.Beta.BetaToolUnion = {
+  name: 'get_email',
+  description:
+    "The client email on the Send screen, as the agent sees it now: the tab open (designed, full, short or text), the subject, " +
+    "the headline, the body's plain text, and the agent's own lines it's written from (how they chose the comps, things to consider, " +
+    "the next step, how they sign). Empty until the agent has opened Send. Call it before you discuss or change the email.",
+  input_schema: { type: 'object', properties: {}, additionalProperties: false },
+  strict: true,
+  eager_input_streaming: true,
+};
+
+const EDIT_EMAIL: Anthropic.Beta.BetaToolUnion = {
+  name: 'edit_email',
+  description:
+    "Changes the email's words on the agent's Send screen, as the agent asked: the subject, the headline, the agent's lines, " +
+    "and exact passages of the body's text. It can't change the layout, the styling, the photos or the price table, and it can't remove " +
+    "the disclaimer. `changes` sets a field to new text (an empty text clears an agent line). `body_edits` replaces one exact passage of the " +
+    "body as get_email returned it with new text, for the tab that's open; each `find` must appear in the body exactly once. " +
+    "The agent sees each change at once and can undo it. QA checks every figure again before the email can be copied.",
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['changes', 'body_edits'],
+    properties: {
+      changes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['field', 'text'],
+          properties: { field: { type: 'string', enum: [...EMAIL_FIELDS] }, text: { type: 'string' } },
+        },
+      },
+      body_edits: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['find', 'replace'],
+          properties: { find: { type: 'string' }, replace: { type: 'string' } },
+        },
+      },
+    },
+  },
   strict: true,
   eager_input_streaming: true,
 };
@@ -97,9 +149,33 @@ export const PROMPTS: Record<string, PromptVersion> = {
     ].join('\n\n'),
     tools: [GET_REPORT, GET_NUMBERS],
   },
+  // Send (2026-10-21): Hubert reads the email and changes its words when the agent asks (get_email,
+  // edit_email). Kimani's rule: he executes the agent's thinking, he doesn't do it for them.
+  'hb-send-2026-10-21': {
+    id: 'hb-send-2026-10-21',
+    system: [
+      "You are Hubert, the Casa Blanca comp report's assistant, named after Casa Blanca's office at 10 Hubert St in Tribeca. You work with a licensed New York City real estate agent on a comparative market analysis for one home.",
+      "Your main rule: you don't do the agent's thinking for them; you carry out their thinking. You answer their questions about the home and the comps, explain what the numbers show, point out what to look at, and make the changes they ask for in the email. The judgments are theirs: you never choose a comp's tier, write its note or pick its tags, and you can't change the comps.",
+      'Every figure comes from the calculation engine. Call get_numbers for the current numbers before you discuss them, and quote its figures as it gives them. Never compute, adjust or estimate a price, price per square foot, range or adjustment of your own.',
+      "Only talk about listings that are in the report's data: the home and the comps get_numbers returns. Never name, suggest or describe a listing, sale or address that isn't there; if the agent asks for more sales, say you can only point to what's already in the report.",
+      "Until get_numbers says the range is revealed, the agent hasn't given their own number at the gate yet: don't suggest a value or a range. Help them sort the comps instead.",
+      "You never see any target price, and you don't ask for the agent's own number. If the agent's lines in the email name a price or an offer, it's theirs: don't judge it, and don't steer it; if they ask, say what the comps show.",
+      [
+        'The email, on the Send screen. Call get_email to read it as the agent sees it.',
+        "- When the agent asks for feedback on their lines or the email, read it and give a few specific, plain suggestions in the chat: clarity, grammar, order, what a client might misread. Don't change anything unless they ask you to.",
+        '- When the agent asks you to change the email, or tells you what they want it to say, use edit_email. Put their words and their thinking in; keep their voice and their first person. Fix grammar and clarity where they ask. Add no opinion, judgment, figure or recommendation of your own.',
+        "- Their lines (how they chose the comps, things to consider, the next step, how they sign) are what the email is written from: change those when they're what the agent means. Change the headline with the headline field, not in the body.",
+        "- Every figure you put in the email must be one get_numbers gives or one the agent said. Never remove or reword the disclaimer. You change words only, never the email's layout or styling.",
+        '- After an edit, say in a line what you changed.',
+      ].join('\n'),
+      'Call get_report to see which report this is.',
+      'Be concise and plain-spoken: a few sentences. A comp report is not an appraisal; never call it one.',
+    ].join('\n\n'),
+    tools: [GET_REPORT, GET_NUMBERS, GET_EMAIL, EDIT_EMAIL],
+  },
 };
 
-export const CURRENT_PROMPT = PROMPTS['cr6-2026-10-15']!;
+export const CURRENT_PROMPT = PROMPTS['hb-send-2026-10-21']!;
 /** Conversations recorded before messages carried a version started on CR-1's. */
 const BEFORE_VERSIONS = PROMPTS['cr1-2026-09-25']!;
 
@@ -178,6 +254,15 @@ export async function runTool(
   if (call.name === 'get_numbers') {
     const numbers = await numbersFor(tx, reportId);
     return { type: 'tool_result', tool_use_id: call.id, content: JSON.stringify(numbers) };
+  }
+  if (call.name === 'get_email') {
+    return { type: 'tool_result', tool_use_id: call.id, content: JSON.stringify(await emailFor(tx, reportId)) };
+  }
+  if (call.name === 'edit_email') {
+    const done = await editEmail(tx, reportId, call.input);
+    return done.ok
+      ? { type: 'tool_result', tool_use_id: call.id, content: JSON.stringify({ applied: done.summary, edit: done.edit }) }
+      : { type: 'tool_result', tool_use_id: call.id, is_error: true, content: done.error };
   }
   if (call.name === 'get_report') {
     const { rows } = await tx.query<Record<string, unknown>>(
