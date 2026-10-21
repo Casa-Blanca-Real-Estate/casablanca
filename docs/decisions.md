@@ -99,8 +99,11 @@ each was applied.
 - [ ] **Soon — `CR_INSPECT_KEY` and `CR_TEST_KEY`** for Dispatch 23, made on the Casa side (TD-14).
 - [ ] **Soon — a co-op and its StreetEasy export** for the co-op sample (TD-15); **test an invite end to end** (TD-16);
   **Noble on the size-scale bands** (TD-17); **record the next walk-through** (TD-13).
-- [ ] **Soon — `CB_PICS_TOKEN` for the profile-pic roster** (#71 is merged). Make it with `openssl rand -hex 32`
-  (not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it
+- [ ] **Soon — swap the Anthropic key in Make** (TD-18). The connection "My Anthropic Claude connection" feeds
+  the live **Mailchimp ISO Blast Automation** (its three Claude steps). Give it its own key from Casa's Anthropic
+  workspace, update the connection, check one run, then revoke the old key.
+- [ ] **Soon — `CB_PICS_TOKEN` for the profile-pic roster** (#71 is merged). Make it on the Key Maker
+  (https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS, not the CMS token), set it in Netlify (Functions scope), and redeploy. Until then the roster tab says it
   isn't configured.
 - [ ] **Soon — read the writer's house voice and its eval drafts** (Dispatch 13, phase 1's PR). The
   style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. **The eval's real

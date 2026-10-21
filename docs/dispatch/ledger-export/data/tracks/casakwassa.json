@@ -1,0 +1,7 @@
+{
+  "name": "Casakwassa",
+  "role": "Planning and setup: ideas, plans, accounts and keys with Kimani, repo docs. Builds nothing, merges nothing.",
+  "also": "Runbook: docs/dispatch/casakwassa.md.",
+  "order": 2,
+  "where": "web"
+}

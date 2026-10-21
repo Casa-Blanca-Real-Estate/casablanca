@@ -89,6 +89,9 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 - **Casanova** — overseer. Holds the whole picture, plans, writes dispatches, reviews and merges
   PRs, keeps repo context current. Does not take on the large builds itself. Its runbook and latest
   handoff: `docs/dispatch/casanova.md`.
+- **Casakwassa** — Kimani's planning and setup session (from 2026-10-21): ideas and plans, anything
+  that needs Kimani directly (accounts, keys, services), and repo docs. Casanova keeps the builds. Its
+  runbook: `docs/dispatch/casakwassa.md`.
 - **The Dispatch Ledger** (https://claude.ai/artifact/HR14yufem1YH1TxqqiWksA) tracks every kickoff from queued to landed. It's Casa's
   own, in the Casa Blanca Claude account (split from the ledger shared with MindBinder, 2026-10-21). Sessions mark their own
   lines with the `ArtifactData` tool (rule 11 in `docs/dispatch/README.md`).
