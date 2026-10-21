@@ -1,17 +1,7 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-21:</strong> the sheet moved to the Casa Blanca Claude account. Done today: the Jev keys, the profile-pic and CMS tokens, the eval key, the email-signatures credential and the account move. <strong>New:</strong> TD-18, the Anthropic key in Make. Noble's 28 questions (NB-1 to NB-28) are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
+  "since": "<strong>Updated 2026-10-21 (evening):</strong> recorded your answers to NB-1 to NB-10, PP-1 (D-24), AC-2 to AC-4, TD-9 and TD-14; they're under each topic's settled list. CR-3 stays open until the eval drafts are in, and AC-7 is back as your reminder. NB-11 to NB-28 are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
   "newIds": [
-    "NB-1",
-    "NB-2",
-    "NB-3",
-    "NB-4",
-    "NB-5",
-    "NB-6",
-    "NB-7",
-    "NB-8",
-    "NB-9",
-    "NB-10",
     "NB-11",
     "NB-12",
     "NB-13",
@@ -31,7 +21,6 @@
     "NB-27",
     "NB-28",
     "TD-13",
-    "TD-14",
     "TD-15",
     "TD-16",
     "TD-17",
@@ -46,235 +35,6 @@
       "linkLabel": "Open the plan",
       "intro": "<p>From Noble's walk-through (2026-10-15) and your notes after it: 102 points in <code>docs/comp-report/feedback/2026-10-15-noble/</code>, one report per topic, and Dispatches 15–24. Each question has a recommended default, so the dispatches build on it unless you object. Read the topic reports alongside: each question cites its NW ids.</p>",
       "questions": [
-        {
-          "id": "NB-1",
-          "q": "What is the offer target: one number, or a range?",
-          "short": "The target: one number or a range",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble could not tell what the target means (NW-002): for a buyer, the most the client would pay, or what they hope to pay.</p><p><strong>Why it needs you.</strong> It never moves a number; it is a named price, hidden from the writer and out of the email. A relabel fixes the confusion with a copy change. A range toggle touches the saved target, Findings' marker and QA, and needs a Findings design (it can go to Claude Design with NW-064).</p><p><strong>Waits for you.</strong> The relabel is built only on an A answer (Dispatch 20).</p>",
-          "options": [
-            [
-              "A",
-              "One number, relabelled",
-              "buyer: \"Most your client would pay\"; seller: \"Price you want to justify\". Copy only",
-              true
-            ],
-            [
-              "B",
-              "A range toggle",
-              "buyer and seller; waits for the Findings design"
-            ]
-          ],
-          "source": "NW-002 · Noble walk-through 2026-10-15"
-        },
-        {
-          "id": "NB-2",
-          "q": "How should the tool model HDFC, sponsor units, condops, townhouses and houses?",
-          "short": "Property types beyond condo and co-op",
-          "quick": false,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> The report's type is only condo or co-op, and it drives the pricing (NW-018 a, NW-019). Noble hit HDFC, sponsor units and a townhouse.</p><p><strong>Why it needs you.</strong> Sponsor and HDFC are attributes of a co-op or condo sale, not separate pricing methods, and the listing read already returns both. A: no migration and no engine change. B: a migration plus a pricing answer for each new type. Townhouses and whole houses wait on a pricing answer either way.</p><p><strong>Waits for you.</strong> The type model (NW-018 a) is built only on an A answer (Dispatch 16).</p>",
-          "options": [
-            [
-              "A",
-              "Keep condo or co-op as the pricing basis",
-              "add a type label (HDFC, condop, townhouse, house) with sponsor and HDFC as flags",
-              true
-            ],
-            [
-              "B",
-              "Widen the report type and the engine",
-              "migration and a pricing rule per type"
-            ]
-          ],
-          "source": "NW-018 a, NW-019"
-        },
-        {
-          "id": "NB-3",
-          "q": "Photos in the Designed email: linked from StreetEasy, or copied and hosted by Casa?",
-          "short": "Email photos: link or host",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble wants listing photos (NW-020, NW-058). The home and Sort will show them from StreetEasy's image URLs either way.</p><p><strong>Why it needs you.</strong> The design of record says linked, not hosted ({repo}/docs/comp-report/01-design.md). Linking needs no storage and no new public route. The risk is an image going blank when a listing is pulled. Hosting copies needs Blobs and a public unguessable route.</p>",
-          "options": [
-            [
-              "A",
-              "Link StreetEasy's image URLs",
-              "revisit if blanks show up in sent emails",
-              true
-            ],
-            [
-              "B",
-              "Store copies in Blobs at copy time",
-              "served from a public unguessable route"
-            ]
-          ],
-          "source": "NW-020 b"
-        },
-        {
-          "id": "NB-4",
-          "q": "Which word for a unit that is well kept but not redone: \"Good\" or \"Well kept\"?",
-          "short": "Condition scale: the word for Good",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> The new condition scale is Needs work, Original, Good, Updated, Renovated, Mint, with an ⓘ on each (NW-012).</p><p><strong>Why it needs you.</strong> It is the label agents see for a middle step. \"Good\" is already a stored state and the design's word. \"Like new\" sits too close to Mint.</p>",
-          "options": [
-            [
-              "A",
-              "Good",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Well kept"
-            ]
-          ],
-          "source": "NW-012"
-        },
-        {
-          "id": "NB-5",
-          "q": "What do agents call a tag?",
-          "short": "The word for \"tag\"",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> \"Tag\" confused Noble (NW-028, NW-040, NW-047). The word changes in the Needs line, the readiness line, the card, the edit form and the filter.</p><p><strong>Why it needs you.</strong> The list holds differences (smaller, lower floor, no outdoor space) as well as similarities, so \"Similarity tags\" would be wrong half the time.</p>",
-          "options": [
-            [
-              "A",
-              "Comp tags",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Similarity tags"
-            ],
-            [
-              "C",
-              "Tags, with an ⓘ"
-            ]
-          ],
-          "source": "NW-028, NW-047"
-        },
-        {
-          "id": "NB-6",
-          "q": "Does starring a comp also make it 1st tier?",
-          "short": "Does ★ imply 1st tier?",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> The ★ moves into the tier control as a fourth segment (NW-026).</p><p><strong>Why it needs you.</strong> Today a 2nd-tier or excluded comp can be the one the email leads with. Making ★ set 1st (and picking 2nd or ✕ clear it) removes that, and matches how you already treat anchoring as a kind of tiering.</p>",
-          "options": [
-            [
-              "A",
-              "Yes",
-              "★ sets 1st; picking 2nd or ✕ clears the star",
-              true
-            ],
-            [
-              "B",
-              "No",
-              "★ stays independent of tier, as today"
-            ]
-          ],
-          "source": "NW-026"
-        },
-        {
-          "id": "NB-7",
-          "q": "How does a StreetEasy fact the agent unlocks and overrides count?",
-          "short": "Overridden facts: fact or estimate",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble wants to fix a wrong floor or size on an export comp. Today those facts are locked (NW-044). The build adds a lock per fact; unlocking overrides it.</p><p><strong>Why it needs you.</strong> It decides whether the override moves the numbers as a fact or lands only in the \"with estimates\" figures. The use is correcting StreetEasy's mistakes, and StreetEasy's value stays on record in \"Where it came from\".</p>",
-          "options": [
-            [
-              "A",
-              "As a fact, marked \"changed\"",
-              "StreetEasy's value kept on record",
-              true
-            ],
-            [
-              "B",
-              "As an estimate",
-              "counted in \"with estimates\" only"
-            ]
-          ],
-          "source": "NW-044 b"
-        },
-        {
-          "id": "NB-8",
-          "q": "Are a note and tags both required on every comp?",
-          "short": "Note and tags: both required?",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Sort's \"Needs tier, note, tag\" blocks Findings until all are done (NW-046).</p><p><strong>Why it needs you.</strong> The note is the learning part for new agents. Experienced ones may find both a chore. The practice and full levels already exist (D-11, D-27).</p><p><strong>Waits for you.</strong> Built only on an A answer: it changes D-27's Save rule (Dispatch 15).</p>",
-          "options": [
-            [
-              "A",
-              "Practice agents need both; full agents need tags, note optional",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Both required for everyone",
-              "as today"
-            ],
-            [
-              "C",
-              "A note only when a comp has no tags"
-            ]
-          ],
-          "source": "NW-046"
-        },
-        {
-          "id": "NB-9",
-          "q": "Tags the data already settles: pre-fill, or suggest?",
-          "short": "Derived tags: pre-fill or suggest",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Same building, first floor, 6+ months, new development and the size scale can be worked out from the data (NW-059). Contradicting tags (an outdoor pick vs \"No outdoor space\") clear on their own.</p><p><strong>Why it needs you.</strong> Tags are the agent's. A pre-filled tag would satisfy \"needs a tag\" with no thought behind it.</p>",
-          "options": [
-            [
-              "A",
-              "Suggest as one-click chips marked \"from the data\"",
-              "clear contradictions automatically",
-              true
-            ],
-            [
-              "B",
-              "Pre-fill them",
-              "the agent can remove them"
-            ],
-            [
-              "C",
-              "Pre-fill for full agents, suggest for practice agents"
-            ]
-          ],
-          "source": "NW-059 b"
-        },
-        {
-          "id": "NB-10",
-          "q": "The size scale: where do Smaller, Similar and Bigger start?",
-          "short": "Size scale thresholds",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble wants Size as an ordered scale with one choice (NW-045). The engine only flags size past 25%.</p><p><strong>Why it needs you.</strong> Someone has to name the bands. They stay house-method configuration, so Noble can change them later. Worth a word with Noble before it ships.</p>",
-          "options": [
-            [
-              "A",
-              "Similar within ±10%; smaller or bigger 10–25%; much past 25%",
-              "matches the engine's 25%",
-              true
-            ],
-            [
-              "B",
-              "Similar within ±15%; much past 25%"
-            ]
-          ],
-          "source": "NW-045, NW-059"
-        },
         {
           "id": "NB-11",
           "q": "Where do the six tags outside Noble's four groups go?",
@@ -707,6 +467,18 @@
           ],
           "source": "NW-102 · NW-080 to NW-082"
         }
+      ],
+      "settled": [
+        "<strong>NB-1 · The target: one number or a range</strong>: A, one number, relabelled (a range toggle may follow the walk-through with Hannah), recorded 2026-10-21.",
+        "<strong>NB-2 · Property types beyond condo and co-op</strong>: A, condo or co-op stays the pricing basis, recorded 2026-10-21.",
+        "<strong>NB-3 · Email photos: link or host</strong>: B, photos copied into Blobs at copy time, recorded 2026-10-21.",
+        "<strong>NB-4 · Condition scale: the word for Good</strong>: B, \"Well kept\", recorded 2026-10-21.",
+        "<strong>NB-5 · The word for \"tag\"</strong>: C, \"Tags\", with an ⓘ, recorded 2026-10-21.",
+        "<strong>NB-6 · Does ★ imply 1st tier?</strong>: A, ★ sets 1st, recorded 2026-10-21.",
+        "<strong>NB-7 · Overridden facts: fact or estimate</strong>: A, a fact marked \"changed\", recorded 2026-10-21.",
+        "<strong>NB-8 · Note and tags: both required?</strong>: A, practice agents need both; C held for later, recorded 2026-10-21.",
+        "<strong>NB-9 · Derived tags: pre-fill or suggest</strong>: C, pre-filled for full agents, suggested for practice agents, recorded 2026-10-21.",
+        "<strong>NB-10 · Size scale thresholds</strong>: A, ±10% / 10–25% / past 25%, recorded 2026-10-21."
       ]
     },
     {
@@ -923,34 +695,10 @@
       "url": "{repo}/docs/dispatch/12-profile-pic-tracker.md",
       "linkLabel": "Open Dispatch 12",
       "intro": "<p>Painter's roster (Dispatch 12, phase 1) is merged in #71. Phase 2 imports the roster once.</p>",
-      "questions": [
-        {
-          "id": "PP-1",
-          "q": "Where do agents' contact details come from for the roster's import?",
-          "short": "D-24: the signatures doc or FileMaker?",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> The roster imports about 110 agents once: names, titles, emails and phones. The email-signatures Google Doc has duplicates, likely typos and gaps.</p><p><strong>Why it needs you.</strong> If a system of record (FileMaker) sits behind the doc, the import reads an export of that instead of parsing a doc.</p>",
-          "options": [
-            [
-              "A",
-              "The email-signatures doc"
-            ],
-            [
-              "B",
-              "FileMaker",
-              "an export you'll pull"
-            ],
-            [
-              "C",
-              "Something else"
-            ]
-          ],
-          "source": "D-24 in {repo}/docs/decisions.md · #71"
-        }
-      ],
+      "questions": [],
       "settled": [
-        "<strong>PP-2 · Already-filed photos: placed or to do?</strong>: recorded 2026-10-15."
+        "<strong>PP-2 · Already-filed photos: placed or to do?</strong>: recorded 2026-10-15.",
+        "<strong>PP-1 · D-24: the signatures doc or FileMaker?</strong>: A, the email-signatures doc for now; Casa's own agent store and an Agent Character Poll later (D-24), recorded 2026-10-21."
       ]
     },
     {
@@ -1124,59 +872,6 @@
           "source": "D-26 · {repo}/docs/casa-accounts-transfer.md"
         },
         {
-          "id": "AC-2",
-          "q": "Which Claude plan does Casa buy, and who's the second admin?",
-          "short": "Claude plan and second admin",
-          "quick": false,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> It needs Projects, memory, connectors, artifacts with databases, the desktop app and Claude Code cloud sessions, with enough usage for parallel tracks. Signed in with <code>casacalliste</code>, so it survives any one person.</p><p><strong>Why it needs you.</strong> Erez pays; a seat with less headroom than today slows the tracks.</p>",
-          "options": [],
-          "source": "D-26"
-        },
-        {
-          "id": "AC-3",
-          "q": "Erez's line on the two accounts",
-          "short": "What Casa info your personal Claude may see",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p><strong>The proposal.</strong> Status and planning readable from your personal Claude, through the repo; client data, agents' details and comp reports stay in Casa's account. After the move, Casa data is cleaned out of the personal account.</p>",
-          "options": [
-            [
-              "A",
-              "Yes, that line"
-            ],
-            [
-              "B",
-              "Stricter",
-              "say how in the note"
-            ],
-            [
-              "C",
-              "Ask Erez first"
-            ]
-          ],
-          "source": "D-26"
-        },
-        {
-          "id": "AC-4",
-          "q": "The Casa desk artifact: move it, or keep it personal?",
-          "short": "The Casa desk: move or keep?",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> It was built to be private to you. In a Casa-owned account, assume Casa's admins can see it.</p>",
-          "options": [
-            [
-              "A",
-              "Move it, and keep it work-only"
-            ],
-            [
-              "B",
-              "Keep it personal, with no client or agent data in it"
-            ]
-          ],
-          "source": "D-26"
-        },
-        {
           "id": "AC-5",
           "q": "What stays yours?",
           "short": "What stays Kimani's",
@@ -1202,7 +897,7 @@
           "short": "GitHub Pages: still used?",
           "quick": true,
           "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> Its address changes with the repo and doesn't redirect. <code>agents/SCHEMA.md</code> and the functions' CORS note name <code>kjcamron.github.io</code>.</p>",
+          "context": "<p><strong>What this is about.</strong> Its address changes with the repo and doesn't redirect. <code>agents/SCHEMA.md</code> and the functions' CORS note name <code>kjcamron.github.io</code>.</p><p><strong>Your note (2026-10-21):</strong> \"Don't think so. Remind me to check.\" This is the reminder: check, then pick A or B.</p>",
           "options": [
             [
               "A",
@@ -1215,6 +910,11 @@
           ],
           "source": "D-26"
         }
+      ],
+      "settled": [
+        "<strong>AC-2 · Claude plan and second admin</strong>: Pro for now, Max 5x if use demands; no second admin yet, recorded 2026-10-21.",
+        "<strong>AC-3 · What Casa info your personal Claude may see</strong>: A, that line, recorded 2026-10-21.",
+        "<strong>AC-4 · The Casa desk: move or keep?</strong>: already moved to the Casa account, work-only, recorded 2026-10-21."
       ]
     },
     {
@@ -1295,21 +995,6 @@
           "source": "D-16"
         },
         {
-          "id": "TD-9",
-          "q": "Sit down with Noble",
-          "short": "Noble: glossary, thresholds, the differences approach",
-          "quick": false,
-          "needsYou": true,
-          "context": "<p>Three things for one meeting: the glossary draft's 8 open questions ({repo}/docs/comp-report/research/glossary-draft.md, updated in #70); the thresholds in CR-5; and the \"differences between comps\" approach (design §6.6), which builds on his point that prices already carry their features.</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "#70 · {repo}/docs/decisions.md"
-        },
-        {
           "id": "TD-10",
           "q": "Brand the Google sign-in (optional)",
           "short": "Brand the Google sign-in",
@@ -1343,21 +1028,6 @@
             ]
           ],
           "source": "NW-097"
-        },
-        {
-          "id": "TD-14",
-          "q": "Add the inspect and test keys to the cloud environment",
-          "short": "The inspect and test keys",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p>The three settings are in Netlify (Production). What's left: add <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> to this Claude Code environment, with the same values as in Netlify (they're in your password manager). They do nothing until Dispatch 23 items 3–4 land. To switch the inspection off, unset <code>CR_INSPECT_KEY</code> in Netlify and redeploy.</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "NW-090"
         },
         {
           "id": "TD-15",
@@ -1426,7 +1096,9 @@
         "<strong>TD-2 · CB_PICS_TOKEN</strong>: done 2026-10-21.",
         "<strong>TD-3 · The eval key</strong>: done 2026-10-21.",
         "<strong>TD-7 · The email-signatures credential</strong>: done 2026-10-21.",
-        "<strong>TD-12 · The Casa account move</strong>: done 2026-10-21."
+        "<strong>TD-12 · The Casa account move</strong>: done 2026-10-21.",
+        "<strong>TD-9 · Noble: glossary, thresholds, the differences approach</strong>: done, recorded 2026-10-21.",
+        "<strong>TD-14 · The inspect and test keys</strong>: done, recorded 2026-10-21."
       ]
     },
     {
@@ -1477,16 +1149,6 @@
       "id": "RL-8",
       "date": "2026-10-15",
       "qids": [
-        "NB-1",
-        "NB-2",
-        "NB-3",
-        "NB-4",
-        "NB-5",
-        "NB-6",
-        "NB-7",
-        "NB-8",
-        "NB-9",
-        "NB-10",
         "NB-11",
         "NB-12",
         "NB-13",
@@ -1544,9 +1206,6 @@
       "date": "2026-10-14",
       "qids": [
         "AC-1",
-        "AC-2",
-        "AC-3",
-        "AC-4",
         "AC-5",
         "AC-6",
         "AC-7"
@@ -1568,9 +1227,7 @@
     {
       "id": "RL-3",
       "date": "2026-10-14",
-      "qids": [
-        "PP-1"
-      ],
+      "qids": [],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/71\" target=\"_blank\" rel=\"noopener\">The profile-pic roster (#71)</a>: every agent's photo status, and what the import needs.",
       "settledIds": [
         "PP-2",

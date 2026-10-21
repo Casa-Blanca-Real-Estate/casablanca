@@ -30,7 +30,7 @@ the existing pickers; how they're laid out is Claude Design's.
 3. **NW-004.** When a pasted link checks out, replace the field's text with the clean `check.url`, on step 1
    and in Add comps.
 4. **NW-017 a.** The neighborhood in step 1's match line ("Condo · Turtle Bay · …").
-4a. **NW-002, if Kimani has answered "A" (one number).** One number stays, and the modal's label reads
+4a. **NW-002 (Kimani answered "A", one number, 2026-10-21; a range toggle may follow the walk-through with Hannah).** One number stays, and the modal's label reads
    "Client's offer target" (buyer) or "Client's target price" (seller). These are the client-owner labels
    Dispatch 21 uses, since client is the owner's default. 21 changes the label when the owner changes. If he
    chose a range or hasn't answered, leave the field as it is.
@@ -62,7 +62,8 @@ the existing pickers; how they're laid out is Claude Design's.
 12. **NW-039 a (UI), NW-045 (UI), NW-059 a (UI) · groups and tags.**
     - Hide feature groups that don't apply to the type.
     - Show the tag groups under their labels inside the existing tag area; Size and Multi-floor take one choice.
-    - Tags the data settles show as one-click chips marked "from the data" (the recommendation for NW-059 b);
+    - Tags the data settles: **pre-filled for full agents, one-click chips marked "from the data" for practice
+      agents** (Kimani, NB-9 C, 2026-10-21); a pre-filled tag is removable;
       a contradicted tag clears itself when its fact changes, and "First floor" hides when the floor is known
       and isn't 1.
     - **DP-6 · free-text tags:** an agent can add their own tag. Cap it at 40 characters, run it through

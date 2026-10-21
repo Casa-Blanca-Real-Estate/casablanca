@@ -10,7 +10,7 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-10-21 by Casakwassa.
+Last updated 2026-10-21 by Casanova (answer sheet: NB-1 to NB-10, CR-3, PP-1, AC-2/3/4/7, TD-9, TD-14).
 
 **What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
 pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dispatch 10's phase 2.
@@ -20,11 +20,10 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 | ID | Decision | Urgency | Size | Blocks |
 |---|---|---|---|---|
 | D-17 | Two questions for counsel | Later | Quick (counsel) | the pilot; factor 18 |
-| D-24 | Where agents' contact details come from | Soon — Dispatch 12, phase 1 | Quick | the roster's one-time import |
 | D-25 | The fair-housing list, and "appraisal contingency" | Soon — before agents copy writer drafts | Think (Hannah) | QA's compliance list (Dispatch 13) |
 | D-26 | Moving Casa's work onto Casa-owned accounts | Later — after the comp report settles; keys sooner | Think (with Erez) | `docs/casa-accounts-transfer.md` |
 | D-27 | The design port: what the handoff changes | Now — Mason builds on the defaults (Dispatch 14) | Quick (object only) | Noble's walk-through |
-| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-28) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
+| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21; NB-11 to NB-28 open) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
 each was applied.
@@ -92,15 +91,21 @@ each was applied.
     of the studio later.
 - [x] ~~Noble's way in.~~ Done 2026-10-15: invited by email, signed in with a password (his Google sign-in was refused; see NB-28).
 - [x] ~~The Casa account move.~~ Done 2026-10-20/21: the repo is `Casa-Blanca-Real-Estate/casablanca`, sessions run in the Casa Blanca Claude account, and the keys are on Casa accounts (the Key Maker tracks them). D-26's open questions remain below.
-- [ ] **Soon — the last of TD-14:** the three settings are in Netlify (Production). Still to do: add `CR_INSPECT_KEY` and
-  `CR_TEST_KEY` to the cloud environment too. They do nothing until Dispatch 23 items 3–4 land.
+- [x] ~~The last of TD-14.~~ Done 2026-10-21: `CR_INSPECT_KEY` and `CR_TEST_KEY` are in the cloud environment too.
+  A session confirms them in the Casa environment when Dispatch 23 items 3–4 start.
+- [x] ~~Sit down with Noble (TD-9).~~ Done (Kimani, 2026-10-21). What came of it (the glossary's questions, the
+  thresholds, the differences approach) isn't recorded yet: tell Casanova, or leave a dev note.
+- [ ] **Soon — check whether the GitHub Pages copy of the studio is still used** (D-26 Q7). Your answer
+  (2026-10-21): "Don't think so. Remind me to check." If not, it's turned off.
 - [ ] **Soon — a co-op and its StreetEasy export** for the co-op sample (TD-15); **test an invite end to end** (TD-16);
   **Noble on the size-scale bands** (TD-17); **record the next walk-through** (TD-13).
 - [ ] **Soon — swap the Anthropic key in Make** (TD-18). The connection "My Anthropic Claude connection" feeds
   the live **Mailchimp ISO Blast Automation** (its three Claude steps). Give it its own key from Casa's Anthropic
   workspace, update the connection, check one run, then revoke the old key.
 - [x] ~~`CB_PICS_TOKEN` and `CB_CMS_TOKEN`.~~ Done 2026-10-21. Production now answers 401, not 503, for the roster and the CMS.
-- [ ] **Soon — read the writer's house voice and its eval drafts** (Dispatch 13, phase 1's PR). The
+- [ ] **Soon — read the writer's house voice and its eval drafts** (Dispatch 13, phase 1's PR). CR-3, 2026-10-21:
+  "Wait for the eval drafts first": the writer doesn't write enough yet to judge the voice; it seems fine, and it
+  may not need much more than it has. The
   style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. `CR_EVAL_ANTHROPIC_API_KEY` is in the
   cloud environment (2026-10-21), so Mason can run the real eval in a new session (well under a dollar).
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
@@ -124,18 +129,6 @@ CR-R (Surveyor) found two legal questions research can't settle. Both are in
    ever computes the sponsor arithmetic (factor 18).
 
 **Answer →** _type here — who it went to, or their answer_
-
----
-
-### D-24 · Where agents' contact details come from
-`Soon — before Dispatch 12 seeds the roster` · `Quick`
-
-Dispatch 12 imports the roster once: about 110 agents, with names, titles, emails and phones. Is the
-email-signatures Google Doc the authority for those, or is there a system of record behind it, such
-as FileMaker, that the import should read instead? The session found duplicates, likely typos and
-gaps in the doc, so the answer decides between parsing a doc and doing a proper export.
-
-**Answer →** _type here — the doc, FileMaker, or something else_ · Related, answered 2026-10-15 (PP-2): already-filed photos import as **placed**.
 
 ---
 
@@ -183,7 +176,23 @@ NB-23: deploying it lets every mentor read every report. Samples stay admin-only
 Dispatch 21 item 1 builds on NB-19 A (B moves it to Calliste). Dispatch 23 items 3–4 (the inspection and test
 keys) wait on NB-22 and TD-14, and run from Casa's account only.
 
-**Answer →** _on the answer sheet (NB-…), or here_
+**Answer →** **Kimani, 2026-10-21 (answer sheet), NB-1 to NB-10.** Four differ from the defaults: NB-3, NB-4,
+NB-5 and NB-9.
+
+| NB | Item | Answer | Applied |
+|---|---|---|---|
+| NB-1 | NW-002, the target | A: one number, relabelled. "Might revisit after the next walk-through with Hannah, and add a range toggle. One number works for now." | Dispatch 20 builds the relabel |
+| NB-2 | NW-018 a, the type model | A: condo or co-op stays the pricing basis; a type label with sponsor and HDFC flags | Dispatch 16 (#80) |
+| NB-3 | NW-020 b, email photos | **B: copy them into Blobs at copy time**, served from a public unguessable route. "We'll want to hold on to these photos per listing anyway for future reference." Replaces the design of record's "linked" | phase B; the listing read keeps full image URLs |
+| NB-4 | NW-012, the condition step | **B: "Well kept"**, not "Good" | Dispatch 16 (#80) |
+| NB-5 | NW-028, the word for "tag" | **C: "Tags", with an ⓘ** | Dispatch 15 (#79) |
+| NB-6 | NW-026, ★ and tier | A: ★ sets 1st; 2nd or ✕ clears it | Dispatch 15 (#79), as built |
+| NB-7 | NW-044 b, an overridden fact | A: a fact, marked "changed", StreetEasy's value kept | Dispatch 15 (#79), as built |
+| NB-8 | NW-046, note and tags | A: practice agents need both; full agents need tags, the note optional. Reverses D-27's Save rule. "Open to C (a note only when a comp has no tags): hold it as a future alternative" | Dispatch 15 (#79), as built |
+| NB-9 | NW-059 b, derived tags | **C: pre-filled for full agents, suggested for practice agents**; contradictions clear themselves | Dispatches 16 (#80) and 20 |
+| NB-10 | NW-045, 059, the size scale | A: Similar within ±10%; smaller or bigger 10–25%; much past 25% (house-method configuration; TD-17, Noble's word, still open) | Dispatch 16 (#80) |
+
+NB-11 to NB-28 are still open on the sheet.
 
 ---
 
@@ -257,7 +266,17 @@ Blanca Project. Settled so far: `casacalliste@gmail.com` **stays** Casa's identi
 6. **A second owner** on the GitHub organization and each service account: who?
 7. **Is the GitHub Pages copy still used?** If not, it's turned off before the move.
 
-**Answer →** _type here_
+**Answer →** **Kimani, 2026-10-21 (answer sheet):**
+- **Q2 (AC-2):** "For now, Pro for $20/mo. Will upgrade to Max 5x if weekly use demands it." No second admin
+  yet; `success@casa-blanca.com` later if needed.
+- **Q3 (AC-3):** A, that line: status and planning readable from the personal Claude through the repo; client
+  data, agents' details and comp reports stay in Casa's account.
+- **Q4 (AC-4):** "Moved already, no?" Yes: the Casa desk is in the Casa account
+  (https://claude.ai/artifact/PyiLHNqBZhCyyQYZRXWZco), so it's work-only from here. The personal copy goes in
+  the clean-out.
+- **Q7 (AC-7):** "Don't think so. Remind me to check." On **Your actions**.
+
+Q1 is done (the keys moved, 2026-10-21); Q5 and Q6 are still open.
 
 ---
 
@@ -288,6 +307,15 @@ Blanca Project. Settled so far: `casacalliste@gmail.com` **stays** Casa's identi
 | D-21 | A headline before the email can be copied | "Sure, A. We'll revisit once we start testing with Noble properly and other agents after that." | `02-screens.md` Send; §10.2 |
 | D-22 | Where the client's name is asked | "A, the new comp modal. Should be asked at the earliest point we can make sense of, alongside buyer or seller." | `02-screens.md` The home |
 | D-23 | "Didn't sell" as a fourth group | "Sure, yeah A." | §6.3; Dispatch 08 phase 2 |
+
+### D-24 · Where agents' contact details come from — answered 2026-10-21
+Dispatch 12's one-time roster import (about 110 agents: names, titles, emails, phones). **Kimani (PP-1): A, the
+email-signatures doc, for now.** His longer view: Casa builds its own store of agent info and headshots, with
+the CMS serving the whole Creative Studio, the comp report included; an Agent Character Poll on the studio,
+where signed-in agents fill in their own details (possibly gating the tools behind it, decided once the poll
+exists), prefilled from the signatures doc. Alternatives: a FileMaker export (he'd need a walkthrough), or
+better, FileMaker's API if it has one. Already-filed photos import as **placed** (PP-2, 2026-10-15).
+**Applied:** Dispatch 12 phase 2 parses the doc; the poll and FileMaker are new work, not dispatched.
 
 ### D-15 · The esbuild / `@netlify/blobs` rule — resolved 2026-09-28
 The rule was wrong. Netlify bundles every v2 function with `nft` whatever `node_bundler` says, and that

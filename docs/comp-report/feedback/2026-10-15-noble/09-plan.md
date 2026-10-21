@@ -87,19 +87,23 @@ reset as landing before Design.
 NW-046, NW-002 and NW-018 a are built only when Kimani answers A; everything else builds on its recommendation
 unless he says otherwise before merge. They go on the Casa Answer Sheet.
 
+**Answered 2026-10-21 (NB-1 to NB-10):** the rows marked **Answered** below. Four differ from the recommendation:
+the word for "tag" (Tags, with an ⓘ), "Well kept", derived tags pre-filled for full agents, and email photos hosted
+in Blobs. The full record is D-28 in `docs/decisions.md`.
+
 | Id | Question | Recommended | Blocks |
 |---|---|---|---|
-| NW-026 | Does ★ also make a comp 1st tier? | Yes: ★ sets 1st; 2nd or ✕ clears it | 15 |
-| NW-028 | The word for "tag" | "Comp tags" | 15 |
-| NW-044 b | An overridden StreetEasy fact counts as | A fact, marked "changed", StreetEasy's value kept | 15 |
-| NW-046 | Note and tags both required? | Practice agents need both; full agents need tags, the note is optional | 15 (applied only if answered). It reverses D-27's "Saving a comp needs a note and a tag for every agent", so 15 changes `CompForm.tsx`'s Save rule to match |
-| NW-012 | The well-kept, not-redone step | "Good" | 16 |
+| NW-026 | Does ★ also make a comp 1st tier? | **Answered A:** yes, ★ sets 1st; 2nd or ✕ clears it | 15 |
+| NW-028 | The word for "tag" | **Answered C:** "Tags", with an ⓘ (not "Comp tags") | 15 |
+| NW-044 b | An overridden StreetEasy fact counts as | **Answered A:** a fact, marked "changed", StreetEasy's value kept | 15 |
+| NW-046 | Note and tags both required? | **Answered A:** practice agents need both; full agents need tags, the note is optional (C, a note only when untagged, held for later) | 15. It reverses D-27's "Saving a comp needs a note and a tag for every agent", so 15 changes `CompForm.tsx`'s Save rule to match |
+| NW-012 | The well-kept, not-redone step | **Answered B:** "Well kept" (not "Good") | 16 |
 | NW-045 | Where the six ungrouped tags go | Four to Similarities, two to a "Differences" group, drop nothing | 16 |
-| NW-045, 059 | The size scale | Similar ±10%, smaller/bigger 10–25%, much past 25% | 16 |
-| NW-059 b | Derived tags pre-filled or suggested? | Suggested, "from the data"; contradictions clear themselves | 16, 20 |
-| NW-018 a | Type model | A: two pricing types; an intake kind label with HDFC and sponsor flags | 16 (built only on A) |
-| NW-002 | The target: one number or a range? | One number, relabelled | 20 (relabel only on A) |
-| NW-020 b | Photos in the Designed email | Link StreetEasy's URLs (the design of record) | phase B |
+| NW-045, 059 | The size scale | **Answered A:** Similar ±10%, smaller/bigger 10–25%, much past 25% | 16 |
+| NW-059 b | Derived tags pre-filled or suggested? | **Answered C:** pre-filled for full agents, suggested "from the data" for practice agents; contradictions clear themselves | 16, 20 |
+| NW-018 a | Type model | **Answered A:** two pricing types; an intake kind label with HDFC and sponsor flags | 16 |
+| NW-002 | The target: one number or a range? | **Answered A:** one number, relabelled (a range toggle may come back after the walk-through with Hannah) | 20 |
+| NW-020 b | Photos in the Designed email | **Answered B:** copy them into Blobs at copy time, served from a public unguessable route; Casa keeps each listing's photos for reference | phase B |
 | NW-086 a | Mark as sent without a copy? | Yes | 18 |
 | NW-065 b | Five rows in the email too? | Yes, one table everywhere | the email's table (after 19) |
 | NW-070 | Default owner of the target | Client | 21 |

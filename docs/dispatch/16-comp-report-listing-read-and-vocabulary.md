@@ -62,8 +62,8 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
 9. **NW-012 (data) · the condition scale:** Needs work · Original · Good · Updated · Renovated · Mint, low to
    high. Map the existing `good` and `needs_work` states to their own labels (today they show as Updated and
    Original, `features.ts:77`). Export the ⓘ text beside the scale: "Original: never redone, as built. Good:
-   well kept, not redone. Needs work: dated or worn, a fixer-upper or gut." Use "Good" unless Kimani picks
-   "Well kept".
+   well kept, not redone. Needs work: dated or worn, a fixer-upper or gut." **Kimani, 2026-10-21 (NB-4): the
+   label is "Well kept"**, not "Good" (the stored state can stay `good`).
 10. **NW-045 (data) · tag groups.** `TAG_GROUPS` in `features.ts`: Similarities; Size as an ordered scale, one
     choice; Floor (adds Penthouse); Multi-floor (One, Two, Three floors; one choice); and, per the
     recommendation, Full service, Renovated, Water views and New development under Similarities, No outdoor
@@ -77,9 +77,9 @@ the vocabulary StreetEasy uses. Data and mapping only: Mason shows the new field
     size thresholds in the house method's configuration, not in code: a new `size_tag_percent` entry beside
     `size_percent` in `check_thresholds` (`engine/house-method/production.json`, validated in `load.ts`
     next to it), holding the ±10% edge; the far edge reads the existing `size_percent`, so the 25 lives in
-    one place. Bump the file's `version`, which stored reports record. No output changes. Mason shows them as suggestions in 20
-    (the recommendation for NW-059 b).
-12. **NW-018 a, only if Kimani answers "A".** The report's type stays the pricing basis (condo or co-op). Add
+    one place. Bump the file's `version`, which stored reports record. No output changes. **Kimani, 2026-10-21 (NB-9 C): pre-filled for full agents, suggested for
+    practice agents**, so export the level-neutral lists and let 20 apply the level. NB-10 confirmed the bands (A).
+12. **NW-018 a (Kimani answered "A", 2026-10-21).** The report's type stays the pricing basis (condo or co-op). Add
     an intake `kind` label (HDFC, condop, townhouse, house) with sponsor and HDFC as flags, filled from the
     read. No migration, no engine change. If he answers B, or hasn't answered, leave it out and say so.
 
