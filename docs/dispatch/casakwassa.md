@@ -23,7 +23,7 @@ Casanova, and became Casakwassa that day.
 |---|---|
 | Casa Answer Sheet: everything waiting on him | https://claude.ai/artifact/AMbuGGXf2FFfszUpZtARmA |
 | Dispatch Ledger: Casanova's | https://claude.ai/artifact/HR14yufem1YH1TxqqiWksA |
-| Key Maker: random tokens made in the browser, nothing saved | https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS |
+| Key Maker: every key and setting, a check for each place it is set (the `deployments` collection: read it before asking Kimani what is in), and fresh values made in the browser, never saved | https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS |
 | Post Log: the caption tracker the builders link | https://claude.ai/artifact/CfD19RGuRSjtAy3PrXp6PU |
 
 ## Keys and services, as of 2026-10-21
@@ -37,5 +37,10 @@ Casanova, and became Casakwassa that day.
 - **Vercel (Jev's AI Gateway):** a Casa team on Pro, signed in with `casacalliste` through Google.
 - **Not needed now:** `NETLIFY_BUILD_HOOK` (until the agent sites come back) and `ALLOWED_ORIGIN` (optional).
   `DEV_NOTEBOOK_KEY` stays as it is (Kimani's call).
+- **The cloud environment:** add the session keys (`DEV_NOTEBOOK_KEY`, `CR_DECIDE_KEY`, `CR_EVAL_ANTHROPIC_API_KEY`,
+  later `CR_INSPECT_KEY` and `CR_TEST_KEY`) as plain environment variables. Their scripts read them from
+  `process.env` and stop (or fall back to a fake run) without them. Network secrets, which the proxy adds to
+  requests, would keep the values out of sessions' reach, but each script would first need a small change to
+  run without seeing its key.
 - **Make** (team "My Team", org 6744294): the live scenario is the Mailchimp ISO Blast Automation. Its
   Gmail and Facebook connections have expired, but only inactive scenarios use them.
