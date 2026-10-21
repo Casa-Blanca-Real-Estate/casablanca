@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError, streamTurn, type ShownMessage } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
+import { HubertText } from './hubert/markdown.tsx';
 
 interface Live {
   text: string;
@@ -132,7 +133,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
           <div key={`${m.seq}-${m.createdAt}`} className={`hb-msg ${m.role}${m.inContext ? '' : ' dim'}`}>
             {m.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
             {m.role === 'assistant' && m.tools.length > 0 && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
-            {m.text && <p className="hb-text">{m.text}</p>}
+            {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
             {!m.inContext && m.role === 'assistant' && (
               <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
             )}
@@ -142,7 +143,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
           <div className="hb-msg assistant" aria-live="polite">
             {live.progress.map((p, i) => <p key={i} className="hb-progress">{p}</p>)}
             {live.tools.length > 0 && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
-            {live.text ? <p className="hb-text">{live.text}</p> : !live.note && <p className="hb-progress">Thinking…</p>}
+            {live.text ? <HubertText text={live.text} /> : !live.note && <p className="hb-progress">Thinking…</p>}
             {live.note && <p className="hb-text">{live.note}</p>}
           </div>
         )}

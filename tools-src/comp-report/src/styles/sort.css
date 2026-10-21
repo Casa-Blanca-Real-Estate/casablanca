@@ -1,10 +1,11 @@
 /* Sort (the handoff, screen 6; Dispatch 14). Classes are prefixed so-.
    Columns are shared by each group's header and its rows, so they line up:
-   no SF  20px · address · price 84 · date 72 · tier 132
-   SF     20px · address · price 84 · $/ft 64 · size 70 · date 72 · tier 132 */
+   no SF  20px · address · price 84 · date 72 · tier 168
+   SF     20px · address · price 84 · $/ft 64 · size 70 · date 72 · tier 168
+   (the tier is four segments since Dispatch 15: ★ · 1st · 2nd · ✕) */
 .so { position: relative; display: flex; flex-direction: column; gap: 28px; }
-.so-cols { display: grid; grid-template-columns: 20px minmax(0, 1fr) 84px 72px 132px; gap: 12px; align-items: center; }
-.so-cols.sf { grid-template-columns: 20px minmax(0, 1fr) 84px 64px 70px 72px 132px; }
+.so-cols { display: grid; grid-template-columns: 20px minmax(0, 1fr) 84px 72px 168px; gap: 12px; align-items: center; }
+.so-cols.sf { grid-template-columns: 20px minmax(0, 1fr) 84px 64px 70px 72px 168px; }
 
 /* Status squares (the group's swatch): 1px ink border on each. */
 .so-sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--cb-black); flex: none; }
@@ -75,6 +76,9 @@
   background: none; border: none; padding: 0; cursor: pointer; user-select: none;
 }
 .so-colh.on, .so-colh:hover { color: var(--cb-black); }
+/* The Tier header and its ⓘ: the tip hangs from the header's right edge. */
+.so-colh-tier { position: relative; display: inline-flex; align-items: center; gap: 6px; }
+.so-colh-tier .nr-tip { top: 20px; }
 
 .so-row-wrap { border-top: 1px solid var(--cb-line); border-left: 3px solid transparent; }
 .so-row-wrap.incomplete { border-left-color: var(--cb-yellow); }
@@ -90,22 +94,22 @@
 }
 .so-addr:hover { color: var(--cb-deep); }
 .so-flag { font-size: 11px; color: var(--cb-mid); }
-.so-need { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; }
+.so-need { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; cursor: default; }
+.so-need-link {
+  font: inherit; color: var(--cb-black); background: none; border: none; border-bottom: 1px solid var(--cb-yellow);
+  border-radius: 0; padding: 0; cursor: pointer;
+}
+.so-need-link:hover { color: var(--cb-deep); }
 .so-need-sq { display: inline-block; width: 7px; height: 7px; background: var(--cb-yellow); flex: none; }
 .so-unsortable { font-size: 11px; color: var(--cb-mid); }
-.so-star {
-  margin-left: auto; flex: none; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
-  font: inherit; font-size: 17px; line-height: 1; color: var(--cb-mid); background: none; border: none; padding: 0; cursor: pointer; opacity: 0;
-}
-.so-star.on { color: var(--cb-yellow); opacity: 1; }
-.so-row:hover .so-star, .so-star:focus-visible { opacity: 1; }
-span.so-star { cursor: default; }
 .so-price { font-weight: 800; }
 .so-size { display: flex; align-items: center; gap: 5px; }
 .so-est { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--cb-black); flex: none; }
 
-/* The tier: 1st ink, 2nd lavender, ✕ sage. */
-.so-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--cb-border); cursor: default; }
+/* The tier: ★ yellow, 1st ink, 2nd lavender, ✕ sage. Always visible (NW-026). */
+.so-seg { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--cb-border); cursor: default; }
+/* No tier yet: the yellow marker, just outside the control (NW-038). */
+.so-seg-need { position: absolute; left: -12px; top: 50%; margin-top: -3.5px; }
 .so-seg button {
   font: inherit; font-size: 11px; font-weight: 800; line-height: 1.5; text-align: center; padding: 6px 0;
   background: var(--cb-surface); color: var(--cb-mid); border: none; border-radius: 0; cursor: pointer;
@@ -116,6 +120,8 @@ span.so-star { cursor: default; }
 .so-seg button.primary.on { background: var(--cb-black); color: #fff; }
 .so-seg button.secondary.on { background: var(--cb-lavender); color: var(--cb-deep); }
 .so-seg button.excluded.on { background: var(--cb-sand); }
+.so-seg button.star { font-size: 13px; }
+.so-seg button.star.on { background: var(--cb-yellow); color: var(--cb-black); }
 .so-seg button:disabled { cursor: default; }
 .so-seg button:disabled:not(.on) { color: var(--cb-border); }
 .so-confirm { display: flex; align-items: center; gap: 10px; cursor: default; }
@@ -149,10 +155,17 @@ span.so-star { cursor: default; }
 }
 .so-edit:hover { color: var(--cb-black); }
 .so-pencil { display: inline-block; transform: rotate(90deg); }
+.so-trash { font: inherit; font-size: 14px; line-height: 1; background: none; border: none; padding: 0; cursor: pointer; opacity: .55; }
+.so-trash:hover:not(:disabled) { opacity: 1; }
+.so-trash:disabled { cursor: default; }
 /* 96px, not the prototype's 104, so four facts and the distance share a row without a size. */
 .so-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px 20px; }
 .so-metric { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.so-metric-label { font-size: 11px; color: var(--cb-mid); }
+.so-metric-label { font-size: 11px; color: var(--cb-mid); display: flex; align-items: center; gap: 6px; }
+/* A source fact's lock in edit mode (NW-044 a), and "changed" on a corrected one. */
+.so-lock { font: inherit; font-size: 11px; line-height: 1; background: none; border: none; padding: 0; cursor: pointer; opacity: .6; }
+.so-lock:hover, .so-lock.open { opacity: 1; }
+.so-changed { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cb-deep); background: var(--cb-lavender); padding: 1px 5px; cursor: help; }
 .so-metric-val { font-size: 18px; font-weight: 800; letter-spacing: -.02em; line-height: 1.3; }
 .so-metric-input {
   width: 100%; min-width: 0; border: none; border-bottom: 1px solid var(--cb-black); border-radius: 0; padding: 2px 0;
@@ -160,7 +173,6 @@ span.so-star { cursor: default; }
 }
 .so-metric-input[type='date'] { font-size: 15px; padding: 5px 0; }
 .so-metric-input:focus { outline: none; box-shadow: inset 0 -1px 0 var(--cb-black); }
-.so-fixed { margin: 0; font-size: 12px; color: var(--cb-mid); }
 
 .so-features { display: flex; flex-direction: column; }
 .so-features-head { display: flex; align-items: center; gap: 12px; padding-bottom: 6px; }
@@ -177,6 +189,10 @@ span.so-star { cursor: default; }
 .so-card .feature-row { grid-template-columns: 110px minmax(0, 1fr); border-top-color: var(--cb-line); }
 .so-card .feature-row .chip { padding: 4px 9px; }
 
+/* Comp tags: labelled, with the yellow marker when the comp still needs one (NW-040 a). */
+.so-tagsec { display: flex; flex-direction: column; gap: 8px; }
+.so-tagsec-title { display: flex; align-items: center; gap: 6px; }
+.so-tag-start { font-size: 12px; }
 .so-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .so-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.4; background: var(--cb-surface); border: 1px solid var(--cb-border); padding: 5px 10px; }
 .so-tag-x { font: inherit; font-size: 13px; line-height: 1; color: var(--cb-mid); background: none; border: none; padding: 0; cursor: pointer; }
@@ -189,6 +205,18 @@ span.so-star { cursor: default; }
 
 .so-note { margin: 0; font-size: 14px; line-height: 1.55; color: var(--cb-deep); white-space: pre-wrap; overflow-wrap: anywhere; }
 .so-note.empty { color: var(--cb-mid); }
+.so-note-pen {
+  font: inherit; font-size: 12px; line-height: 1; color: var(--cb-mid); background: none; border: none; padding: 0 0 0 8px;
+  cursor: pointer; vertical-align: baseline;
+}
+.so-note-pen:hover { color: var(--cb-black); }
+/* "+ Add a note": the note without Edit (NW-030). */
+.so-note-add {
+  align-self: flex-start; display: flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; color: var(--cb-mid);
+  background: none; border: 1px dashed var(--cb-sand); border-radius: 0; padding: 8px 12px; cursor: pointer;
+}
+.so-note-add:hover { color: var(--cb-black); border-color: var(--cb-black); }
+.so-note-edit { display: flex; flex-direction: column; gap: 10px; }
 .so-note-input {
   width: 100%; border: 1px solid var(--cb-border); border-bottom: 2px solid var(--cb-black); border-radius: 0; padding: 10px 12px;
   font: inherit; font-size: 15px; line-height: 1.5; color: var(--cb-black); background: var(--cb-surface); resize: vertical; min-height: 72px;
@@ -198,7 +226,9 @@ span.so-star { cursor: default; }
 .so-why-sq { width: 7px; height: 7px; background: var(--cb-yellow); flex: none; }
 .so-error { margin: 0; font-size: 12px; color: var(--cb-red); }
 .so-card-actions { display: flex; align-items: center; gap: 18px; font-size: 12px; }
-.so-remove { color: var(--cb-mid); }
+/* Collapsing with unsaved changes (NW-043): asked on the card, not in a dialog. */
+.so-ask { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--cb-surface); border-left: 3px solid var(--cb-yellow); font-size: 13px; font-weight: 800; }
+.so-ask .link { font-size: 13px; }
 .so-save { margin-left: auto; font-size: 11px; padding: 11px 18px; }
 
 /* Checks, sources and history: folded under the card. */
@@ -228,3 +258,23 @@ span.so-star { cursor: default; }
 .so-tile-n { color: var(--cb-mid); font-weight: 400; }
 .so-tile-val { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
 .so-tile-unit { font-size: 13px; color: var(--cb-mid); font-weight: 400; letter-spacing: 0; }
+
+/* ─── The bottom of Sort (Dispatch 15) ────────────────────────────────────── */
+/* What was taken out, with Put back (NW-056). */
+.so-removed { font-size: 13px; }
+.so-removed summary {
+  cursor: pointer; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cb-mid);
+  list-style: none; display: inline-flex; gap: 6px;
+}
+.so-removed summary::-webkit-details-marker { display: none; }
+.so-removed summary::before { content: '+'; }
+.so-removed[open] summary::before { content: '–'; }
+.so-removed summary:hover { color: var(--cb-black); }
+.so-removed-list { list-style: none; margin: 10px 0 0; padding: 0; background: var(--cb-surface); }
+.so-removed-row { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--cb-line); }
+.so-removed-row:first-child { border-top: none; }
+.so-removed-addr { font-weight: 800; }
+.so-removed-mid { font-size: 12px; color: var(--cb-mid); }
+.so-putback { margin-left: auto; font-size: 12px; }
+/* The Findings CTA again, at the end of the list (NW-053). */
+.so-bottom-cta { margin-left: 0; justify-content: flex-end; }

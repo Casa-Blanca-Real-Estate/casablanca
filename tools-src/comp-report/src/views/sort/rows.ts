@@ -7,11 +7,11 @@ import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
 import { psf } from '../../../workspace/format.ts';
 import { noteOf } from '../../../workspace/state.ts';
 import { compAddress, compPrice, compStatus, rowPsf, STATUS_LABEL, STATUS_ORDER } from '../workspace/comps.tsx';
-import { needsOf } from '../workspace/screens.ts';
+import { needsOf, type Level } from '../workspace/screens.ts';
 import type { RowNeed } from './table.ts';
 
 export {
-  monthYear, needText, nextSort, passes, shortName, shortPrice, sortRows, tagCounts,
+  monthYear, NEED_WORD, needText, nextSort, passes, shortName, shortPrice, sortRows, tagCounts,
   type Filter, type RowNeed, type SortKey, type SortState,
 } from './table.ts';
 
@@ -46,12 +46,12 @@ export interface Row {
   dom: number | null;
 }
 
-export function toRow(c: WorkspaceComp, out: CompOut | undefined): Row {
+export function toRow(c: WorkspaceComp, out: CompOut | undefined, level: Level): Row {
   const j = c.judgment;
   const f = c.record.facts;
   const status = compStatus(c);
   const group: GroupId = c.unsortable || !j || !status ? 'unsortable' : status;
-  const needs: RowNeed[] = group === 'unsortable' ? [] : c.unconfirmed ? ['confirm'] : needsOf(c);
+  const needs: RowNeed[] = group === 'unsortable' ? [] : c.unconfirmed ? ['confirm'] : needsOf(c, level);
   const area = f.area_sqft;
   return {
     c,

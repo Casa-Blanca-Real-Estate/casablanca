@@ -21,25 +21,30 @@ export function isScreen(s: string | null): s is ScreenId {
   return s === 'sort' || s === 'gate' || s === 'findings' || s === 'send' || s === 'done';
 }
 
-/** What a comp still needs before Findings unlocks (the handoff: a tier, a note and at least one tag). */
+/** What a comp still needs before Findings unlocks: a tier, at least one comp tag, and a note for a practice agent. */
 export type Need = 'tier' | 'note' | 'tag';
 
-export function needsOf(c: WorkspaceComp): Need[] {
+/** The agent's level: practice (new) or full (graduated). */
+export type Level = 'practice' | 'full';
+
+/**
+ * NB-8 (NW-046, Kimani's A, 2026-10-21): a practice agent needs a note and
+ * comp tags on every comp; a full agent needs the tags, and the note is theirs
+ * to write or not. This reverses D-27's "a note and a tag for every agent".
+ */
+export const noteRequired = (level: Level) => level === 'practice';
+
+export function needsOf(c: WorkspaceComp, level: Level): Need[] {
   const j = c.judgment;
   const needs: Need[] = [];
   if (!j?.tier) needs.push('tier');
-  if (!noteOf(j)) needs.push('note');
+  if (noteRequired(level) && !noteOf(j)) needs.push('note');
   if (!(j?.tags?.length)) needs.push('tag');
   return needs;
 }
 
-/** "Needs tier, note, tag". */
-export function needsLabel(needs: Need[]): string {
-  return needs.length ? `Needs ${needs.join(', ')}` : '';
-}
-
 export interface SortReadiness {
-  /** Findings unlocks: every comp that can be sorted has a tier, a note and a tag, and none waits for a confirm. */
+  /** Findings unlocks: every comp that can be sorted has what it needs (needsOf), and none waits for a confirm. */
   ready: boolean;
   /** The comps that still need something, in list order. */
   incomplete: { comp: WorkspaceComp; needs: Need[] }[];
@@ -47,6 +52,8 @@ export interface SortReadiness {
   toConfirm: WorkspaceComp[];
   /** Comps that can be sorted (a comp the engine can't sort doesn't count). */
   counted: number;
+  /** A note is required at this level. */
+  noteRequired: boolean;
 }
 
 /**
@@ -54,19 +61,28 @@ export interface SortReadiness {
  * must be confirmed or removed; comps that can't be sorted (no address, a
  * status the engine doesn't know) don't count. With no comps, it isn't ready.
  */
-export function sortReadiness(comps: WorkspaceComp[]): SortReadiness {
+export function sortReadiness(comps: WorkspaceComp[], level: Level): SortReadiness {
   const sortable = comps.filter((c) => !c.unsortable);
   const toConfirm = sortable.filter((c) => c.unconfirmed);
-  const incomplete = sortable.filter((c) => !c.unconfirmed).map((comp) => ({ comp, needs: needsOf(comp) })).filter((x) => x.needs.length);
-  return { ready: sortable.length > 0 && !toConfirm.length && !incomplete.length, incomplete, toConfirm, counted: sortable.length };
+  const incomplete = sortable.filter((c) => !c.unconfirmed).map((comp) => ({ comp, needs: needsOf(comp, level) })).filter((x) => x.needs.length);
+  return {
+    ready: sortable.length > 0 && !toConfirm.length && !incomplete.length, incomplete, toConfirm, counted: sortable.length,
+    noteRequired: noteRequired(level),
+  };
 }
 
-/** "3 comps need a tier, note or tag" — the helper link under the Findings button. */
+/** What every comp needs, in a phrase: "a tier, a note and comp tags", or "a tier and comp tags". */
+export function needsPhrase(r: Pick<SortReadiness, 'noteRequired'>): string {
+  return r.noteRequired ? 'a tier, a note and comp tags' : 'a tier and comp tags';
+}
+
+/** "3 comps need a tier, note or comp tags" — the helper link under the Findings button. */
 export function readinessLine(r: SortReadiness): string {
   if (r.ready) return '';
   if (!r.counted) return 'Add comps to sort';
   const parts: string[] = [];
-  if (r.incomplete.length) parts.push(`${r.incomplete.length} comp${r.incomplete.length === 1 ? ' needs' : 's need'} a tier, note or tag`);
+  const what = r.noteRequired ? 'a tier, note or comp tags' : 'a tier or comp tags';
+  if (r.incomplete.length) parts.push(`${r.incomplete.length} comp${r.incomplete.length === 1 ? ' needs' : 's need'} ${what}`);
   if (r.toConfirm.length) parts.push(`${r.toConfirm.length} to confirm`);
   return parts.join(' · ');
 }

@@ -137,6 +137,18 @@ function echo(body: Block): Script {
       delayMs: 15,
     };
   }
+  // Hubert's markdown (Dispatch 15): a reply with a heading, bold, a list, code and links, one of them refused.
+  if (/\bmarkdown\b/i.test(said)) {
+    return {
+      content: [{
+        type: 'text',
+        text: '## Three to look at\nThe **closest match** is *200 Chambers*:\n- **200 Chambers #10A**: sold, full service\n- **5 Franklin #14A**: size is `approximate`\n'
+          + '- [its listing](https://streeteasy.com/building/200-chambers-street) and https://streeteasy.com/sale/1\n\nNot a link: [click](javascript:alert(1)) or [this](https://streeteasy.com@evil.example/x).',
+      }],
+      stopReason: 'end_turn',
+      delayMs: 15,
+    };
+  }
   if (/which report/i.test(said)) {
     return {
       content: [

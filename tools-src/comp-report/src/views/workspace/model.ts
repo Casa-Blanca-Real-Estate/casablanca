@@ -89,7 +89,7 @@ export interface Workspace {
   setViewAsNewAgent: (on: boolean) => void;
   /** Admin dev scaffolding (About this screen, Build notes, Fill with sample): off by default. */
   devTools: boolean;
-  /** Sort → Gate: every comp has a tier, a note and a tag, and none waits for a confirm. */
+  /** Sort → Gate: every comp has a tier, comp tags and (a practice agent) a note, and none waits for a confirm. */
   readiness: SortReadiness;
   /** Sort's filter, shared so the Findings button's helper link can filter to the incomplete rows. */
   sortFilter: { incomplete: boolean; tags: string[] };
@@ -98,16 +98,24 @@ export interface Workspace {
   editComp: (reportCompId: string, edit: CompEdit) => Promise<void>;
   /** Export rows the agent took out: the only sales Hubert may point back to. */
   suggestions: { judgment: CompJudgment; record: CompRecord }[];
+  /** Every comp the agent took out, for Sort's "Removed" fold (Dispatch 15): each can be put back. */
+  removed: WorkspaceComp[];
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
   outcomes: Outcomes;
   setOutcomes: (next: Outcomes) => void;
   reached: Reached;
-  /** A short confirmation at the bottom of the screen: "Copied. Paste into Gmail." */
-  toast: (message: string) => void;
+  /** A short confirmation at the bottom of the screen: "Copied. Paste into Gmail." An action (Undo) shows beside it. */
+  toast: (message: string, action?: ToastAction) => void;
   /** Back to the reports list (what ← Reports does). */
   back: () => void;
+}
+
+/** A toast's one action: "Undo". */
+export interface ToastAction {
+  label: string;
+  run: () => void;
 }
 
 export interface StepProps {
