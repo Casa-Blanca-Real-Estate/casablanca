@@ -13,7 +13,7 @@ is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`
 
 **Pending decisions for Kimani, across every track, are in `docs/decisions.md`** — each with its
 context and a field to answer in. Don't guess at an open decision; check there first. Kimani answers them, and
-everything else waiting on him, on the **Casa Answer Sheet** (https://claude.ai/artifact/R57ZAZVbGDRP69o7gGG4Ry),
+everything else waiting on him, on the **Casa Answer Sheet** (https://claude.ai/artifact/AMbuGGXf2FFfszUpZtARmA),
 which Casanova keeps current: `docs/answer-sheet/README.md`.
 
 **Kimani's notes on the site are in the dev notebook** — he writes them while using it (Ctrl+. / ⌘. on
@@ -89,8 +89,8 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 - **Casanova** — overseer. Holds the whole picture, plans, writes dispatches, reviews and merges
   PRs, keeps repo context current. Does not take on the large builds itself. Its runbook and latest
   handoff: `docs/dispatch/casanova.md`.
-- **The Dispatch Ledger** (https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq#casa) tracks every kickoff from queued to landed. It's one
-  artifact shared with MindBinder, and Casa's lines are on its Casa Blanca tab. Sessions mark their own
+- **The Dispatch Ledger** (https://claude.ai/artifact/HR14yufem1YH1TxqqiWksA) tracks every kickoff from queued to landed. It's Casa's
+  own, in the Casa Blanca Claude account (split from the ledger shared with MindBinder, 2026-10-21). Sessions mark their own
   lines with the `ArtifactData` tool (rule 11 in `docs/dispatch/README.md`).
 - **Dispatched sessions** — own one brief from `docs/dispatch/` end to end, open a PR to
   `claude/main` when done, and sign their work with their session name.

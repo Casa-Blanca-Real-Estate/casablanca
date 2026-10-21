@@ -26,7 +26,7 @@ environment. Keep it current: it's how the next one starts.
   big files, summaries over dumps.
 - **Decisions are his.** Put each one in `docs/decisions.md` with its context and options; never guess
   at an open one. A reversible engineering call is yours: make it and log it.
-- **The Casa Answer Sheet** (https://claude.ai/artifact/R57ZAZVbGDRP69o7gGG4Ry) is where he answers.
+- **The Casa Answer Sheet** (https://claude.ai/artifact/AMbuGGXf2FFfszUpZtARmA) is where he answers.
   Everything waiting on him goes on it, and you record his answers each block: `docs/answer-sheet/README.md`.
 - **Agents (the brokerage's) rarely respond.** Never design a workflow that depends on them.
 
@@ -83,10 +83,10 @@ environment. Keep it current: it's how the next one starts.
 
 ## The Dispatch Ledger
 
-https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq#casa — Kimani's artifact, shared with MindBinder's
-overseer (Big Kahuna). Casa's lines are on the Casa Blanca tab.
+https://claude.ai/artifact/HR14yufem1YH1TxqqiWksA — Casa's own, in the Casa Blanca Claude account. Stood up 2026-10-21 from
+`docs/dispatch/ledger-export/` (the Casa side of the ledger Kimani's personal account shares with MindBinder).
 
-- **Each kickoff is a line** in collection `dispatches`, with the fields Big Kahuna's use, plus:
+- **Each kickoff is a line** in collection `dispatches`, with these fields, plus:
   - `"project": "casa"`;
   - an id of `casa-r<round>-<item>`;
   - a `code` such as `D13`;
@@ -97,9 +97,11 @@ overseer (Big Kahuna). Casa's lines are on the Casa Blanca tab.
   `if_version`.
 - **Sessions mark their own line delivered** when their PR opens (rule 11). Mark it landed when you
   merge: `status: "landed"`, `landedIn`, `landedAt`, `updatedBy: "Casanova"`.
-- **Never touch a line without `project: "casa"`.** Those are MindBinder's.
-- **Don't change the ledger's page.** It's shared with MindBinder; everything Casa needs fits its fields
-  (follow-ups are ordinary lines with code `FU·<pr>`).
+- **Keep `project: "casa"` and the `casa-` id prefix on every line,** so the lines match the old ledger's.
+  Follow-ups are ordinary lines with code `FU·<pr>`. The page is `docs/dispatch/ledger-export/ledger.html`;
+  republish from it if it changes.
+- **The old shared ledger** (`MeqkECtyVRXJxqjKBw1yuq`, personal account) isn't reachable from here. Kimani
+  drops its Casa lines once this one is confirmed.
 
 ## Gotchas
 
@@ -148,3 +150,16 @@ before 23 items 3–4, and before any production key.
 **Agent budget for this round (Kimani's):** 5 Opus and 30–40 Sonnet or Haiku in total. The triage used the 5
 Opus. Triage, fixes and checks used 24 Sonnet. Ask before going past 40.
 
+
+## Handoff, 2026-10-21 — the Casa Blanca Claude account
+
+Casanova now runs in Casa's own Claude account. The repo is `Casa-Blanca-Real-Estate/casablanca`, and
+Netlify is relinked to it (Kimani).
+- **New artifacts, made in this account:** the Dispatch Ledger (`HR14yufem1YH1TxqqiWksA`, seeded with the
+  64 documents in `ledger-export/`) and the Answer Sheet (`AMbuGGXf2FFfszUpZtARmA`, built from
+  `questions.json`, with no answers carried over because there were none). Kimani rebuilt the Post Log
+  here (`CfD19RGuRSjtAy3PrXp6PU`), and the four carousel builders now link to it.
+- **The old personal-account artifacts** (the shared ledger, the old sheet, the old Post Log
+  `U5g6cCuSs1igsswBWn5Jxc`) can't be reached from here. Kimani retires them.
+- **Keys:** Kimani is setting them up on Casa's side, using the walkthrough from this session. Firecrawl
+  was always Casa's. `CB_CMS_TOKEN` was never set. The dev notebook key stays as it is (Kimani: no risk).

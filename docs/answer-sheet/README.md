@@ -1,6 +1,6 @@
 # The Casa Answer Sheet
 
-**https://claude.ai/artifact/R57ZAZVbGDRP69o7gGG4Ry** — Kimani's one place to answer everything waiting on
+**https://claude.ai/artifact/AMbuGGXf2FFfszUpZtARmA** — Kimani's one place to answer everything waiting on
 him across the Casa tracks: open decisions, questions merged PRs left for him, team feedback to route, and
 his to-dos. A clone of MindBinder's KJ Answer Sheet (same page and behavior), in Casa's palette. Made by
 Casanova, 2026-10-14.
@@ -43,7 +43,7 @@ The sheet above lives in Kimani's personal account. Nothing needs carrying over 
 2. Publishes it as a **new** artifact (no `url`), icon `checklist`, with
    `capabilities: {"db": {"rules": [{"path": "", "read": "admin", "write": "admin"}]}, "user": {}}`
    so only the owner can read or write answers.
-3. Replaces the URL at the top of this file and in `CLAUDE.md` with the new one. From then on the loop above
+3. Replaces the URL at the top of this file and in `CLAUDE.md` with the new one (done 2026-10-21: the old sheet was `R57ZAZVbGDRP69o7gGG4Ry`). From then on the loop above
    runs against the new URL.
 4. Kimani deletes the old sheet in his personal account once the new one opens (any answers made there in
    the meantime are read with `ArtifactData` and recorded first).

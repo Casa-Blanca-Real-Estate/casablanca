@@ -1,7 +1,7 @@
 # Pending decisions
 
 Everything waiting on Kimani, across every track. **The quickest way to answer is the Casa Answer Sheet**
-(https://claude.ai/artifact/R57ZAZVbGDRP69o7gGG4Ry), which carries all of this plus PR questions and team
+(https://claude.ai/artifact/AMbuGGXf2FFfszUpZtARmA), which carries all of this plus PR questions and team
 feedback; Casanova records what you pick here. **Or answer inline:** open this file on GitHub, click
 the pencil, replace a *type here* placeholder with your answer (a letter is enough where there are
 options), and commit. Casanova folds each answer into the right design doc, logs it there, and moves

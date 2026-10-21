@@ -24,7 +24,7 @@ this folder is authoritative; Kimani pastes a short kickoff into the new session
 9. **Anything internal-only at a new path goes on the forced-404 list** in `netlify.toml` —
    `publish = "."` serves the whole repo root to the public web (`/CLAUDE.md`).
 10. **Keep your roster entry current** through your PR — never by pushing to `claude/main` directly.
-11. **Mark your line on the Dispatch Ledger.** Kimani's ledger (https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq, the Casa Blanca tab) has
+11. **Mark your line on the Dispatch Ledger.** The ledger (https://claude.ai/artifact/HR14yufem1YH1TxqqiWksA) has
     one line per kickoff, and your kickoff names its id (`casa-r6-1`, say). When your PR opens, use the
     `ArtifactData` tool:
     1. `get` the line from collection `dispatches`;
@@ -53,7 +53,7 @@ Each dispatch opens with: its number and title, **dispatched by** (session name 
 (session name), the design sections it builds from, and what it depends on. It ends with a definition of
 done. It carries the rules above by reference, and restates rules 3–5 so no kickoff can drop them.
 
-**Every kickoff goes on the Dispatch Ledger** (https://claude.ai/artifact/MeqkECtyVRXJxqjKBw1yuq#casa) as a line on the Casa Blanca tab, in
+**Every kickoff goes on the Dispatch Ledger** (https://claude.ai/artifact/HR14yufem1YH1TxqqiWksA) as a line, in
 the round it goes out with. The kickoff names the line's id, and the line holds the kickoff text to
 copy.
 - **The ledger is shared with MindBinder's overseer, Big Kahuna.** Casa lines carry `"project": "casa"`
