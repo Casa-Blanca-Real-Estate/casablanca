@@ -11,9 +11,12 @@ Casanova, and became Casakwassa that day.
   ready to build, hand it to Casanova as a short note or a draft dispatch.
 - **Anything that needs Kimani directly:** accounts, keys, services and connectors. Walk him through it
   step by step, check the result in production, and record it.
-- **Repo docs:** `CLAUDE.md`, `docs/decisions.md`, `docs/context/` and the Answer Sheet
-  (`docs/answer-sheet/README.md`). Casanova keeps its own runbook, the dispatches, the roster and the
-  ledger.
+- **Repo docs:** `CLAUDE.md`, `docs/context/` and the account and key notes in `docs/decisions.md`. Casanova
+  keeps the Answer Sheet (it records Kimani's answers from its project threads, on `claude/project-thread-*`
+  branches), its own runbook, the dispatches, the roster and the ledger. Before editing
+  `docs/answer-sheet/questions.json` or `docs/decisions.md`, check those branches for unmerged edits
+  (`git merge-tree --write-tree --name-only origin/claude/main <branch>`), and leave the sheet to Casanova.
+- **Passing work to Casanova:** a note in the ledger's `notes` collection (`by: "Casakwassa"`).
 - **No builds and no merges.** Docs go straight to `claude/main` (Kimani's standing permission). Fetch
   first: Casanova pushes there too.
 
