@@ -33,6 +33,21 @@ Casanova, 2026-10-14.
 5. **Clear stale answers:** after recording, delete their `answers` documents, so a re-asked question
    starts fresh.
 
+## Moving it to the Casa Claude account (2026-10-21)
+
+The sheet above lives in Kimani's personal account. Nothing needs carrying over but the page: on
+2026-10-21 there were no saved answers or reading marks (both collections empty), so the questions in
+`questions.json` are the whole state. In the Casa account, Casanova:
+
+1. Builds it: `node docs/answer-sheet/build.mjs <scratchpad>/casa-answers.html`.
+2. Publishes it as a **new** artifact (no `url`), icon `checklist`, with
+   `capabilities: {"db": {"rules": [{"path": "", "read": "admin", "write": "admin"}]}, "user": {}}`
+   so only the owner can read or write answers.
+3. Replaces the URL at the top of this file and in `CLAUDE.md` with the new one. From then on the loop above
+   runs against the new URL.
+4. Kimani deletes the old sheet in his personal account once the new one opens (any answers made there in
+   the meantime are read with `ArtifactData` and recorded first).
+
 ## Files
 
 | File | What |
