@@ -1,6 +1,6 @@
 // The handoff's paste bar (New report 3 of 3, and Sort's "+ Add comps"):
 // paste StreetEasy links (each read in the background, its row filling in as
-// the read finishes), or start typing an address (the comp's form opens with
+// the read finishes; a pasted link shows as the clean link, NW-004), or type an address (the comp's form opens with
 // it), or "Type one in". Drop the StreetEasy export anywhere on the screen
 // that holds it (useDropTarget). Screenshots aren't read in this version: the
 // screen says so where they're dropped.
@@ -49,6 +49,14 @@ async function addExport(ws: Workspace, file: File): Promise<string | null> {
     ws.applyServer(await workspaceApi.importFile(ws.reportId, { filename: file.name, contentBase64: toBase64(bytes), asOf: ws.today }));
   });
   return null;
+}
+
+/** Every word a StreetEasy link that checks out: the clean links, a space apart. Otherwise null. */
+export function cleanLinks(text: string): string | null {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length || !words.every((w) => LINKISH.test(w))) return null;
+  const checked = words.map((w) => checkListingLink(/^https?:\/\//i.test(w) ? w : `https://${w}`));
+  return checked.every((c) => c.ok) ? checked.map((c) => (c.ok ? c.url : '')).join(' ') : null;
 }
 
 export const SCREENSHOTS_LATER = 'Screenshots aren’t read yet: paste the listing’s link, or type it in for now.';
@@ -123,10 +131,19 @@ export function AddBar({ ws, note, onNote }: { ws: Workspace; note: string | nul
     <div className="add-bar">
       <div className="paste-bar">
         <input
-          aria-label="Paste a StreetEasy link or start typing an address"
+          aria-label="Paste StreetEasy links, or type an address"
           value={paste}
-          placeholder="Paste a StreetEasy link or start typing an address"
+          placeholder="Paste StreetEasy links to fill them in, or type an address and fill it in yourself"
           onChange={(e) => onType(e.target.value)}
+          // Links that check out show as the clean links the tool reads (NW-004).
+          onPaste={(e) => {
+            const el = e.currentTarget;
+            const next = `${el.value.slice(0, el.selectionStart ?? el.value.length)}${e.clipboardData.getData('text')}${el.value.slice(el.selectionEnd ?? el.value.length)}`;
+            const clean = cleanLinks(next);
+            if (clean === null || clean === next) return;
+            e.preventDefault();
+            onType(clean);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();

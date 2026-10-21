@@ -223,6 +223,8 @@ function HomeScreen({ ws, onScreen, onClose }: { ws: Workspace; onScreen: (s: St
       next.address = entry(l.address, today);
       if (l.unit) next.unit = entry(l.unit, today);
       else delete next.unit;
+      // The report is called what's typed (Dispatch 14's follow-up): a changed address retitles it.
+      if (l.title !== ws.report.title) ws.setTitle(l.title);
     } else {
       // A link (its page fills the address) or nothing: the typed address goes.
       if (!next.address && !next.unit) return;
@@ -257,7 +259,7 @@ function HomeScreen({ ws, onScreen, onClose }: { ws: Workspace; onScreen: (s: St
   const i = ws.intake;
   const meta = home && (home.status === 'queued' || home.status === 'running')
     ? `${TYPE_LABEL[ws.propertyType]} · reading its StreetEasy page…`
-    : [TYPE_LABEL[ws.propertyType], i.beds && `${i.beds.value} bd`, i.baths && `${i.baths.value} ba`, i.floor && `Fl ${i.floor.value}`].filter(Boolean).join(' · ');
+    : [TYPE_LABEL[ws.propertyType], i.neighborhood?.value, i.beds && `${i.beds.value} bd`, i.baths && `${i.baths.value} ba`, i.floor && `Fl ${i.floor.value}`].filter(Boolean).join(' · ');
 
   return (
     <Frame

@@ -7,15 +7,16 @@
 // A typed-in comp's facts are the agent's, so editing one sends it again (the
 // same address is the same comp). A comp from the export or a link keeps its
 // source's facts: only its note, tags and features change here.
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import type { ListingStatus } from '../../../engine/index.ts';
 import { workspaceApi } from '../../api.ts';
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
-import { cleanFeatures, type Features } from '../../../workspace/features.ts';
+import { cleanFeatures, isTag, type Features, type Tag } from '../../../workspace/features.ts';
 import { noteOf } from '../../../workspace/state.ts';
 import { compAddress, compPrice, compStatus, STATUS_LABEL, STATUS_ORDER } from '../workspace/comps.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { homeName, noteRequired } from '../workspace/screens.ts';
+import { useCloseGuard } from '../newcomp/Frame.tsx';
 import { FeaturePicker, TagPicker } from './Pickers.tsx';
 import '../../styles/compform.css';
 
@@ -91,6 +92,7 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
   onCancel: () => void;
 }) {
   const [d, setD] = useState<Draft>(() => draftFrom(comp, prefill));
+  const [start] = useState(d);
   const [error, setError] = useState<string | null>(null);
   const home = homeName(ws.intake, ws.report.title);
   const editing = Boolean(comp?.judgment);
@@ -99,9 +101,21 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
 
   const address = hideAddress ? (prefill?.address ?? '') : d.address;
+  // In the new-report modal, Escape asks before a half-filled comp is dropped (Dispatch 20).
+  const dirty = JSON.stringify(d) !== JSON.stringify(start) || (hideAddress && Boolean(address.trim()));
+  useCloseGuard(dirty);
+  const type = comp?.record.facts.property_type?.value ?? ws.propertyType;
+  // "First floor" only while the floor could be the first (NW-059 a).
+  const floorNow = readCount(d.floor);
+  const hidden: Tag[] = floorNow !== null && floorNow !== 1 ? ['First floor'] : [];
+  const suggested = useMemo(
+    () => (comp?.judgment ? ws.tagSuggestions[comp.judgment.reportCompId] ?? [] : []),
+    [comp?.judgment, ws.tagSuggestions],
+  );
   // NB-8: a practice agent saves with a note and comp tags; a full agent with the tags (the note is optional).
   const needNote = noteRequired(ws.level);
-  const missing = (needNote && !d.note.trim()) || !d.tags.length;
+  // Only the list's tags count: an agent's own tag is extra (Dispatch 20).
+  const missing = (needNote && !d.note.trim()) || !d.tags.some(isTag);
   const need = missing ? (needNote ? 'Add a note and a comp tag to save' : 'Add a comp tag to save') : !factsFixed && !address.trim() ? 'Add the address to save' : '';
 
   async function save(e: FormEvent) {
@@ -205,12 +219,12 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
         <textarea className="box cf-note" rows={2} maxLength={2000} value={d.note} onChange={(e) => set('note', e.target.value)} placeholder={`What makes it comparable to ${home}, or not`} />
       </label>
       <div className="cf-block">
-        <span className="fh">Comp tags <span className="opt">(pick at least one)</span></span>
-        <TagPicker value={d.tags} onChange={(v) => set('tags', v)} label="Comp tags" />
+        <span className="fh">Comp tags <span className="opt">(pick at least one from the list)</span></span>
+        <TagPicker value={d.tags} onChange={(v) => set('tags', v)} label="Comp tags" hidden={hidden} suggested={suggested} />
       </div>
       <div className="cf-block">
         <span className="fh">Features <span className="opt">(lavender outline: {home} has it too)</span></span>
-        <FeaturePicker value={d.features} onChange={(v) => set('features', v)} home={ws.homeFeatures} />
+        <FeaturePicker value={d.features} onChange={(v) => set('features', v)} home={ws.homeFeatures} type={type} />
       </div>
       {error && <p className="cf-error" role="alert">{error}</p>}
       <div className="cf-foot">

@@ -4,7 +4,9 @@
 // default: the engine computes with it), and the target, optional.
 //
 // The target keeps D-4: Hubert doesn't see it until his own math is done, it's
-// never in the email, and it stays editable on Findings.
+// never in the email, and it stays editable on Findings. It's one number,
+// labelled as the client's (NB-1 A, Dispatch 20): Dispatch 21 changes the label
+// when the target's owner changes.
 import { useId, type ReactNode } from 'react';
 import type { Audience } from '../../../workspace/state.ts';
 import { checkListingLink, titleFromLink, type LinkCheck } from '../../../workspace/links.ts';
@@ -18,7 +20,18 @@ const LINKISH = /^(https?:\/\/|www\.|streeteasy)/i;
 
 export const TYPE_LABEL: Record<PropertyType, string> = { coop: 'Co-op', condo: 'Condo' };
 
-export const TARGET_TIP = 'Hidden from Hubert, the assistant, so it can’t steer the range. It’s never in the email, and you can change it on Findings.';
+export const TARGET_TIP = 'Hubert, the AI assistant, doesn’t see this, so it can’t sway his read of the comps. It’s never in your client’s email and doesn’t change any number. Findings shows it against the range, and you can change it there.';
+
+/** The target's label, as the client's (NB-1 A): the client is the owner's default (Dispatch 21). */
+export function targetLabel(side: Audience): string {
+  return side === 'buyer' ? 'Client’s offer target' : 'Client’s target price';
+}
+
+/** A pasted link that checks out, as the clean link the tool reads (NW-004); otherwise null. */
+export function cleanLink(text: string): string | null {
+  const v = readHomeLine(text);
+  return v.kind === 'link' && v.check.ok && v.check.url !== text ? v.check.url : null;
+}
 
 /** What's in the home's line: a StreetEasy link (checked), an address typed in, or nothing yet. */
 export type HomeLineValue =
@@ -61,8 +74,22 @@ export function HomeLineInput({ text, onText, type, disabled }: {
         aria-label="The home’s StreetEasy link, or its address"
         value={text}
         disabled={disabled}
-        placeholder="Paste the home’s StreetEasy link, or type its address"
+        placeholder="Paste its StreetEasy link to fill it in, or type the address and fill it in yourself"
         onChange={(e) => onText(e.target.value)}
+        // A link that checks out shows as the clean link the tool reads (NW-004): on a paste, and when the field is left.
+        onPaste={(e) => {
+          const el = e.currentTarget;
+          const pasted = e.clipboardData.getData('text');
+          const next = `${el.value.slice(0, el.selectionStart ?? el.value.length)}${pasted}${el.value.slice(el.selectionEnd ?? el.value.length)}`;
+          const clean = cleanLink(next.trim());
+          if (!clean) return;
+          e.preventDefault();
+          onText(clean);
+        }}
+        onBlur={() => {
+          const clean = cleanLink(text.trim());
+          if (clean) onText(clean);
+        }}
         autoFocus={!text}
       />
       {v.kind === 'link' && !v.check.ok && (
@@ -157,7 +184,7 @@ export function HomeFields({ line, side, onSide, client, onClient, type, onType,
         </div>
         <div className="nr-col">
           <div className="fh nr-label-line">
-            <label htmlFor={`${ids}-target`}>{buyer ? 'Offer target · optional' : 'Target price · optional'}</label>
+            <label htmlFor={`${ids}-target`}>{targetLabel(side)} · optional</label>
             <span className="nr-sub">{buyer ? '(what your client hopes to pay)' : '(what you or the client want to justify)'}</span>
             <Info label={buyer ? 'About the offer target' : 'About the target price'} text={TARGET_TIP} />
           </div>

@@ -6,13 +6,19 @@
 // charges and taxes); About the home (the five pickers and Year built); Notes.
 // The engine's other facts fold away under "More about the home", so nothing
 // it reads is dropped. Everything saves as it's typed.
-import { useState, type ReactNode } from 'react';
-import type { LaundryState } from '../../../engine/index.ts';
-import { withHomeFeatures, type Features } from '../../../workspace/features.ts';
+//
+// Dispatch 20: with no read of the home, the size is a plain field (the
+// Estimate toggle beside it); "Not listed" only after a read that gave none.
+// The page's type, when it isn't the report's, with a one-tap switch (NW-011);
+// rooms and the neighborhood; the pickers that apply to the home's kind.
+import { useMemo, useState, type ReactNode } from 'react';
+import { compRecordFromListing, type LaundryState, type PropertyType } from '../../../engine/index.ts';
+import { typeFromListing, withHomeFeatures, type Features } from '../../../workspace/features.ts';
 import type { Entry, Intake } from '../../../workspace/state.ts';
 import { FeaturePicker } from '../comp/Pickers.tsx';
 import { entry } from '../workspace/bits.tsx';
 import type { Workspace } from '../workspace/model.ts';
+import { Info } from './Frame.tsx';
 import { TYPE_LABEL } from './Home.tsx';
 import { NrNumber } from './inputs.tsx';
 
@@ -23,7 +29,15 @@ const LAUNDRY: { value: LaundryState; label: string }[] = [
   { value: 'none_listed', label: 'None in the unit (not known if allowed)' },
 ];
 
-type NumberKey = 'areaSqft' | 'beds' | 'baths' | 'floor' | 'askingPrice' | 'commonCharges' | 'taxes' | 'outdoorSqft' | 'yearBuilt';
+type NumberKey = 'areaSqft' | 'beds' | 'baths' | 'rooms' | 'floor' | 'askingPrice' | 'commonCharges' | 'taxes' | 'outdoorSqft' | 'yearBuilt';
+
+export const NOTES_TIP = 'What someone would notice walking through that the facts don’t say: light, views, layout, condition, noise, storage. Hubert reads it. Your client never sees it.';
+
+/** The pickers' type for the home: its kind label where the read gave one (a house has no concierge), else the report's type. */
+function pickerType(kind: string | undefined, reportType: 'condo' | 'coop'): PropertyType {
+  if (!kind) return reportType;
+  return kind === 'house' ? 'townhouse' : (kind as PropertyType);
+}
 type YesNoKey = 'dishwasher' | 'centralAir' | 'fireplace' | 'corner';
 
 export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNode }) {
@@ -38,9 +52,21 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
   const num = (key: NumberKey) => (v: Entry<number> | undefined) => set(key, v);
   const coop = ws.propertyType === 'coop';
   const size = intake.areaSqft;
-  const showSize = Boolean(size) || sizeOpen;
-  const fromPage = (Object.values(intake) as ({ from?: string } | undefined)[]).filter((v) => v?.from === 'listing').length;
   const home = ws.reads.filter((r) => r.purpose === 'subject').at(-1) ?? null;
+  // "Not listed" only when the home's page was read and gave no size (NW-006); typed in, the size is a plain field.
+  const readGaveNoSize = home?.status === 'done' && !size;
+  const showSize = Boolean(size) || sizeOpen || !readGaveNoSize;
+  const fromPage = (Object.values(intake) as ({ from?: string } | undefined)[]).filter((v) => v?.from === 'listing').length;
+  // The page's type (NW-011): never written over the report's, offered as a switch when it differs.
+  const pageType = useMemo(() => {
+    if (!home || home.status !== 'done' || !home.extract) return null;
+    try {
+      return typeFromListing(compRecordFromListing(home.extract, { as_of: home.asOf ?? today, url: home.url }).record);
+    } catch {
+      return null;
+    }
+  }, [home?.id, home?.status]);
+  const switchTo = pageType?.asReportType && pageType.asReportType !== ws.propertyType ? pageType.asReportType : null;
 
   const setFeatures = (f: Features) => {
     const next = withHomeFeatures(ws.intake, f, today);
@@ -48,8 +74,10 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
     if (!next.outdoorKind || next.outdoorKind.value === 'none') delete next.outdoorSqft;
     ws.setIntake(next);
   };
+  // With no size yet, the toggle marks the next value typed as an estimate.
+  const [estimateNext, setEstimateNext] = useState(false);
   const toggleEstimate = () => {
-    if (!size) return;
+    if (!size) return setEstimateNext((e) => !e);
     const { estimate, from: _from, ...rest } = size;
     set('areaSqft', estimate ? rest : { ...rest, estimate: true });
   };
@@ -98,6 +126,12 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
         )}
       </div>
       {notices}
+      {switchTo && (
+        <div className="nr-note nr-type-note" role="status">
+          <span>Its StreetEasy page says {pageType!.label ?? TYPE_LABEL[switchTo]}, and this report is a {TYPE_LABEL[ws.propertyType].toLowerCase()}.</span>
+          {!off && <button type="button" className="btn" onClick={() => ws.setPropertyType(switchTo)}>Make it a {TYPE_LABEL[switchTo].toLowerCase()}</button>}
+        </div>
+      )}
 
       <div className="nr-compact">
         <div className="seg nr-seg small" role="group" aria-label="For a buyer or a seller">
@@ -151,8 +185,8 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
                   disabled={off}
                   placeholder="0"
                   suffix="sq ft"
-                  {...(size ? {} : { estimate: true })}
-                  autoFocus={!size}
+                  {...(size ? {} : { estimate: estimateNext || readGaveNoSize })}
+                  autoFocus={sizeOpen && !size}
                   onFocus={() => setSizeOpen(true)}
                   onBlur={() => setSizeOpen(false)}
                 />
@@ -164,11 +198,11 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
               </div>
             )}
           </div>
-          {size && (
+          {(size || !readGaveNoSize) && (
             <button
               type="button"
-              className={`nr-est${size.estimate ? ' on' : ''}`}
-              aria-pressed={Boolean(size.estimate)}
+              className={`nr-est${(size ? size.estimate : estimateNext) ? ' on' : ''}`}
+              aria-pressed={Boolean(size ? size.estimate : estimateNext)}
               disabled={off}
               title="Your estimate counts in “with estimates” only, and the email says so."
               onClick={toggleEstimate}
@@ -184,6 +218,10 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
             <span className="nr-small-label">Baths</span>
             <span className="nr-small-line"><NrNumber className="nr-big" label="Baths" value={intake.baths} onChange={num('baths')} today={today} disabled={off} integer={false} placeholder="—" /></span>
           </label>
+          <label className="nr-small">
+            <span className="nr-small-label">Rooms</span>
+            <span className="nr-small-line"><NrNumber className="nr-big" label="Rooms" value={intake.rooms} onChange={num('rooms')} today={today} disabled={off} integer={false} placeholder="—" /></span>
+          </label>
         </div>
         <div className="nr-fields4">
           {tile('floor', 'Floor')}
@@ -195,15 +233,36 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
 
       <section className="nr-about" aria-label="About the home">
         <div className="nr-sec-h">About the home</div>
-        <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} />
+        <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} type={pickerType(intake.kind?.value, ws.propertyType)} />
         <label className="nr-feat-row">
           <span className="fh">Year built</span>
-          <span><NrNumber className="nr-year" label="Year built" value={intake.yearBuilt} onChange={num('yearBuilt')} today={today} disabled={off} placeholder="—" plain /></span>
+          <span className="nr-tile-line nr-year-line">
+            <NrNumber className="nr-year" label="Year built" value={intake.yearBuilt} onChange={num('yearBuilt')} today={today} disabled={off} placeholder="—" plain />
+            <span className="nr-pen" aria-hidden="true"><span>✎</span></span>
+          </span>
+        </label>
+        <label className="nr-feat-row">
+          <span className="fh">Neighborhood</span>
+          <span className="nr-tile-line nr-year-line">
+            <input
+              className="nr-text"
+              aria-label="Neighborhood"
+              value={intake.neighborhood?.value ?? ''}
+              disabled={off}
+              maxLength={80}
+              placeholder="—"
+              onChange={(e) => set('neighborhood', e.target.value.trim() ? entry(e.target.value, today) : undefined)}
+            />
+            <span className="nr-pen" aria-hidden="true"><span>✎</span></span>
+          </span>
         </label>
       </section>
 
       <section className="nr-notes" aria-label="Notes">
-        <label className="nr-sec-h" htmlFor="nr-home-notes">Notes</label>
+        <div className="nr-label-line">
+          <label className="nr-sec-h" htmlFor="nr-home-notes">Notes</label>
+          <Info label="About the notes" text={NOTES_TIP} align="left" />
+        </div>
         <textarea
           id="nr-home-notes"
           className="box"

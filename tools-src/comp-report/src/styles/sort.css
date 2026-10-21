@@ -278,3 +278,27 @@
 .so-putback { margin-left: auto; font-size: 12px; }
 /* The Findings CTA again, at the end of the list (NW-053). */
 .so-bottom-cta { margin-left: 0; justify-content: flex-end; }
+
+/* The listing's photos (Dispatch 20, NW-020 a): a plain <img> in the photo area, ‹ › through the rest. */
+.so-photo.has { background: var(--cb-line); overflow: hidden; }
+.so-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.so-photo-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border: none; border-radius: 0;
+  background: rgba(15, 15, 15, .55); color: #fff; font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+}
+.so-photo-nav:hover { background: rgba(15, 15, 15, .8); }
+.so-photo-nav.prev { left: 6px; }
+.so-photo-nav.next { right: 6px; }
+.so-photo-count { position: absolute; right: 6px; bottom: 6px; padding: 2px 6px; font-size: 10px; background: rgba(15, 15, 15, .55); color: #fff; }
+
+/* The card's tags in their groups, at the card's measure. */
+.so-card .tag-group .chip { padding: 4px 9px; }
+
+/* The subway near the comp (NW-037 a): the line's own colour in a circle, its letter inside. */
+.so-subway { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.so-station { display: inline-flex; align-items: center; gap: 4px; }
+.so-bullet {
+  display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%;
+  font-size: 11px; font-weight: 800; line-height: 1; flex: none;
+}
+.so-station-name { margin-left: 2px; }

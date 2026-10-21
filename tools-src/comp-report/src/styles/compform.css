@@ -58,3 +58,20 @@
 /* A report whose type doesn't match its comps (co-op or condo, like for like): Sort and Findings. */
 .type-mismatch { display: flex; align-items: center; gap: 20px; background: var(--cb-surface); border-left: 3px solid var(--cb-yellow); padding: 14px 18px; margin-bottom: 20px; }
 .type-mismatch p { margin: 0; flex: 1; font-size: 13px; line-height: 1.5; }
+
+/* Tags in their groups (Dispatch 20, NW-045): a label above each; "from the data" chips (NB-9 C); the agent's own (DP-6). */
+.tag-groups { display: flex; flex-direction: column; gap: 10px; }
+.tag-group { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: start; }
+.tag-group-label { font-size: 11px; color: var(--cb-mid); padding-top: 6px; }
+.tag-group-one { color: var(--cb-sand); }
+.tag-group .own-problem { grid-column: 2; font-size: 12px; color: var(--cb-red); }
+.chip.data { border: 1px dashed var(--cb-lavender); background: var(--cb-surface); display: inline-flex; align-items: baseline; gap: 6px; }
+.chip.data:hover { border-style: solid; }
+.data-mark { font-size: 10px; letter-spacing: .04em; color: var(--cb-deep); }
+.chip.own { display: inline-flex; align-items: center; gap: 6px; cursor: default; }
+.own-x { font: inherit; font-size: 13px; line-height: 1; color: inherit; background: none; border: none; padding: 0; cursor: pointer; opacity: .75; }
+.own-x:hover { opacity: 1; }
+.own-add { display: inline-flex; align-items: center; gap: 6px; }
+.own-input.own-input { font-size: 12px; padding: 4px 8px; width: 150px; border: 1px dashed var(--cb-sand); background: transparent; }
+.own-input.own-input:focus { border-style: solid; border-color: var(--cb-black); }
+.own-go { font-size: 12px; }

@@ -9,6 +9,7 @@
 //         admins: sort every comp the sample knows, with its sample reason,
 //         mark them reviewed and set the sample's anchor (Dispatch 07)
 //   PATCH {reportId, reportCompId, reviewed?, anchor?, confirmed?, tier?, note?, tags?, features?, removed?}
+//         (tags: the list's, or the agent's own (DP-6, Dispatch 20): see cleanTags)
 //         mark a comp reviewed; make it the anchor (★, one per report, any
 //         status: starring another moves it); confirm a comp read from its
 //         StreetEasy page (until then it counts in neither result, §6.2); and
@@ -21,6 +22,8 @@
 //         factOverrides {price?, size?, date?, floor?}: the agent's corrections
 //         to the source's facts, a value each, or null to put the source's back
 //   POST  {reportId, manual, note?, tags?, features?}: a typed-in comp saves its note, tags and features with it
+//   PATCH {reportId, tagEdits: [{reportCompId, tags}]}: several comps' tags at once, for the tags the
+//         data settles (NB-9 C, Dispatch 20)
 // Each returns the whole workspace. Only the report's owner can change it.
 import { compRecordFromManual, FACT_CHECKS, ParseError, PARSER_VERSION, type ManualCompFields } from '../../engine/index.ts';
 import { withActor, type Queryable } from '../db.ts';
@@ -29,6 +32,7 @@ import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '..
 import { SAMPLE_TIERS } from '../sample/barclay-17l.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
 import { cleanFeatures, isTag } from '../../workspace/features.ts';
+import { freeTagHardTerm, isFreeTag, MAX_FREE_TAG, MAX_TAGS, normalizeFreeTag } from '../../workspace/free-tags.ts';
 import { NO_NOTE_YET, OVERRIDE_KEYS, type FactOverride, type OverrideKey } from '../../workspace/state.ts';
 import { asUser, requirePool } from './reports.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
@@ -37,6 +41,8 @@ const TIERS = ['primary', 'secondary', 'excluded'];
 const REASON_TYPES = ['property', 'client', 'method'];
 const MAX_REASON = 1000;
 const MAX_NOTE = 2000;
+/** The most comps one tagEdits call sets: a report's comps, with room. */
+const MAX_TAG_EDITS = 200;
 
 /** Each correctable fact's rule: the one a typed-in comp's matching field gets (compRecordFromManual). */
 const OVERRIDE_RULES: Record<OverrideKey, { ok: (v: unknown, today: string) => boolean; says: string }> = {
@@ -82,6 +88,32 @@ function overrideEdits(raw: unknown, by: string, now: Date): OverrideEdits {
   return out;
 }
 
+/**
+ * A comp's tags as stored: each from the house list, or the agent's own
+ * (DP-6), NFC-normalised, checked by isFreeTag and screened for a fair-housing
+ * hard term (a client may read it in the email). Each once; at most 30.
+ */
+export function cleanTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) throw new HttpError(400, 'bad_tags', 'Send the tags as a list.');
+  const out: string[] = [];
+  for (const given of raw) {
+    if (typeof given !== 'string') throw new HttpError(400, 'bad_tags', 'A tag is text.');
+    if (isTag(given)) {
+      if (!out.includes(given)) out.push(given);
+      continue;
+    }
+    const t = normalizeFreeTag(given);
+    if (!isFreeTag(t)) {
+      throw new HttpError(400, 'bad_tags', `A tag of your own is one line of up to ${MAX_FREE_TAG} letters, numbers, spaces and . , ' - & / ( ) + %, and not one on the list.`);
+    }
+    const hard = freeTagHardTerm(t);
+    if (hard) throw new HttpError(400, 'fair_housing', `“${hard.term}” can’t be a tag: it reads as a preference on ${hard.basis}.`);
+    if (!out.includes(t)) out.push(t);
+  }
+  if (out.length > MAX_TAGS) throw new HttpError(400, 'too_many_tags', `A comp can have up to ${MAX_TAGS} tags.`);
+  return out;
+}
+
 /** The agent's edits to a comp, validated: undefined where not given. */
 function compEdits(body: Record<string, unknown>, by = '', now = new Date()) {
   const out: { note?: string | null; tags?: string[]; features?: Record<string, string[]>; overrides?: OverrideEdits } = {};
@@ -91,10 +123,7 @@ function compEdits(body: Record<string, unknown>, by = '', now = new Date()) {
     if (note.length > MAX_NOTE) throw new HttpError(400, 'bad_note', `Keep the note under ${MAX_NOTE} characters.`);
     out.note = note || null;
   }
-  if (body.tags !== undefined) {
-    if (!Array.isArray(body.tags) || !body.tags.every(isTag)) throw new HttpError(400, 'bad_tags', 'Tags come from the list.');
-    out.tags = [...new Set(body.tags as string[])];
-  }
+  if (body.tags !== undefined) out.tags = cleanTags(body.tags);
   if (body.features !== undefined) {
     if (!body.features || typeof body.features !== 'object' || Array.isArray(body.features)) throw new HttpError(400, 'bad_features', 'Send the features as an object.');
     out.features = cleanFeatures(body.features) as Record<string, string[]>;
@@ -259,6 +288,31 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
         }
         return loadWorkspace(tx, user, reportId);
       }), 201);
+    }
+
+    // The tags the data settles, set on several comps at once (NB-9 C, Dispatch 20): a full agent's are pre-filled,
+    // and a tag a fact contradicts comes off. Tags only: each is checked as a single comp's would be.
+    if (req.method === 'PATCH' && body.tagEdits !== undefined) {
+      if (!Array.isArray(body.tagEdits) || !body.tagEdits.length || body.tagEdits.length > MAX_TAG_EDITS) {
+        throw new HttpError(400, 'bad_tags', `Send up to ${MAX_TAG_EDITS} comps' tags at once.`);
+      }
+      const edits = body.tagEdits.map((e: unknown) => {
+        const one = e && typeof e === 'object' && !Array.isArray(e) ? (e as Record<string, unknown>) : {};
+        const id = typeof one.reportCompId === 'string' && UUID.test(one.reportCompId) ? one.reportCompId : null;
+        if (!id) throw new HttpError(400, 'bad_comp', 'Which comp?');
+        return { id, tags: cleanTags(one.tags) };
+      });
+      return json(await withActor(pool, asUser(user), async (tx) => {
+        await reportFor(tx, user, reportId, true);
+        for (const e of edits) {
+          // A removed comp keeps its tags as they were.
+          await tx.query(
+            'update comp_report.report_comps set tags = $3::text[] where report_id = $1 and id = $2 and removed_at is null',
+            [reportId, e.id, e.tags],
+          );
+        }
+        return loadWorkspace(tx, user, reportId);
+      }));
     }
 
     const reportCompId = typeof body.reportCompId === 'string' && UUID.test(body.reportCompId) ? body.reportCompId : null;

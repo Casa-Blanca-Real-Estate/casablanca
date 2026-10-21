@@ -5,18 +5,24 @@
 // its source's, each behind a lock: unlocking one corrects it (Dispatch 15,
 // NW-044 a), and StreetEasy's value stays on record. The note can be written on
 // its own, without Edit (NW-030); 🗑 takes the comp out, with Undo (NW-056).
+//
+// Dispatch 20: the listing's photos in the photo area (a plain <img>, linked,
+// never proxied); the tags in their groups, with the agent's own and a practice
+// agent's "from the data" chips (NB-9 C), one click each; and only the feature
+// groups that apply to the comp's type.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CompOut } from '../../../engine/index.ts';
 import { workspaceApi, type CompEdit } from '../../api.ts';
 import { compDistance } from '../../../workspace/distance.ts';
-import { cleanFeatures, FEATURE_GROUPS, featuresFromRecord, sharedCount, TAGS, type Features } from '../../../workspace/features.ts';
+import { cleanFeatures, featuresFromRecord, groupsFor, sharedCount, toggleTag, type Features, type Tag } from '../../../workspace/features.ts';
 import { isoDay, psf } from '../../../workspace/format.ts';
 import { OVERRIDE_KEYS, type OverrideKey } from '../../../workspace/state.ts';
 import { readPrice } from '../comp/CompForm.tsx';
-import { FeaturePicker } from '../comp/Pickers.tsx';
+import { DataChip, FeaturePicker, TagPicker } from '../comp/Pickers.tsx';
 import { compPrice, listingUrl } from '../workspace/comps.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { homeName } from '../workspace/screens.ts';
+import { photoImg, tagChip } from './elements.ts';
 import { More } from './More.tsx';
 import { countText, monthYear, PRICE_LABEL, shortPrice, sizeText, type Row } from './rows.ts';
 
@@ -82,6 +88,9 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
   const j = c.judgment;
   const home = homeName(ws.intake, ws.report.title);
   const features = useMemo(() => compFeatures(row), [row]);
+  const type = c.record.facts.property_type?.value ?? ws.propertyType;
+  const groups = useMemo(() => groupsFor(type), [type]);
+  const suggested = j ? ws.tagSuggestions[j.reportCompId] ?? [] : [];
   const shared = sharedCount(ws.homeFeatures, features);
   const url = listingUrl(c);
   const canEdit = !ws.readOnly && Boolean(j) && row.group !== 'unsortable';
@@ -314,6 +323,26 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
     }
   }
 
+  // A "from the data" chip, one click (NB-9 C): added and saved, without Edit.
+  async function addSuggested(tag: Tag) {
+    if (!j) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await ws.editComp(j.reportCompId, { tags: toggleTag(row.tags, tag) });
+    } catch (e) {
+      setError(`Not saved: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /** "First floor" only while the floor could be the first (NW-059 a): the floor as the draft has it. */
+  const firstFloorHidden = (floor: string): Tag[] => {
+    const n = floor.trim() === '' ? null : Number(floor);
+    return n !== null && Number.isInteger(n) && n !== 1 ? ['First floor'] : [];
+  };
+
   const startEdit = () => {
     setError(null);
     setNoteDraft(null);
@@ -371,9 +400,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
 
   return (
     <div className={`so-card${editing ? ' editing' : ''}`} id={id}>
-      <div className="so-photo">
-        {editing && <span className="so-photo-later">Photos aren’t in this version yet</span>}
-      </div>
+      <Photos photos={j?.photos ?? []} address={row.address} editing={editing} />
       <div className="so-card-main">
         {asking && (
           <div className="so-ask" role="alertdialog" aria-label="Save changes?">
@@ -441,9 +468,9 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
             <span className="so-shared"><span className="so-shared-sq" aria-hidden="true" />{shared} shared with {home}</span>
           </div>
           {editing ? (
-            <FeaturePicker value={draft!.features} onChange={(v) => set('features', v)} home={ws.homeFeatures} />
+            <FeaturePicker value={draft!.features} onChange={(v) => set('features', v)} home={ws.homeFeatures} type={type} />
           ) : (
-            FEATURE_GROUPS.map((g) => {
+            groups.map((g) => {
               const picked = features[g.key] ?? [];
               return (
                 <div key={g.key} className="so-frow">
@@ -463,22 +490,19 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
 
         <div className="so-tagsec" ref={tagsRef}>
           <span className="so-features-title so-tagsec-title">{sq(needs.has('tag'))}Comp tags</span>
-          <div className="so-tags" role={editing ? 'group' : undefined} aria-label={editing ? 'Comp tags' : undefined}>
-            {shownTags.map((t) => (
-              <span key={t} className="so-tag">
-                {t}
-                {editing && (
-                  <button type="button" className="so-tag-x" aria-label={`Remove the comp tag ${t}`} onClick={() => set('tags', draft!.tags.filter((x) => x !== t))}>×</button>
-                )}
-              </span>
-            ))}
-            {editing && TAGS.filter((t) => !draft!.tags.includes(t)).map((t) => (
-              <button key={t} type="button" className="so-tag-add" onClick={() => set('tags', [...draft!.tags, t])}>+ {t}</button>
-            ))}
-            {!editing && !shownTags.length && (canEdit
-              ? <button type="button" className="link so-tag-start" onClick={startEdit}>+ Add comp tags</button>
-              : <span className="so-fnone">None yet</span>)}
-          </div>
+          {editing ? (
+            <TagPicker value={draft!.tags} onChange={(v) => set('tags', v)} label="Comp tags" hidden={firstFloorHidden(draft!.floor)} suggested={suggested} />
+          ) : (
+            <div className="so-tags">
+              {shownTags.map(tagChip)}
+              {canEdit && suggested.map((d) => (
+                <DataChip key={d.tag} d={d} disabled={saving} onAdd={() => void addSuggested(d.tag)} />
+              ))}
+              {!shownTags.length && !suggested.length && (canEdit
+                ? <button type="button" className="link so-tag-start" onClick={startEdit}>+ Add comp tags</button>
+                : <span className="so-fnone">None yet</span>)}
+            </div>
+          )}
         </div>
 
         {editing ? (
@@ -536,6 +560,35 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
 
         <More ws={ws} c={c} out={out} distance={distance} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * The listing's photos (NW-020 a): the hero, then the rest with ‹ ›. A plain
+ * <img> with no referrer, loaded lazily; one that fails to load drops out, and
+ * none left shows the placeholder. Never fetched by the server.
+ */
+function Photos({ photos, address, editing }: { photos: string[]; address: string; editing: boolean }) {
+  const [at, setAt] = useState(0);
+  const [broken, setBroken] = useState<string[]>([]);
+  const shown = photos.filter((p) => !broken.includes(p));
+  const n = shown.length;
+  const i = n ? at % n : 0;
+  return (
+    <div className={`so-photo${n ? ' has' : ''}`}>
+      {n > 0 ? (
+        <>
+          {photoImg(shown[i]!, `${address}, photo ${i + 1} of ${n}`, () => setBroken((b) => [...b, shown[i]!]))}
+          {n > 1 && (
+            <>
+              <button type="button" className="so-photo-nav prev" aria-label="The photo before" onClick={() => setAt((i + n - 1) % n)}>‹</button>
+              <button type="button" className="so-photo-nav next" aria-label="The next photo" onClick={() => setAt((i + 1) % n)}>›</button>
+              <span className="so-photo-count" aria-hidden="true">{i + 1} / {n}</span>
+            </>
+          )}
+        </>
+      ) : editing && <span className="so-photo-later">No photos from StreetEasy for this one</span>}
     </div>
   );
 }

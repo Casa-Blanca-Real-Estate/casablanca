@@ -2,6 +2,7 @@
 // Findings, Send and Done, with the progress row's three steps over them.
 // Plain functions, shared by the shell and every screen.
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
+import { isTag } from '../../../workspace/features.ts';
 import { noteOf, type Intake } from '../../../workspace/state.ts';
 
 export type ScreenId = 'sort' | 'gate' | 'findings' | 'send' | 'done';
@@ -39,7 +40,8 @@ export function needsOf(c: WorkspaceComp, level: Level): Need[] {
   const needs: Need[] = [];
   if (!j?.tier) needs.push('tier');
   if (noteRequired(level) && !noteOf(j)) needs.push('note');
-  if (!(j?.tags?.length)) needs.push('tag');
+  // Only the list's tags count (Dispatch 20): an agent's own tag says something, but not what the list asks.
+  if (!(j?.tags ?? []).some(isTag)) needs.push('tag');
   return needs;
 }
 

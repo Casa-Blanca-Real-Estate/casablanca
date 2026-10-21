@@ -1,14 +1,32 @@
 // The new-report modal's frame (the handoff, screens 03–05; Dispatch 14): an
 // 820px card on a dark scrim, a three-bar progress row with "N of 3" and ✕, or
-// "Edit details" when it's opened from a workspace. Escape closes it; the page
+// "Edit details" when it's opened from a workspace. Escape closes it (asking
+// first while a comp is half-typed, useCloseGuard); the page
 // behind it doesn't scroll while it's open.
-import { useEffect, useId, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import '../../styles/newreport.css';
 
 export interface DropHandlers {
   onDragOver: (e: DragEvent) => void;
   onDragLeave: (e: DragEvent) => void;
   onDrop: (e: DragEvent) => void;
+}
+
+/** Something half-done inside the modal (a comp form with text in it) that Escape or ✕ would drop. */
+const GuardContext = createContext<((id: string, on: boolean) => void) | null>(null);
+
+/**
+ * Inside the modal, `on` makes Escape and ✕ ask before closing (Dispatch 20,
+ * from Dispatch 14's follow-ups): a half-filled comp isn't dropped by a stray
+ * Escape. Outside the modal it does nothing.
+ */
+export function useCloseGuard(on: boolean): void {
+  const register = useContext(GuardContext);
+  const id = useId();
+  useEffect(() => {
+    register?.(id, on);
+    return () => register?.(id, false);
+  }, [register, id, on]);
 }
 
 export function Frame({ step, editing = false, title, onClose, children, footer, drop, veil }: {
@@ -26,8 +44,20 @@ export function Frame({ step, editing = false, title, onClose, children, footer,
   veil?: ReactNode;
 }) {
   const dialog = useRef<HTMLDivElement>(null);
-  const close = useRef(onClose);
-  close.current = onClose;
+  const guards = useRef(new Set<string>());
+  const [asking, setAsking] = useState(false);
+  const register = useCallback((id: string, on: boolean) => {
+    if (on) guards.current.add(id);
+    else guards.current.delete(id);
+    if (!guards.current.size) setAsking(false);
+  }, []);
+  // Escape and ✕ close, unless something half-done inside asks first; Escape again keeps editing.
+  const attempt = () => {
+    if (!guards.current.size) return onClose();
+    setAsking((a) => !a);
+  };
+  const close = useRef(attempt);
+  close.current = attempt;
 
   useEffect(() => {
     dialog.current?.focus({ preventScroll: true });
@@ -68,9 +98,19 @@ export function Frame({ step, editing = false, title, onClose, children, footer,
               <span className="nr-count" aria-hidden="true">{step} of 3</span>
             </>
           )}
-          <button type="button" className="nr-x" aria-label="Close" onClick={onClose}>✕</button>
+          <button type="button" className="nr-x" aria-label="Close" onClick={attempt}>✕</button>
         </div>
-        <div className="nr-body">{children}</div>
+        <GuardContext.Provider value={register}>
+          <div className="nr-body">{children}</div>
+        </GuardContext.Provider>
+        {asking && (
+          <div className="nr-ask" role="alertdialog" aria-label="Close and lose the comp you’re typing?">
+            <span>You’re partway through a comp. Close and lose it?</span>
+            <button type="button" className="link" onClick={() => setAsking(false)} autoFocus>Keep editing</button>
+            <span aria-hidden="true">·</span>
+            <button type="button" className="link" onClick={() => { setAsking(false); onClose(); }}>Close anyway</button>
+          </div>
+        )}
         <div className="nr-foot">{footer}</div>
       </div>
     </div>
