@@ -65,10 +65,10 @@ export function said(screen: ScreenId, side: 'buyer' | 'seller', comps: Workspac
         chips: buyer ? [ask('Where should an offer open?'), ask('What gives us leverage?')] : [ask('What sets the low end?'), ask('Why is the range this wide?')],
       };
     case 'send':
-      // Hubert reads the numbers, not the email, and never edits it.
+      // Hubert reads the email and changes its words when the agent asks: never its styling, never on his own.
       return {
-        hint: 'Hubert can’t see or change the email. Ask him about the numbers behind it.',
-        chips: buyer ? [ask('How should I explain the range?'), ask('How do I make the case for a lower offer?')] : [ask('How should I explain the range?'), ask('Which comp should the email lead with?')],
+        hint: 'Hubert reads the email and changes its words when you ask, never its styling. Tell him what you want it to say.',
+        chips: [ask('How do my lines read?'), buyer ? ask('How should I explain the range?') : ask('Which comp should the email lead with?')],
       };
     case 'done':
       // Reopen is the same as Done's own: it clears the sent mark and goes back to Send.

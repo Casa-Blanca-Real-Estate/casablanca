@@ -17,7 +17,7 @@ import { addMonths, daysBetween, type IsoDate } from '../util/dates.ts';
 import { compareStrings, roundHalfAway } from '../util/numbers.ts';
 import { sha256Tag } from '../util/sha256.ts';
 import { ENGINE_VERSION } from '../version.ts';
-import type { CompInput, CompRecord, EngineInput, EvidenceClass, PropertyFacts, PropertyType, Sourced, StatedFact } from '../types.ts';
+import type { CompInput, CompRecord, EngineInput, EvidenceClass, FactField, PropertyFacts, PropertyType, Sourced, StatedFact } from '../types.ts';
 import { adjustmentLines, resolveLines } from './adjust.ts';
 import { compChecks, compDistanceMiles } from './checks.ts';
 import { compareComp, monthlyCarry } from './compare.ts';
@@ -349,38 +349,44 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
   warnings.push(...contradictions.values(), ...hypotheticals.values());
 
   // ── Gaps ──
-  // One gap per distinct problem; a problem in both results lists both.
-  const gapFor = (code: string, message: string, target: string | null, field: string | null, kinds: ResultKind[]) => {
-    const same = gaps.find((g) => g.code === code && g.message === message && g.target === target && g.field === field);
+  // One gap per distinct problem; a problem in both results lists both. The messages are shown to the
+  // agent, so they say "the home" (NW-077 b).
+  const gapFor = (code: string, message: string, target: string | null, field: string | null, kinds: ResultKind[], fillable: boolean) => {
+    const text = homeWords(message);
+    const same = gaps.find((g) => g.code === code && g.message === text && g.target === target && g.field === field);
     if (same) same.results = KINDS.filter((k) => same.results.includes(k) || kinds.includes(k));
-    else gaps.push({ code, message, target, field, results: [...kinds] });
+    else gaps.push({ code, message: text, target, field, results: [...kinds], fillable });
   };
-  const missingSubjectArea = KINDS.filter((k) => !subjectFacts[k].area_sqft);
+  // Interior size is about $/sqft, which a co-op report never uses (NW-066 a).
+  const missingSubjectArea = reportType === 'coop' ? [] : KINDS.filter((k) => !subjectFacts[k].area_sqft);
   if (missingSubjectArea.length === 2) {
-    gapFor('subject_area_missing', "The subject's interior area isn't known — it isn't in the export. Without it there are no $/sqft implied values, so no base or range from the unit-rate indicators. The listing or the agent can supply it.", 'subject', 'area_sqft', missingSubjectArea);
+    gapFor('subject_area_missing', "The home's interior size isn't known — it isn't in the export. Without it there are no $/sqft implied values, so no base or range from the unit-rate indicators. The listing or the agent can supply it.", 'subject', 'area_sqft', missingSubjectArea, true);
   } else if (missingSubjectArea.length === 1) {
-    gapFor('subject_area_estimate_only', "The subject's interior area is only the agent's estimate, so \"on the facts\" has no $/sqft implied values.", 'subject', 'area_sqft', missingSubjectArea);
+    gapFor('subject_area_estimate_only', "The home's interior size is only the agent's estimate, so \"on the facts\" has no $/sqft implied values.", 'subject', 'area_sqft', missingSubjectArea, true);
   }
   for (const kind of KINDS) {
     const r = results[kind];
-    if (r.evidence.sold.counts.included === 0) gapFor('no_primary_sold_comps', 'No primary sold comp — the base and range need sold evidence.', null, null, [kind]);
+    if (r.evidence.sold.counts.included === 0) gapFor('no_primary_sold_comps', 'No primary sold comp — the base and range need sold evidence.', null, null, [kind], false);
     const [family, which] = r.lead.indicator.split('.') as ['unit_rate' | 'adjusted_price', 'median' | 'mean' | 'anchor'];
     const leadInd = r.indicators[family][which];
-    if (!r.base) gapFor('base_unavailable', `No base: ${leadInd.label.charAt(0).toLowerCase()}${leadInd.label.slice(1)} gives no subject value — ${leadInd.reason ?? 'it has nothing to work from'}.`, null, null, [kind]);
-    if (!r.range && r.range_unavailable_because) gapFor('range_unavailable', `No range: ${r.range_unavailable_because}.`, null, null, [kind]);
+    if (!r.base) gapFor('base_unavailable', `No base: ${leadInd.label.charAt(0).toLowerCase()}${leadInd.label.slice(1)} gives no value for the home — ${leadInd.reason ?? 'it has nothing to work from'}.`, null, null, [kind], false);
+    if (!r.range && r.range_unavailable_because) gapFor('range_unavailable', `No range: ${r.range_unavailable_because}.`, null, null, [kind], false);
   }
-  for (const c of compsOut) {
-    const name = label(comps.find((x) => x.id === c.id)!);
-    // An unconfirmed link comp's values aren't missing — they wait for the agent: one gap says so.
+  // A comp's gaps only where the comp counts (NW-077 b): a 2nd-tier or ✕ comp's missing floor changes nothing.
+  // A link comp waiting for its confirm counts in neither result yet, so it's asked for when it's 1st tier.
+  compsOut.forEach((c, i) => {
+    const name = label(comps[i]!);
     if (c.flags.unconfirmed) {
-      gapFor('comp_unconfirmed', `${name} was read from its StreetEasy page; its values wait for the agent's one-tap confirmation, so it counts in neither result yet.`, c.id, null, [...KINDS]);
-      continue;
+      if (c.tier === 'primary') gapFor('comp_unconfirmed', `${name} was read from its StreetEasy page; its values wait for the agent's one-tap confirmation, so it counts in neither result yet.`, c.id, null, [...KINDS], true);
+      return;
     }
-    if (c.flags.area_missing && c.evidence_class) gapFor('comp_area_missing', `${name} has no interior area, so it contributes no unit-rate indication.`, c.id, 'area_sqft', [...KINDS]);
-    if (c.flags.price_missing && c.evidence_class) gapFor('comp_price_missing', `${name} has no ${c.evidence_class === 'sold' ? 'sale' : 'asking'} price.`, c.id, c.evidence_class === 'sold' ? 'sale_price' : 'list_price', [...KINDS]);
-    if (c.flags.floor_missing) gapFor('comp_floor_missing', `${name} has no floor, so floors can't be compared for it.`, c.id, 'floor', [...KINDS]);
-  }
-  // Subject facts the comparisons need — each gap names the field to ask for.
+    const counts = KINDS.filter((k) => statesByKind[k][i]!.included);
+    if (counts.length === 0) return;
+    if (c.flags.area_missing && c.evidence_class && reportType !== 'coop') gapFor('comp_area_missing', `${name} has no interior size, so it contributes no unit-rate indication.`, c.id, 'area_sqft', counts, true);
+    if (c.flags.price_missing && c.evidence_class) gapFor('comp_price_missing', `${name} has no ${c.evidence_class === 'sold' ? 'sale' : 'asking'} price.`, c.id, c.evidence_class === 'sold' ? 'sale_price' : 'list_price', counts, true);
+    if (c.flags.floor_missing) gapFor('comp_floor_missing', `${name} has no floor, so floors can't be compared for it.`, c.id, 'floor', counts, true);
+  });
+  // Subject facts the comparisons need — each gap names the field to ask for. Interior size has its own gap above.
   const subjectNeeds = new Map<string, { label: string; kinds: Set<ResultKind> }>();
   for (const kind of KINDS) {
     for (const s of statesByKind[kind]) {
@@ -393,11 +399,12 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
     }
   }
   for (const [field, need] of [...subjectNeeds.entries()].sort(([a], [b]) => compareStrings(a, b))) {
-    gapFor('subject_fact_missing', `${need.label.charAt(0).toUpperCase()}${need.label.slice(1)} would let the engine compare it with the comps.`, 'subject', field, [...need.kinds]);
+    if (field === 'area_sqft' && missingSubjectArea.length > 0) continue;
+    gapFor('subject_fact_missing', `${need.label.charAt(0).toUpperCase()}${need.label.slice(1)} would let the engine compare it with the comps.`, 'subject', field, [...need.kinds], FILLABLE_SUBJECT_FIELDS.has(field as FactField));
   }
   const noCarry = KINDS.filter((k) => !monthlyCarry(subjectFacts[k], reportType));
   if (noCarry.length > 0) {
-    gapFor('subject_carry_missing', `The subject's ${reportType === 'coop' ? 'maintenance' : 'common charges and taxes'} ${noCarry.length === 2 ? "aren't known" : 'are only an estimate'}, so its carry can't be compared${noCarry.length === 2 ? '' : ' on the facts'}.`, 'subject', reportType === 'coop' ? 'maintenance_monthly' : 'common_charges_monthly', noCarry);
+    gapFor('subject_carry_missing', `The home's ${reportType === 'coop' ? 'maintenance' : 'common charges and taxes'} ${noCarry.length === 2 ? "aren't known" : 'are only an estimate'}, so its carry can't be compared${noCarry.length === 2 ? '' : ' on the facts'}.`, 'subject', reportType === 'coop' ? 'maintenance_monthly' : 'common_charges_monthly', noCarry, true);
   }
 
   // ── Divergence ──
@@ -474,6 +481,28 @@ export function compute(input: EngineInput, options: ComputeOptions = {}): Engin
   };
   output.meta.output_hash = sha256Tag(canonicalJson(output));
   return output;
+}
+
+/**
+ * The home's facts the agent can fill on a screen that exists (NW-077 b):
+ * Details (size, rooms, floor, price, charges, the systems, outdoor space,
+ * views, year built, new development) and its Building and Policies pickers
+ * (service, parking, shared outdoor space, amenities, policies — mapped in
+ * workspace/engine-input.ts). Unit type, the building's size and its location
+ * have no field: their gaps are real but not fillable.
+ */
+const FILLABLE_SUBJECT_FIELDS: ReadonlySet<FactField> = new Set<FactField>([
+  'area_sqft', 'beds', 'baths', 'rooms', 'floor', 'list_price', 'common_charges_monthly', 'taxes_monthly', 'maintenance_monthly',
+  'central_air', 'dishwasher', 'fireplace', 'laundry', 'outdoor_private', 'outdoor_kinds', 'outdoor_area_sqft', 'views',
+  'year_built', 'new_development', 'service', 'parking', 'outdoor_shared', 'amenities', 'policies', 'pets', 'smoke_free',
+]);
+
+/** "the subject's" → "the home's", and the subject itself → the home, in words the screen shows. */
+function homeWords(message: string): string {
+  return message
+    .replace(/\b([Tt])he subject's\b/g, (_, t: string) => `${t === 'T' ? 'T' : 't'}he home's`)
+    .replace(/\b([Tt])he subject\b/g, (_, t: string) => `${t === 'T' ? 'T' : 't'}he home`)
+    .replace(/\binterior area\b/g, 'interior size');
 }
 
 function sortWarnings(warnings: Warning[]): Warning[] {

@@ -2,7 +2,7 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { CompEdit, GeocodeView, LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
+import type { CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
@@ -110,6 +110,10 @@ export interface Workspace {
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
+  /** Hubert's edits to the email, waiting for Send to apply them (server/hubert-email.ts). */
+  hubertEdits: HubertEmailEdit[];
+  queueHubertEdit: (edit: HubertEmailEdit) => void;
+  takeHubertEdits: (n: number) => void;
   outcomes: Outcomes;
   setOutcomes: (next: Outcomes) => void;
   reached: Reached;

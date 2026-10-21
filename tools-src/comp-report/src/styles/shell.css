@@ -215,7 +215,19 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
   display: flex; flex-direction: column; overflow-y: auto;
   background: var(--cb-surface); /* Hubert's own root (.hb) draws the left border and shadow */
 }
-.hubert-drawer > * { flex: 1 1 auto; min-height: 0; }
+.hubert-drawer > :not(.hubert-resize) { flex: 1 1 auto; min-height: 0; }
+/* The left edge's handle: drag, arrow keys, or double-click for 380px again. */
+.hubert-resize {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 7px; z-index: 1;
+  cursor: col-resize; touch-action: none; background: transparent;
+}
+.hubert-resize::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: transparent; transition: background .15s;
+}
+.hubert-resize:hover::after, .hubert-resize:focus-visible::after, .hubert-drawer.resizing .hubert-resize::after { background: var(--cb-lavender); }
+.hubert-resize:focus-visible { outline: none; }
+.hubert-drawer.resizing { user-select: none; }
+body:has(.hubert-drawer.resizing) { cursor: col-resize; user-select: none; }
 
 .sh-hubert-tab {
   position: absolute; right: 0; top: 132px; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 12px;

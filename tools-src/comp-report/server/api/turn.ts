@@ -3,7 +3,7 @@
 //   body: { reportId, message? }   message is the agent's new text; omit it to
 //                                  continue after a tool call
 //   reply: text/event-stream of JSON events —
-//     start · progress · text · tool · done · refused · interrupted · error
+//     email_edit (Hubert's checked edit, for Send) · start · progress · text · tool · done · refused · interrupted · error
 //
 // Each request runs any pending tool calls server-side, then makes exactly one
 // model call and streams it. When a turn ends in a tool call the browser
@@ -23,6 +23,7 @@ import {
   type StoredMessage,
 } from '../assistant.ts';
 import { withActor, type PoolLike, type Queryable } from '../db.ts';
+import { editFromResult, type HubertEmailEdit } from '../hubert-email.ts';
 import { allowMethods, HttpError, readJsonObject, respond, UUID } from '../http.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
@@ -74,10 +75,17 @@ async function prepare(pool: PoolLike, user: SessionUser, reportId: string, mess
     const prompt = promptFor(stored);
 
     const pending = pendingToolUses(stored.findLast((m) => m.in_context));
+    // Hubert's checked edits to the email, for this response to hand to the agent's Send screen.
+    const edits: HubertEmailEdit[] = [];
     if (pending.length) {
       // §8.3 rule 6: run the pending tool calls server-side first.
       const results = [];
-      for (const call of pending) results.push(await runTool(tx, reportId, call, prompt));
+      for (const call of pending) {
+        const result = await runTool(tx, reportId, call, prompt);
+        results.push(result);
+        const edit = call.name === 'edit_email' ? editFromResult(result) : null;
+        if (edit) edits.push(edit);
+      }
       const content = message ? [...results, { type: 'text', text: message }] : results;
       await insertMessage(tx, reportId, ++seq, 'user', content, { promptVersion: prompt.id });
       stored.push({ seq, role: 'user', content, stop_reason: null, in_context: true });
@@ -88,7 +96,7 @@ async function prepare(pool: PoolLike, user: SessionUser, reportId: string, mess
     } else {
       throw new HttpError(400, 'nothing_to_send', 'Send a message.');
     }
-    return { messages: buildMessages(stored), nextSeq: seq + 1, prompt };
+    return { messages: buildMessages(stored), nextSeq: seq + 1, prompt, edits };
   });
 }
 
@@ -153,6 +161,8 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
           }
         };
         const emit = (e: Event) => write(`data: ${JSON.stringify(e)}\n\n`);
+        // First, before the model's reply: the edits Hubert just made, for Send to apply.
+        for (const edit of prepared.edits) emit({ type: 'email_edit', edit });
         const aborter = new AbortController();
         let timedOut = false;
         const timer = setTimeout(() => {
