@@ -146,7 +146,7 @@ export function SortStep({ ws }: StepProps) {
         <BuildNote>
           Findings unlocks on ws.readiness (every comp: a tier and tags, and a note at the practice level; none to confirm). Kara’s checks are the engine’s{' '}
           <code>comps[].checks</code> (§6.10), folded under each card. The range stays hidden until the Gate <DecisionTag id="D-1" />.{' '}
-          <StubTag>Waits on D-12</StubTag> Jev’s tier suggestions (§7). <StubTag>Later</StubTag> Photos, screenshots read into comps, Hubert’s
+          <StubTag>Waits on D-12</StubTag> Jev’s tier suggestions (§7). <StubTag>Later</StubTag> Screenshots read into comps, Hubert’s
           suggestions from market data.
         </BuildNote>
       )}

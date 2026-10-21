@@ -4,6 +4,7 @@ import './styles/shell.css';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { api, ApiError, type Me } from './api.ts';
 import { session, type SessionState } from './session.ts';
+import { leaveGuestMode } from './guest-session.ts';
 import { AcceptInvite, NotAuthorised, SetNewPassword, SignIn, Unavailable } from './views/SignIn.tsx';
 import { Reports } from './views/Reports.tsx';
 import { Workspace } from './views/workspace/Workspace.tsx';
@@ -34,7 +35,15 @@ export function App() {
     if (state.status !== 'signed-in') return;
     setMe(null);
     setRefusal(null);
-    api<Me>('/api/comp-report/me').then(setMe, (e) => setRefusal(e instanceof ApiError ? e : new ApiError(0, 'network', String(e))));
+    api<Me>('/api/comp-report/me').then(setMe, (e) => {
+      // A guest key the server won't take (production, or out of date): back to signing in.
+      if (session.guest && e instanceof ApiError && e.status === 401) {
+        leaveGuestMode();
+        setState({ status: 'signed-out', notice: e.message });
+        return;
+      }
+      setRefusal(e instanceof ApiError ? e : new ApiError(0, 'network', String(e)));
+    });
   }, [state]);
 
   // The account menu's Sign out: the real Identity sign-out (the Studio chip only clears its own key).
@@ -76,7 +85,7 @@ export function App() {
     body = <Reports me={me} onOpen={open} />;
   }
 
-  const account = state.status === 'signed-in' ? { email: state.email, role: me?.user.role, dev: session.dev } : null;
+  const account = state.status === 'signed-in' ? { email: state.email, role: me?.user.role, dev: session.dev, guest: session.guest } : null;
 
   return (
     <Shell account={account} onSignOut={() => void signOut()}>

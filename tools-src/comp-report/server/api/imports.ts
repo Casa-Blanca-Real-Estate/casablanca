@@ -17,8 +17,10 @@ import { EXPORT_SCHEMA, ParseError, parseExport, type ParsedExport } from '../..
 import { withActor } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { SAMPLE_EXPORT } from '../sample/barclay-17l-export.ts';
-import { requireUser, type AuthDeps } from '../session.ts';
+import { samplePhotos } from '../sample/photos.ts';
+import { mayUseSample, requireUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
+import type { SamplePhotoDeps } from './sample-photos.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
 
 /** StreetEasy exports are a few kilobytes; this leaves room while staying under Netlify's 6 MB request limit. */
@@ -29,7 +31,7 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function handleImports(req: Request, deps: AuthDeps): Promise<Response> {
+export function handleImports(req: Request, deps: SamplePhotoDeps): Promise<Response> {
   return respond(async () => {
     allowMethods(req, 'POST');
     const user = await requireUser(req, deps);
@@ -43,7 +45,7 @@ export function handleImports(req: Request, deps: AuthDeps): Promise<Response> {
     let asOf: string;
     const sample = body.sample === true;
     if (sample) {
-      if (user.role !== 'admin') throw new HttpError(403, 'admins_only', 'Sample data is for admins.');
+      if (!mayUseSample(user)) throw new HttpError(403, 'admins_only', 'Sample data is for admins and guests.');
       bytes = new TextEncoder().encode(SAMPLE_EXPORT.csv);
       filename = SAMPLE_EXPORT.filename;
       asOf = SAMPLE_EXPORT.asOf;
@@ -66,6 +68,8 @@ export function handleImports(req: Request, deps: AuthDeps): Promise<Response> {
       throw new HttpError(400, 'unreadable_export', `That file couldn’t be read as a StreetEasy export: ${why}`);
     }
     if (!parsed.comps.length) throw new HttpError(400, 'no_comps', 'That export has no comps in it.');
+    // The sample's comps carry the photos read from their pages, once that's been done (sample/photos.ts).
+    const photos = sample ? await samplePhotos(deps.samplePhotos) : {};
 
     const workspace = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
@@ -94,9 +98,9 @@ export function handleImports(req: Request, deps: AuthDeps): Promise<Response> {
         );
         const property = (await tx.query<{ id: string }>('select id from comp_report.properties where property_key = $1', [key])).rows[0]!;
         const observation = (await tx.query<{ id: string }>(
-          `insert into comp_report.property_observations (property_id, report_id, import_id, source, as_of, facts, links)
-           values ($1, $2, $3, 'se_export', $4, $5::jsonb, $6) returning id`,
-          [property.id, reportId, imported.id, asOf, JSON.stringify(record.facts), se?.url ? [se.url] : []],
+          `insert into comp_report.property_observations (property_id, report_id, import_id, source, as_of, facts, links, raw)
+           values ($1, $2, $3, 'se_export', $4, $5::jsonb, $6, $7::jsonb) returning id`,
+          [property.id, reportId, imported.id, asOf, JSON.stringify(record.facts), se?.url ? [se.url] : [], photos[key] ? JSON.stringify({ photos: photos[key] }) : null],
         )).rows[0]!;
         await tx.query(
           `insert into comp_report.report_comps (report_id, property_id, observation_id, evidence_class)

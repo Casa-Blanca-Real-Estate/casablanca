@@ -37,6 +37,7 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
 const BACKGROUND: Record<string, { module: string; handler: string }> = {
   '/.netlify/functions/comp-report-links-background': { module: '/server/api/links.ts', handler: 'runLinkRead' },
   '/.netlify/functions/comp-report-write-background': { module: '/server/api/narratives.ts', handler: 'runWrite' },
+  '/.netlify/functions/comp-report-sample-photos-background': { module: '/server/api/sample-photos.ts', handler: 'runSamplePhotoCapture' },
 };
 
 async function toRequest(req: IncomingMessage): Promise<Request> {
@@ -64,11 +65,16 @@ async function send(res: ServerResponse, response: Response) {
   res.end();
 }
 
+let devSamplePhotos: unknown;
+
 async function deps(server: ViteDevServer) {
   const load = (m: string) => server.ssrLoadModule(m);
   const { accessConfig } = await load('/server/access.ts');
   const { databasePool } = await load('/server/db.ts');
   const { devVerifier } = await load('/dev/stub-identity.ts');
+  const { guestConfig } = await load('/server/guest.ts');
+  const { memorySamplePhotoStore } = await load('/server/sample/photos.ts');
+  devSamplePhotos ??= memorySamplePhotoStore();
   const { firecrawlReader } = await load('/server/links.ts');
   const { nycGeoSearch } = await load('/server/geocode.ts');
   const { default: Anthropic } = await import('@comp-report/anthropic-sdk');
@@ -77,6 +83,8 @@ async function deps(server: ViteDevServer) {
     verifier: devVerifier,
     access: accessConfig(process.env),
     pool: databasePool(process.env),
+    guest: guestConfig(process.env, 'dev'), // CR_GUEST_KEY, to try guest mode locally
+    samplePhotos: devSamplePhotos, // in memory: kept until the dev server restarts
     env: process.env,
     reader: firecrawlReader(fake ? { apiKey: 'dev-fake', baseUrl: fake, backoffMs: [500] } : { apiKey: process.env.FIRECRAWL_API_KEY }),
     geocoder: nycGeoSearch({ baseUrl: process.env.CR_DEV_GEOSEARCH_BASE_URL || undefined }),

@@ -1,13 +1,17 @@
 // Production wiring: what the deployed functions pass to the handlers. Tests
 // and the local dev server pass their own — the stub sign-in in dev/ is never
 // imported from here, so it can't reach a deployed function.
+import { getStore } from '@netlify/blobs';
 import { accessConfig } from './access.ts';
 import { databasePool } from './db.ts';
+import { deployContext, guestConfig } from './guest.ts';
 import { identityUrlFor, netlifyIdentityVerifier, type IdentityVerifier } from './identity.ts';
 import { firecrawlReader } from './links.ts';
 import { nycGeoSearch } from './geocode.ts';
 import type { GeocodeDeps } from './api/geocode.ts';
 import type { LinkReadDeps } from './api/links.ts';
+import type { SamplePhotoCaptureDeps, SamplePhotoDeps } from './api/sample-photos.ts';
+import type { SamplePhotoStore } from './sample/photos.ts';
 import type { WriteDeps } from './api/narratives.ts';
 import { productionAnthropic } from './api/turn.ts';
 import type { AuthDeps } from './session.ts';
@@ -25,7 +29,33 @@ function verifierFor(identityUrl: string): IdentityVerifier {
 }
 
 export function productionAuthDeps(req: Request): AuthDeps {
-  return { verifier: verifierFor(identityUrlFor(req)), access: accessConfig(), pool: databasePool() };
+  return {
+    verifier: verifierFor(identityUrlFor(req)),
+    access: accessConfig(),
+    pool: databasePool(),
+    guest: guestConfig(process.env, deployContext(req)),
+  };
+}
+
+/** The sample's photos (server/sample/photos.ts): one site-wide Blobs store, shared by every deploy. */
+function samplePhotoStore(): SamplePhotoStore {
+  const store = getStore('comp-report-sample');
+  return {
+    get: (key) => store.get(key, { type: 'text' }),
+    set: async (key, value) => {
+      await store.set(key, value);
+    },
+  };
+}
+
+/** The handlers that fill a report with the sample (imports, comps): the API's dependencies and the sample's photos. */
+export function productionSampleDeps(req: Request): SamplePhotoDeps {
+  return { ...productionAuthDeps(req), samplePhotos: samplePhotoStore() };
+}
+
+/** Reading the sample's photos once: Firecrawl, with the key the link reads use. */
+export function productionSamplePhotoCaptureDeps(req: Request): SamplePhotoCaptureDeps {
+  return { ...productionSampleDeps(req), reader: firecrawlReader({ apiKey: process.env.FIRECRAWL_API_KEY }) };
 }
 
 export function productionGateDeps(): GateDeps {

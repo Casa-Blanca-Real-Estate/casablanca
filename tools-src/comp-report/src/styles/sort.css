@@ -88,6 +88,8 @@
 /* The address, its tags and what it needs wrap under the address, not under the thumb. */
 .so-addr-line { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
 .so-thumb { flex: none; width: 44px; height: 32px; background: repeating-linear-gradient(135deg, var(--cb-line-2) 0 6px, var(--cb-line) 6px 12px); }
+.so-thumb.has { background: var(--cb-line); overflow: hidden; }
+.so-thumb.has img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .so-addr {
   font: inherit; font-size: 13px; font-weight: 800; color: var(--cb-black); text-align: left;
   background: none; border: none; border-bottom: 1px solid var(--cb-lavender); padding: 0; cursor: pointer; line-height: 1.35;

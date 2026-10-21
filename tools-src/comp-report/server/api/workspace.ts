@@ -143,7 +143,8 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     features: c.features ?? {},
     removedAt: c.removed_at ? iso(c.removed_at) : null,
     factOverrides: c.fact_overrides ?? {},
-    photos: c.source === 'listing' ? listingPhotos(c.raw) : [],
+    // A listing's photos, and a sample comp's (an export row carries none, but the sample's are kept: sample/photos.ts).
+    photos: c.source === 'listing' || c.source === 'se_export' ? listingPhotos(c.raw) : [],
   }));
 }
 

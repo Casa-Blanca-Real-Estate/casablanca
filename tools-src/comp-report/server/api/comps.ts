@@ -30,11 +30,13 @@ import { withActor, type Queryable } from '../db.ts';
 import { newYorkToday } from '../links.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { SAMPLE_TIERS } from '../sample/barclay-17l.ts';
-import { requireUser, type AuthDeps } from '../session.ts';
+import { samplePhotos } from '../sample/photos.ts';
+import { mayUseSample, requireUser } from '../session.ts';
 import { cleanFeatures, isTag } from '../../workspace/features.ts';
 import { freeTagHardTerm, isFreeTag, MAX_FREE_TAG, MAX_TAGS, normalizeFreeTag } from '../../workspace/free-tags.ts';
 import { NO_NOTE_YET, OVERRIDE_KEYS, type FactOverride, type OverrideKey } from '../../workspace/state.ts';
 import { asUser, requirePool } from './reports.ts';
+import type { SamplePhotoDeps } from './sample-photos.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
 
 const TIERS = ['primary', 'secondary', 'excluded'];
@@ -241,7 +243,35 @@ async function addManualComp(tx: Queryable, reportId: string, manual: unknown, a
   )).rows[0]!.id;
 }
 
-export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
+/**
+ * The sample's photos, once they've been read (sample/photos.ts), on the sample comps that came
+ * from the export without them. Observations never change (§12), so each gets a fresh one of the
+ * same export row that carries them, and the comp points to it.
+ */
+async function attachSamplePhotos(tx: Queryable, reportId: string, photos: Record<string, string[]>) {
+  if (!Object.keys(photos).length) return;
+  const rows = (await tx.query<{ id: string; property_key: string; property_id: string; import_id: string; as_of: string; facts: unknown; links: string[] | null; raw: { photos?: unknown } | null }>(
+    `select rc.id, p.property_key, o.property_id, o.import_id, o.as_of::text as as_of, o.facts, o.links, o.raw
+       from comp_report.report_comps rc
+       join comp_report.properties p on p.id = rc.property_id
+       join comp_report.property_observations o on o.id = rc.observation_id
+       join comp_report.imports i on i.id = o.import_id
+      where rc.report_id = $1 and o.source = 'se_export' and i.sample`,
+    [reportId],
+  )).rows;
+  for (const r of rows) {
+    const urls = photos[r.property_key];
+    if (!urls || (Array.isArray(r.raw?.photos) && r.raw.photos.length)) continue;
+    const observation = (await tx.query<{ id: string }>(
+      `insert into comp_report.property_observations (property_id, report_id, import_id, source, as_of, facts, links, raw)
+       values ($1, $2, $3, 'se_export', $4, $5::jsonb, $6, $7::jsonb) returning id`,
+      [r.property_id, reportId, r.import_id, r.as_of, JSON.stringify(r.facts), r.links ?? [], JSON.stringify({ photos: urls })],
+    )).rows[0]!;
+    await tx.query('update comp_report.report_comps set observation_id = $1 where id = $2 and report_id = $3', [observation.id, r.id, reportId]);
+  }
+}
+
+export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Response> {
   return respond(async () => {
     allowMethods(req, 'POST', 'PATCH');
     const user = await requireUser(req, deps);
@@ -251,9 +281,11 @@ export function handleComps(req: Request, deps: AuthDeps): Promise<Response> {
     if (!reportId) throw new HttpError(400, 'bad_report', 'Which report?');
 
     if (req.method === 'POST' && body.sample === true) {
-      if (user.role !== 'admin') throw new HttpError(403, 'admins_only', 'Sample data is for admins.');
+      if (!mayUseSample(user)) throw new HttpError(403, 'admins_only', 'Sample data is for admins and guests.');
+      const photos = await samplePhotos(deps.samplePhotos);
       return json(await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
+        await attachSamplePhotos(tx, reportId, photos);
         const comps = (await tx.query<{ id: string; property_key: string; tier: string | null }>(
           `select rc.id, p.property_key, rc.tier from comp_report.report_comps rc
              join comp_report.properties p on p.id = rc.property_id where rc.report_id = $1`,

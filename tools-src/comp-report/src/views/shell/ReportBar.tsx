@@ -1,5 +1,5 @@
 // What a report adds to the top bar (the handoff): the Sample badge when the report holds sample data,
-// the Hubert toggle, and — for admins only — the switches in the account menu: dev tools (off by
+// the Hubert toggle, and — for admins (a guest gets dev tools) — the switches in the account menu: dev tools (off by
 // default) and viewing the Gate as a new agent.
 import type { Workspace } from '../workspace/model.ts';
 import { InBar } from './slots.tsx';
@@ -27,7 +27,7 @@ export function ReportBar({ ws, setDevTools }: { ws: Workspace; setDevTools: (on
           <span className="sh-spark" aria-hidden="true">✦</span>Hubert
         </button>
       </InBar>
-      {ws.isAdmin && (
+      {(ws.isAdmin || ws.isGuest) && (
         <InBar where="menu">
           <Switch
             on={ws.devTools}
@@ -35,12 +35,12 @@ export function ReportBar({ ws, setDevTools }: { ws: Workspace; setDevTools: (on
             label="Dev tools"
             hint="About this screen, build notes and Fill with sample."
           />
-          <Switch
+          {ws.isAdmin && <Switch
             on={ws.viewAsNewAgent}
             onChange={ws.setViewAsNewAgent}
             label="View the Gate as a new agent"
             hint="Low, high and a why of 100+ characters; no skip."
-          />
+          />}
         </InBar>
       )}
     </>

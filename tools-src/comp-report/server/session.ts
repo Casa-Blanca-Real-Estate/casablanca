@@ -11,6 +11,7 @@
 import { decide, type AccessConfig } from './access.ts';
 import { withActor, type PoolLike, type Role } from './db.ts';
 import { HttpError } from './http.ts';
+import { GUEST_EMAIL, GUEST_NAME, guestKeyMatches, isGuestToken, type GuestConfig } from './guest.ts';
 import { bearerToken, IdentityUnavailable, type IdentityVerifier } from './identity.ts';
 
 export type Capability = 'practice' | 'full';
@@ -24,12 +25,21 @@ export interface SessionUser {
   provider: string | null;
   /** false when there's no database yet: the user was admitted but not recorded. */
   persisted: boolean;
+  /** Signed in through guest mode (server/guest.ts), not Identity: an agent with the sample data. */
+  guest: boolean;
+}
+
+/** The sample data (Dispatch 07) is for admins, and for a guest walking a preview through. */
+export function mayUseSample(user: SessionUser): boolean {
+  return user.role === 'admin' || user.guest;
 }
 
 export interface AuthDeps {
   verifier: IdentityVerifier;
   access: AccessConfig;
   pool: PoolLike | null;
+  /** Guest mode, when it's on for this request; absent or null, a guest token is refused. */
+  guest?: GuestConfig | null;
 }
 
 const NOT_AUTHORISED = 'This account isn\'t authorised for the comp report. Sign in with your Casa Blanca Google account, or ask an admin to add you.';
@@ -52,6 +62,7 @@ interface UserRow {
 export async function requireUser(req: Request, deps: AuthDeps): Promise<SessionUser> {
   const token = bearerToken(req);
   if (!token) throw new HttpError(401, 'signed_out', 'Sign in to continue.');
+  if (isGuestToken(token)) return requireGuest(token, deps);
 
   let identity;
   try {
@@ -100,6 +111,7 @@ export async function requireUser(req: Request, deps: AuthDeps): Promise<Session
       identityId: identity.id,
       provider: identity.provider,
       persisted: false,
+      guest: false,
     };
   }
 
@@ -165,5 +177,37 @@ export async function requireUser(req: Request, deps: AuthDeps): Promise<Session
     identityId: identity.id,
     provider: identity.provider,
     persisted: true,
+    guest: false,
   };
+}
+
+/**
+ * A guest (server/guest.ts): the key, on a deploy where guest mode is on, or
+ * nothing. The guest's row is recorded like anyone's, as an agent, and an
+ * admin can turn it off like anyone's.
+ */
+async function requireGuest(token: string, deps: AuthDeps): Promise<SessionUser> {
+  if (!deps.guest || !guestKeyMatches(token, deps.guest)) {
+    throw new HttpError(401, 'signed_out', 'Guest mode isn\'t on here, or that guest link is out of date. Sign in to continue.');
+  }
+  const user: SessionUser = {
+    email: GUEST_EMAIL, name: GUEST_NAME, role: 'agent', capability: 'full',
+    identityId: 'guest', provider: 'guest', persisted: false, guest: true,
+  };
+  if (!deps.pool) return user;
+  const row = await withActor(deps.pool, { kind: 'system', does: 'sign-in' }, async (tx) => {
+    const r = await tx.query<UserRow>(
+      `insert into comp_report.users (email, name, identity_provider, identity_id, role, last_seen_at)
+       values ($1, $2, 'guest', 'guest', 'agent', now())
+       on conflict (email) do update set last_seen_at = now()
+       returning email, name, role, status, capability, identity_id, identity_provider, last_seen_at`,
+      [GUEST_EMAIL, GUEST_NAME],
+    );
+    return r.rows[0];
+  });
+  if (!row) throw new HttpError(500, 'user_not_recorded');
+  if (row.status !== 'active') {
+    throw new HttpError(403, 'disabled', 'Guest mode has been turned off for this preview.');
+  }
+  return { ...user, capability: row.capability, persisted: true };
 }
