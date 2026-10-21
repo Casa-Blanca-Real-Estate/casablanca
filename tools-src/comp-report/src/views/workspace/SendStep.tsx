@@ -492,7 +492,7 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
         {!off && (
           <div className="se-lines-actions">
             <button type="button" className="btn small-btn se-help" disabled={locked || written.length === LINE_KEYS.length} title={written.length === LINE_KEYS.length ? 'Every line is already yours' : 'Fills the empty lines from your tiers, tags and notes'} onClick={() => void help('draft')}>
-              <span className="se-star" aria-hidden="true">✦</span>{busy === 'draft' ? 'Drafting…' : 'Draft from my notes'}
+              <span className="se-star" aria-hidden="true">✦</span>{busy === 'draft' ? 'Drafting…' : 'Draft from notes'}
             </button>
           </div>
         )}

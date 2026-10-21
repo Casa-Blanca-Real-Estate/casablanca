@@ -43,7 +43,7 @@ label.se-label, .se-label {
 /* ─── The agent's lines: first in the main column, open (2026-10-21) ─────── */
 .se-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .se-lines { padding: 20px 28px 24px; display: flex; flex-direction: column; gap: 16px; }
-.se-lines-head { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.se-lines-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
 .se-lines-title { position: relative; }
 .se-lines-title .nr-tip { top: 24px; }
 .se-lines-actions { display: flex; flex-wrap: wrap; gap: 8px; }

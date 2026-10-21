@@ -36,7 +36,7 @@ check(await p.locator('.se-lines-title .nr-tip').isVisible(), 'the hint behind t
 await shot('01b-hint');
 await p.mouse.move(0, 0);
 
-await p.getByRole('button', { name: /Draft from my notes/ }).click();
+await p.getByRole('button', { name: /Draft from notes/ }).click();
 await p.waitForSelector('.se-lines-note');
 check(await p.locator('.se-line-mark').count() > 0, 'a drafted line is marked');
 check((await field('How I chose the comps').inputValue()).length > 0, 'how the comps were chosen, drafted');
