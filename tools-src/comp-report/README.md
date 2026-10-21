@@ -59,6 +59,7 @@ that can create roles and databases, because each test file makes a throwaway da
 | `CR_ALLOWED_DOMAINS` | Netlify | Casa's sign-in domains; default `casa-blanca.com`, matched exactly |
 | `ANTHROPIC_API_KEY` | Netlify | The assistant and the writer. Never reaches the browser |
 | `CR_WRITES_PER_DAY` | Netlify, optional | Drafts a person may have the writer make in any 24 hours; default 40 (admins at least 200). Each is a model call, an estimated $0.05–0.10 until real usage says |
+| — | — | The same limit, counted apart, holds Send's "Draft from notes" and "Tidy the wording" (`/api/comp-report/lines`, logged as usage purpose `lines`): a small low-effort call each |
 | `FIRECRAWL_API_KEY` | Netlify | Reading StreetEasy links (already set for the carousel tools). Never reaches the browser |
 | `CR_LINK_READS_PER_DAY` | Netlify, optional | Links a person may have read in any 24 hours; default 60 (admins at least 200). Each read costs Firecrawl credit |
 | `CR_LOCAL_DATABASE_URL` | local only | Ignored wherever `NETLIFY_DB_URL` exists |

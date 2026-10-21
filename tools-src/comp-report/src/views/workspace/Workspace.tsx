@@ -10,7 +10,7 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, geocodeApi, workspaceApi, type CompEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { ApiError, geocodeApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
@@ -168,6 +168,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
+  const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
   const today = useMemo(localToday, []);
   const save = useAutosave(reportId);
 
@@ -516,6 +517,9 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     removed,
     drawerOpen,
     setDrawerOpen,
+    hubertEdits,
+    queueHubertEdit: (edit) => setHubertEdits((list) => [...list, edit]),
+    takeHubertEdits: (n) => setHubertEdits((list) => list.slice(n)),
     outcomes: state.outcomes ?? {},
     setOutcomes: (next: Outcomes) => setState({ ...stateRef.current, outcomes: next }),
     reached,

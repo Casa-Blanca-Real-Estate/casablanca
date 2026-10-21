@@ -136,7 +136,7 @@ describe('get_numbers and prompt versions', { skip: skipWithoutDatabase }, () =>
 
     const before = await getNumbers(reportId);
     const sent = lastSent();
-    assert.deepEqual((sent.tools as Block[]).map((t) => t.name), ['get_report', 'get_numbers']);
+    assert.deepEqual((sent.tools as Block[]).map((t) => t.name), ['get_report', 'get_numbers', 'get_email', 'edit_email']);
     assert.equal((sent.system as Block[])[0]!.text, CURRENT_PROMPT.system);
     assert.ok((await messageRows(reportId)).every((r) => r.prompt_version === CURRENT_PROMPT.id));
     assert.equal(before.numbers.revealed, false);

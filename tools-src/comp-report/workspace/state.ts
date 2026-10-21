@@ -207,6 +207,22 @@ export interface SendState {
   useTemplate?: boolean;
   acks?: Acknowledgment[];
   copiedAt?: string;
+  /**
+   * The email as the agent last saw it on Send (2026-10-21): the open tab and
+   * its plain text. Hubert reads it (get_email) and edits against it; nothing
+   * else does.
+   */
+  seen?: SeenEmail;
+}
+
+/** What Send showed: written by the browser as the email changes, read by Hubert's get_email. */
+export interface SeenEmail {
+  format: 'full' | 'designed' | 'short' | 'text';
+  length: 'full' | 'short' | 'text';
+  subject: string;
+  headline: string;
+  text: string;
+  at: string;
 }
 
 /** reports.state. */

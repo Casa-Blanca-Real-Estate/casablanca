@@ -36,11 +36,40 @@ label.se-label, .se-label {
 }
 .se-fix:hover { background: var(--cb-bg); }
 
-/* The left column's other panels: which result, and the agent's lines. */
+/* The left column's other panel: which result. */
 .se-panel { padding: 20px 28px; display: flex; flex-direction: column; gap: 10px; }
 .se-panel .seg { align-self: flex-start; }
-.se-lines summary { font-size: 14px; font-weight: 800; cursor: pointer; }
-.se-lines[open] summary { margin-bottom: 4px; }
+
+/* ─── The agent's lines: first in the main column, open (2026-10-21) ─────── */
+.se-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.se-lines { padding: 20px 28px 24px; display: flex; flex-direction: column; gap: 16px; }
+.se-lines-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.se-lines-title { position: relative; }
+.se-lines-title .nr-tip { top: 24px; }
+.se-lines-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.se-lines-tidy { justify-content: flex-end; }
+.btn.se-help { display: inline-flex; align-items: center; gap: 6px; }
+.btn.se-help .se-star { font-size: 13px; }
+.se-lines-note {
+  margin: 0; padding: 10px 14px; font-size: 12px; line-height: 1.5;
+  background: var(--cb-bg); border-left: 3px solid var(--cb-lavender);
+}
+.se-lines-note.error { border-left-color: var(--cb-red); }
+.se-lines-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.se-line-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.se-line-mark { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--cb-mid); }
+.se-line-mark .se-star { font-size: 12px; }
+.se-line textarea { font-size: 14px; line-height: 1.5; min-height: 72px; }
+.se-lines-foot { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding-top: 4px; border-top: 1px solid var(--cb-line); }
+.se-lines-foot .se-client-note { flex: 1 1 280px; padding-top: 12px; }
+@media (max-width: 900px) {
+  .se-grid { grid-template-columns: minmax(0, 1fr); }
+  .se-lines { padding: 16px; }
+}
+@media (max-width: 720px) {
+  .se-lines-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--cb-black); }
 .se-field input, .se-field textarea { width: 100%; }
 .se-field textarea { resize: vertical; min-height: 64px; }
