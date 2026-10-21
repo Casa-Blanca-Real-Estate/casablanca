@@ -45,9 +45,10 @@ each station is `{ name, lines, otherLines, lat, lng, gtfsStopIds }`. 464 statio
   trademarks like the MTA symbol, the MetroCard and the NYC subway route symbols", and charges for their use in
   advertising and publishing. A coloured circle with the line's letter in the official colour *is* the route
   symbol's design, so drawing our own doesn't take it outside that claim. Naming which trains stop nearby is
-  ordinary descriptive use, and the plain-text form ("A, C, E" or a small dot in the line's colour beside the
-  letter) carries the least risk. My read: fine inside the tool; for the client-facing email, use the
-  plain-text form unless Kimani accepts the risk. This is not legal advice.
+  ordinary descriptive use, and the plain-text form carries the least risk.
+- **Decided (Kimani, 2026-10-21):** the tool shows the bullets (a circle in the line's colour with its letter).
+  Client emails use plain text, the line's letter with a small dot in its colour beside it ("● A ● C ● E"),
+  never the bullet. This note is not legal advice.
 
 ## `streeteasy-photo-hosts.json`
 
