@@ -23,6 +23,13 @@
 .hb-msg.dim { opacity: .55; }
 .hb-msg p { margin: 0; }
 .hb-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Hubert's markdown (Dispatch 15): paragraphs, bold heading lines, lists, code and links. */
+.hb-md > * + * { margin-top: 8px !important; }
+.hb-md-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }
+.hb-md-code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: var(--cb-surface); padding: 0 3px; }
+.hb-md-link { color: var(--cb-black); text-decoration: none; border-bottom: 1px solid var(--cb-lavender); }
+.hb-md-link:hover { color: var(--cb-deep); }
+.hb-md-host { color: var(--cb-mid); font-size: 12px; }
 .hb-progress { font-size: 11px; color: var(--cb-mid); margin: 0 0 6px !important; }
 .hb-hint { margin: 0; font-size: 12px; color: var(--cb-mid); line-height: 1.45; }
 .hb-notice { margin: 0; font-size: 12px; color: var(--cb-black); border-left: 3px solid var(--cb-yellow); padding: 4px 0 4px 10px; }

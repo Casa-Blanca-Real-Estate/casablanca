@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
 import { ApiError, geocodeApi, workspaceApi, type CompEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
-import { engineInput, locationsFrom, namedPrices, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
+import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
@@ -25,10 +25,10 @@ import { BuildNotesContext, useBuildNotesSwitch } from './buildNotes.tsx';
 import { Done } from './Done.tsx';
 import { Findings } from './Findings.tsx';
 import { Gate } from './Gate.tsx';
-import { fromBase64, localToday, type Workspace as WorkspaceModel } from './model.ts';
+import { fromBase64, localToday, type ToastAction, type Workspace as WorkspaceModel } from './model.ts';
 import { useLinkReads } from './reads.ts';
 import { SendStep } from './SendStep.tsx';
-import { hasSF, isScreen, sortReadiness, type ScreenId } from './screens.ts';
+import { hasSF, isScreen, sortReadiness, type Level, type ScreenId } from './screens.ts';
 import { SortFirst } from './SortFirst.tsx';
 import { SortStep } from './SortStep.tsx';
 import { Center, DevStrip, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
@@ -163,7 +163,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const [propertyType, setPropertyTypeState] = useState<'condo' | 'coop'>('condo');
   const [viewAsNewAgent, setViewAsNewAgentState] = useState(readViewAsNew);
   const [sortFilter, setSortFilter] = useState<{ incomplete: boolean; tags: string[] }>({ incomplete: false, tags: [] });
-  const [toastText, setToastText] = useState<string | null>(null);
+  const [toastText, setToastText] = useState<{ text: string; action?: ToastAction } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
@@ -265,7 +265,9 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       return { output: null, engineError: message };
     }
   }, [today, intake, dealTerms, comps, prices, locations, propertyType]);
-  const readiness = useMemo(() => sortReadiness(comps), [comps]);
+  const level: Level = me.user.role === 'admin' && viewAsNewAgent ? 'practice' : me.user.capability;
+  const readiness = useMemo(() => sortReadiness(comps, level), [comps, level]);
+  const removed = useMemo(() => removedComps(parsed, data?.comps ?? [], recordCache.current), [parsed, data?.comps]);
   const suggestions = useMemo(() => removedExportComps(parsed, data?.comps ?? []), [parsed, data?.comps]);
   const features = useMemo(() => homeFeatures(intake), [intake]);
 
@@ -369,10 +371,11 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   }, [loadedState, screen, setState]);
 
   const toastTimer = useRef(0);
-  const toast = useCallback((message: string) => {
-    setToastText(message);
+  const toast = useCallback((message: string, action?: ToastAction) => {
+    setToastText({ text: message, ...(action ? { action } : {}) });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToastText(null), 3200);
+    // Long enough to reach an Undo.
+    toastTimer.current = window.setTimeout(() => setToastText(null), action ? 7000 : 3200);
   }, []);
 
   // The home's page, once read, fills the details the agent hasn't filled: once per read.
@@ -464,7 +467,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     side: brief.audience?.value === 'seller' ? 'seller' : 'buyer',
     sf: hasSF(intake, propertyType),
     homeFeatures: features,
-    level: me.user.role === 'admin' && viewAsNewAgent ? 'practice' : me.user.capability,
+    level,
     isAdmin: me.user.role === 'admin',
     viewAsNewAgent,
     setViewAsNewAgent: (on) => {
@@ -481,6 +484,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     setSortFilter,
     editComp,
     suggestions,
+    removed,
     drawerOpen,
     setDrawerOpen,
     outcomes: state.outcomes ?? {},
@@ -620,7 +624,24 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       )}
 
       {drawerOpen && <HubertDrawer ws={ws} />}
-      {toastText && <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">{toastText}</div>}
+      {toastText && (
+        <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">
+          {toastText.text}
+          {toastText.action && (
+            <button
+              type="button"
+              className="sh-toast-action"
+              onClick={() => {
+                const run = toastText.action!.run;
+                setToastText(null);
+                run();
+              }}
+            >
+              {toastText.action.label}
+            </button>
+          )}
+        </div>
+      )}
     </BuildNotesContext.Provider>
   );
 }

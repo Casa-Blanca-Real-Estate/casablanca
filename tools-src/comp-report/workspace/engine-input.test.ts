@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { compute, parseExport } from '../engine/index.ts';
 import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
 import { SAMPLE_CALL, SAMPLE_DEAL_TERMS, SAMPLE_INTAKE, SAMPLE_TARGET, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
-import { dealTermsInput, engineInput, namedPrices, removedExportComps, subjectFacts, workspaceComps, type ParsedImport } from './engine-input.ts';
+import { dealTermsInput, engineInput, namedPrices, removedComps, removedExportComps, subjectFacts, withOverrides, workspaceComps, type ParsedImport } from './engine-input.ts';
 import type { CompJudgment } from './state.ts';
 
 const AS_OF = '2026-09-29';
@@ -145,4 +145,70 @@ test('removed comps count in nothing; an export’s removed rows are what Hubert
   // A typed-in comp taken out isn't suggested back: only an export's rows are data Hubert can name.
   const typed = { ...removed, source: { kind: 'manual' as const, fields: { address: '1 Main Street, New York, NY', status: 'sold' }, asOf: AS_OF } };
   assert.deepEqual(removedExportComps(imports, [typed]), []);
+});
+
+// ─── The agent's corrections to a source's facts (Dispatch 15, NW-044) ───────
+
+const CHAMBERS = 'pk1|ny|new york|200 chambers st|10A';
+const ACTIVE_108 = 'pk1|ny|new york|108 leonard st|7G';
+const by = 'kimani@casa-blanca.com';
+const at = '2026-10-16T12:00:00.000Z';
+
+test('a correction counts as the agent’s fact, marked changed; StreetEasy’s value stays on the original', () => {
+  const judgments = sampleJudgments();
+  const j = judgments.find((x) => x.propertyKey === CHAMBERS)!;
+  const exportRecord = parsed.comps.find((r) => r.identity.key === CHAMBERS)!;
+  const was = { price: exportRecord.facts.sale_price!.value, size: exportRecord.facts.area_sqft?.value, floor: exportRecord.facts.floor?.value };
+  j.factOverrides = { price: { value: 4_100_000, by, at }, size: { value: 2_000, by, at }, floor: { value: 1, by, at }, date: { value: '2026-07-01', by, at } };
+  const comps = workspaceComps(imports, judgments);
+  const c = comps.find((x) => x.id === CHAMBERS)!;
+  assert.deepEqual(
+    [c.record.facts.sale_price, c.record.facts.area_sqft?.value, c.record.facts.floor?.value, c.record.facts.status_date?.value],
+    [{ value: 4_100_000, source: 'agent', as_of: '2026-10-16', confidence: 'exact', note: 'changed by the agent' }, 2_000, 1, '2026-07-01'],
+  );
+  assert.equal(c.record.flags.approx_area, false);
+  assert.equal(c.original?.facts.sale_price?.value, was.price, 'StreetEasy’s value is kept beside it');
+  // The parsed export is shared and cached: it's never written to.
+  assert.deepEqual([exportRecord.facts.sale_price!.value, exportRecord.facts.area_sqft?.value, exportRecord.facts.floor?.value], [was.price, was.size, was.floor]);
+  // The checks re-run on the new value: a first floor against a 17th-floor home.
+  const out = compute(engineInput({ asOf: AS_OF, intake: SAMPLE_INTAKE, comps }));
+  const checks = out.comps.find((x) => x.id === CHAMBERS)!.checks;
+  assert.equal(checks.find((k) => k.code === 'first_floor')?.status, 'flagged');
+  // And it counts as a fact: "on the facts" uses it like any exact value.
+  assert.equal(engineInput({ asOf: AS_OF, intake: SAMPLE_INTAKE, comps }).comps.find((x) => x.id === CHAMBERS)!.record.facts.sale_price?.confidence, 'exact');
+});
+
+test('a price correction is the sale price for a sold comp and the ask otherwise; cleared, StreetEasy’s comes back', () => {
+  const judgments = sampleJudgments();
+  const j = judgments.find((x) => x.propertyKey === ACTIVE_108)!;
+  j.factOverrides = { price: { value: 3_333_000, by, at } };
+  const c = workspaceComps(imports, judgments).find((x) => x.id === ACTIVE_108)!;
+  assert.equal(c.record.facts.list_price?.value, 3_333_000);
+  assert.equal(c.record.facts.sale_price, undefined);
+  j.factOverrides = {};
+  const back = workspaceComps(imports, judgments).find((x) => x.id === ACTIVE_108)!;
+  assert.equal(back.original ?? null, null);
+  assert.equal(back.record, parsed.comps.find((r) => r.identity.key === ACTIVE_108), 'no correction: the record as parsed');
+});
+
+test('a stored correction the engine wouldn’t take, or a key off the list, is ignored, and nothing reaches Object.prototype', () => {
+  const record = parsed.comps.find((r) => r.identity.key === CHAMBERS)!;
+  const odd = JSON.parse('{"__proto__": {"value": 1, "by": "x", "at": "y"}, "constructor": {"value": 2}, "prototype": {"value": 3}, "price": {"value": "4100000", "by": "x", "at": "y"}, "floor": {"value": 2.5}}');
+  assert.equal(withOverrides(record, odd), null);
+  assert.equal(Object.keys(Object.prototype).length, 0);
+  assert.equal(({} as Record<string, unknown>).value, undefined);
+});
+
+test('the Removed fold reads every removed comp, oldest removal first, with its corrections', () => {
+  const judgments = sampleJudgments();
+  const a = { ...judgments[1]!, removedAt: '2026-10-15T11:00:00.000Z' };
+  const b = { ...judgments[2]!, removedAt: '2026-10-15T10:00:00.000Z', factOverrides: { floor: { value: 3, by, at } } };
+  const typed = {
+    ...judgments[3]!, propertyKey: 'pk1|ny|new york|1 main st|2', removedAt: '2026-10-15T12:00:00.000Z',
+    source: { kind: 'manual' as const, fields: { address: '1 Main Street, New York, NY', unit: '#2', status: 'sold', price: 3000000 }, asOf: AS_OF },
+  };
+  const out = removedComps(imports, [a, b, typed, ...judgments.slice(4)]);
+  assert.deepEqual(out.map((c) => c.judgment!.reportCompId), [b.reportCompId, a.reportCompId, typed.reportCompId]);
+  assert.equal(out[0]!.record.facts.floor?.value, 3);
+  assert.equal(out[2]!.origin, 'manual');
 });

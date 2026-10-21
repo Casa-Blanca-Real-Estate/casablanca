@@ -210,6 +210,29 @@ export interface CompJudgment {
   features?: Record<string, string[]>;
   /** Taken out of the report: it counts in nothing, and an export's removed row is what Hubert can suggest again. */
   removedAt?: string | null;
+  /**
+   * The agent's corrections to the source's facts (Dispatch 15, NW-044 a): read
+   * as the agent's fact, marked "changed"; the source's value stays on record.
+   */
+  factOverrides?: FactOverrides;
+}
+
+/** The source facts the agent can correct on a comp's card: a closed list, checked by the server. */
+export const OVERRIDE_KEYS = ['price', 'size', 'date', 'floor'] as const;
+export type OverrideKey = (typeof OVERRIDE_KEYS)[number];
+
+/** One correction: the value (whole dollars, whole square feet, YYYY-MM-DD, a whole floor), who made it and when. */
+export interface FactOverride<T = number | string> {
+  value: T;
+  by: string;
+  at: string;
+}
+
+export interface FactOverrides {
+  price?: FactOverride<number>;
+  size?: FactOverride<number>;
+  date?: FactOverride<string>;
+  floor?: FactOverride<number>;
 }
 
 /** A reason recorded when a comp is tiered before it has a note (the reasons table needs one). */

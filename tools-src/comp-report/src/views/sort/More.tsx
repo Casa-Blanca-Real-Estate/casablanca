@@ -36,6 +36,8 @@ export function More({ ws, c, out, distance }: { ws: Workspace; c: WorkspaceComp
   const j = c.judgment;
   // Without a size for the home, no size column anywhere: the comp's own size stays out too.
   const facts = useMemo(() => factLines(c.record).filter((f) => ws.sf || f.label !== 'Size'), [c.record, ws.sf]);
+  // A fact the agent corrected keeps StreetEasy's value beside it (Dispatch 15).
+  const was = useMemo(() => new Map(c.original ? factLines(c.original).map((f) => [f.label, f.value]) : []), [c.original]);
   const usual = usualSource(facts);
   const checks = out?.checks ?? [];
   const flagged = checks.filter((k) => k.status === 'flagged');
@@ -81,7 +83,15 @@ export function More({ ws, c, out, distance }: { ws: Workspace; c: WorkspaceComp
                   <tr key={f.label}>
                     <th scope="row">{f.label}</th>
                     <td>{f.value}</td>
-                    <td className="so-more-mid">{[f.from !== usual ? f.from : null, f.sureness || null].filter(Boolean).join(' · ')}</td>
+                    <td className="so-more-mid">
+                      {[
+                        f.from !== usual ? f.from : null,
+                        f.sureness || null,
+                        c.original && was.get(f.label) !== f.value
+                          ? (was.has(f.label) ? `changed; StreetEasy says ${was.get(f.label)}` : 'added; StreetEasy doesn’t list it')
+                          : null,
+                      ].filter(Boolean).join(' · ')}
+                    </td>
                   </tr>
                 ))}
               </tbody>

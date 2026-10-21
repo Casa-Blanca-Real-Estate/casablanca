@@ -96,9 +96,10 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     source: 'se_export' | 'se_pdf' | 'listing' | 'agent' | null; import_id: string | null; raw: unknown; as_of: string | null; links: string[] | null;
     read_id: string | null; confirmed_at: Date | null;
     note: string | null; tags: string[] | null; features: Record<string, string[]> | null; removed_at: Date | null;
+    fact_overrides: CompJudgment['factOverrides'] | null;
   }>(
     `select rc.id, p.property_key, rc.evidence_class, rc.tier, rc.is_anchor, rc.reviewed_at,
-            rc.note, rc.tags, rc.features, rc.removed_at,
+            rc.note, rc.tags, rc.features, rc.removed_at, rc.fact_overrides,
             o.source, o.import_id, o.raw, o.as_of::text as as_of, o.links,
             lr.id as read_id, lr.confirmed_at
        from comp_report.report_comps rc
@@ -141,6 +142,7 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     tags: c.tags ?? [],
     features: c.features ?? {},
     removedAt: c.removed_at ? iso(c.removed_at) : null,
+    factOverrides: c.fact_overrides ?? {},
   }));
 }
 

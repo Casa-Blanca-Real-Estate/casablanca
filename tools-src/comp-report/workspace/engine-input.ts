@@ -6,7 +6,9 @@ import {
   type CompInput, type CompRecord, type DealTerms, type EngineInput, type FactField, type IsoDate,
   type ManualCompFields, type NamedPrice, type OutdoorKind, type ParsedExport, type PropertyFacts, type ReportPropertyType, type Sourced,
 } from '../engine/index.ts';
-import { noteOf, type CallState, type CompJudgment, type CompSource, type DealTermsState, type Entry, type Intake, type TargetState } from './state.ts';
+import {
+  noteOf, type CallState, type CompJudgment, type CompSource, type DealTermsState, type Entry, type FactOverride, type FactOverrides, type Intake, type TargetState,
+} from './state.ts';
 
 /** An import, parsed: the browser and the server parse the stored file with the same parser. */
 export interface ParsedImport {
@@ -33,6 +35,62 @@ export interface WorkspaceComp {
   judgment: CompJudgment | null;
   /** Why the agent can't sort this comp, when they can't. */
   unsortable: string | null;
+  /**
+   * The record as its source has it, when the agent corrected any of its facts
+   * (Dispatch 15): `record` carries the corrections, this keeps StreetEasy's
+   * values for "Where it came from". Null when nothing was corrected.
+   */
+  original?: CompRecord | null;
+}
+
+/** The correction's fact: the agent's, "changed", and never a guess (NB-7: it counts as a fact). */
+function overrideFact<T>(o: FactOverride, value: T, was: Sourced<unknown> | undefined): Sourced<T> {
+  const day = typeof o.at === 'string' && /^\d{4}-\d{2}-\d{2}/.test(o.at) ? o.at.slice(0, 10) : was?.as_of ?? '1970-01-01';
+  return { value, source: 'agent', as_of: day, confidence: 'exact', note: 'changed by the agent' };
+}
+
+/**
+ * A record with the agent's corrections laid over it, as a copy (records are
+ * cached and shared). One explicit assignment per key, and only a value the
+ * engine would take: never a path built from stored data. Null when there is
+ * nothing to lay over, so the caller keeps the record it has.
+ */
+export function withOverrides(record: CompRecord, overrides: FactOverrides | null | undefined): CompRecord | null {
+  if (!overrides) return null;
+  const facts: PropertyFacts = { ...record.facts };
+  let changed = false;
+  const price = overrides.price;
+  if (price && FACT_CHECKS.sale_price.check(price.value)) {
+    const sold = (record.status.listing_status ?? record.status.evidence_class) === 'sold';
+    if (sold) facts.sale_price = overrideFact(price, price.value, record.facts.sale_price);
+    else facts.list_price = overrideFact(price, price.value, record.facts.list_price);
+    changed = true;
+  }
+  const size = overrides.size;
+  if (size && FACT_CHECKS.area_sqft.check(size.value)) {
+    facts.area_sqft = overrideFact(size, size.value, record.facts.area_sqft);
+    changed = true;
+  }
+  const date = overrides.date;
+  if (date && FACT_CHECKS.status_date.check(date.value)) {
+    facts.status_date = overrideFact(date, date.value, record.facts.status_date);
+    changed = true;
+  }
+  const floor = overrides.floor;
+  if (floor && FACT_CHECKS.floor.check(floor.value)) {
+    facts.floor = overrideFact(floor, floor.value, record.facts.floor);
+    changed = true;
+  }
+  if (!changed) return null;
+  // The agent's size is exact: the source's "~" no longer applies.
+  const flags = facts.area_sqft !== record.facts.area_sqft ? { ...record.flags, approx_area: false } : record.flags;
+  return { ...record, facts, flags };
+}
+
+/** The comp with its corrections, if it has any: the record the engine reads, and the source's kept beside it. */
+function corrected(c: WorkspaceComp): WorkspaceComp {
+  const over = c.judgment ? withOverrides(c.record, c.judgment.factOverrides) : null;
+  return over ? { ...c, record: over, original: c.record } : c;
 }
 
 /**
@@ -69,15 +127,8 @@ function sourceRecord(source: CompSource, cache?: RecordCache): CompRecord | nul
  * (no address, a status the engine doesn't know), so the agent sees them too.
  */
 export function workspaceComps(imports: ParsedImport[], judgments: CompJudgment[], cache?: RecordCache): WorkspaceComp[] {
-  const newestFirst = [...imports].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
-  const fromExport = (key: string, importId: string | null): { record: CompRecord; importId: string } | null => {
-    const preferred = importId ? newestFirst.filter((i) => i.importId === importId) : [];
-    for (const imp of [...preferred, ...newestFirst]) {
-      const record = imp.parsed.comps.find((r) => r.identity.key === key);
-      if (record) return { record, importId: imp.importId };
-    }
-    return null;
-  };
+  const newestFirst = newestImports(imports);
+  const fromExport = exportFinder(newestFirst);
 
   const out: WorkspaceComp[] = [];
   const seen = new Set<string>();
@@ -87,25 +138,9 @@ export function workspaceComps(imports: ParsedImport[], judgments: CompJudgment[
       seen.add(j.propertyKey);
       continue;
     }
-    if (j.source.kind === 'export') {
-      const hit = fromExport(j.propertyKey, j.source.importId);
-      if (!hit) continue; // its export couldn't be read here: the export says so
-      out.push({ id: j.propertyKey, record: hit.record, origin: 'export', importId: hit.importId, readId: null, unconfirmed: false, judgment: j, unsortable: null });
-    } else {
-      const record = sourceRecord(j.source, cache);
-      if (!record) continue;
-      const listing = j.source.kind === 'listing' ? j.source : null;
-      out.push({
-        id: j.propertyKey,
-        record,
-        origin: j.source.kind,
-        importId: null,
-        readId: listing?.readId ?? null,
-        unconfirmed: Boolean(listing && !listing.confirmedAt),
-        judgment: j,
-        unsortable: null,
-      });
-    }
+    const c = judgedComp(j, fromExport, cache);
+    if (!c) continue; // its export couldn't be read here: the export says so
+    out.push(corrected(c));
     seen.add(j.propertyKey);
   }
   for (const imp of newestFirst) {
@@ -123,6 +158,59 @@ export function workspaceComps(imports: ParsedImport[], judgments: CompJudgment[
     }
   }
   return out;
+}
+
+type FromExport = (key: string, importId: string | null) => { record: CompRecord; importId: string } | null;
+
+const newestImports = (imports: ParsedImport[]) => [...imports].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+
+/** An export comp's row: from the import it names first, else the newest import that has it. */
+function exportFinder(newestFirst: ParsedImport[]): FromExport {
+  return (key, importId) => {
+    const preferred = importId ? newestFirst.filter((i) => i.importId === importId) : [];
+    for (const imp of [...preferred, ...newestFirst]) {
+      const record = imp.parsed.comps.find((r) => r.identity.key === key);
+      if (record) return { record, importId: imp.importId };
+    }
+    return null;
+  };
+}
+
+/** A judged comp from its newest observation; null when its source can't be read here. */
+function judgedComp(j: CompJudgment, fromExport: FromExport, cache?: RecordCache): WorkspaceComp | null {
+  if (j.source.kind === 'export') {
+    const hit = fromExport(j.propertyKey, j.source.importId);
+    if (!hit) return null;
+    return { id: j.propertyKey, record: hit.record, origin: 'export', importId: hit.importId, readId: null, unconfirmed: false, judgment: j, unsortable: null };
+  }
+  const record = sourceRecord(j.source, cache);
+  if (!record) return null;
+  const listing = j.source.kind === 'listing' ? j.source : null;
+  return {
+    id: j.propertyKey,
+    record,
+    origin: j.source.kind,
+    importId: null,
+    readId: listing?.readId ?? null,
+    unconfirmed: Boolean(listing && !listing.confirmedAt),
+    judgment: j,
+    unsortable: null,
+  };
+}
+
+/**
+ * The comps the agent took out of the report (Dispatch 15's "Removed" fold),
+ * oldest removal first, each from its newest observation, so it reads as it
+ * did in Sort. One whose source can't be read here is left out.
+ */
+export function removedComps(imports: ParsedImport[], judgments: CompJudgment[], cache?: RecordCache): WorkspaceComp[] {
+  const fromExport = exportFinder(newestImports(imports));
+  return judgments
+    .filter((j) => j.removedAt)
+    .sort((a, b) => (a.removedAt! < b.removedAt! ? -1 : a.removedAt! > b.removedAt! ? 1 : 0))
+    .map((j) => judgedComp(j, fromExport, cache))
+    .filter((c): c is WorkspaceComp => c !== null)
+    .map(corrected);
 }
 
 /** How an entry is sourced: the agent's, or read from the home's StreetEasy page (the agent confirmed it on the details screen). */
