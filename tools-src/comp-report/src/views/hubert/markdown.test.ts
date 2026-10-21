@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createElement, Fragment } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { renderMarkdown, safeUrl } from './markdown.ts';
+import { renderInline, renderMarkdown, safeUrl } from './markdown.ts';
 
 const html = (text: string) => renderToStaticMarkup(createElement(Fragment, null, ...renderMarkdown(text)));
 
@@ -56,4 +56,11 @@ test('half-streamed text keeps an unclosed marker as written', () => {
   assert.equal(html('a *note'), '<p class="hb-md-p">a *note</p>');
   assert.equal(html('`code'), '<p class="hb-md-p">`code</p>');
   assert.equal(html('[the listing](https://streeteasy.co'), '<p class="hb-md-p">[the listing](<a href="https://streeteasy.co/" target="_blank" rel="noopener noreferrer nofollow" class="hb-md-link">https://streeteasy.co</a></p>');
+});
+
+test('a progress note gets the inline part: bold, italic and code, its lines kept, no blocks', () => {
+  const note = (text: string) => renderToStaticMarkup(createElement(Fragment, null, ...renderInline(text)));
+  assert.equal(note('**Checking** the *numbers*'), '<strong>Checking</strong> the <em>numbers</em>');
+  assert.equal(note('one\n- two'), 'one<br/>- two');
+  assert.ok(!note('<b>x</b>').includes('<b>'));
 });
