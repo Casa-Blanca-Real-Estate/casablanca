@@ -10,7 +10,7 @@ import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
 import { SAMPLE_INTAKE, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
 import {
   countedComps, hasHomeSize,
-  buildEmail, DISCLAIMER, HEADLINE_PLACEHOLDER, headlineDrafts, htmlFromText, SAMPLE_BANNER,
+  buildEmail, DISCLAIMER, HEADLINE_PLACEHOLDER, headlineDrafts, SAMPLE_BANNER,
   type EmailInput,
 } from './email.ts';
 import { engineInput, workspaceComps } from './engine-input.ts';
@@ -39,7 +39,7 @@ const emailChecks = (args: { text: string; headline: string | undefined; sample?
   draftChecks({ ...args, ledger, result: 'with_estimates', output, sample: args.sample ?? false });
 
 test('the email goes in Frankie’s order: greeting, headline, how they were chosen, the comps by status with notes, things to consider, the next step, sign-off, disclaimer', () => {
-  const { subject, text, html } = buildEmail(base);
+  const { subject, text } = buildEmail(base);
   assert.equal(subject, '100 Barclay Street #17L: what the comps say');
   const at = (s: string) => {
     const i = text.indexOf(s);
@@ -53,7 +53,6 @@ test('the email goes in Frankie’s order: greeting, headline, how they were cho
   assert.deepEqual(order, [...order].sort((a, b) => a - b), 'in order');
   assert.ok(text.includes('- 200 Chambers Street #10A — sold for $4,650,000 ($2,112 a sq ft), 3.0% below its last ask · 24 days on the market — https://streeteasy.com/building/200-chambers-street-new_york/10a'));
   assert.ok(text.includes('  Full-service Tribeca condo, high floor, water views, close in size — the closest match.'), 'the agent’s note under its comp');
-  assert.ok(html.includes('<a href="https://streeteasy.com/building/200-chambers-street-new_york/10a">200 Chambers Street #10A</a>'), 'comps paste as links');
   assert.equal(text.includes('79 Laight'), false, 'an excluded comp isn’t listed');
   assert.deepEqual(appraisalFindings(text), [], 'the approved disclaimer isn’t a finding');
 });
@@ -131,11 +130,10 @@ test('the writer’s sections take the agent’s lines’ place, inside the code
     consider: ['Lower carrying costs here than at 25 North Moore'],
     nextStep: 'Let’s talk through an offer this week.',
   };
-  const { text, html } = buildEmail({ ...base, written });
+  const { text } = buildEmail({ ...base, written });
   assert.ok(text.includes(written.chosen) && !text.includes('I focused on high floors'), 'the writer’s line, not the agent’s');
   assert.ok(text.includes('  High floor, water views\n  The closest match'), 'a comp’s lines under its frame line');
   assert.ok(text.includes('THINGS TO CONSIDER\n- Lower carrying costs here than at 25 North Moore'));
-  assert.ok(html.includes('<ul><li>Lower carrying costs here than at 25 North Moore</li></ul>'));
   assert.ok(text.includes(written.nextStep) && !text.includes('If you offer'));
   assert.ok(text.includes('PRICE PER SQ FT FOR') && text.endsWith(DISCLAIMER), 'the frame stays the code’s');
   const empty = buildEmail({ ...base, written: { chosen: '', comps: [], consider: [], nextStep: '' } }).text;
@@ -153,11 +151,6 @@ test('didn’t sell is its own group, from the engine’s numbers (§6.3)', () =
   const { text } = buildEmail({ ...base, output: out, comps: all });
   assert.ok(text.includes('DIDN’T SELL\n- 100 Barclay Street #16L — on the market for $5,100,000 ($2,550 a sq ft), and never sold'), 'its last ask, as a ceiling');
   assert.ok(text.indexOf('DIDN’T SELL') > text.indexOf('ACTIVE') && text.indexOf('DIDN’T SELL') < text.indexOf('THINGS TO CONSIDER'));
-});
-
-test('an edited draft copies as HTML with its StreetEasy links made links', () => {
-  assert.equal(htmlFromText('Hi <Leeann>,\n\nSee https://streeteasy.com/building/x/1 please'),
-    '<p>Hi &lt;Leeann&gt;,</p>\n<p>See <a href="https://streeteasy.com/building/x/1">https://streeteasy.com/building/x/1</a> please</p>');
 });
 
 test('formatting: $/sqft truncates, money is whole dollars, client prices are three figures', () => {

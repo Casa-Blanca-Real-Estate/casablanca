@@ -2,13 +2,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  COPY_LABEL, designedCta, designedEyebrow, formatOf, homeSub, lengthOf, monthOf, outcomeFields, parseAmount, sentLine,
+  COPY_LABEL, designedCta, FORMATS, designedEyebrow, formatOf, homeSub, lengthOf, monthOf, outcomeFields, parseAmount, sentLine,
 } from './copy.ts';
 
-test('the tabs: Designed is the Full draft; a report from before the tabs opens on its length', () => {
+test('the tabs: Designed first and the default; a stored format wins; a report from before the tabs opens on its length', () => {
+  assert.deepEqual(FORMATS.map((f) => f.label), ['Designed', 'Full', 'Short', 'Text']);
   assert.equal(lengthOf('designed'), 'full');
   assert.equal(lengthOf('text'), 'text');
-  assert.equal(formatOf({}), 'full');
+  assert.equal(formatOf({}), 'designed', 'no stored format: Designed');
+  assert.equal(formatOf({ format: 'full' }), 'full', 'a stored format still wins');
   assert.equal(formatOf({ length: 'short' }), 'short');
   assert.equal(formatOf({ format: 'designed', length: 'full' }), 'designed');
   assert.equal(COPY_LABEL.designed, 'Copy the designed email');

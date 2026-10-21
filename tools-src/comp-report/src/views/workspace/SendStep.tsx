@@ -1,10 +1,11 @@
-// Send (Dispatch 14, item 10; the handoff's screens 9 and 10). Left, what QA
-// found: "N to fix", numbered as the email marks them, each with Show, and
-// "✦ Fix both" for the fixes QA can make itself. Right, the email: the tabs
-// Full, Designed, Short and Text; the headline (D-21: Copy waits for it) with
-// its drafts; the plain-text body the agent edits, the source of truth, with
-// the issues painted over it; Designed, the Full draft laid out as the
-// branded email; then Mark as sent (after a copy) and Copy.
+// Send (Dispatch 14, item 10; the handoff's screens 9 and 10; Dispatch 18).
+// Left, what QA found: "N to fix", numbered as the email marks them, each with
+// Show, and "✦ Fix both" for the fixes QA can make itself. Right, the email:
+// the tabs Designed, Full, Short and Text; the subject, its own field with its
+// own Copy; the headline (D-21: Copy waits for it), which is also the email's
+// first line, with its drafts; the plain-text body the agent edits, the source
+// of truth, with the issues painted over it; Designed, the Full draft laid out
+// as the branded email; then Copy, and Mark as sent beside it, copied or not.
 //
 // Everything CR-5 built stays: Hubert (the writer) drafts the headline and the
 // email in the house voice in the background, the template stands in when it
@@ -15,6 +16,7 @@ import type { ResultKind } from '../../../engine/index.ts';
 import type { Entry } from '../../../workspace/state.ts';
 import { AnnotatedText, revealMark, type TextMark } from '../send/AnnotatedText.tsx';
 import { COPY_LABEL, FORMATS, LENGTH_WORD, sentDay } from '../send/copy.ts';
+import { footOf } from '../send/drafts.ts';
 import { IssuesPanel } from '../send/IssuesPanel.tsx';
 import type { SendIssue } from '../send/issues.ts';
 import { useSendEmail, type SendModel } from '../send/useSendEmail.ts';
@@ -74,7 +76,7 @@ export function SendStep({ ws }: StepProps) {
     <div className="se-send">
       <div className="se-grid">
         <div className="se-side">
-          <IssuesPanel issues={m.issues} canChange={!m.off && !m.editedElsewhere} onShow={show} onFix={() => m.fix()} onAnswer={m.answer} />
+          <IssuesPanel issues={m.issues} canChange={!m.off} onShow={show} onFix={() => m.fix()} onAnswer={m.answer} />
           {m.both && <WhichResult m={m} />}
           <YourLines ws={ws} m={m} />
         </div>
@@ -103,28 +105,11 @@ export function SendStep({ ws }: StepProps) {
           <Notices m={m} />
 
           {m.format === 'full' && <FullBody m={m} />}
-          {m.format === 'short' && <PlainBody m={m} label="Body · short" />}
+          {m.format === 'short' && <><Subject m={m} /><PlainBody m={m} label="Body · short" /></>}
           {m.format === 'text' && <TextBody m={m} />}
           {m.format === 'designed' && <DesignedBody m={m} />}
 
-          <footer className="se-foot">
-            {m.send.sentAt
-              ? <span className="se-foot-note">Marked as sent {sentDay(m.send.sentAt)}.</span>
-              : !m.off && !m.send.copiedAt && <span className="se-foot-note">Copy it, send it, then mark it as sent.</span>}
-            <div className="se-foot-actions">
-              {!m.off && (
-                <button type="button" className="btn se-sent" disabled={!m.send.copiedAt} title={m.send.copiedAt ? undefined : 'Copy it first'} onClick={m.markSent}>
-                  Mark as sent
-                </button>
-              )}
-              <span className="se-copy">
-                <span className="se-tip" role="tooltip">{m.copyable ? 'Double-check before sending' : 'Fix what’s listed first'}</span>
-                <button type="button" className="btn primary" disabled={!m.copyable} onClick={() => void m.copy()}>
-                  {COPY_LABEL[m.format]}
-                </button>
-              </span>
-            </div>
-          </footer>
+          <Foot m={m} />
           <BuildNote>
             <StubTag>CR-5</StubTag> The writer runs in a background function; each draft is pinned to its numbers (<code>narratives</code>).
             QA’s fixes are deterministic (<code>workspace/qa.ts</code>); Designed reads the Full draft’s plain text back (<code>send/designed.ts</code>).
@@ -132,6 +117,29 @@ export function SendStep({ ws }: StepProps) {
         </section>
       </div>
     </div>
+  );
+}
+
+/** Copy, then Mark as sent on its right (NW-101 a); after a copy, Mark as sent leads (NW-086 a). */
+function Foot({ m }: { m: SendModel }) {
+  const foot = footOf({ off: m.off, copiedAt: m.send.copiedAt, sentAt: m.send.sentAt, sentDay: m.send.sentAt ? sentDay(m.send.sentAt) : '' });
+  return (
+    <footer className="se-foot">
+      {foot.note && <span className="se-foot-note" role="status">{foot.note}</span>}
+      <div className="se-foot-actions">
+        <span className="se-copy">
+          <span className="se-tip" role="tooltip">{m.copyable ? 'Double-check before sending' : 'Fix what’s listed first'}</span>
+          <button type="button" className={foot.primary === 'copy' ? 'btn primary' : 'btn'} disabled={!m.copyable} onClick={() => void m.copy()}>
+            {COPY_LABEL[m.format]}
+          </button>
+        </span>
+        {foot.markSent && (
+          <button type="button" className={foot.primary === 'sent' ? 'btn primary se-sent' : 'btn se-sent'} onClick={m.markSent}>
+            Mark as sent
+          </button>
+        )}
+      </div>
+    </footer>
   );
 }
 
@@ -143,7 +151,6 @@ function Notices({ m }: { m: SendModel }) {
     <>
       {!m.off && !m.everWritten && !m.writing && (
         <div className="se-writer">
-          <p>Hubert drafts the headline and the email from the comps that count, in the house voice. Or edit the template below.</p>
           <button type="button" className="btn primary se-write" onClick={() => void m.writeIt()}>
             <span className="se-star" aria-hidden="true">✦</span>Write it
           </button>
@@ -163,19 +170,8 @@ function Notices({ m }: { m: SendModel }) {
       {m.stale && (
         <p className="se-notice">
           The numbers, your lines or the draft changed since you edited this email.{' '}
-          {!m.off && <button type="button" className="link" onClick={() => m.setSend({ draft: undefined })}>Back to the {back}</button>}
+          {!m.off && <button type="button" className="link" onClick={m.discard}>Back to the {back}</button>}
           {!m.off && ' to pick them up.'}
-        </p>
-      )}
-      {m.editedElsewhere && (
-        <p className="se-notice">
-          Your edits are on the {LENGTH_WORD[m.editedElsewhere]}{m.editedElsewhere === 'text' ? '' : ' email'}, so this one shows as drafted.{' '}
-          {!m.off && (
-            <button type="button" className="link" onClick={() => m.setSend({ draft: undefined })}>
-              Edit this one instead
-            </button>
-          )}
-          {!m.off && ' (your edits there go).'}
         </p>
       )}
     </>
@@ -210,17 +206,21 @@ function HeadlineDrafts({ m }: { m: SendModel }) {
   );
 }
 
+/** The subject: its own field on Designed, Full and Short (not Text), with its own Copy (NW-083 a). */
 function Subject({ m }: { m: SendModel }) {
   return (
-    <div className="se-subject-row">
-      <label className="se-label" htmlFor="se-subject">Subject</label>
-      <input
-        id="se-subject"
-        className="se-subject"
-        value={m.shown.subject}
-        readOnly={m.off || Boolean(m.editedElsewhere)}
-        onChange={(e) => m.edit({ subject: e.target.value })}
-      />
+    <div className="se-block se-subject-block">
+      <div className="se-subject-row">
+        <label className="se-label" htmlFor="se-subject">Subject</label>
+        <input
+          id="se-subject"
+          className="se-subject"
+          value={m.shown.subject}
+          readOnly={m.off}
+          onChange={(e) => m.editSubject(e.target.value)}
+        />
+        <button type="button" className="btn small-btn se-copy-subject" onClick={() => void m.copySubject()}>Copy subject</button>
+      </div>
     </div>
   );
 }
@@ -228,7 +228,7 @@ function Subject({ m }: { m: SendModel }) {
 function BackToDraft({ m }: { m: SendModel }) {
   if (m.off || !m.draftHere || m.stale) return null;
   return (
-    <button type="button" className="link se-undo" onClick={() => m.setSend({ draft: undefined })}>
+    <button type="button" className="link se-undo" onClick={m.discard}>
       Back to the {m.usesWriter ? 'draft' : 'template'}
     </button>
   );
@@ -237,9 +237,10 @@ function BackToDraft({ m }: { m: SendModel }) {
 function FullBody({ m }: { m: SendModel }) {
   return (
     <>
+      <Subject m={m} />
       <div className="se-block se-head-block">
         <div className="se-labelrow">
-          <label className="se-label" htmlFor="se-headline">Headline</label>
+          <label className="se-label" htmlFor="se-headline">Headline <span className="se-label-note">· also the email’s first line</span></label>
           <HeadlineDrafts m={m} />
         </div>
         <AnnotatedText
@@ -262,7 +263,6 @@ function FullBody({ m }: { m: SendModel }) {
 function PlainBody({ m, label }: { m: SendModel; label: string }) {
   return (
     <div className="se-block">
-      <Subject m={m} />
       <div className="se-labelrow">
         <label className="se-label" htmlFor="se-body">{label}</label>
         <BackToDraft m={m} />
@@ -272,9 +272,9 @@ function PlainBody({ m, label }: { m: SendModel; label: string }) {
         label="Email body"
         className="se-body"
         value={m.shown.text}
-        onChange={(body) => m.edit({ body })}
+        onChange={m.edit}
         marks={marksOf(m.issues, 'body')}
-        readOnly={m.off || Boolean(m.editedElsewhere)}
+        readOnly={m.off}
       />
     </div>
   );
@@ -293,9 +293,9 @@ function TextBody({ m }: { m: SendModel }) {
           label="Text message"
           className="se-bubble"
           value={m.shown.text}
-          onChange={(body) => m.edit({ body })}
+          onChange={m.edit}
           marks={marksOf(m.issues, 'body')}
-          readOnly={m.off || Boolean(m.editedElsewhere)}
+          readOnly={m.off}
         />
       </div>
       <div className="se-labelrow">
@@ -308,6 +308,8 @@ function TextBody({ m }: { m: SendModel }) {
 
 function DesignedBody({ m }: { m: SendModel }) {
   return (
+    <>
+    <Subject m={m} />
     <div className="se-block se-designed">
       <div className="se-labelrow wrap">
         <span className="se-label">Designed · Casa Blanca branded</span>
@@ -320,6 +322,7 @@ function DesignedBody({ m }: { m: SendModel }) {
         Copies as HTML for Gmail, with the Full email’s words. Photos come later: the gray blocks hold their place.
       </span>
     </div>
+    </>
   );
 }
 
@@ -407,7 +410,7 @@ function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
         <span className="se-hint">What matters to them. It isn’t quoted in the email, and Hubert doesn’t see it.</span>
       </label>
       {!off && m.done && !m.writing && (
-        <button type="button" className="link" onClick={() => m.setSend({ useTemplate: !m.send.useTemplate, draft: undefined })}>
+        <button type="button" className="link" onClick={() => m.setSend({ useTemplate: !m.send.useTemplate, draft: undefined, drafts: undefined })}>
           {m.send.useTemplate ? 'Use Hubert’s draft' : 'Use the template instead'}
         </button>
       )}

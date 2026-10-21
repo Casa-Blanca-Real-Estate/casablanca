@@ -198,54 +198,79 @@ export interface DesignedInput {
   /** "Talk it through" (seller), "Plan the offer" (buyer). */
   cta: string;
   subject: string;
+  /** The home's StreetEasy page, when known: the title links there. */
+  titleUrl?: string | null;
 }
 
-const FONT = '\'Object Sans\', \'Helvetica Neue\', Helvetica, Arial, sans-serif';
+// Email-safe: no Object Sans, which only the app embeds. A font the reader's mail
+// can't load falls back unpredictably, and one suspect for Noble's italic (NW-081).
+const FONT = '\'Helvetica Neue\', Helvetica, Arial, sans-serif';
+const INK = '#0f0f0f';
+/**
+ * Every cell's own style, so nothing is left to the mail client or the
+ * compose box it's pasted into: upright, regular, dark, set left (NW-080, 081).
+ * A cell's own style follows it and wins where it differs.
+ */
+const CELL = `font-family:${FONT};font-style:normal;font-weight:normal;color:${INK};text-align:left;`;
 const HATCH = 'background-color:#eeece7;background-image:repeating-linear-gradient(135deg,#e4e2dc 0 8px,#eeece7 8px 16px);';
 const SWATCH: Record<ListingStatus, string> = { sold: '#0f0f0f', in_contract: '#aaa3cf', active: '#ffffff', off_market: '#c0c2b5' };
-const EYEBROW = 'font-size:10px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;';
+const EYEBROW = 'font-size:10px;font-weight:bold;letter-spacing:.24em;text-transform:uppercase;';
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/** The one escape: everything typed or read reaches the HTML through it, in text and attributes alike. */
+export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/** A link we write: https only, else none. */
+export const safeUrl = (url: string | null | undefined): string | null => (url && /^https:\/\/[^\s"<>]+$/i.test(url) ? url : null);
 const lines = (s: string) => esc(s).replace(/\n/g, '<br>');
 
 function swatch(status: ListingStatus, border: boolean): string {
   return `<span style="display:inline-block;width:8px;height:8px;background:${SWATCH[status]};${border || status === 'active' ? 'border:1px solid #0f0f0f;' : ''}box-sizing:border-box;vertical-align:middle;margin:0 6px 2px 0;"></span>`;
 }
 
-function name(c: DesignedComp, style: string): string {
-  return c.url
-    ? `<a href="${esc(c.url)}" style="${style}color:#0f0f0f;text-decoration:none;">${esc(c.name)}</a>`
-    : `<span style="${style}">${esc(c.name)}</span>`;
+/**
+ * Text Gmail would otherwise autolink (an address, "Floor 17") in an anchor of
+ * our own: dark, no underline, to the StreetEasy page when there is one
+ * (NW-082). Without a page it's an anchor with no href, which links nowhere.
+ */
+function quiet(text: string, url: string | null | undefined, style: string): string {
+  const href = safeUrl(url);
+  return `<a${href ? ` href="${esc(href)}"` : ''} style="${style}color:${INK};text-decoration:none;">${esc(text)}</a>`;
 }
 
-const row = (inner: string, pad = '32px 32px 0') => `<tr><td style="padding:${pad};">${inner}</td></tr>`;
+const name = (c: DesignedComp, style: string) => quiet(c.name, c.url, style);
+
+const row = (inner: string, pad = '32px 32px 0') => `<tr><td style="${CELL}padding:${pad};">${inner}</td></tr>`;
 const para = (text: string, style = '') => `<p style="margin:0 0 14px;${style}">${lines(text)}</p>`;
 
-/** The designed email: one table, inline styles, 600px at most. */
+/**
+ * The designed email: tables and inline styles, 600px at most, centred by its
+ * own markup (NW-080): an outer full-width table, the email centred in it,
+ * every cell set left.
+ */
 export function designedHtml(d: DesignedInput): string {
   const e = d.email;
   const wordmark = (h: number) => `<img src="${esc(d.origin)}/assets/brand/casa-blanca-wordmark-white.png" alt="Casa Blanca" height="${h}" style="height:${h}px;width:auto;display:block;border:0;">`;
   const out: string[] = [];
-  out.push(`<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;border-collapse:collapse;background:#ffffff;color:#0f0f0f;font-family:${FONT};">`);
-  out.push(`<tr><td bgcolor="#0f0f0f" style="background:#0f0f0f;padding:22px 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>`
-    + `<td style="vertical-align:middle;">${wordmark(18)}</td>`
-    + `<td align="right" style="vertical-align:middle;${EYEBROW}color:#aaa3cf;font-family:${FONT};">Comp report</td></tr></table></td></tr>`);
-  if (e.sample) out.push(`<tr><td bgcolor="#fbf0c4" style="background:#fbf0c4;padding:10px 32px;font-size:11px;font-weight:800;">${esc(SAMPLE_BANNER)}</td></tr>`);
-  out.push(`<tr><td height="240" bgcolor="#eeece7" style="height:240px;${HATCH}font-size:0;line-height:0;">&nbsp;</td></tr>`);
+  out.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="${CELL}text-align:center;padding:0;">`);
+  out.push(`<table role="presentation" align="center" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;margin:0 auto;border-collapse:collapse;background:#ffffff;color:${INK};font-family:${FONT};font-style:normal;">`);
+  out.push(`<tr><td bgcolor="#0f0f0f" style="${CELL}background:#0f0f0f;padding:22px 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>`
+    + `<td style="${CELL}vertical-align:middle;">${wordmark(18)}</td>`
+    + `<td align="right" style="${CELL}text-align:right;vertical-align:middle;${EYEBROW}color:#aaa3cf;">Comp report</td></tr></table></td></tr>`);
+  if (e.sample) out.push(`<tr><td bgcolor="#fbf0c4" style="${CELL}background:#fbf0c4;padding:10px 32px;font-size:11px;font-weight:bold;">${esc(SAMPLE_BANNER)}</td></tr>`);
+  out.push(`<tr><td height="240" bgcolor="#eeece7" style="${CELL}height:240px;${HATCH}font-size:0;line-height:0;">&nbsp;</td></tr>`);
   out.push(row(
     `<div style="${EYEBROW}color:#888680;">Prepared for ${esc(d.preparedFor)} · ${esc(d.month)}</div>`
-    + `<div style="font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-top:6px;">${esc(d.title)}</div>`
-    + (d.sub ? `<div style="font-size:13px;color:#888680;margin-top:6px;">${esc(d.sub)}</div>` : ''),
+    + `<div style="font-size:30px;font-weight:bold;letter-spacing:-.03em;line-height:1.05;margin-top:6px;">${quiet(d.title, d.titleUrl, 'font-size:30px;font-weight:bold;')}</div>`
+    + (d.sub ? `<div style="font-size:13px;color:#888680;margin-top:6px;">${quiet(d.sub, d.titleUrl, 'font-size:13px;color:#888680;')}</div>` : ''),
   ));
   if (d.range) {
-    out.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#0f0f0f" style="background:#0f0f0f;color:#ffffff;padding:26px 28px;">`
+    out.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#0f0f0f" style="${CELL}background:#0f0f0f;color:#ffffff;padding:26px 28px;">`
       + `<div style="${EYEBROW}color:#aaa3cf;">${esc(d.eyebrow)}</div>`
-      + `<div style="font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1;margin-top:8px;color:#ffffff;">${esc(d.range)}</div>`
+      + `<div style="font-size:44px;font-weight:bold;letter-spacing:-.04em;line-height:1;margin-top:8px;color:#ffffff;">${esc(d.range)}</div>`
       + (d.perSqft ? `<div style="font-size:13px;color:#d8d6d0;margin-top:8px;">${esc(d.perSqft)}</div>` : '')
       + '</td></tr></table>', '24px 32px 0'));
   }
   const intro = [
-    e.headline ? para(e.headline, 'font-size:18px;font-weight:800;line-height:1.35;') : '',
+    e.headline ? para(e.headline, 'font-size:18px;font-weight:bold;line-height:1.35;') : '',
     ...e.intro.map((p) => para(p)),
   ].join('');
   if (intro) out.push(row(`<div style="font-size:15px;line-height:1.6;">${intro}</div>`, '24px 32px 0'));
@@ -254,12 +279,12 @@ export function designedHtml(d: DesignedInput): string {
     out.push(row(
       `<div style="${EYEBROW}padding-bottom:12px;"><span style="color:#e8b923;font-size:13px;letter-spacing:0;">★</span>&nbsp; The closest match</div>`
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
-      + `<td width="48%" height="150" bgcolor="#eeece7" style="width:48%;height:150px;${HATCH}font-size:0;line-height:0;">&nbsp;</td>`
-      + '<td width="4%" style="width:4%;font-size:0;">&nbsp;</td>'
-      + '<td width="48%" style="width:48%;vertical-align:top;">'
-      + `<div>${name(a, 'font-size:17px;font-weight:800;')}</div>`
+      + `<td width="48%" height="150" bgcolor="#eeece7" style="${CELL}width:48%;height:150px;${HATCH}font-size:0;line-height:0;">&nbsp;</td>`
+      + `<td width="4%" style="${CELL}width:4%;font-size:0;">&nbsp;</td>`
+      + `<td width="48%" style="${CELL}width:48%;vertical-align:top;">`
+      + `<div>${name(a, 'font-size:17px;font-weight:bold;')}</div>`
       + `<div style="font-size:12px;color:#888680;margin-top:6px;">${swatch(a.status, false)}${esc(a.sub)}</div>`
-      + `<div style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:6px;">${esc(a.price)}</div>`
+      + `<div style="font-size:24px;font-weight:bold;letter-spacing:-.02em;margin-top:6px;">${esc(a.price)}</div>`
       + (a.note ? `<div style="font-size:13px;line-height:1.5;color:#3c3654;margin-top:6px;">${lines(a.note)}</div>` : '')
       + '</td></tr></table>',
     ));
@@ -268,11 +293,11 @@ export function designedHtml(d: DesignedInput): string {
     out.push(row(
       `<div style="${EYEBROW}padding-bottom:10px;">${d.anchor ? 'Other comps' : 'The comps'}</div>`
       + d.others.map((c) => '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #eeece7;"><tr>'
-        + `<td width="72" style="width:72px;padding:12px 0;vertical-align:middle;"><div style="width:72px;height:52px;${HATCH}font-size:0;line-height:0;">&nbsp;</div></td>`
-        + '<td width="14" style="width:14px;font-size:0;">&nbsp;</td>'
-        + `<td style="padding:12px 0;vertical-align:middle;"><div>${name(c, 'font-size:14px;font-weight:800;')}</div>`
+        + `<td width="72" style="${CELL}width:72px;padding:12px 0;vertical-align:middle;"><div style="width:72px;height:52px;${HATCH}font-size:0;line-height:0;">&nbsp;</div></td>`
+        + `<td width="14" style="${CELL}width:14px;font-size:0;">&nbsp;</td>`
+        + `<td style="${CELL}padding:12px 0;vertical-align:middle;"><div>${name(c, 'font-size:14px;font-weight:bold;')}</div>`
         + `<div style="font-size:12px;color:#888680;margin-top:3px;">${swatch(c.status, true)}${esc(c.sub)}</div></td>`
-        + `<td align="right" style="padding:12px 0 12px 12px;vertical-align:middle;font-size:15px;font-weight:800;white-space:nowrap;">${esc(c.price)}</td>`
+        + `<td align="right" style="${CELL}text-align:right;padding:12px 0 12px 12px;vertical-align:middle;font-size:15px;font-weight:bold;white-space:nowrap;">${esc(c.price)}</td>`
         + '</tr></table>').join(''),
     ));
   }
@@ -286,22 +311,120 @@ export function designedHtml(d: DesignedInput): string {
     after.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;">'
       + e.table.map((t) => {
         const [rate, price] = t.split(/\s+-\s+/);
-        return `<tr><td style="padding:8px 0;border-top:1px solid #eeece7;font-size:13px;color:#888680;">${esc(rate ?? t)} a sq ft</td>`
-          + `<td align="right" style="padding:8px 0;border-top:1px solid #eeece7;font-size:14px;font-weight:800;">${esc(price ?? '')}</td></tr>`;
+        return `<tr><td style="${CELL}padding:8px 0;border-top:1px solid #eeece7;font-size:13px;color:#888680;">${esc(rate ?? t)} a sq ft</td>`
+          + `<td align="right" style="${CELL}text-align:right;padding:8px 0;border-top:1px solid #eeece7;font-size:14px;font-weight:bold;">${esc(price ?? '')}</td></tr>`;
       }).join('') + '</table>');
   }
   after.push(...e.outro.map((p) => para(p)));
   if (after.length) out.push(row(`<div style="font-size:15px;line-height:1.6;">${after.join('')}</div>`));
   const mail = d.agent.email ? `mailto:${encodeURIComponent(d.agent.email).replace('%40', '@')}?subject=${encodeURIComponent(d.subject)}` : null;
-  out.push(`<tr><td style="padding:32px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid #0f0f0f;"><tr>`
-    + `<td width="56" style="width:56px;padding:22px 16px 28px 0;"><div style="width:56px;height:56px;border-radius:50%;${HATCH}"></div></td>`
-    + `<td style="padding:22px 0 28px;vertical-align:middle;"><div style="font-size:15px;font-weight:800;">${esc(e.signOff?.split('\n').at(-1)?.trim() || d.agent.name)}</div>`
-    + `<div style="font-size:12px;color:#888680;margin-top:2px;">${esc(d.agent.office)}</div></td>`
-    + (mail ? `<td align="right" style="padding:22px 0 28px 12px;vertical-align:middle;"><a href="${esc(mail)}" style="display:inline-block;background:#0f0f0f;color:#ffffff;text-decoration:none;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:12px 18px;white-space:nowrap;">${esc(d.cta)}</a></td>` : '')
+  out.push(`<tr><td style="${CELL}padding:32px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid #0f0f0f;"><tr>`
+    + `<td width="56" style="${CELL}width:56px;padding:22px 16px 28px 0;"><div style="width:56px;height:56px;border-radius:50%;${HATCH}"></div></td>`
+    + `<td style="${CELL}padding:22px 0 28px;vertical-align:middle;"><div style="font-size:15px;font-weight:bold;">${esc(e.signOff?.split('\n').at(-1)?.trim() || d.agent.name)}</div>`
+    + `<div style="font-size:12px;color:#888680;margin-top:2px;">${quiet(d.agent.office, null, 'font-size:12px;color:#888680;')}</div></td>`
+    + (mail ? `<td align="right" style="${CELL}text-align:right;padding:22px 0 28px 12px;vertical-align:middle;"><a href="${esc(mail)}" style="display:inline-block;background:#0f0f0f;color:#ffffff;text-decoration:none;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;padding:12px 18px;white-space:nowrap;">${esc(d.cta)}</a></td>` : '')
     + '</tr></table></td></tr>');
-  out.push(`<tr><td bgcolor="#0f0f0f" style="background:#0f0f0f;color:#888680;padding:22px 32px;font-size:11px;line-height:1.5;">${wordmark(13)}`
+  out.push(`<tr><td bgcolor="#0f0f0f" style="${CELL}background:#0f0f0f;color:#888680;padding:22px 32px;font-size:11px;line-height:1.5;">${wordmark(13)}`
     + (e.disclaimer ? `<div style="margin-top:10px;">${lines(e.disclaimer)}</div>` : '')
     + '</td></tr>');
   out.push('</table>');
+  out.push('</td></tr></table>');
   return out.join('\n');
+}
+
+// ─── Full and Short, as they copy (NW-084 a) ─────────────────────────────────
+
+const MUTED = '#888680';
+const TEXT = `font-family:${FONT};font-style:normal;font-weight:normal;color:${INK};`;
+const STREETEASY_LINK = /https:\/\/(?:www\.)?streeteasy\.com\/[^\s<>"]*[^\s<>".,;:!?)]/g;
+
+/** A StreetEasy page as a link labelled "StreetEasy", never the raw URL; anything else not https stays text. */
+function streetEasy(url: string): string {
+  const href = safeUrl(url);
+  return href ? `<a href="${esc(href)}" style="${TEXT}color:${INK};text-decoration:underline;">StreetEasy</a>` : esc(url);
+}
+
+/** Prose: escaped, its StreetEasy URLs as labelled links, its line breaks kept. */
+function prose(s: string): string {
+  let out = '';
+  let at = 0;
+  for (const m of s.matchAll(STREETEASY_LINK)) {
+    out += esc(s.slice(at, m.index)) + streetEasy(m[0]);
+    at = m.index + m[0].length;
+  }
+  return (out + esc(s.slice(at))).replace(/\n/g, '<br>');
+}
+
+const p = (inner: string, style = '') => `<p style="${TEXT}margin:0 0 14px;font-size:15px;line-height:1.55;${style}">${inner}</p>`;
+const ul = (items: string[]) => `<ul style="${TEXT}margin:0 0 14px;padding-left:22px;font-size:15px;line-height:1.55;">${items.map((li) => `<li style="${TEXT}margin:0 0 6px;">${li}</li>`).join('')}</ul>`;
+
+/**
+ * The plain text of Full or Short (the agent's, edited or not) as the HTML that
+ * copies beside it: the headline bold, each heading bold, comps and points as
+ * bullets with "StreetEasy" links, the disclaimer small. It reads the text the
+ * way the Designed email does (parseEmailText finds the headline; the same
+ * headings and comp lines), so an edit keeps its formatting. Only the copy is
+ * formatted: the text, QA and the Text tab are the plain text as typed.
+ */
+export function emailHtml(text: string, headline?: string): string {
+  const head = parseEmailText(text, headline).headline;
+  const blocks = text.replace(/\r\n/g, '\n').split(/\n[ \t]*\n/).filter((b) => b.trim());
+  let headDone = false;
+  const out: string[] = [];
+  for (const block of blocks) {
+    const t = block.trim();
+    if (t === SAMPLE_BANNER) {
+      out.push(p(esc(t), 'font-weight:bold;'));
+      continue;
+    }
+    if (t.toLowerCase().startsWith(DISCLAIMER_START)) {
+      out.push(p(prose(t), `font-size:12px;line-height:1.5;color:${MUTED};`));
+      continue;
+    }
+    if (!headDone && head && t === head) {
+      headDone = true;
+      out.push(p(prose(t), 'font-size:17px;font-weight:bold;line-height:1.35;'));
+      continue;
+    }
+    const lines = block.split('\n');
+    if (!isHeading(lines[0]!.trim())) {
+      out.push(p(prose(t)));
+      continue;
+    }
+    // A section: a heading, then its comps, points or rows.
+    let items: string[] = [];
+    let rows: string[] = [];
+    let comps = false;
+    const flush = () => {
+      if (items.length) out.push(ul(items));
+      if (rows.length) out.push(p(rows.join('<br>')));
+      items = [];
+      rows = [];
+    };
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (isHeading(line)) {
+        flush();
+        comps = STATUS_HEADINGS.has(line);
+        out.push(p(esc(line), 'font-size:13px;font-weight:bold;letter-spacing:.04em;margin:22px 0 8px;'));
+        continue;
+      }
+      const comp = comps ? COMP_LINE.exec(line) : null;
+      if (comp) {
+        const url = comp[3];
+        items.push(`<strong style="${TEXT}font-weight:bold;">${esc(comp[1]!.trim())}</strong> — ${esc(comp[2]!.trim())}${url ? ` · ${streetEasy(url)}` : ''}`);
+      } else if (comps && items.length && !line.startsWith('- ')) {
+        // A note under the comp above it.
+        items[items.length - 1] += `<br><span style="${TEXT}color:#3c3654;">${prose(line)}</span>`;
+      } else if (line.startsWith('- ')) {
+        items.push(prose(line.slice(2)));
+      } else {
+        if (items.length) flush();
+        rows.push(prose(line));
+      }
+    }
+    flush();
+  }
+  return `<div style="${TEXT}font-size:15px;line-height:1.55;">${out.join('\n')}</div>`;
 }
