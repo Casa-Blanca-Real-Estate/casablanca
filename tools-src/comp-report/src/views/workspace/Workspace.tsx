@@ -577,7 +577,9 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
           // sample's photos on its comps, once the site has read them; this asks for that, once.
           void workspaceApi.captureSamplePhotos();
           let latest: WorkspaceData | null = null;
-          if (!hasSampleImport) latest = await workspaceApi.importSample(reportId);
+          // A report with comps of its own keeps them: the sample sort gives those a placeholder sort instead.
+          const ownComps = (data?.comps ?? []).some((c) => !c.removedAt);
+          if (!hasSampleImport && !ownComps) latest = await workspaceApi.importSample(reportId);
           if (all || which === 'sort') latest = await workspaceApi.sortSample(reportId);
           if (latest) ws.applyServer(latest);
         }

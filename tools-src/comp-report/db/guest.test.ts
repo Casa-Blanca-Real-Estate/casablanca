@@ -171,4 +171,21 @@ describe('guest mode and the sample, through the API', { skip: skipWithoutDataba
     const again = await (await handleComps(req(guest, '/api/comp-report/comps', 'POST', { reportId: early, sample: true }), deps)).json();
     assert.deepEqual(again.comps.map((c: { photos: string[] }) => c.photos), ws.comps.map((c: { photos: string[] }) => c.photos));
   });
+
+  test('a sample sort also sorts the comps the sample doesn’t know, keeping what the agent gave', async () => {
+    const id = (await (await handleReports(req(guest, '/api/comp-report/reports', 'POST', { title: '30 Warren Street #7A' }), deps)).json()).report.id as string;
+    const typed = await handleComps(req(guest, '/api/comp-report/comps', 'POST', {
+      reportId: id, manual: { address: '30 Warren Street, New York, NY', unit: '#7A', status: 'sold', price: 4380000, date: '2026-08-01', floor: 7 },
+      tags: ['Similar size'],
+    }), deps);
+    assert.equal(typed.status, 201);
+    const ws = await (await handleComps(req(guest, '/api/comp-report/comps', 'POST', { reportId: id, sample: true }), deps)).json();
+    assert.equal(ws.comps.length, 1);
+    const [c] = ws.comps;
+    assert.equal(c.tier, 'secondary');
+    assert.deepEqual(c.tags, ['Similar size']);
+    assert.match(c.note, /placeholder/);
+    assert.ok(c.reviewedAt);
+    assert.equal(c.reasons.at(-1).sample, true);
+  });
 });

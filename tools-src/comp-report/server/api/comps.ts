@@ -271,6 +271,36 @@ async function attachSamplePhotos(tx: Queryable, reportId: string, photos: Recor
   }
 }
 
+const PLACEHOLDER_NOTE = 'Sample sort: a placeholder so the walkthrough can move on.';
+
+/**
+ * A sample sort of the comps the sample doesn't know: a 2nd tier where there's none, a note and a tag
+ * where they're missing, reviewed, and a link read confirmed. What the agent already gave stays.
+ */
+async function placeholderSort(tx: Queryable, reportId: string, skip: Set<string>) {
+  const rest = (await tx.query<{ id: string; tier: string | null; note: string | null; tags: string[] | null }>(
+    'select id, tier, note, tags from comp_report.report_comps where report_id = $1 and removed_at is null',
+    [reportId],
+  )).rows.filter((c) => !skip.has(c.id));
+  for (const c of rest) {
+    if (!c.tier) await recordReason(tx, reportId, c.id, 'secondary', PLACEHOLDER_NOTE, 'method', true);
+    const edits: { note?: string; tags?: string[] } = {};
+    if (!c.note?.trim()) edits.note = PLACEHOLDER_NOTE;
+    if (!c.tags?.length) edits.tags = ['Same area'];
+    if (edits.note !== undefined || edits.tags) await saveEdits(tx, reportId, c.id, edits);
+    await setReviewed(tx, reportId, c.id, true);
+    await tx.query(
+      `update comp_report.link_reads lr
+          set confirmed_at = now(), confirmed_by = comp_report.actor()
+         from comp_report.report_comps rc
+        where rc.id = $2 and rc.report_id = $1
+          and lr.report_id = rc.report_id and lr.observation_id = rc.observation_id
+          and lr.status = 'done' and lr.confirmed_at is null`,
+      [reportId, c.id],
+    );
+  }
+}
+
 export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Response> {
   return respond(async () => {
     allowMethods(req, 'POST', 'PATCH');
@@ -291,17 +321,20 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
              join comp_report.properties p on p.id = rc.property_id where rc.report_id = $1`,
           [reportId],
         )).rows;
-        let matched = 0;
+        const matched = new Set<string>();
         for (const sample of SAMPLE_TIERS) {
           const comp = comps.find((c) => c.property_key === sample.propertyKey);
           if (!comp) continue;
-          matched++;
+          matched.add(comp.id);
           if (comp.tier !== sample.tier) await recordReason(tx, reportId, comp.id, sample.tier, sample.reason, sample.reasonType, true);
           await saveEdits(tx, reportId, comp.id, { note: sample.reason, tags: sample.tags, ...(sample.features ? { features: sample.features } : {}) });
           await setReviewed(tx, reportId, comp.id, true);
           if (sample.anchor) await setAnchor(tx, reportId, comp.id, true);
         }
-        if (!matched) throw new HttpError(409, 'no_sample_comps', 'Import the sample export first (step 2): the sample sorts its comps.');
+        if (!comps.length) throw new HttpError(409, 'no_sample_comps', 'Import the sample export first (step 2): the sample sorts its comps.');
+        // Every other comp in the report (a pasted link, one typed in) gets a placeholder sort, marked
+        // sample, so a walkthrough can always move on to Findings.
+        await placeholderSort(tx, reportId, matched);
         await tx.query('update comp_report.reports set sample_data = true where id = $1 and not sample_data', [reportId]);
         return loadWorkspace(tx, user, reportId);
       }));
