@@ -1,0 +1,17 @@
+{
+  "code": "D11",
+  "createdAt": "2026-10-06T12:00:00Z",
+  "file": "docs/dispatch/11-comp-report-distance.md",
+  "item": 1,
+  "landedAt": "2026-10-09T12:00:00Z",
+  "landedIn": 62,
+  "pr": 62,
+  "project": "casa",
+  "round": 5,
+  "status": "landed",
+  "summary": "Every comp's miles from the home; Kara's quarter-mile rule runs.",
+  "title": "Comp report: distance, from coordinates (CR-3c)",
+  "track": "Mason",
+  "updatedAt": "2026-10-09T12:00:00Z",
+  "updatedBy": "Casanova"
+}

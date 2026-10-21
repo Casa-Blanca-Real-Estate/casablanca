@@ -1,0 +1,7 @@
+{
+  "name": "Painter",
+  "role": "Visual tools: photo and video, the profile pics, the roster and store.",
+  "also": "Dispatch 01 parked; 12 phase 2 waits on CB_PICS_TOKEN and D-24.",
+  "order": 7,
+  "where": "web"
+}

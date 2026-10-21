@@ -1,0 +1,18 @@
+{
+  "body": "Mason: Casa's tracks are moving to a new cloud environment, so wrap up here and write your own handoff. 1) git fetch origin claude/main. Push any unpushed work on your branch. Don't start new build work. 2) At the end of your latest dispatch file (docs/dispatch/11-comp-report-distance.md), add a section \"Handoff, 2026-10-13\": where the work stands, your open PRs and what's left on them, what's next, gotchas, and anything waiting on Kimani or Casanova. Leave the roster and CLAUDE.md's table alone; Casanova updates them at merge. 3) In that section, write the restart kickoff for your successor session, from \"Restarting a track in a new session\" in docs/dispatch/README.md, naming your next work, which is Dispatch 13, the writer and QA (ledger line casa-r6-1). 4) Open a docs-only PR to claude/main with it, and paste the restart kickoff back to Kimani in chat. Never merge. Sign \"— Mason (CR-3c)\". When the PR opens, mark Dispatch Ledger line casa-r7-1 delivered (rule 11).",
+  "code": "HO",
+  "createdAt": "2026-10-13T20:00:00Z",
+  "file": "docs/dispatch/11-comp-report-distance.md",
+  "item": 1,
+  "landedAt": "2026-10-14T22:00:00Z",
+  "landedIn": 65,
+  "pr": 65,
+  "project": "casa",
+  "round": 7,
+  "status": "landed",
+  "summary": "Write a handoff and the restart kickoff for the new environment.",
+  "title": "Handoff: Mason",
+  "track": "Mason",
+  "updatedAt": "2026-10-14T22:00:00Z",
+  "updatedBy": "Casanova"
+}

@@ -1,0 +1,19 @@
+{
+  "body": "Your Dispatch 12 draft is approved and merged (#63); my answers are in its §7. Build it: docs/dispatch/12-profile-pic-tracker.md. Leave Dispatch 01's stack alone until Casanova re-reviews #41. Pull claude/main first. One PR per phase to claude/main. Never merge. Sign as the Dispatch 01 session. When your PR opens, mark Dispatch Ledger line casa-r6-2 delivered (rule 11 in docs/dispatch/README.md).",
+  "code": "D12",
+  "createdAt": "2026-10-09T12:00:00Z",
+  "file": "docs/dispatch/12-profile-pic-tracker.md",
+  "item": 2,
+  "landedAt": "2026-10-14T22:00:00Z",
+  "landedIn": 71,
+  "note": "Phase 1 landed; phase 2 after CB_PICS_TOKEN and D-24.",
+  "pr": 71,
+  "project": "casa",
+  "round": 6,
+  "status": "landed",
+  "summary": "Every agent's photo status, raws stored, a pasteable Gmail signature, where each photo is used.",
+  "title": "Profile pics: the roster, the store and the email signature",
+  "track": "D01 session",
+  "updatedAt": "2026-10-14T22:00:00Z",
+  "updatedBy": "Casanova"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Abacus",
+  "role": "The comp report's calculation engine and parser.",
+  "also": "Round 13: 16, then 19.",
+  "order": 3,
+  "where": "web"
+}

@@ -1,0 +1,23 @@
+{
+  "body": "Mason: from #77's merge comment, the design port's leftovers, once Noble's walk-through notes are in (npm run -s notebook): the follow-ups listed at the end of docs/dispatch/14-comp-report-design-port.md (one edited draft per length, Hubert's Fix-both chip reaching Send, setting an agent to practice in Access, Escape dropping a half-filled comp form, step 1's address retitling the report, Mark as sent recording the copied tab, the pixel polish), plus whatever Kimani's dev notes from the walk-through add. PR to claude/main; never merge. Sign \"— Mason (CR-6)\". Mark Dispatch Ledger line casa-r12-1 delivered when the PR opens.",
+  "code": "FU·77",
+  "createdAt": "2026-10-15T09:30:00Z",
+  "heldFrom": "queued",
+  "item": 1,
+  "kind": "follow-up",
+  "note": "Superseded by round 13 (Noble's walk-through plan): one draft per length and Mark as sent go to 18 (casa-r13-4); Escape and the retitle to 20 (casa-r13-6); practice from Access to 22 (casa-r13-8); the Fix-both chip to 24 (casa-r13-10). The pixel polish goes to Claude Design.",
+  "project": "casa",
+  "round": 12,
+  "status": "dropped",
+  "summary": "The port's leftovers, plus the notes from Noble's walk-through.",
+  "supersededBy": [
+    "casa-r13-4",
+    "casa-r13-6",
+    "casa-r13-8",
+    "casa-r13-10"
+  ],
+  "title": "Follow-up: the design port's leftovers and Noble's notes",
+  "track": "Mason",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

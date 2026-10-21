@@ -1,0 +1,17 @@
+{
+  "body": "Mason: carry on with Dispatch 13 phase 2: the agent's voice and the client profile (§8.7, §8.6), in docs/dispatch/13-comp-report-writer-and-qa.md, building on Dispatch 21's brief.client. Pull claude/main first. PR to claude/main; never merge. Sign \"— Mason (CR-5)\". When your PR opens, mark Dispatch Ledger line casa-r10-1 delivered (rule 11). (If Kimani answers NB-20 A, this goes to Calliste instead and Casanova rewrites the line.)",
+  "code": "FU·76",
+  "createdAt": "2026-10-14T23:30:00Z",
+  "heldFrom": "queued",
+  "item": 1,
+  "kind": "follow-up",
+  "note": "DP-6's free-text tags moved to Dispatch 20 (casa-r13-6). The voice and the client profile become Calliste's second dispatch, after 21 lands brief.client, if Kimani answers NB-20 A on the answer sheet. Held until then.",
+  "project": "casa",
+  "round": 10,
+  "status": "held",
+  "summary": "From #76's merge comment: phase 2 can start.",
+  "title": "Follow-up: Dispatch 13 phase 2, the agent's voice and the client profile",
+  "track": "Mason",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

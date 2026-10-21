@@ -1,0 +1,7 @@
+{
+  "name": "Arbiter",
+  "role": "The decision provider: Jev, with a Haiku fallback.",
+  "also": "Live run waits on the Jev keys and the labels sheet.",
+  "order": 5,
+  "where": "web"
+}

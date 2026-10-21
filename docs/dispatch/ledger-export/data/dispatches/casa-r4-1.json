@@ -1,0 +1,18 @@
+{
+  "code": "D08",
+  "createdAt": "2026-09-29T12:00:00Z",
+  "file": "docs/dispatch/08-comp-report-buyers-argument-engine.md",
+  "item": 1,
+  "landedAt": "2026-10-06T14:54:57Z",
+  "landedIn": 58,
+  "note": "Landed in #55 and #58.",
+  "pr": 55,
+  "project": "casa",
+  "round": 4,
+  "status": "landed",
+  "summary": "Comps by link and by hand; didn't sell; Kara's checks; differences between comps; the price table; headline facts.",
+  "title": "Comp report: the engine for a buyer's argument (CR-2.2)",
+  "track": "Abacus",
+  "updatedAt": "2026-10-06T14:54:57Z",
+  "updatedBy": "Casanova"
+}

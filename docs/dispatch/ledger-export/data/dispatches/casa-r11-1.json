@@ -1,0 +1,21 @@
+{
+  "body": "Mason: ultracode. Next is Dispatch 14, the comp report's design port, for Noble's walk-through tomorrow (2026-10-15): docs/dispatch/14-comp-report-design-port.md, with the design in docs/comp-report/design-port/. Run it in one go at Ultracode effort, orchestrating with workflows, within Kimani's agent budget for the whole dispatch: at most 1 Fable, 5 Opus and 10 Sonnet agents, and Haiku as needed. Pass model on every agent() call. Dispatch 13 phase 2 waits behind this. Pull claude/main first. One PR to claude/main; never merge. Sign \"— Mason (CR-6)\". When your PR opens, mark Dispatch Ledger line casa-r11-1 delivered (rule 11).",
+  "code": "D14",
+  "createdAt": "2026-10-15T00:40:00Z",
+  "file": "docs/dispatch/14-comp-report-design-port.md",
+  "item": 1,
+  "landedAt": "2026-10-15T09:30:00Z",
+  "landedIn": 77,
+  "note": "Agent budget: 1 Fable, 5 Opus, 10 Sonnet, Haiku as needed. Defaults Kimani can object to: DP-1 to DP-8 on the answer sheet.",
+  "pr": 77,
+  "project": "casa",
+  "round": 11,
+  "sentAt": "2026-10-14T23:07:24.518Z",
+  "status": "landed",
+  "summary": "The whole comp report flow in the new design, working on real data, live for Noble tomorrow.",
+  "title": "Comp report: the design port, for Noble (CR-6)",
+  "track": "Mason",
+  "updatedAt": "2026-10-15T09:30:00Z",
+  "updatedBy": "Casanova",
+  "updatedById": "u_6mqdmWtftdL6XPr55OdDcQ"
+}

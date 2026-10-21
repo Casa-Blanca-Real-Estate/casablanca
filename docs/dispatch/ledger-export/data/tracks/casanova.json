@@ -1,0 +1,7 @@
+{
+  "name": "Casanova",
+  "role": "Overseer: plans, writes dispatches, reviews and merges, keeps repo context current.",
+  "also": "Runbook: docs/dispatch/casanova.md.",
+  "order": 1,
+  "where": "web"
+}

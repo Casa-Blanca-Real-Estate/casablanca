@@ -1,0 +1,17 @@
+{
+  "body": "You're Mason, continuing the Casa Blanca comp report track. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/23-comp-report-samples-and-inspection.md in full, and build it in two PRs as it says: items 1–2 (the sample reset, the co-op sample) straight after 22a, from any account; items 3–4 (the inspection API, the test user) only from Casa's Claude account, once 22b has merged, Kimani has answered NB-22 A and the TD-14 keys are set.\nPRs to claude/main; never merge. Sign \"— Mason (CR-7f)\".\nMark Dispatch Ledger line casa-r13-9 delivered when the first PR opens, and add the second PR's number when it opens.",
+  "code": "D23",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/23-comp-report-samples-and-inspection.md",
+  "heldFrom": "queued",
+  "item": 9,
+  "note": "Items 1–2 after 22a, any account; samples stay admin-only on the server until NB-24. Items 3–4: Casa's account only, after 22b, NB-22 and TD-14.",
+  "project": "casa",
+  "round": 13,
+  "status": "held",
+  "summary": "Samples that reset, a co-op sample, and a read-only, redacted inspection key for sessions, with a separate test key for writes.",
+  "title": "Comp report: samples that reset, and reading production safely (CR-7f)",
+  "track": "Mason (or a second builder Kimani names)",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

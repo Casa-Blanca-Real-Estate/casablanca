@@ -1,0 +1,19 @@
+{
+  "body": "Mason: Noble couldn't sign in with Google on 2026-10-15, though Kimani had added his exact email on Access, and nobody could see why without Netlify's function log. Build a sign-in log admins can read in the tool: (1) the Identity gate (server/identity-events.ts) records every decision (event, provider, allowed or not, via; for a refusal only the domain, as today) to a small table; (2) the sign-in page catches the error Google or Identity hands back in the URL (error, error_description, e.g. admin_policy_enforced or access_denied) and records it through an unauthenticated, rate-limited, size-capped endpoint; (3) Access shows the last 100 lines. That tells a Google-side block (Casa's Workspace refusing Netlify's Google app) from our gate refusing. Additive migration with a fresh timestamp. PR to claude/main; never merge. Sign \"— Mason (CR-6)\". Mark Dispatch Ledger line casa-r12-2 delivered when the PR opens.",
+  "code": "FU·SIGNIN",
+  "createdAt": "2026-10-15T15:00:00Z",
+  "item": 2,
+  "kind": "follow-up",
+  "note": "Superseded by Dispatch 22 (casa-r13-8), which keeps this line's URL-error capture.",
+  "project": "casa",
+  "round": 12,
+  "status": "dropped",
+  "summary": "A sign-in log admins can read, so refused sign-ins explain themselves.",
+  "supersededBy": [
+    "casa-r13-8"
+  ],
+  "title": "Follow-up: a sign-in log in the tool",
+  "track": "Mason",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

@@ -1,0 +1,17 @@
+{
+  "body": "Mason: CR_EVAL_ANTHROPIC_API_KEY is in the cloud environment. Run tools-src/comp-report/dev/writer-eval.ts on the 100 Barclay sample and Frankie's #517, and post the drafts on #76 for Kimani. Sign \"— Mason (CR-5)\". Mark Dispatch Ledger line casa-r10-2 delivered with the PR or comment number.",
+  "code": "FU·76",
+  "createdAt": "2026-10-14T23:30:00Z",
+  "heldFrom": "queued",
+  "item": 2,
+  "kind": "follow-up",
+  "note": "Waits on Kimani: TD-3 (CR_EVAL_ANTHROPIC_API_KEY) on the answer sheet.",
+  "project": "casa",
+  "round": 10,
+  "status": "held",
+  "summary": "From #76: phase 1's production check needs real drafts.",
+  "title": "Follow-up: run the writer eval and post real drafts",
+  "track": "Mason",
+  "updatedAt": "2026-10-14T23:30:00Z",
+  "updatedBy": "Casanova"
+}

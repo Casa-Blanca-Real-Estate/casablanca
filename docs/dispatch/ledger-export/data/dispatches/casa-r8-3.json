@@ -1,0 +1,18 @@
+{
+  "body": "You're retiring: Casa's work is moving to a new cloud environment and named, persistent sessions, and this session is being archived. Before it is, put everything that lives only here into the repo. 1) git fetch origin claude/main. If anything you built isn't pushed, push it to your branch now and say which branch. Don't start new work. 2) Write docs/parked/sessions/motion-graphic.md, short and plain: what you built and where it lives (files, branches, PRs); what's unfinished or broken, and how you'd fix it; decisions, findings and ideas that exist only in this conversation; and anything waiting on Kimani. The Stories generator stays parked: say what porting it into the studio takes, given the single-file rule, so whoever resumes it starts there. 3) Open a docs-only PR to claude/main. Never merge. Sign \"— the Motion graphic session (retiring)\". When the PR opens, mark Dispatch Ledger line casa-r8-3 delivered (rule 11 in docs/dispatch/README.md). Then tell Kimani in chat that you're done.",
+  "code": "RET",
+  "createdAt": "2026-10-14T18:00:00Z",
+  "file": "docs/parked/2026-09-23-threads.md",
+  "item": 3,
+  "landedAt": "2026-10-14T22:00:00Z",
+  "landedIn": 74,
+  "pr": 74,
+  "project": "casa",
+  "round": 8,
+  "status": "landed",
+  "summary": "Put what lives only in this session into the repo, then archive.",
+  "title": "Retire: TOOL: Motion graphic generator for stories",
+  "track": "TOOL: Motion graphic generator for stories",
+  "updatedAt": "2026-10-14T22:00:00Z",
+  "updatedBy": "Casanova"
+}

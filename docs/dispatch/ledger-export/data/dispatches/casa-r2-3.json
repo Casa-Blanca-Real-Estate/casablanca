@@ -1,0 +1,18 @@
+{
+  "code": "D06",
+  "createdAt": "2026-09-23T12:00:00Z",
+  "file": "docs/dispatch/06-comp-report-engine.md",
+  "item": 3,
+  "landedAt": "2026-09-28T12:00:00Z",
+  "landedIn": 51,
+  "note": "Landed in #50 and #51.",
+  "pr": 50,
+  "project": "casa",
+  "round": 2,
+  "status": "landed",
+  "summary": "Both results, carry, the catalog, the null house method, the export parser.",
+  "title": "Comp report: engine and parser (CR-2)",
+  "track": "Abacus",
+  "updatedAt": "2026-09-28T12:00:00Z",
+  "updatedBy": "Casanova"
+}

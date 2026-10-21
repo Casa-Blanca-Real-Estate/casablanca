@@ -1,0 +1,18 @@
+{
+  "code": "D10",
+  "createdAt": "2026-09-29T12:00:00Z",
+  "file": "docs/dispatch/10-comp-report-decision-provider.md",
+  "item": 3,
+  "landedAt": "2026-10-09T12:00:00Z",
+  "landedIn": 61,
+  "note": "Landed in #56, #59 (follow-ups) and #61 (the zero-retention switch).",
+  "pr": 56,
+  "project": "casa",
+  "round": 4,
+  "status": "landed",
+  "summary": "The Jev layer in watch mode, with a Haiku fallback; off in production.",
+  "title": "Comp report: the decision provider, Jev first (CR-D), phase 1",
+  "track": "Arbiter",
+  "updatedAt": "2026-10-09T12:00:00Z",
+  "updatedBy": "Casanova"
+}

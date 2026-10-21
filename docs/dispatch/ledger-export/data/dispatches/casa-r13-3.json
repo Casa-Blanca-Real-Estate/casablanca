@@ -1,0 +1,16 @@
+{
+  "body": "You're Surveyor, continuing the Casa Blanca comp report research track. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/17-comp-report-streeteasy-lists-and-subway.md in full, and do it.\nOne PR to claude/main; never merge. Sign \"— Surveyor (CR-R2)\".\nMark Dispatch Ledger line casa-r13-3 delivered when the PR opens.",
+  "code": "D17",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/17-comp-report-streeteasy-lists-and-subway.md",
+  "item": 3,
+  "note": "Ready now. Runs alongside 15 and 16. Research only: its lists feed 20's transit line and later checks.",
+  "project": "casa",
+  "round": 13,
+  "status": "queued",
+  "summary": "Research: StreetEasy's own lists (types, neighborhoods, amenities) and the subway station data.",
+  "title": "Comp report: StreetEasy's lists, and the subway (CR-R2)",
+  "track": "Surveyor",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

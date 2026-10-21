@@ -1,0 +1,17 @@
+{
+  "code": "D01",
+  "createdAt": "2026-09-10T12:00:00Z",
+  "file": "docs/dispatch/01-profile-pic-cutout-and-outpaint.md",
+  "heldFrom": "delivered",
+  "item": 1,
+  "note": "#41's fixes (2026-10-06) wait for Casanova's re-review; #45 has a merge conflict. Dispatch 12 runs first in this session.",
+  "pr": 41,
+  "project": "casa",
+  "round": 1,
+  "status": "held",
+  "summary": "Parked for the comp report. Stack #41–#45.",
+  "title": "Profile pics: cutout quality and torso outpainting",
+  "track": "D01 session",
+  "updatedAt": "2026-10-13T12:00:00Z",
+  "updatedBy": "Casanova"
+}

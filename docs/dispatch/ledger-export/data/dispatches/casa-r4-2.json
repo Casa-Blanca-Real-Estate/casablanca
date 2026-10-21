@@ -1,0 +1,18 @@
+{
+  "code": "D09",
+  "createdAt": "2026-09-29T12:00:00Z",
+  "file": "docs/dispatch/09-comp-report-first-class-start.md",
+  "item": 2,
+  "landedAt": "2026-10-06T16:02:59Z",
+  "landedIn": 60,
+  "note": "Landed in #57 (phases 1–2) and #60 (phase 3).",
+  "pr": 57,
+  "project": "casa",
+  "round": 4,
+  "status": "landed",
+  "summary": "The new-comp modal; Sort, Findings and Send; the engine's checks and price table on screen.",
+  "title": "Comp report: the first-class start, and the screens (CR-3b)",
+  "track": "Mason",
+  "updatedAt": "2026-10-06T16:02:59Z",
+  "updatedBy": "Casanova"
+}

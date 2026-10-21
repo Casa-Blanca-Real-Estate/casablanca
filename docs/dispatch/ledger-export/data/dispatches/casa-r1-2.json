@@ -1,0 +1,17 @@
+{
+  "code": "D02",
+  "createdAt": "2026-09-12T12:00:00Z",
+  "file": "docs/dispatch/02-agent-sites-foundations.md",
+  "item": 2,
+  "landedAt": "2026-09-14T12:00:00Z",
+  "landedIn": 46,
+  "pr": 46,
+  "project": "casa",
+  "round": 1,
+  "status": "landed",
+  "summary": "Schema, a hardened build, Sam Valk in place of the fictional agents.",
+  "title": "Agent sites, Slice 0: data model and build hardening",
+  "track": "Agent sites",
+  "updatedAt": "2026-09-14T12:00:00Z",
+  "updatedBy": "Casanova"
+}

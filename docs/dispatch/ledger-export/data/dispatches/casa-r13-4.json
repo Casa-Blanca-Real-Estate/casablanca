@@ -1,0 +1,17 @@
+{
+  "body": "You're Mason, continuing the Casa Blanca comp report track. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/18-comp-report-send-and-done.md in full, and build it once Dispatch 15 has merged.\nOne PR to claude/main; never merge. Sign \"— Mason (CR-7b)\".\nMark Dispatch Ledger line casa-r13-4 delivered when the PR opens.",
+  "code": "D18",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/18-comp-report-send-and-done.md",
+  "heldFrom": "queued",
+  "item": 4,
+  "note": "Waits on 15 merging (Mason's queue). The greyed way on to Done is layout, so Claude Design's (NW-101 b).",
+  "project": "casa",
+  "round": 13,
+  "status": "held",
+  "summary": "Send and Done: the Designed email renders right, one draft per length, Mark as sent is its own button and records what was copied.",
+  "title": "Comp report: Send and Done (CR-7b)",
+  "track": "Mason",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

@@ -1,0 +1,17 @@
+{
+  "body": "You're Mason, continuing the Casa Blanca comp report track. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/22-comp-report-access-and-activity-log.md in full, and build it in two PRs as it says: 22a (items 1–2: mentors read every report, the invite fix) once Dispatch 18 has merged, and 22b (the log tables) after Dispatch 21. 22a doesn't merge until Kimani answers NB-23; item 2 may go as its own small PR so the sign-in fix isn't held. It replaces ledger line casa-r12-2.\nPRs to claude/main; never merge. Sign \"— Mason (CR-7e)\".\nMark Dispatch Ledger line casa-r13-8 delivered when 22a's PR opens, and add 22b's PR number to it when that opens.",
+  "code": "D22",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/22-comp-report-access-and-activity-log.md",
+  "heldFrom": "queued",
+  "item": 8,
+  "note": "22a after 18 in Mason's queue, held for merge until NB-23. 22b after 21. Replaces casa-r12-2.",
+  "project": "casa",
+  "round": 13,
+  "status": "held",
+  "summary": "Admins and mentors see every report, read-only (22a); the sign-in log, the activity log and practice from Access (22b).",
+  "title": "Comp report: who sees what, the sign-in log and the activity log (CR-7e)",
+  "track": "Mason (or a second builder Kimani names)",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

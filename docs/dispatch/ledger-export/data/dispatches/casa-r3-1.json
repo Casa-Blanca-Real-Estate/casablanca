@@ -1,0 +1,17 @@
+{
+  "code": "D07",
+  "createdAt": "2026-09-28T12:00:00Z",
+  "file": "docs/dispatch/07-comp-report-walkthrough-scaffold.md",
+  "item": 1,
+  "landedAt": "2026-09-29T12:00:00Z",
+  "landedIn": 53,
+  "pr": 53,
+  "project": "casa",
+  "round": 3,
+  "status": "landed",
+  "summary": "The whole flow with sample data, annotated.",
+  "title": "Comp report: the walkthrough scaffold (CR-3a)",
+  "track": "Mason",
+  "updatedAt": "2026-09-29T12:00:00Z",
+  "updatedBy": "Casanova"
+}

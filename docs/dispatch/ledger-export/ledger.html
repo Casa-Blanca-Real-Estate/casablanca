@@ -1,0 +1,1099 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dispatch Ledger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a dispatch desk. One ruled sheet per round, newest on top; each line is one dispatch:
+   its track, what it asks, where it stands, and its PR. A paper/ink system. */
+:root {
+  --paper: #f6f4ee;
+  --paper-2: #efece4;
+  --ink: #0e0e0d;
+  --ink-2: #2a2a28;
+  --muted: #6b6862;
+  --hair: rgba(14, 14, 13, 0.16);
+  --blue: #2b6cff;
+  --amber: #b87900;
+  --green: #2f7d4f;
+  --violet: #6b4fd0;
+  --coral: #d9473b;
+  --tint-blue: rgba(43, 108, 255, 0.12);
+  --tint-amber: rgba(232, 153, 0, 0.16);
+  --tint-green: rgba(47, 125, 79, 0.14);
+  --tint-violet: rgba(124, 92, 214, 0.14);
+  --tint-ink: rgba(14, 14, 13, 0.07);
+  --scrim: rgba(14, 14, 13, 0.34);
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, "Courier New", monospace;
+  --shadow: 4px 4px 0 var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121211; --paper-2: #1c1b18; --ink: #e9e7e1; --ink-2: #bdb9b0; --muted: #8f8b83;
+    --hair: rgba(233, 231, 225, 0.16);
+    --blue: #7ea3ff; --amber: #f2b33d; --green: #6cc493; --violet: #ac97f2; --coral: #ff8578;
+    --tint-blue: rgba(126, 163, 255, 0.16); --tint-amber: rgba(242, 179, 61, 0.16);
+    --tint-green: rgba(108, 196, 147, 0.16); --tint-violet: rgba(172, 151, 242, 0.18);
+    --tint-ink: rgba(233, 231, 225, 0.08);
+    --scrim: rgba(0, 0, 0, 0.56);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #121211; --paper-2: #1c1b18; --ink: #e9e7e1; --ink-2: #bdb9b0; --muted: #8f8b83;
+  --hair: rgba(233, 231, 225, 0.16);
+  --blue: #7ea3ff; --amber: #f2b33d; --green: #6cc493; --violet: #ac97f2; --coral: #ff8578;
+  --tint-blue: rgba(126, 163, 255, 0.16); --tint-amber: rgba(242, 179, 61, 0.16);
+  --tint-green: rgba(108, 196, 147, 0.16); --tint-violet: rgba(172, 151, 242, 0.18);
+  --tint-ink: rgba(233, 231, 225, 0.08);
+  --scrim: rgba(0, 0, 0, 0.56);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+[hidden] { display: none !important; }
+
+/* Masthead */
+.mast { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--ink); padding-bottom: 16px; }
+.eyebrow { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-size: clamp(28px, 5vw, 40px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; text-wrap: balance; }
+.lede { margin: 0; color: var(--ink-2); max-width: 62ch; }
+
+/* Tallies double as filters */
+.tallies { display: flex; flex-wrap: wrap; gap: 8px; }
+.tally {
+  display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 12px;
+  border: 1px solid var(--ink); background: var(--paper); color: var(--ink);
+  font: 600 13px var(--font-sans); cursor: pointer;
+}
+.tally b { font: 600 15px var(--font-mono); font-variant-numeric: tabular-nums; }
+.tally[aria-pressed="true"] { box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px, -1px); }
+.tally .dot { width: 8px; height: 8px; border-radius: 50%; align-self: center; }
+
+/* Project switch: one ledger, a sheet per project */
+.projects { align-self: flex-start; }
+.projects button { display: inline-flex; gap: 8px; align-items: baseline; }
+.projects b { font: 600 13px var(--font-mono); font-variant-numeric: tabular-nums; opacity: 0.75; }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--ink); }
+.seg button { border: 0; border-right: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 600 13px var(--font-sans); padding: 7px 14px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+select, input[type="text"], input[type="number"], textarea {
+  font: 14px var(--font-sans); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--ink); padding: 7px 10px; border-radius: 0;
+}
+textarea { width: 100%; min-height: 120px; font-family: var(--font-mono); font-size: 13px; line-height: 1.5; }
+label.lab { font: 600 12px var(--font-sans); color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.spacer { flex: 1; }
+
+button.act {
+  font: 600 12.5px var(--font-sans); padding: 6px 10px; cursor: pointer;
+  background: var(--paper); color: var(--ink); border: 1px solid var(--ink);
+}
+button.act:hover { background: var(--paper-2); }
+button.act.primary { background: var(--ink); color: var(--paper); }
+button.act.primary:hover { opacity: 0.9; }
+button.act.quiet { border-color: var(--hair); color: var(--muted); }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 2px solid var(--blue); outline-offset: 2px;
+}
+a { color: var(--ink); text-underline-offset: 2px; }
+a.mono { font-family: var(--font-mono); font-size: 13px; }
+
+/* Round sheets */
+.sheet { border: 1px solid var(--ink); box-shadow: var(--shadow); background: var(--paper); }
+.sheet-head {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline;
+  padding: 12px 16px; border-bottom: 1px solid var(--ink); background: var(--paper-2);
+}
+.sheet-head h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.sheet-head .meta { font: 12.5px var(--font-mono); color: var(--muted); }
+.sheet-head .theme-line { flex-basis: 100%; color: var(--ink-2); font-size: 13.5px; }
+
+.line { display: grid; grid-template-columns: 64px minmax(0, 1fr) 128px; gap: 4px 16px; padding: 14px 16px; border-bottom: 1px solid var(--hair); }
+.line:last-child { border-bottom: 0; }
+.code { font: 600 13px var(--font-mono); padding-top: 4px; display: flex; flex-direction: column; gap: 3px; }
+.code .when { font: 500 11.5px var(--font-mono); color: var(--muted); }
+.main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.titlerow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.track { font-weight: 800; font-size: 19px; letter-spacing: -0.01em; line-height: 1.15; }
+.title { font-weight: 650; font-size: 15px; text-wrap: pretty; margin: 0; }
+.where { font: 600 10.5px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 6px; border: 1px dashed currentColor; }
+.where.web { color: var(--blue); }
+.where.local { color: var(--ink-2); }
+.where.remote { color: var(--violet); }
+.whereseg b { font: 600 12px var(--font-mono); font-variant-numeric: tabular-nums; opacity: 0.75; margin-left: 6px; }
+.line.dropped .title { text-decoration: line-through; color: var(--muted); }
+.summary { color: var(--ink-2); font-size: 14px; margin: 0; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 12.5px var(--font-mono); color: var(--muted); }
+.side { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.side .pill { text-align: center; }
+.pill { font: 600 12px var(--font-sans); padding: 3px 9px; white-space: nowrap; border: 1px solid currentColor; }
+.pill.queued { color: var(--ink); background: var(--tint-ink); }
+.pill.sent { color: var(--blue); background: var(--tint-blue); }
+.pill.delivered { color: var(--amber); background: var(--tint-amber); }
+.pill.landed { color: var(--green); background: var(--tint-green); }
+.pill.held { color: var(--violet); background: var(--tint-violet); }
+.pill.dropped { color: var(--muted); background: transparent; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.side .actions { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+.side .actions button.act { width: 100%; }
+.side .inline-form { flex-direction: column; align-items: stretch; }
+.side .inline-form input { width: 100%; }
+.queue { font: 12.5px var(--font-sans); color: var(--ink-2); }
+.inline-form { display: flex; gap: 6px; align-items: center; }
+.inline-form input { width: 108px; padding: 5px 8px; font-family: var(--font-mono); }
+
+details.more { grid-column: 2 / -1; }
+details.more > summary { cursor: pointer; font: 600 12.5px var(--font-sans); color: var(--muted); list-style: none; display: inline-flex; gap: 6px; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "▸"; }
+details.more[open] > summary::before { content: "▾"; }
+.body-box { margin-top: 10px; border: 1px solid var(--hair); background: var(--paper-2); padding: 12px 14px; max-height: 420px; overflow: auto; }
+.body-box pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 13px/1.55 var(--font-mono); color: var(--ink-2); }
+.detail-grid { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.timeline { display: flex; flex-wrap: wrap; gap: 4px 16px; font: 12.5px var(--font-mono); color: var(--muted); }
+.note { border-left: 3px solid var(--ink); padding-left: 10px; color: var(--ink-2); font-size: 14px; white-space: pre-wrap; }
+
+/* States */
+.notice { border: 1px dashed var(--ink); padding: 18px; color: var(--ink-2); background: var(--paper-2); }
+.notice b { color: var(--ink); }
+.empty { padding: 18px 16px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 9px 14px; font: 600 13px var(--font-sans); box-shadow: 3px 3px 0 var(--muted); }
+
+/* Add form + how-to */
+.panel { border: 1px solid var(--ink); background: var(--paper); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.panel h3 { margin: 0; font-size: 15px; font-weight: 800; }
+.form-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
+.howto { color: var(--ink-2); font-size: 14px; }
+.howto code { font-family: var(--font-mono); font-size: 12.5px; background: var(--tint-ink); padding: 1px 5px; }
+.foot { display: flex; flex-direction: column; gap: 14px; }
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 22px; }
+.roster .who { display: flex; flex-direction: column; gap: 2px; padding-top: 8px; border-top: 1px solid var(--hair); }
+.roster .who b { font-size: 15px; font-weight: 800; display: flex; gap: 8px; align-items: baseline; }
+.roster .who span { color: var(--ink-2); font-size: 13.5px; }
+.roster .who em { font-style: normal; color: var(--muted); font-size: 12.5px; }
+
+/* Copied: a line Kimani has copied but not yet marked sent. The mark is kept on the line (copiedAt). */
+.copyctl { display: flex; flex-direction: column; gap: 3px; }
+button.act.copied { background: var(--green); border-color: var(--green); color: var(--paper); }
+button.act.copied:hover { background: var(--green); opacity: 0.9; }
+.copied-at { font: 500 11px var(--font-mono); color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Notes to Casanova: a drawer on desktop, a full-width sheet on a phone */
+.notes-btn { display: inline-flex; align-items: center; gap: 7px; }
+.notes-btn b { font: 600 11.5px var(--font-mono); font-variant-numeric: tabular-nums; background: var(--ink); color: var(--paper); padding: 0 6px; line-height: 18px; min-width: 18px; text-align: center; }
+body.drawer-open { overflow: hidden; }
+dialog.drawer {
+  position: fixed; inset: 0 0 0 auto; margin: 0; padding: 0; z-index: 50;
+  width: min(460px, 100vw); max-width: 100vw; height: 100vh; height: 100dvh; max-height: none;
+  border: 0; border-left: 1px solid var(--ink); box-shadow: -4px 0 0 var(--ink);
+  background: var(--paper); color: var(--ink); overflow: hidden;
+}
+dialog.drawer::backdrop { background: var(--scrim); }
+.drawer-in { display: flex; flex-direction: column; height: 100%; }
+.drawer-head { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--ink); background: var(--paper-2); }
+.drawer-head h2 { margin: 0; flex: 1; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.drawer-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px 20px calc(28px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 20px; }
+.composer { display: flex; flex-direction: column; gap: 8px; }
+.composer textarea, .nedit textarea { font: 16px/1.5 var(--font-sans); min-height: 150px; max-height: 55vh; resize: none; overflow-y: auto; }
+.nedit textarea { min-height: 96px; }
+.composer-row { display: flex; align-items: center; gap: 10px; }
+.kbd-hint { font: 12px var(--font-mono); color: var(--muted); }
+.nlist-head { font: 600 11.5px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-bottom: 6px; }
+.nlist-head:focus { outline: none; }
+.nlist { display: flex; flex-direction: column; }
+.nempty { margin: 0; padding: 8px 0; color: var(--muted); font-size: 14px; }
+.nitem { border-top: 1px solid var(--hair); padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+.nmeta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font: 12px var(--font-mono); color: var(--muted); }
+.ntext { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; }
+.nstat { display: inline-flex; align-items: center; gap: 6px; font: 600 11.5px var(--font-sans); color: var(--ink); padding: 1px 8px; border: 1px solid var(--hair); }
+.nstat::before { content: ""; width: 7px; height: 7px; border-radius: 50%; }
+.nstat.new { background: var(--tint-amber); }
+.nstat.new::before { background: var(--amber); }
+.nstat.seen { background: var(--tint-blue); }
+.nstat.seen::before { background: var(--blue); }
+.nstat.done { background: var(--tint-green); }
+.nstat.done::before { background: var(--green); }
+.nreply { border-left: 3px solid var(--blue); padding: 2px 0 2px 10px; display: flex; flex-direction: column; gap: 2px; }
+.nreply b { font: 600 12px var(--font-sans); color: var(--muted); }
+.nreply p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; color: var(--ink-2); }
+.nitem .actions { justify-content: flex-start; align-items: center; }
+.nconfirm { font: 600 13px var(--font-sans); }
+@media (hover: none) { .kbd-hint { display: none; } }
+/* A toast raised while the drawer is open sits in the drawer, centred on it. */
+dialog.drawer .toast { left: auto; right: calc(min(460px, 100vw) / 2); transform: translateX(50%); max-width: calc(min(460px, 100vw) - 32px); }
+@keyframes drawer-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  dialog.drawer[open] { animation: drawer-in 160ms ease-out; }
+}
+
+@media (max-width: 640px) {
+  .line { grid-template-columns: 1fr; }
+  .code { padding-top: 0; }
+  .code { flex-direction: row; gap: 10px; align-items: baseline; }
+  .side { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .side .actions { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; align-items: flex-start; }
+  .side .actions button.act { width: auto; }
+  .side .inline-form { flex-direction: row; }
+  .side .inline-form input { width: 96px; }
+  details.more { grid-column: 1; }
+  .form-row { grid-template-columns: 1fr; }
+  dialog.drawer {
+    inset: auto 0 0 0; width: auto; height: 92vh; height: 92dvh;
+    border-left: 0; border-top: 1px solid var(--ink); box-shadow: 0 -4px 0 var(--ink);
+  }
+  dialog.drawer .toast { left: 50%; right: auto; transform: translateX(-50%); max-width: calc(100vw - 32px); }
+  .drawer-head, .drawer-body { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  dialog.drawer[open] { animation-name: sheet-in; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tally, button.act { transition: background 120ms ease, box-shadow 120ms ease, transform 120ms ease; }
+}
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="seg projects" role="group" aria-label="Project" id="projectTabs"></div>
+    <div class="eyebrow" id="eyebrow">Casa Blanca · the build crew</div>
+    <h1>Dispatch Ledger</h1>
+    <p class="lede" id="lede">Every dispatch Casanova writes, from the moment it is drafted to the PR that lands it. Copy a line to pass it to its track; mark it as it moves.</p>
+    <div class="tallies" id="tallies" aria-label="Filter by status"></div>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Show" id="viewSeg">
+      <button type="button" data-view="open" aria-pressed="true">Open</button>
+      <button type="button" data-view="landed" aria-pressed="false">Landed</button>
+      <button type="button" data-view="all" aria-pressed="false">All</button>
+    </div>
+    <div class="seg whereseg" role="group" aria-label="Where the track runs" id="whereSeg">
+      <button type="button" data-where="" aria-pressed="true">Both</button>
+      <button type="button" data-where="web" aria-pressed="false" title="Lines you can pass from anywhere: web tracks, plus Stoner and CFO by remote control">Web<b id="whereWeb"></b></button>
+      <button type="button" data-where="local" aria-pressed="false" title="Tracks that run on Kimani's machine, remote-controlled ones included">Local<b id="whereLocal"></b></button>
+    </div>
+    <select id="trackFilter" aria-label="Track"><option value="">All tracks</option></select>
+    <div class="spacer"></div>
+    <button type="button" class="act notes-btn" id="notesOpen" aria-haspopup="dialog" aria-controls="notesDlg">Note to Casanova<b id="notesCount" hidden></b></button>
+    <button type="button" class="act" id="toggleAdd">Add a dispatch</button>
+  </div>
+
+  <section id="addPanel" class="panel" hidden aria-label="Add a dispatch">
+    <h3>Add a dispatch</h3>
+    <div class="form-row">
+      <label class="lab" for="addRound">Round<input type="number" id="addRound" min="1" step="1"></label>
+      <label class="lab" for="addTrack">Track<input type="text" id="addTrack" placeholder="Sage, Thinker, Stoner…"></label>
+    </div>
+    <label class="lab" for="addTitle">Title<input type="text" id="addTitle" placeholder="What it asks, in a few words"></label>
+    <label class="lab" for="addSummary">One line<input type="text" id="addSummary" placeholder="Why it matters"></label>
+    <label class="lab" for="addBody">Dispatch text (what you paste to the track)<textarea id="addBody"></textarea></label>
+    <div class="actions" style="justify-content:flex-start">
+      <button type="button" class="act primary" id="addSave">Add to the ledger</button>
+      <button type="button" class="act quiet" id="addCancel">Cancel</button>
+    </div>
+  </section>
+
+  <main id="board" aria-live="polite">
+    <div class="notice" id="connecting">Opening the ledger…</div>
+  </main>
+
+  <footer class="foot">
+    <details class="panel" id="rosterPanel">
+      <summary style="cursor:pointer;font-weight:800">Who does what</summary>
+      <p class="howto" id="rosterRule"></p>
+      <div class="roster" id="roster"></div>
+    </details>
+    <details class="panel">
+      <summary style="cursor:pointer;font-weight:800">How a track checks off its line</summary>
+      <div class="howto" id="howto">
+        <p>When a track opens its PR, it marks its line delivered from its own session with the <code>ArtifactData</code> tool: <code>update</code> on this artifact, collection <code>dispatches</code>, the line's id (<code>R12·4</code> on the line is <code>r12-4</code>), data <code>{"status": "delivered", "pr": 1234, "updatedBy": "Thinker"}</code>.</p>
+        <p>Casanova marks a line landed when it merges the work, and marks any line a track could not reach. Statuses: queued (written) → sent (passed to the track) → delivered (PR open) → landed (merged). Held parks a line; dropped retires it.</p>
+      </div>
+    </details>
+  </footer>
+</div>
+
+<dialog id="notesDlg" class="drawer" aria-labelledby="notesTitle">
+  <div class="drawer-in">
+    <div class="drawer-head">
+      <h2 id="notesTitle">Note to Casanova</h2>
+      <button type="button" class="act quiet" id="notesClose">Close</button>
+    </div>
+    <div class="drawer-body">
+      <div class="composer" id="noteComposer">
+        <label class="lab" for="noteText">Your note</label>
+        <textarea id="noteText" placeholder="A heads-up, a decision, an idea…"></textarea>
+        <div class="composer-row">
+          <span class="kbd-hint" id="noteHint">Ctrl + Enter to save</span>
+          <span class="spacer"></span>
+          <button type="button" class="act primary" id="noteSave">Save note</button>
+        </div>
+      </div>
+      <p class="howto" id="noteReadOnly" hidden>This view can read notes but not leave them.</p>
+      <section aria-labelledby="notesListHead">
+        <div class="nlist-head" id="notesListHead" tabindex="-1">Your notes</div>
+        <div class="nlist" id="notesList"></div>
+      </section>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+  // Casa Blanca's ledger, split from the shared one on 2026-10-21. Lines keep project "casa" and ids
+  // prefixed "casa-", so they read the same as before the split; a line with no project is Casa's too.
+  var PROJECTS = {
+    casa: { name: "Casa Blanca", repo: "https://github.com/kjcamron/casablanca", branch: "claude/main", lead: "Casanova", crew: "Mason, Abacus, Calliste…", prefix: "casa-", example: "casa-r13-1", sample: "Mason" }
+  };
+  var PROJECT_ORDER = ["casa"];
+  function projectOf(d) { return d && PROJECTS[d.project] ? d.project : "casa"; }
+  function initialProject() {
+    var h = (location.hash || "").replace("#", "").toLowerCase();
+    if (PROJECTS[h]) return h;
+    try { var saved = localStorage.getItem("ledger.project"); if (PROJECTS[saved]) return saved; } catch (e) { /* no storage */ }
+    return "casa";
+  }
+  var STATUSES = ["queued", "sent", "delivered", "landed", "held", "dropped"];
+  var LABEL = { queued: "Queued", sent: "Sent", delivered: "PR open", landed: "Landed", held: "Held", dropped: "Dropped" };
+  var DOT = { queued: "var(--ink)", sent: "var(--blue)", delivered: "var(--amber)", landed: "var(--green)", held: "var(--violet)" };
+  var OPEN = { queued: 1, sent: 1, delivered: 1, held: 1 };
+  var WHERE_TEXT = { web: ["Web", "Runs on the web: pass it from anywhere"], local: ["Local", "Runs on Kimani's machine"], remote: ["Remote", "Runs on Kimani's machine by remote control: pass it from anywhere"] };
+
+  function initialWhere() {
+    try { var w = localStorage.getItem("ledger.where"); if (w === "web" || w === "local") return w; } catch (e) { /* no storage */ }
+    return "";
+  }
+  var state = { dispatches: [], rounds: {}, tracks: [], view: "open", track: "", status: "", where: initialWhere(), canWrite: null, db: null, uid: null, project: initialProject() };
+  function P() { return PROJECTS[state.project]; }
+  function inProject(d) { return projectOf(d) === state.project; }
+  // "web", "local", "remote" (a local track Kimani reaches by remote control: under both filters), or "" when the line
+  // says none of them and its track is not on the map (shown under every filter).
+  function whereOf(d) {
+    if (d && (d.where === "web" || d.where === "local" || d.where === "remote")) return d.where;
+    var map = PROJECTS[projectOf(d)].where; if (!map) return "";
+    var parts = str(d.track).toLowerCase().split(/\s*(?:\+|,|&|\/|\band\b)\s*/).map(function (p) { return p.replace(/^the\s+/, "").trim(); }).filter(Boolean);
+    var seen = parts.map(function (p) { return map[p] || ""; });
+    return seen.length && seen.every(function (w) { return w && w === seen[0]; }) ? seen[0] : "";
+  }
+  function whereOk(d) { var w = whereOf(d); return !state.where || !w || w === "remote" || w === state.where; }
+  var openDetails = new Set();
+  var drafts = {};          // per-line unsaved inputs (PR numbers, notes), kept across re-renders
+  var pendingRender = false;
+  var copiedLocal = {};     // id -> ISO of a copy made in this session; shown even when its write didn't land
+  var copyChain = {};       // id -> the line's pending copiedAt write, so one write at a time per line
+  var flashUntil = {};      // id -> ms until which a sent-or-later line's brief "Copied" shows, across re-renders
+
+  var board = document.getElementById("board");
+  var talliesEl = document.getElementById("tallies");
+  var trackFilter = document.getElementById("trackFilter");
+  var notesDlg = document.getElementById("notesDlg");
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      var v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === "text") n.textContent = v;
+      else if (k === "class") n.className = v;
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? "" : String(v));
+    }
+    (kids || []).forEach(function (c) { if (c != null) n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return n;
+  }
+  function str(v) { return typeof v === "string" ? v : v == null ? "" : String(v); }
+  function num(v) { var n = Number(v); return Number.isFinite(n) ? n : null; }
+  function nowIso() { return new Date().toISOString(); }
+  function ago(iso) {
+    var t = Date.parse(str(iso)); if (!Number.isFinite(t)) return "";
+    var s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 90) return "just now";
+    var m = s / 60; if (m < 60) return Math.round(m) + " min ago";
+    var h = m / 60; if (h < 36) return Math.round(h) + " h ago";
+    var d = h / 24; if (d < 21) return Math.round(d) + " days ago";
+    return new Date(t).toISOString().slice(0, 10);
+  }
+  // "9:41 pm" today, "Yesterday, 9:41 pm", "Oct 14, 9:41 pm" (with the year when it isn't this one).
+  function clockText(iso) {
+    var t = Date.parse(str(iso)); if (!Number.isFinite(t)) return "";
+    try {
+      var d = new Date(t), now = new Date();
+      var time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/AM|PM/, function (m) { return m.toLowerCase(); });
+      if (d.toDateString() === now.toDateString()) return time;
+      var y = new Date(now.getTime()); y.setDate(now.getDate() - 1);
+      if (d.toDateString() === y.toDateString()) return "Yesterday, " + time;
+      var opts = { month: "short", day: "numeric" };
+      if (d.getFullYear() !== now.getFullYear()) opts.year = "numeric";
+      return d.toLocaleDateString([], opts) + ", " + time;
+    } catch (e) { return new Date(t).toISOString().slice(0, 16).replace("T", " "); }
+  }
+  function laterIso(a, b) {
+    var ta = Date.parse(str(a)), tb = Date.parse(str(b));
+    if (!Number.isFinite(ta)) return Number.isFinite(tb) ? str(b) : "";
+    if (!Number.isFinite(tb)) return str(a);
+    return tb > ta ? str(b) : str(a);
+  }
+  function toast(msg) {
+    var t = el("div", { class: "toast", role: "status", text: msg });
+    // One toast at a time: a newer message replaces the one still showing, so two never sit on top of each other.
+    try { document.querySelectorAll(".toast").forEach(function (x) { x.remove(); }); } catch (e) { /* fine */ }
+    // An open drawer sits in the top layer, so a toast on the body would land under it.
+    (notesDlg && notesDlg.open ? notesDlg : document.body).appendChild(t);
+    setTimeout(function () { t.remove(); }, 1800);
+  }
+
+  function lineStatus(d) { return STATUSES.indexOf(d.status) >= 0 ? d.status : "queued"; }
+  function visible(d) {
+    var s = lineStatus(d);
+    if (!inProject(d)) return false;
+    if (!whereOk(d)) return false;
+    if (state.track && str(d.track) !== state.track) return false;
+    if (state.status) return s === state.status;
+    if (state.view === "open") return !!OPEN[s];
+    if (state.view === "landed") return s === "landed";
+    return true;
+  }
+
+  function renderTallies() {
+    var counts = {};
+    state.dispatches.forEach(function (d) {
+      if (!inProject(d)) return;
+      if (!whereOk(d)) return;
+      if (state.track && str(d.track) !== state.track) return;
+      var s = lineStatus(d); counts[s] = (counts[s] || 0) + 1;
+    });
+    talliesEl.textContent = "";
+    ["queued", "sent", "delivered", "landed", "held"].forEach(function (s) {
+      var b = el("button", {
+        type: "button", class: "tally", "aria-pressed": state.status === s ? "true" : "false",
+        title: state.status === s ? "Show every line again" : "Show only " + LABEL[s].toLowerCase(),
+        onclick: function () { state.status = state.status === s ? "" : s; render(); }
+      }, [el("span", { class: "dot", style: "background:" + DOT[s] }), LABEL[s], el("b", { text: String(counts[s] || 0) })]);
+      talliesEl.appendChild(b);
+    });
+  }
+
+  function renderTrackOptions() {
+    var tracks = Array.from(new Set(state.dispatches.filter(function (d) { return inProject(d) && whereOk(d); }).map(function (d) { return str(d.track); }).filter(Boolean))).sort();
+    var cur = state.track;
+    trackFilter.textContent = "";
+    trackFilter.appendChild(el("option", { value: "", text: "All tracks" }));
+    tracks.forEach(function (t) { trackFilter.appendChild(el("option", { value: t, text: t, selected: t === cur })); });
+    if (cur && tracks.indexOf(cur) < 0) { state.track = ""; trackFilter.value = ""; }
+  }
+
+  function write(id, patch, doneMsg) {
+    if (!state.db) return Promise.resolve();
+    patch.updatedAt = nowIso();
+    patch.updatedBy = "ledger";
+    if (state.uid) patch.updatedById = state.uid;
+    return state.db.doc("dispatches/" + id).update(patch).then(function () {
+      if (doneMsg) toast(doneMsg);
+    }).catch(function (e) {
+      if (e && e.code === "invalid_argument") { state.canWrite = false; render(); toast("This view can read the ledger but not change it."); }
+      else if (e && e.code === "unavailable") toast("The ledger didn't answer. Try again in a moment.");
+      else toast("That change didn't save" + (e && e.message ? ": " + e.message : "."));
+    });
+  }
+
+  function copyText(d, onCopied) {
+    var text = str(d.body) || [str(d.title), str(d.summary)].filter(Boolean).join("\n\n");
+    var done = function () { try { onCopied(); } catch (e) { /* the copy itself worked */ } };
+    var fallback = function () {
+      var ta = el("textarea", { readonly: true, style: "position:fixed;left:-9999px;top:0" });
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      ta.remove();
+      if (ok) done(); else toast("Copy isn't allowed here. Open the line and select the text.");
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  }
+
+  // A copy is remembered on the line (copiedAt), so a line Kimani copied but has not marked sent
+  // reads "Copied" on every device. Only a convenience: a failed write keeps it for this session.
+  function copiedAtOf(d) { return laterIso(d.copiedAt, copiedLocal[d.id]); }
+  function showsCopied(d) { var s = lineStatus(d); return (s === "queued" || s === "held") && !!copiedAtOf(d); }
+  function saveCopied(id, iso) {
+    if (!state.db || state.canWrite === false) return;
+    var run = function () {
+      try { return state.db.doc("dispatches/" + id).update({ copiedAt: iso }).catch(function () { /* still shown for this session */ }); }
+      catch (e) { return Promise.resolve(); }
+    };
+    copyChain[id] = (copyChain[id] || Promise.resolve()).then(run, run);
+  }
+  function copyControl(d) {
+    var btn = el("button", { type: "button", class: "act" });
+    var cap = el("span", { class: "copied-at", hidden: true });
+    var timer = null;
+    function paint() {
+      var on = showsCopied(d), at = clockText(copiedAtOf(d));
+      var left = on ? 0 : (flashUntil[d.id] || 0) - Date.now();
+      btn.className = on ? "act copied" : "act";
+      btn.textContent = "";
+      if (on) { btn.appendChild(el("span", { "aria-hidden": "true", text: "\u2713 " })); btn.appendChild(document.createTextNode("Copied")); }
+      else btn.appendChild(document.createTextNode(left > 0 ? "Copied" : "Copy"));
+      btn.title = on ? "Copied " + at + ". Click to copy it again." : "Copy the dispatch text to pass it to its track";
+      cap.textContent = on ? at : "";
+      cap.hidden = !on;
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (left > 0) timer = setTimeout(paint, left + 20);
+    }
+    btn.addEventListener("click", function () {
+      copyText(d, function () {
+        var iso = nowIso();
+        copiedLocal[d.id] = iso;
+        // Sent or later: the copied mark no longer matters, so the button only flashes. The flash is kept
+        // by line, not on this button, so the re-render the copiedAt write sets off doesn't cut it short.
+        if (!showsCopied(d)) flashUntil[d.id] = Date.now() + 1400;
+        paint();
+        saveCopied(d.id, iso);
+      });
+    });
+    paint();
+    return el("div", { class: "copyctl" }, [btn, cap]);
+  }
+
+  function prLink(n, label, proj) {
+    var repo = PROJECTS[proj || state.project].repo;
+    return el("a", { class: "mono", href: repo + "/pull/" + n, target: "_blank", rel: "noopener", text: (label || "#") + n });
+  }
+
+  function actionsFor(d) {
+    var s = lineStatus(d), id = d.id, box = el("div", { class: "actions" });
+    if (s === "queued" || s === "sent" || s === "held") box.appendChild(copyControl(d));
+    if (state.canWrite === false) return box;
+    if (s === "queued") {
+      box.appendChild(el("button", { type: "button", class: "act primary", onclick: function () { write(id, { status: "sent", sentAt: nowIso() }, "Marked sent"); } }, ["Mark sent"]));
+    }
+    if (s === "queued" || s === "sent") {
+      var input = el("input", { type: "number", min: "1", step: "1", placeholder: "PR #", "aria-label": "PR number for " + id, value: drafts[id + ":pr"] || null,
+        oninput: function (e) { drafts[id + ":pr"] = e.target.value; } });
+      var mark = el("button", { type: "button", class: s === "sent" ? "act primary" : "act", onclick: function () {
+        var n = num(input.value);
+        if (!n || n < 1) { toast("Enter the PR number first."); input.focus(); return; }
+        delete drafts[id + ":pr"];
+        var patch = { status: "delivered", pr: Math.round(n), deliveredAt: nowIso() };
+        if (!d.sentAt) patch.sentAt = nowIso();
+        write(id, patch, "Marked delivered");
+      } }, ["Delivered"]);
+      box.appendChild(el("div", { class: "inline-form" }, [input, mark]));
+    }
+    if (s === "delivered") {
+      var lin = el("input", { type: "number", min: "1", step: "1", placeholder: "Landing #", "aria-label": "Landing PR for " + id, value: drafts[id + ":land"] || null,
+        oninput: function (e) { drafts[id + ":land"] = e.target.value; } });
+      box.appendChild(el("div", { class: "inline-form" }, [lin, el("button", { type: "button", class: "act primary", onclick: function () {
+        var n = num(lin.value); delete drafts[id + ":land"];
+        var patch = { status: "landed", landedAt: nowIso() };
+        if (n && n > 0) patch.landedIn = Math.round(n);
+        write(id, patch, "Marked landed");
+      } }, ["Landed"])]));
+    }
+    if (s === "queued" || s === "sent") box.appendChild(el("button", { type: "button", class: "act quiet", onclick: function () { write(id, { status: "held", heldFrom: s }, "Held"); } }, ["Hold"]));
+    if (s === "held") box.appendChild(el("button", { type: "button", class: "act primary", onclick: function () { write(id, { status: STATUSES.indexOf(d.heldFrom) >= 0 ? d.heldFrom : "queued" }, "Back on the board"); } }, ["Unhold"]));
+    return box;
+  }
+
+  function detailsFor(d) {
+    var id = d.id, s = lineStatus(d);
+    var det = el("details", { class: "more" });
+    if (openDetails.has(id)) det.open = true;
+    det.addEventListener("toggle", function () { if (det.open) openDetails.add(id); else openDetails.delete(id); });
+    det.appendChild(el("summary", { text: d.body ? "Dispatch text and history" : "History" }));
+    var grid = el("div", { class: "detail-grid" });
+    var tl = el("div", { class: "timeline" });
+    [["written", d.createdAt], ["copied", copiedAtOf(d)], ["sent", d.sentAt], ["PR opened", d.deliveredAt], ["landed", d.landedAt]].forEach(function (p) {
+      if (p[1]) tl.appendChild(el("span", { title: str(p[1]), text: p[0] + " " + ago(p[1]) }));
+    });
+    var by = str(d.updatedBy);
+    if (d.updatedAt) tl.appendChild(el("span", { title: str(d.updatedAt), text: "last change " + ago(d.updatedAt) + (by ? (by === "ledger" ? " on the ledger" : " by " + by) : "") }));
+    grid.appendChild(tl);
+    if (d.note) grid.appendChild(el("div", { class: "note", text: str(d.note) }));
+    if (d.body) grid.appendChild(el("div", { class: "body-box" }, [el("pre", { text: str(d.body) })]));
+    if (state.canWrite !== false) {
+      var ta = el("textarea", { "aria-label": "Note for " + id, placeholder: "Add a note (what changed, what's blocking)", style: "min-height:64px;font-family:var(--font-sans)",
+        oninput: function (e) { drafts[id + ":note"] = e.target.value; } });
+      ta.value = drafts[id + ":note"] != null ? drafts[id + ":note"] : str(d.note);
+      var row = el("div", { class: "actions", style: "justify-content:flex-start" }, [
+        el("button", { type: "button", class: "act", onclick: function () { var v = ta.value.trim(); delete drafts[id + ":note"]; write(id, { note: v }, v ? "Note saved" : "Note cleared"); } }, ["Save note"]),
+        s === "landed" || s === "delivered"
+          ? el("button", { type: "button", class: "act quiet", onclick: function () { write(id, { status: "sent", pr: null, landedIn: null, deliveredAt: null, landedAt: null }, "Reopened"); } }, ["Reopen"])
+          : null,
+        s !== "dropped"
+          ? el("button", { type: "button", class: "act quiet", onclick: function () { write(id, { status: "dropped" }, "Dropped"); } }, ["Drop"])
+          : el("button", { type: "button", class: "act quiet", onclick: function () { write(id, { status: "queued" }, "Restored"); } }, ["Restore"])
+      ]);
+      grid.appendChild(ta); grid.appendChild(row);
+    }
+    det.appendChild(grid);
+    return det;
+  }
+
+  function lineFor(d) {
+    var s = lineStatus(d);
+    var code = d.code ? str(d.code) : "R" + (num(d.round) || "?") + "·" + (num(d.item) || "?");
+    var proj = projectOf(d);
+    var facts = el("div", { class: "facts" });
+    if (num(d.pr)) facts.appendChild(el("span", {}, ["PR ", prLink(num(d.pr), null, proj)]));
+    if (num(d.landedIn)) facts.appendChild(el("span", {}, ["landed in ", prLink(num(d.landedIn), null, proj)]));
+    var when = s === "landed" ? d.landedAt : s === "delivered" ? d.deliveredAt : s === "sent" ? d.sentAt : d.createdAt;
+    return el("article", { class: "line " + s }, [
+      el("div", { class: "code" }, [el("span", { text: code }), when ? el("span", { class: "when", title: str(when), text: ago(when) }) : null]),
+      el("div", { class: "main" }, [
+        el("div", { class: "titlerow" }, [el("span", { class: "track", text: str(d.track) || "—" }),
+          whereOf(d) ? el("span", { class: "where " + whereOf(d), text: WHERE_TEXT[whereOf(d)][0], title: WHERE_TEXT[whereOf(d)][1] }) : null]),
+        el("p", { class: "title", text: str(d.title) || "(untitled)" }),
+        d.summary ? el("p", { class: "summary", text: str(d.summary) }) : null,
+        d.queue ? el("div", { class: "queue", text: str(d.queue) }) : null,
+        facts.childNodes.length ? facts : null
+      ]),
+      el("div", { class: "side" }, [el("span", { class: "pill " + s, text: LABEL[s] }), actionsFor(d)]),
+      detailsFor(d)
+    ]);
+  }
+
+  function renderProject() {
+    var p = P(), tabs = document.getElementById("projectTabs");
+    tabs.textContent = "";
+    tabs.hidden = PROJECT_ORDER.length < 2;
+    PROJECT_ORDER.forEach(function (k) {
+      var open = state.dispatches.filter(function (d) { return projectOf(d) === k && OPEN[lineStatus(d)]; }).length;
+      tabs.appendChild(el("button", { type: "button", "aria-pressed": k === state.project ? "true" : "false", title: open + " open",
+        onclick: function () {
+          if (state.project === k) return;
+          state.project = k; state.track = ""; state.status = "";
+          try { localStorage.setItem("ledger.project", k); } catch (e) { /* no storage */ }
+          render();
+        } }, [PROJECTS[k].name, el("b", { text: String(open) })]));
+    });
+    document.getElementById("eyebrow").textContent = p.name + " · the build crew";
+    document.getElementById("lede").textContent = "Every dispatch " + p.lead + " writes, from the moment it is drafted to the PR that lands it. Copy a line to pass it to its track; mark it as it moves.";
+    document.getElementById("addTrack").placeholder = p.crew;
+    var howto = document.getElementById("howto");
+    howto.textContent = "";
+    var p1 = el("p", {}, ["When a track opens its PR, it marks its line delivered from its own session with the ",
+      el("code", { text: "ArtifactData" }), " tool: ", el("code", { text: "update" }), " on this artifact, collection ",
+      el("code", { text: "dispatches" }), ", the line's id (shown on the line, e.g. ", el("code", { text: p.example }), "), data ",
+      el("code", { text: '{"status": "delivered", "pr": 1234, "updatedBy": "' + p.sample + '"}' }), "."]);
+    var p2 = el("p", { text: p.lead + " marks a line landed when it merges the work, and marks any line a track could not reach. Statuses: queued (written) → sent (passed to the track) → delivered (PR open) → landed (merged). Held parks a line; dropped retires it." });
+    howto.appendChild(p1); howto.appendChild(p2);
+    if (p.where) howto.appendChild(el("p", { text: "Web, Local and Remote say where a line's track runs. Web tracks can be passed from anywhere; local ones run on Kimani's machine; remote ones (Stoner, CFO) run on Kimani's machine under remote control, so they show under both switches. A line can also carry where: \"web\", \"local\" or \"remote\" itself." }));
+    howto.appendChild(el("p", {}, ["Kimani's notes to Casanova live in the ", el("code", { text: "notes" }), " collection. Casanova answers one with ",
+      el("code", { text: "update" }), " and data ", el("code", { text: '{"status": "seen", "reply": "..."}' }), ", and sets ", el("code", { text: '"done"' }), " when it is handled."]));
+    if (p.prefix) howto.appendChild(el("p", {}, [p.name + " lines carry ", el("code", { text: '"project": "' + state.project + '"' }), " and ids that start ",
+      el("code", { text: p.prefix }), ", so they never collide with the other sheet's."]));
+  }
+
+  function renderWhere() {
+    var seg = document.getElementById("whereSeg");
+    var any = state.dispatches.some(function (d) { return inProject(d) && whereOf(d); });
+    seg.hidden = !any;
+    if (!any && state.where) state.where = "";
+    var open = { web: 0, local: 0 };
+    state.dispatches.forEach(function (d) {
+      if (!inProject(d) || !OPEN[lineStatus(d)]) return;
+      var w = whereOf(d);
+      if (w === "remote") { open.web++; open.local++; } else if (w) open[w]++;
+    });
+    document.getElementById("whereWeb").textContent = String(open.web);
+    document.getElementById("whereLocal").textContent = String(open.local);
+    seg.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", (b.dataset.where || "") === state.where ? "true" : "false"); });
+  }
+
+  function renderRoster() {
+    var box = document.getElementById("roster"), rule = document.getElementById("rosterRule");
+    if (!box) return;
+    box.textContent = "";
+    var rows = (state.tracks || []).filter(function (t) { return t.id !== "_rule"; })
+      .sort(function (a, b) { return (num(a.order) || 99) - (num(b.order) || 99) || str(a.name).localeCompare(str(b.name)); });
+    var r = (state.tracks || []).filter(function (t) { return t.id === "_rule"; })[0];
+    rule.textContent = r ? str(r.text) : "";
+    rows.forEach(function (t) {
+      var w = str(t.where).toLowerCase();
+      box.appendChild(el("div", { class: "who" }, [
+        el("b", {}, [str(t.name), WHERE_TEXT[w] ? el("span", { class: "where " + w, text: WHERE_TEXT[w][0] }) : null]),
+        el("span", { text: str(t.role) }),
+        t.also ? el("em", { text: str(t.also) }) : null
+      ]));
+    });
+    if (!rows.length) box.appendChild(el("div", { class: "empty", text: "No roster yet." }));
+  }
+
+  function render() {
+    var active = document.activeElement;
+    if (active && board.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) { pendingRender = true; return; }
+    pendingRender = false;
+    renderProject();
+    renderTallies();
+    renderTrackOptions();
+    document.querySelectorAll("#viewSeg button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.view === state.view && !state.status ? "true" : "false"); });
+    renderWhere();
+
+    board.textContent = "";
+    if (!state.dispatches.filter(inProject).length) {
+      board.appendChild(el("div", { class: "notice" }, [el("b", { text: "No " + P().name + " dispatches yet. " }), P().lead + " adds each round here as it goes out, and you can add one yourself with “Add a dispatch”."]));
+      return;
+    }
+    var byRound = {};
+    state.dispatches.filter(visible).forEach(function (d) { var r = num(d.round) || 0; (byRound[r] = byRound[r] || []).push(d); });
+    var rounds = Object.keys(byRound).map(Number).sort(function (a, b) { return b - a; });
+    if (!rounds.length) {
+      board.appendChild(el("div", { class: "notice", text: state.status ? "Nothing is " + LABEL[state.status].toLowerCase() + " right now." : state.view === "open" ? "Nothing open. Every dispatch on the ledger has landed or been dropped." : "Nothing matches this view." }));
+      return;
+    }
+    rounds.forEach(function (r) {
+      var meta = state.rounds[P().prefix + "r" + r] || {};
+      var lines = byRound[r].sort(function (a, b) { return (num(a.item) || 0) - (num(b.item) || 0); });
+      var head = el("div", { class: "sheet-head" }, [
+        el("h2", { text: "Round " + r }),
+        meta.date ? el("span", { class: "meta", text: str(meta.date) }) : null,
+        meta.file ? el("a", { class: "mono", href: P().repo + "/blob/" + P().branch + "/" + str(meta.file), target: "_blank", rel: "noopener", text: "dispatch file ↗" }) : null,
+        meta.theme ? el("div", { class: "theme-line", text: str(meta.theme) }) : null
+      ]);
+      board.appendChild(el("section", { class: "sheet", "aria-label": "Round " + r }, [head].concat(lines.map(lineFor))));
+    });
+  }
+
+  board.addEventListener("focusout", function () { setTimeout(function () { if (pendingRender) render(); }, 0); });
+  document.querySelectorAll("#viewSeg button").forEach(function (b) {
+    b.addEventListener("click", function () { state.view = b.dataset.view; state.status = ""; render(); });
+  });
+  document.querySelectorAll("#whereSeg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      state.where = b.dataset.where || "";
+      try { localStorage.setItem("ledger.where", state.where); } catch (e) { /* no storage */ }
+      render();
+    });
+  });
+  trackFilter.addEventListener("change", function () { state.track = trackFilter.value; render(); });
+
+  // Add a dispatch
+  var addPanel = document.getElementById("addPanel");
+  document.getElementById("toggleAdd").addEventListener("click", function () {
+    addPanel.hidden = !addPanel.hidden;
+    if (!addPanel.hidden) {
+      var maxRound = state.dispatches.filter(inProject).reduce(function (m, d) { return Math.max(m, num(d.round) || 0); }, 0);
+      var r = document.getElementById("addRound"); if (!r.value) r.value = String(maxRound || 1);
+      document.getElementById("addTitle").focus();
+    }
+  });
+  document.getElementById("addCancel").addEventListener("click", function () { addPanel.hidden = true; });
+  document.getElementById("addSave").addEventListener("click", function () {
+    if (!state.db) { toast("The ledger isn't connected in this view."); return; }
+    var round = Math.round(num(document.getElementById("addRound").value) || 0);
+    var track = document.getElementById("addTrack").value.trim();
+    var title = document.getElementById("addTitle").value.trim();
+    if (round < 1 || !track || !title) { toast("A round, a track and a title are needed."); return; }
+    var items = state.dispatches.filter(function (d) { return inProject(d) && num(d.round) === round; }).map(function (d) { return num(d.item) || 0; });
+    var item = (items.length ? Math.max.apply(null, items) : 0) + 1;
+    var id = P().prefix + "r" + round + "-" + item;
+    var body = { round: round, item: item, track: track, title: title, summary: document.getElementById("addSummary").value.trim(),
+      body: document.getElementById("addBody").value, status: "queued", createdAt: nowIso(), updatedAt: nowIso(), updatedBy: "ledger" };
+    body.project = state.project;
+    if (state.uid) body.updatedById = state.uid;
+    state.db.doc("dispatches/" + id).set(body).then(function () {
+      ["addTrack", "addTitle", "addSummary", "addBody"].forEach(function (k) { document.getElementById(k).value = ""; });
+      addPanel.hidden = true; toast("Added " + id);
+    }).catch(function (e) { toast(e && e.code === "quota_exceeded" ? "The ledger is full. Drop old lines first." : "That didn't save" + (e && e.message ? ": " + e.message : ".")); });
+  });
+
+  // Notes to Casanova: Kimani's own channel to the lead, one document per note in "notes".
+  // { text, at, by, status: new|seen|done, reply (Casanova writes it), source: "ledger" }
+  var NOTE_DRAFT_KEY = "ledger.noteDraft";
+  var NOTE_LABEL = { "new": "New", seen: "Seen by Casanova", done: "Done" };
+  var notesState = { list: null, off: "", editing: {}, edits: {}, confirming: {}, busy: {}, saving: false, pending: false, focus: "" };
+  var notesOpenBtn = document.getElementById("notesOpen");
+  var notesList = document.getElementById("notesList");
+  var notesListHead = document.getElementById("notesListHead");
+  var noteText = document.getElementById("noteText");
+  var noteSaveBtn = document.getElementById("noteSave");
+
+  function noteStatus(n) { return NOTE_LABEL.hasOwnProperty(n.status) ? n.status : "new"; }
+  // A note is Kimani's to change when this viewer wrote it, or when nothing says otherwise.
+  function mineNote(n) { return !state.uid || !n.by || n.by === "ledger" || n.by === state.uid; }
+  function noteById(id) { return (notesState.list || []).filter(function (x) { return x.id === id; })[0] || null; }
+  function autosize(ta) {
+    try { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 2) + "px"; } catch (e) { /* keep the CSS height */ }
+  }
+  function storeDraft(v) {
+    try { if (v) localStorage.setItem(NOTE_DRAFT_KEY, v); else localStorage.removeItem(NOTE_DRAFT_KEY); } catch (e) { /* no storage */ }
+  }
+  function loadDraft() { try { return localStorage.getItem(NOTE_DRAFT_KEY) || ""; } catch (e) { return ""; } }
+  function isSaveKey(e) { return e.key === "Enter" && (e.metaKey || e.ctrlKey); }
+
+  function notesOff(msg) { notesState.off = msg; renderNotes(); }
+
+  function renderNoteBadge() {
+    var n = (notesState.list || []).filter(function (x) { return noteStatus(x) === "new"; }).length;
+    var b = document.getElementById("notesCount");
+    b.textContent = String(n);
+    b.hidden = !n;
+    notesOpenBtn.setAttribute("aria-label", "Note to Casanova" + (n ? ", " + n + " new" : ""));
+    notesOpenBtn.title = n ? n + (n === 1 ? " note" : " notes") + " Casanova hasn't seen yet" : "Leave Casanova a note";
+  }
+
+  // Re-render now even if a note's edit box has focus (after a save or a cancel).
+  function forceRenderNotes() {
+    var a = document.activeElement;
+    if (a && notesList.contains(a)) { try { a.blur(); } catch (e) { /* fine */ } }
+    renderNotes();
+  }
+
+  function renderNotes() {
+    var readOnly = state.canWrite === false;
+    document.getElementById("noteComposer").hidden = readOnly;
+    document.getElementById("noteReadOnly").hidden = !readOnly;
+    noteSaveBtn.disabled = notesState.saving || !!notesState.off;
+    var active = document.activeElement;
+    if (active && notesList.contains(active) && active.tagName === "TEXTAREA") { notesState.pending = true; return; }
+    notesState.pending = false;
+    notesList.textContent = "";
+    if (notesState.off) { notesList.appendChild(el("p", { class: "nempty", text: notesState.off })); return; }
+    if (!notesState.list) { notesList.appendChild(el("p", { class: "nempty", text: "Opening your notes…" })); return; }
+    if (!notesState.list.length) {
+      notesList.appendChild(el("p", { class: "nempty", text: "Leave Casanova a heads-up, a decision or an idea here, and its reply shows up under your note." }));
+      return;
+    }
+    notesState.list.forEach(function (n) { notesList.appendChild(noteItem(n)); });
+    if (notesState.focus) {
+      var f = notesList.querySelector('[data-focus="' + notesState.focus + '"]');
+      notesState.focus = "";
+      if (f) { try { f.focus(); } catch (e) { /* fine */ } }
+    }
+  }
+
+  function noteItem(n) {
+    var id = n.id, s = noteStatus(n);
+    var canChange = mineNote(n) && !!state.db && state.canWrite !== false;
+    var editing = canChange && s === "new" && !!notesState.editing[id];
+    var kids = [el("div", { class: "nmeta" }, [
+      el("time", { datetime: str(n.at) || null, title: ago(n.at) || null, text: clockText(n.at) || "Earlier" }),
+      el("span", { class: "nstat " + s, text: NOTE_LABEL[s] }),
+      n.editedAt ? el("span", { title: "Edited " + clockText(n.editedAt), text: "edited" }) : null
+    ])];
+    if (editing) {
+      var ta = el("textarea", { "aria-label": "Edit this note", "data-focus": "edit:" + id });
+      ta.value = notesState.edits[id] != null ? notesState.edits[id] : str(n.text);
+      ta.addEventListener("input", function () { notesState.edits[id] = ta.value; autosize(ta); });
+      ta.addEventListener("keydown", function (e) {
+        if (isSaveKey(e)) { e.preventDefault(); saveEdit(id, ta.value); }
+        else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancelEdit(id); }
+      });
+      kids.push(el("div", { class: "nedit" }, [ta]));
+      kids.push(el("div", { class: "actions" }, [
+        el("button", { type: "button", class: "act primary", onclick: function () { saveEdit(id, ta.value); } }, ["Save changes"]),
+        el("button", { type: "button", class: "act quiet", onclick: function () { cancelEdit(id); } }, ["Cancel"])
+      ]));
+      setTimeout(function () { autosize(ta); }, 0);
+    } else {
+      kids.push(el("p", { class: "ntext", text: str(n.text) }));
+    }
+    if (str(n.reply).trim()) {
+      kids.push(el("div", { class: "nreply" }, [el("b", { text: "Casanova replied" }), el("p", { text: str(n.reply) })]));
+    }
+    if (canChange && !editing) {
+      if (notesState.confirming[id]) {
+        kids.push(el("div", { class: "actions" }, [
+          el("span", { class: "nconfirm", text: "Delete this note?" }),
+          el("button", { type: "button", class: "act primary", "data-focus": "del:" + id, onclick: function () { deleteNote(id); } }, ["Delete"]),
+          el("button", { type: "button", class: "act quiet", onclick: function () { delete notesState.confirming[id]; notesState.focus = "delask:" + id; renderNotes(); } }, ["Keep it"])
+        ]));
+      } else {
+        kids.push(el("div", { class: "actions" }, [
+          s === "new" ? el("button", { type: "button", class: "act", "data-focus": "editask:" + id, onclick: function () {
+            notesState.editing[id] = true; notesState.edits[id] = str(n.text); notesState.focus = "edit:" + id; renderNotes();
+          } }, ["Edit"]) : null,
+          el("button", { type: "button", class: "act quiet", "data-focus": "delask:" + id, onclick: function () {
+            notesState.confirming[id] = true; notesState.focus = "del:" + id; renderNotes();
+          } }, ["Delete"])
+        ]));
+      }
+    }
+    return el("article", { class: "nitem" }, kids);
+  }
+
+  function noteFail(e, id) {
+    if (e && e.code === "invalid_argument" && id && !noteById(id)) toast("That note is gone.");
+    else if (e && e.code === "invalid_argument") { state.canWrite = false; render(); renderNotes(); toast("This view can read notes but not change them."); }
+    else if (e && e.code === "quota_exceeded") toast("The ledger is full. Delete old notes first.");
+    else if (e && e.code === "unavailable") toast("The ledger didn't answer. Try again in a moment.");
+    else toast("That didn't save" + (e && e.message ? ": " + e.message : "."));
+  }
+
+  function saveNote() {
+    if (notesState.saving) return;
+    var text = noteText.value.trim();
+    if (!text) { toast("Write the note first."); try { noteText.focus(); } catch (e) { /* fine */ } return; }
+    if (!state.db) { toast("The ledger isn't connected in this view."); return; }
+    notesState.saving = true;
+    noteSaveBtn.disabled = true; noteSaveBtn.textContent = "Saving…"; noteText.readOnly = true;
+    var doc = { text: text, at: nowIso(), by: state.uid || "ledger", status: "new", source: "ledger" };
+    var p;
+    try { p = state.db.collection("notes").add(doc); } catch (e) { p = Promise.reject(e); }
+    p.then(function () {
+      noteText.value = ""; storeDraft(""); autosize(noteText);
+      toast("Saved for Casanova");
+    }, function (e) { noteFail(e); }).then(function () {
+      notesState.saving = false;
+      noteText.readOnly = false; noteSaveBtn.textContent = "Save note";
+      noteSaveBtn.disabled = !!notesState.off;
+    });
+  }
+
+  function cancelEdit(id) {
+    delete notesState.editing[id]; delete notesState.edits[id];
+    notesState.focus = "editask:" + id;
+    forceRenderNotes();
+  }
+
+  function saveEdit(id, value) {
+    if (notesState.busy[id]) return;
+    var text = str(value).trim(), cur = noteById(id);
+    if (!cur) { toast("That note is gone."); cancelEdit(id); return; }
+    if (noteStatus(cur) !== "new") { toast("Casanova has seen this note, so it stays as it is. Leave a new one instead."); cancelEdit(id); return; }
+    if (!text) { toast("A note needs some text. Delete it instead."); return; }
+    if (text === str(cur.text).trim()) { cancelEdit(id); return; }
+    if (!state.db) { toast("The ledger isn't connected in this view."); return; }
+    notesState.busy[id] = true;
+    var p;
+    try { p = state.db.doc("notes/" + id).update({ text: text, editedAt: nowIso() }); } catch (e) { p = Promise.reject(e); }
+    p.then(function () { toast("Note updated"); cancelEdit(id); }, function (e) { noteFail(e, id); })
+      .then(function () { delete notesState.busy[id]; });
+  }
+
+  function deleteNote(id) {
+    if (notesState.busy[id]) return;
+    if (!state.db) { toast("The ledger isn't connected in this view."); return; }
+    notesState.busy[id] = true;
+    var p;
+    try { p = state.db.doc("notes/" + id).delete(); } catch (e) { p = Promise.reject(e); }
+    p.then(function () {
+      delete notesState.confirming[id]; delete notesState.editing[id]; delete notesState.edits[id];
+      toast("Note deleted");
+      try { notesListHead.focus(); } catch (e) { /* fine */ }
+    }, function (e) { noteFail(e, id); }).then(function () { delete notesState.busy[id]; });
+  }
+
+  function openNotes() {
+    try {
+      if (typeof notesDlg.showModal === "function") { if (!notesDlg.open) notesDlg.showModal(); }
+      else notesDlg.setAttribute("open", "");
+    } catch (e) { notesDlg.setAttribute("open", ""); }
+    document.body.classList.add("drawer-open");
+    renderNotes();
+    autosize(noteText);
+    // On a keyboard-and-pointer screen go straight to writing; on a phone don't pop the keyboard over the replies.
+    var desk = false;
+    try { desk = window.matchMedia("(hover: hover) and (pointer: fine)").matches; } catch (e) { desk = false; }
+    if (desk && state.canWrite !== false) { try { noteText.focus(); } catch (e) { /* fine */ } }
+  }
+  function notesClosed() {
+    document.body.classList.remove("drawer-open");
+    try { notesOpenBtn.focus(); } catch (e) { /* fine */ }
+  }
+  function closeNotes() {
+    try {
+      if (typeof notesDlg.close === "function") { if (notesDlg.open) notesDlg.close(); }
+      else notesDlg.removeAttribute("open");
+    } catch (e) { notesDlg.removeAttribute("open"); }
+    notesClosed();
+  }
+
+  notesOpenBtn.addEventListener("click", openNotes);
+  document.getElementById("notesClose").addEventListener("click", closeNotes);
+  notesDlg.addEventListener("close", notesClosed);
+  notesDlg.addEventListener("click", function (e) { if (e.target === notesDlg) closeNotes(); });
+  notesList.addEventListener("focusout", function () { setTimeout(function () { if (notesState.pending) renderNotes(); }, 0); });
+  noteText.value = loadDraft();
+  noteText.addEventListener("input", function () { storeDraft(noteText.value); autosize(noteText); });
+  noteText.addEventListener("keydown", function (e) { if (isSaveKey(e)) { e.preventDefault(); saveNote(); } });
+  noteSaveBtn.addEventListener("click", saveNote);
+  try {
+    if (/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || "")) document.getElementById("noteHint").textContent = "⌘ + Enter to save";
+  } catch (e) { /* keep Ctrl */ }
+
+  // Connect
+  function start() {
+    if (!window.claude || typeof window.claude.use !== "function") {
+      board.textContent = "";
+      board.appendChild(el("div", { class: "notice", text: "The ledger's data opens inside Claude. Open this page from claude.ai while signed in." }));
+      notesOff("Notes open inside Claude. Open this page from claude.ai while signed in.");
+      return;
+    }
+    window.claude.use("user").then(function (user) {
+      if (!user) return;
+      try {
+        Promise.resolve(user.can ? user.can("data.write") : null).then(function (c) { if (c === false) { state.canWrite = false; render(); renderNotes(); } else if (c === true) state.canWrite = true; }).catch(function () {});
+        Promise.resolve(user.id ? user.id() : null).then(function (id) { if (id) state.uid = id; }).catch(function () {});
+      } catch (e) { /* read what we can */ }
+    }).catch(function () {});
+    window.claude.use("db").then(function (db) {
+      if (!db) {
+        board.textContent = "";
+        board.appendChild(el("div", { class: "notice", text: "The ledger can't reach its data in this view. Open it on claude.ai while signed in." }));
+        notesOff("Notes can't be reached in this view. Open the ledger on claude.ai while signed in.");
+        return;
+      }
+      state.db = db;
+      var gotFirst = false;
+      db.collection("rounds").onSnapshot(function (snap) {
+        var m = {}; snap.docs.forEach(function (doc) { var v = doc.data(); if (v) m[doc.id] = v; });
+        state.rounds = m; if (gotFirst) render();
+      }, function () {});
+      db.collection("tracks").onSnapshot(function (snap) {
+        state.tracks = snap.docs.map(function (doc) { var v = Object.assign({}, doc.data() || {}); v.id = doc.id; return v; });
+        renderRoster();
+      }, function () {});
+      db.collection("notes").onSnapshot(function (snap) {
+        notesState.list = snap.docs.map(function (doc) { var v = Object.assign({}, doc.data() || {}); v.id = doc.id; return v; })
+          .sort(function (a, b) { return (Date.parse(str(b.at)) || 0) - (Date.parse(str(a.at)) || 0) || str(b.id).localeCompare(str(a.id)); });
+        renderNoteBadge();
+        renderNotes();
+      }, function (e) {
+        notesOff(e && e.code === "revoked" ? "This view no longer has access to notes." : "Notes stopped answering. Reload the page to reconnect.");
+      });
+      db.collection("dispatches").onSnapshot(function (snap) {
+        gotFirst = true;
+        state.dispatches = snap.docs.map(function (doc) { var v = Object.assign({}, doc.data() || {}); v.id = doc.id; return v; });
+        render();
+      }, function (e) {
+        board.textContent = "";
+        board.appendChild(el("div", { class: "notice", text: e && e.code === "revoked" ? "This view no longer has access to the ledger." : "The ledger stopped answering. Reload the page to reconnect." }));
+      });
+    }).catch(function () {
+      board.textContent = "";
+      board.appendChild(el("div", { class: "notice", text: "The ledger can't reach its data in this view." }));
+      notesOff("Notes can't be reached in this view.");
+    });
+  }
+  renderProject();
+  renderNoteBadge();
+  renderNotes();
+  start();
+})();
+</script>
+
+</body></html>

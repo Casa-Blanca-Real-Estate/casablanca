@@ -1,0 +1,17 @@
+{
+  "body": "You're Abacus, continuing the Casa Blanca comp report engine track. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/19-comp-report-engine-for-findings.md in full, and build it once Dispatches 15 and 16 have merged.\nOne PR to claude/main; never merge. Sign \"— Abacus (CR-2.4)\".\nMark Dispatch Ledger line casa-r13-5 delivered when the PR opens.",
+  "code": "D19",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/19-comp-report-engine-for-findings.md",
+  "heldFrom": "queued",
+  "item": 5,
+  "note": "Waits on 15 and 16 merging.",
+  "project": "casa",
+  "round": 13,
+  "status": "held",
+  "summary": "The engine for Findings: the five-row price table and the calculator's inputs, sales against ask, days on market.",
+  "title": "Comp report: the engine for Findings (CR-2.4)",
+  "track": "Abacus",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

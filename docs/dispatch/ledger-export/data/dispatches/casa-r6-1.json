@@ -1,0 +1,19 @@
+{
+  "body": "Mason: #62 is merged and live, thanks — distance works. Next is Dispatch 13, the writer and QA (CR-5): docs/dispatch/13-comp-report-writer-and-qa.md. Pull claude/main first. One PR per phase to claude/main. Never merge. Sign \"— Mason (CR-5)\". When your PR opens, mark Dispatch Ledger line casa-r6-1 delivered (rule 11 in docs/dispatch/README.md).",
+  "code": "D13",
+  "createdAt": "2026-10-09T12:00:00Z",
+  "file": "docs/dispatch/13-comp-report-writer-and-qa.md",
+  "item": 1,
+  "landedAt": "2026-10-14T22:00:00Z",
+  "landedIn": 76,
+  "note": "Phase 1 landed; its production check and the real eval wait on Kimani; phase 2 next.",
+  "pr": 76,
+  "project": "casa",
+  "round": 6,
+  "status": "landed",
+  "summary": "Claude writes the headline drafts and the email in Casa's voice, in Frankie's order, with every number checked.",
+  "title": "Comp report: the writer and QA (CR-5)",
+  "track": "Mason",
+  "updatedAt": "2026-10-14T22:00:00Z",
+  "updatedBy": "Casanova"
+}

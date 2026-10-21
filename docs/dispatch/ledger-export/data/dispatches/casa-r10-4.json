@@ -1,0 +1,17 @@
+{
+  "body": "Painter: CB_PICS_TOKEN is set and D-24 is answered (docs/decisions.md). Pull claude/main and carry on with Dispatch 12 phase 2. From my #71 comment: consider a version check on the agent record that the CMS and the roster both write. If Kimani routed FB-1 (agent photos and renames in the studio) to you on the answer sheet, it comes first. PR to claude/main; never merge. Sign \"— Painter (D12)\". Mark Dispatch Ledger line casa-r10-4 delivered when the PR opens.",
+  "code": "FU·71",
+  "createdAt": "2026-10-14T23:30:00Z",
+  "heldFrom": "queued",
+  "item": 4,
+  "kind": "follow-up",
+  "note": "Waits on Kimani: TD-2 (CB_PICS_TOKEN) and PP-1 (D-24). PP-2 answered: already-filed photos import as placed.",
+  "project": "casa",
+  "round": 10,
+  "status": "held",
+  "summary": "From #71: phase 2 waits on the roster token and D-24.",
+  "title": "Follow-up: Dispatch 12 phase 2, the roster's import",
+  "track": "Painter",
+  "updatedAt": "2026-10-15T09:30:00Z",
+  "updatedBy": "Casanova"
+}

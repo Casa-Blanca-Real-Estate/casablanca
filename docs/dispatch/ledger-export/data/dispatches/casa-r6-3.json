@@ -1,0 +1,21 @@
+{
+  "body": "Arbiter: #61 is merged and live, and Kimani's Jev key and CR_JEV_ZDR=off are in Netlify. Start Dispatch 10 phase 2: the go/no-go call first, then commit the labels sheet before any live call. Pull claude/main first. PR to claude/main. Never merge. Sign \"— Arbiter (CR-D)\". When your PR opens, mark Dispatch Ledger line casa-r6-3 delivered (rule 11 in docs/dispatch/README.md).",
+  "code": "D10·2",
+  "createdAt": "2026-10-09T12:00:00Z",
+  "file": "docs/dispatch/10-comp-report-decision-provider.md",
+  "heldFrom": "queued",
+  "item": 3,
+  "landedAt": "2026-10-14T22:00:00Z",
+  "landedIn": 75,
+  "note": "The pre-live build landed; the live run waits on Kimani's keys and the labels sheet.",
+  "pr": 75,
+  "progress": "Pre-live build in PR #75: the go/no-go call, the labels sheet (Kimani or Hannah can fill it now), Haiku as a second judge, the weekly drift check, and CR_DECIDE_KEY for Arbiter. Still held for the live run: the key, then the probe, watch mode, the labelled batch and the write-up.",
+  "project": "casa",
+  "round": 6,
+  "status": "landed",
+  "summary": "The go/no-go call, pre-registered labels, watch mode on real listings, the calibration write-up.",
+  "title": "Jev phase 2: live watch mode and calibration",
+  "track": "Arbiter",
+  "updatedAt": "2026-10-14T22:00:00Z",
+  "updatedBy": "Casanova"
+}

@@ -1,0 +1,16 @@
+{
+  "body": "You're **Publisher**, a new Casa Blanca Creative Studio track: the post builders (the Closed, In Contract, For Sale, Listing and Editorial carousels), their StreetEasy import, and captions. Read /CLAUDE.md, then docs/dispatch/README.md (your roster row), docs/context/casa-blanca.md, docs/design/README.md and the brief for each builder you touch, and docs/parked/sessions/editorial-builder.md (#73). Your first dispatch, from Casanova, covers two notes from the team Feedback list (the In Contract one-agent header, and keeping the StreetEasy link with each property across the builders), then one live run of the Editorial builder. Work on your branch from claude/main, one PR per phase to claude/main. Never merge. Sign \"— Publisher (post builders)\". When your PR opens, mark Dispatch Ledger line casa-r9-2 delivered (rule 11).",
+  "code": "PUBL",
+  "createdAt": "2026-10-14T22:00:00Z",
+  "file": "docs/parked/sessions/editorial-builder.md",
+  "item": 2,
+  "note": "Held: its first dispatch (the two builder notes, then the Editorial check) is Casanova's to write once Kimani makes notes of that feedback.",
+  "project": "casa",
+  "round": 9,
+  "status": "held",
+  "summary": "The post builders, the StreetEasy import and captions.",
+  "title": "Publisher: the post builders",
+  "track": "Publisher",
+  "updatedAt": "2026-10-14T22:00:00Z",
+  "updatedBy": "Casanova"
+}

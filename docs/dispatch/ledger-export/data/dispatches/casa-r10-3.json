@@ -1,0 +1,17 @@
+{
+  "body": "Arbiter: the Jev keys are in (AI_GATEWAY_API_KEY and CR_JEV_ZDR=off in Netlify; CR_DECIDE_KEY in Netlify and the cloud environment) and the labels sheet is filled. Pull claude/main, then run the go/no-go call and the labelled batch per Dispatch 10 phase 2. PR to claude/main; never merge. Sign \"— Arbiter (CR-D)\". Mark Dispatch Ledger line casa-r10-3 delivered when the PR opens.",
+  "code": "FU·75",
+  "createdAt": "2026-10-14T23:30:00Z",
+  "heldFrom": "queued",
+  "item": 3,
+  "kind": "follow-up",
+  "note": "Waits on Kimani: TD-1 (the Jev keys) and TD-4 (label the 30 listings).",
+  "project": "casa",
+  "round": 10,
+  "status": "held",
+  "summary": "From #75: the pre-live build is merged; the live run waits on keys and labels.",
+  "title": "Follow-up: Jev's live run, the go/no-go call and the labelled batch",
+  "track": "Arbiter",
+  "updatedAt": "2026-10-14T23:30:00Z",
+  "updatedBy": "Casanova"
+}

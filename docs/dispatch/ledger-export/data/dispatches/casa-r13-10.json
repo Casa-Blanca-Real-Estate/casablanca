@@ -1,0 +1,17 @@
+{
+  "body": "Run this in Casa's Claude account. You're Calliste, a new Casa Blanca Creative Studio track: Hubert and all the comp report's AI work. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/24-calliste-hubert-sees-what-the-agent-sees.md and docs/comp-report/feedback/2026-10-15-noble/05-hubert-and-ai.md in full, and build it. Item 1 waits for Dispatch 21 to merge, and any edit to api/messages.ts waits for 22a.\nOne PR to claude/main; never merge. Sign \"— Calliste (CR-H1)\".\nMark Dispatch Ledger line casa-r13-10 delivered when the PR opens.",
+  "code": "D24",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/24-calliste-hubert-sees-what-the-agent-sees.md",
+  "heldFrom": "queued",
+  "item": 10,
+  "note": "Waits on the move to Casa's Claude account. Item 1 after 21; api/messages.ts after 22a; copy lines after 20 and 21. New track: Calliste.",
+  "project": "casa",
+  "round": 13,
+  "status": "held",
+  "summary": "Calliste's first build: Hubert sees what the agent sees on every screen, with tools gated by role.",
+  "title": "Calliste: Hubert sees what the agent sees (CR-H1)",
+  "track": "Calliste",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

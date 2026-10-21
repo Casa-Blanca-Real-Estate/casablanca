@@ -1,0 +1,16 @@
+{
+  "body": "You're **Concierge**, continuing a Casa Blanca Creative Studio track: agent sites and the agent CMS. Read /CLAUDE.md, then docs/dispatch/README.md (your roster row says where you are), then docs/dispatch/03-agent-cms.md in full, then the handoff (docs/parked/sessions/agent-cms.md), then PR #47 and its comments. Carry on from \"What's next\" there, starting with wiring the CMS to agents/SCHEMA.md and the build. Work on your branch from claude/main, one PR per phase to claude/main. Never merge. Sign \"— Concierge (agent sites)\". When your PR opens, mark Dispatch Ledger line casa-r9-1 delivered (rule 11).",
+  "code": "CONC",
+  "createdAt": "2026-10-14T22:00:00Z",
+  "file": "docs/parked/sessions/agent-cms.md",
+  "item": 1,
+  "note": "Held: the agent-site track is parked behind the comp report. Send when Kimani wants it back.",
+  "project": "casa",
+  "round": 9,
+  "status": "held",
+  "summary": "Agent sites and the CMS: Slices 2–3 and 5, and agent-record fields such as Instagram handles.",
+  "title": "Concierge: agent sites and the CMS",
+  "track": "Concierge",
+  "updatedAt": "2026-10-14T22:00:00Z",
+  "updatedBy": "Casanova"
+}

@@ -1,0 +1,16 @@
+{
+  "body": "You're Abacus, continuing the Casa Blanca comp report engine track. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/16-comp-report-listing-read-and-vocabulary.md in full, and build it.\nOne PR to claude/main; never merge. Sign \"— Abacus (CR-2.3)\".\nMark Dispatch Ledger line casa-r13-2 delivered when the PR opens.",
+  "code": "D16",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/16-comp-report-listing-read-and-vocabulary.md",
+  "item": 2,
+  "note": "Ready now. Runs alongside 15 and 17. NW-018 a's part only if Kimani answers it A on the answer sheet.",
+  "project": "casa",
+  "round": 13,
+  "status": "queued",
+  "summary": "The listing read pulls the home's type, neighborhood, size and fees from StreetEasy, and the vocabulary to say them.",
+  "title": "Comp report: the listing read and the home's vocabulary (CR-2.3)",
+  "track": "Abacus",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

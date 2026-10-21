@@ -1,0 +1,17 @@
+{
+  "code": "D03",
+  "createdAt": "2026-09-12T12:00:00Z",
+  "file": "docs/dispatch/03-agent-cms.md",
+  "item": 3,
+  "landedAt": "2026-09-14T12:00:00Z",
+  "landedIn": 47,
+  "pr": 47,
+  "project": "casa",
+  "round": 1,
+  "status": "landed",
+  "summary": "The agent CMS. Next for agent sites: Slice 5 (SEO, Google reviews) is ready to dispatch; Slices 2–3 wait on the Wix capture.",
+  "title": "Agent sites, Slice 4: the CMS",
+  "track": "Agent sites",
+  "updatedAt": "2026-09-14T12:00:00Z",
+  "updatedBy": "Casanova"
+}

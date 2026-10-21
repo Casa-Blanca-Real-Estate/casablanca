@@ -1,0 +1,17 @@
+{
+  "body": "You're Mason, continuing the Casa Blanca comp report track. Pull claude/main, then read /CLAUDE.md, docs/dispatch/README.md, then docs/dispatch/21-comp-report-findings-target-and-client.md in full, and build it once Dispatches 19 and 20 have merged.\nOne PR to claude/main; never merge. Sign \"— Mason (CR-7d)\".\nMark Dispatch Ledger line casa-r13-7 delivered when the PR opens.",
+  "code": "D21",
+  "createdAt": "2026-10-15T22:00:00Z",
+  "file": "docs/dispatch/21-comp-report-findings-target-and-client.md",
+  "heldFrom": "queued",
+  "item": 7,
+  "note": "Waits on 19 and 20 merging.",
+  "project": "casa",
+  "round": 13,
+  "status": "held",
+  "summary": "Findings in plainer words, whose target it is (client, agent or shared), pinned server-side once revealed, and the client's facts.",
+  "title": "Comp report: Findings, in plainer words, with whose target and the client's facts (CR-7d)",
+  "track": "Mason",
+  "updatedAt": "2026-10-15T22:00:00Z",
+  "updatedBy": "Casanova"
+}

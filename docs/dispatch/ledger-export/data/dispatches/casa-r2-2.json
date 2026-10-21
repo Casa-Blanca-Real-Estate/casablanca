@@ -1,0 +1,18 @@
+{
+  "code": "D05",
+  "createdAt": "2026-09-23T12:00:00Z",
+  "file": "docs/dispatch/05-comp-report-foundations.md",
+  "item": 2,
+  "landedAt": "2026-09-28T12:00:00Z",
+  "landedIn": 52,
+  "note": "Landed in #48 and #52; CR-1.1 item 3 in #57. Step 6 (a Gmail on no list is refused) is Kimani's to confirm in Netlify's function log.",
+  "pr": 48,
+  "project": "casa",
+  "round": 2,
+  "status": "landed",
+  "summary": "The React app, sign-in, the database, the Claude proxy.",
+  "title": "Comp report: foundations (CR-1)",
+  "track": "Mason",
+  "updatedAt": "2026-10-09T12:00:00Z",
+  "updatedBy": "Casanova"
+}
