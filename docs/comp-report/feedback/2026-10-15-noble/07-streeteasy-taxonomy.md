@@ -1,83 +1,123 @@
 # NW-018 probe: what StreetEasy's grey line and amenity lists can say
 
-Probe date 2026-10-15. StreetEasy blocks direct fetches, so this is built from web-search snippets of StreetEasy pages, the repo's reference export, and the parsers.
+First probe 2026-10-15 (search snippets, the reference export, the parsers). **Finished 2026-10-21 by Surveyor
+(Dispatch 17)** with live reads of StreetEasy pages: seven listing pages, three search-results pages, and the
+per-borough browse pages. StreetEasy served every page asked for except the Queens sales browse page (one
+failed read; the Queens rental browse page was used, and for the other four boroughs the sale and rental lists
+are identical). Only paths StreetEasy's `robots.txt` allows were read: `/building/<building>/<unit>`,
+`/for-sale/<area>` and `/browse/...`. It disallows `/sale/*`, `/rental/*` and `/building/*/for-sale/*`,
+which were not read.
 
-Confidence key: **seen SE** (a StreetEasy page or help article in a search result) · **seen export** (the reference CSV) · **repo** (what our parser already assumes) · **inferred** (memory or reasoning; verify).
+Each line below is marked **verified** (with its source) or **not verified**. Anything not verified is on
+Kimani's checklist at the end.
 
-## What is confirmed
+## Sources (read 2026-10-21)
 
-- The line is real. Search results for 100 United Nations Plaza units (#5A, #3D, #19C, #25G, #31C, #7G, #20E) show "Condo", "Turtle Bay", "Resale" as the three tags. **seen SE**
-- StreetEasy's own listing-feed format (the XML agents upload) has a **building type** field and a separate **sale status** field. They are different fields. **seen SE**
-  - Building type: condo, coop, townhouse, condop, rental, house, other.
-  - Sale status: Sponsor Unit, Resale, Foreclosure, Auction Sale, Restricted Sale, Short Sale.
-- So "Resale" is not a property type. It sits in a second field. The grey line likely renders feed values (type, neighborhood, sale status), but the exact display labels were not seen for every value.
+| Key | Page | Grey line as shown |
+|---|---|---|
+| P1 | `streeteasy.com/building/309-west-83-street-new_york/4a` | Co-op · Upper West Side · Resale |
+| P2 | `streeteasy.com/building/256-east-4-street-new_york/2` | Condo · East Village · Sponsor unit |
+| P3 | `streeteasy.com/building/222-16-street-brooklyn/3e` (built 2026) | Condo · Park Slope · Sponsor unit |
+| P4 | `streeteasy.com/building/128-west-138-street-new_york/3e` (an HDFC co-op) | Co-op · Central Harlem · Restricted sale |
+| P5 | `streeteasy.com/building/432-fenimore-street-brooklyn/twnhse` | House · Prospect Lefferts Gardens · Resale |
+| P6 | `streeteasy.com/building/62-bainbridge-street-brooklyn/multi` | Three-family home · Stuyvesant Heights · Resale |
+| P7 | `streeteasy.com/building/113-east-81-street-new_york/twnh` | Two-family home · Upper East Side · Resale |
+| P8 | `streeteasy.com/building/67-east-82-street-new_york/twnhs` (a rental) | House · Upper East Side · (rental) |
+| C1–C3 | search results: `/for-sale/manhattan`, `/for-sale/downtown`, `/for-sale/brooklyn` | cards read "<Type> in <Neighborhood>" |
+| B | `/browse`, `/browse/sale/{manhattan,brooklyn,bronx,staten-island}`, `/browse/rental/{manhattan,…,queens}` | neighborhood lists |
+| X | the reference export, `docs/comp-report/sources/streeteasy-comp-export-100-barclay-17l-2026-09-23.csv` | |
+| F | StreetEasy's listing-feed spec (search snippets, 2026-10-15) | |
+
+The page renders the three values as separate items (the "·" here is ours). Note the capitals: StreetEasy
+writes "Sponsor unit" and "Restricted sale", lower-case second word.
 
 ## Field 1: type
 
-| Value | Source | Sure? |
+| Label as shown | Status | Source |
 |---|---|---|
-| Condo | line on 100 UN Plaza; export "Property Type" | seen SE, seen export |
-| Co-op | feed value `coop`; display spelling "Co-op" is the likely label | seen SE (feed), label inferred |
-| Condop | feed value `condop` | seen SE (feed) |
-| Townhouse | feed value `townhouse`; SE Experts docs define a townhouse listing as a 1-, 2- or 3-family home | seen SE |
-| House | feed value `house` | seen SE (feed) |
-| Multi-family | a "Multi Family" browse category beside condos, co-ops, houses, townhouses; not in the feed's building-type list | seen SE (browse), label inferred |
-| Rental | feed value `rental` (rental buildings; irrelevant to sales comps) | seen SE (feed) |
-| Other | feed value `other` | seen SE (feed) |
+| Condo | verified | P2, P3, C1–C3; X ("Property Type") |
+| Co-op | verified, spelled "Co-op" on pages and cards | P1, P4, C1, C2, C3 |
+| Condop | verified (card) | C2 "Condop in Battery Park City", C3 "Condop in Downtown Brooklyn" |
+| House | verified: a single-family townhouse shows as **House** | P5, P8, C3 "House in Ocean Hill" |
+| Two-family home · Three-family home · Four-family home | verified: multi-family homes say how many families | P7, P6, C1 "Two-family home in Hamilton Heights", C3 "Four-family home in Boerum Hill" |
+| Hybrid | verified (card); meaning not checked | C3 "Hybrid in Brighton Beach" |
+| Rental unit | verified (card); not a sale type | C3 "Rental unit in Coney Island" |
+| Townhouse | **not seen** on any page or card. Three townhouse listings (URL slugs `twnhse`, `twnh`, `twnhs`) showed House or Two-family home. The feed's `townhouse` most likely displays as House | P5, P7, P8 |
+| Multi-family, Other | not seen as labels | — |
 
-The export also has a **Building Type** column, which reads "Condo building" for all 11 rows. So the building label and the unit label differ ("Condo building" vs "Condo"). Other building labels (for example "Co-op building") are inferred, not seen. **seen export / inferred**
-
-### Where HDFC, sponsor and new development show up
-
-- **HDFC**: not found as a type value anywhere. It is a co-op with income and resale limits. On StreetEasy it most likely shows as type Co-op plus a sale status such as **Restricted Sale**, or only in the description. Not confirmed. **inferred**
-- **Sponsor unit**: a **sale status** value ("Sponsor Unit"), not a type. SE new-development pages list sponsor units ahead of resales. **seen SE**
-- **Foreclosure, Auction Sale, Short Sale, Restricted Sale**: sale status values. **seen SE (feed)**
-- **Estate / as-is**: not a StreetEasy field. Description only. The tool already asks it as a question (`estate_or_as_is`). **repo**
+- The grey line's type is the unit's type. The export also has **Building Type** ("Condo building" in all 11
+  rows). Other building labels ("Co-op building") are not verified. **X**
+- What the export writes for a co-op ("Co-op" or "Coop") is **not verified**: the reference export is all
+  condos. On Kimani's checklist.
 
 ## Field 2: neighborhood
 
-- StreetEasy uses its own neighborhood names, one per listing, and shows the borough in the page title ("in Turtle Bay, Manhattan"). The export has two columns: **Neighborhood** (the unit) and **Building Neighborhood**; both were "Tribeca" in the reference file. **seen SE, seen export**
-- One neighborhood per listing. Names are StreetEasy's, not the city's or the REBNY's. A name can differ from what agents say (Lenox Hill, Yorkville and Carnegie Hill are separate on SE and all "Upper East Side" in speech; the SE page for Upper East Side is an umbrella "area"). **seen SE**
-- **Full list could not be pulled.** Search never returned the index page. Get it from the source instead: `https://streeteasy.com/browse` (all boroughs) and `https://streeteasy.com/browse/rental/manhattan` (Manhattan), both found in search results; a person can open them in a browser and copy the lists. **seen SE (URLs)**
-- Manhattan names below are from memory and from what search snippets showed. **inferred, verify against the browse page before shipping**:
+- One name per listing, StreetEasy's own. The grey line uses the same names as the browse lists: Upper West
+  Side, East Village, Park Slope, Central Harlem, Prospect Lefferts Gardens, Stuyvesant Heights and Upper East
+  Side are all in them. **verified, P1–P7 against B**
+- "Upper East Side" and "Upper West Side" are names of their own, beside Lenox Hill, Yorkville, Carnegie Hill
+  and Lincoln Square. The browse page lists them separately from the umbrella links "All Upper East Side" and
+  "All Upper West Side", and P7 (East 81st Street) and P1 (West 83rd Street) carry them. How StreetEasy draws
+  the line between "Upper East Side" and Lenox Hill or Carnegie Hill was not checked. **verified, B, P1, P7**
+- The full list, 311 names across the five boroughs, is
+  `tools-src/comp-report/workspace/data/streeteasy-neighborhoods.json`, with its note beside it. **verified, B**
+- Corrections to the first probe's from-memory list: StreetEasy says **Hell's Kitchen** (not "Clinton"),
+  **Fulton/Seaport** (not "South Street Seaport"), **Soho** and **Noho** (not "SoHo", "NoHo"). It has no
+  "Alphabet City" or "Meatpacking District". It adds Beekman, Hudson Heights, NoMad, South Harlem, Two Bridges
+  and Upper Carnegie Hill. **verified, B**
+- The export's **Neighborhood** and **Building Neighborhood** columns: both "Tribeca" in the reference file.
+  **verified, X**
 
-Alphabet City, Battery Park City, Carnegie Hill, Central Harlem, Central Park South, Chelsea, Chinatown, Civic Center, Clinton (Hell's Kitchen), East Harlem, East Village, Financial District, Flatiron, Fort George, Gramercy Park, Greenwich Village, Hamilton Heights, Harlem, Hudson Square, Hudson Yards, Inwood, Kips Bay, Lenox Hill, Lincoln Square, Little Italy, Lower East Side, Manhattan Valley, Manhattanville, Marble Hill, Meatpacking District, Midtown, Midtown East, Midtown South, Midtown West, Morningside Heights, Murray Hill, NoHo, Nolita, Roosevelt Island, SoHo, South Street Seaport, Stuyvesant Town/PCV, Sutton Place, Theater District, Tribeca, Turtle Bay, Upper East Side, Upper West Side, Washington Heights, West Chelsea, West Harlem, West Village, Yorkville.
+## Field 3: sale kind
 
-Seen in snippets: Upper East Side, Lenox Hill, Yorkville, Carnegie Hill, Civic Center, Turtle Bay, Tribeca, Chelsea, Flatiron, Gramercy Park, Greenwich Village, West Village, East Village, Lower East Side, Midtown East, Battery Park City, East Harlem, Morningside Heights, Washington Heights, Lincoln Square.
-
-To get the other boroughs: the same `/browse` page groups neighborhoods under Manhattan, Brooklyn, Queens, Bronx, Staten Island (and Jersey-side areas StreetEasy also covers). Plan: capture it once into a static list in the repo (see shape below), re-check twice a year.
-
-## Field 3: resale or new development
-
-| Value | Source | Sure? |
+| Label as shown | Status | Source |
 |---|---|---|
-| Resale | line on 100 UN Plaza; feed sale status | seen SE |
-| Sponsor Unit | feed sale status | seen SE (feed) |
-| New development | an SE filter and building flag ("New Developments" pages); whether the line says "New development" or "Sponsor" for a developer's own unit is not confirmed | seen SE (filter), label inferred |
-| Foreclosure / Auction / Short Sale / Restricted Sale | feed sale status | seen SE (feed) |
+| Resale | verified | P1, P5, P6, P7 |
+| Sponsor unit | verified | P2, P3 |
+| Restricted sale | verified, on an HDFC co-op | P4 |
+| New development | **not on the grey line** in the two sponsor units read, one of them in a building finished in 2026 (P3). It is a **card badge** ("New development") on search results. Whether a never-sold building's line ever says it is not verified | P2, P3, C2, C3 |
+| Foreclosure, Auction, Short sale | feed values; display labels not seen | F |
+| "Sponsored" | a **paid-placement card badge** (beside "Featured"), not a sponsor unit. Don't map it | C2, C3 |
 
-Treat the third field as a free label with a known set, not a closed enum. Unknown text must be kept as shown.
+- The export has **no sale-kind column**. Its 31 columns are Address … Building Amenities, none of them a sale
+  kind. **verified, X (header row)**
+- Treat the third field as a label from a known set, not a closed enum. Keep unknown text as shown.
 
-## Amenities as a listing shows them
+### HDFC, sponsor and new development
 
-Building pages split into **Policies**, then **Building amenities** in groups. A group with nothing says "No info". **seen SE**
+- **HDFC** is a Co-op with sale kind **Restricted sale**. "HDFC" itself appears only in the description
+  (P4: "prewar HDFC building"). The page also says "This is a restricted sale. Buyer income limits apply."
+  **verified, P4**. Restricted sale is the signal; "HDFC" in the text confirms it.
+- **Sponsor unit** is a sale kind, not a type. **verified, P2, P3**
+- **New development** is a building-level badge on cards, not a grey-line value in what was read. **verified,
+  P3, C2, C3** (the never-sold case is on the checklist)
+- **Estate / as-is**: not a StreetEasy field. The tool asks it (`estate_or_as_is`). **repo**
 
-| Group | Items seen (SE pages or export) |
-|---|---|
-| Policies | Guarantors accepted · Pets allowed · Smoke-free · Pied-a-terre allowed · Sublets allowed (rental-leaning ones are inferred to hide on sale pages) |
-| Services and facilities | Elevator · Doorman / Full-time doorman · Concierge · Live-in super · Package room · Laundry in building · Bike room · Storage space · Cold storage · Locker/cage · Wheelchair access · Verizon Fios · Parking / Garage parking / Valet parking |
-| Wellness and recreation | Gym · Swimming pool · Hot tub · Children's playroom · Media room |
-| Shared outdoor space | Courtyard · Garden · Deck · Patio · Roof deck · "Shared outdoor space" (the export flattens the group into this one tag) |
-| Private outdoor space (unit) | Balcony · Terrace · Garden · Roof deck · Patio. In the export these appear under Home Features. |
-| Home features (unit) | Central air · Dishwasher · Hardwood floors · Washer/dryer · Fireplace · Gas fireplace · Loft · City view · Water view · Skyline view |
+## Amenities, policies and home features as a listing shows them
 
-Export vs page: the export puts everything in three columns (Building Policies, Home Features, Building Amenities) with no group names. Page groups are lost, so "Shared outdoor space" in the export is one flat tag while the page lists courtyard, garden and so on. **seen export**
+A listing page has three blocks: **Policies**, **Building amenities** (in three groups) and **Home features**.
+An empty group says "No info on <group>". An empty Policies block says "Sorry, policy info isn't available
+right now. Check back later." (P4–P7). **verified, P1–P7**
 
-### Pets and smoking
+An item can carry sub-items, shown under it: "Pets allowed" › "Cats and dogs allowed"; "View" › "City",
+"Garden"; "Private outdoor space" › "Balcony, Garden, Roof deck, Terrace"; "Fireplace" › "Decorative";
+"Doorman" › "Virtual"; "Parking" › "Garage".
 
-- Policies shows tags, not a rule. Seen: "Pets allowed", "Smoke-free". 8 of 11 export rows say "Pets allowed", one adds "Smoke-free", two are blank. **seen export**
-- Blank means "StreetEasy shows nothing", not "no pets". One SE page shows cats and dogs allowed; a StreetEasy blog says many buildings ban pets or cap dog size, and that detail is in the building's house rules, not the tag. **seen SE**
-- Nothing seen for "No pets" as a tag. Absence is the only signal. **inferred**
+| Block / group | Items seen | Source |
+|---|---|---|
+| Policies | Co-purchase allowed · Gifts allowed · Parents buying allowed · Pets allowed (› Cats and dogs allowed) · Pied-a-terre allowed · Sublets allowed | P1, P2, P3; X adds Smoke-free |
+| Building amenities › Services and facilities | Elevator · Laundry in building · Doorman (› Virtual) · Package room · Parking (› Garage) · Storage space · Wheelchair access | P1, P2, P3, P6, P7. X adds Bike room, Concierge, Full-time doorman, Live-in super, Verizon Fios |
+| Building amenities › Wellness and recreation | Gym | P3. X adds Children's playroom, Swimming pool |
+| Building amenities › Shared outdoor space | Roof deck · Courtyard | P3, P5, P6, P7. X flattens the group to the one tag "Shared outdoor space" |
+| Home features | Central air · Dishwasher · Hardwood floors · Washer/dryer · Fireplace (› Decorative) · Loft · View (› City, Garden) · Private outdoor space (› Balcony, Garden, Roof deck, Terrace) | P1, P2, P3, P5, P6, P7, P8 |
+
+- The first probe's other items (Hot tub, Media room, Cold storage, Locker/cage, Valet parking, Gas fireplace,
+  Water view, Skyline view, Guarantors accepted, Smoke-free on a page) were **not seen on a page**. Water view
+  and Smoke-free are in the export. They are plausible, not verified.
+- Export vs page: the export has three flat columns (Building Policies, Home Features, Building Amenities), no
+  group names and no sub-items. A page's "View › City" is the export's "City view". **verified, X against P2**
+- "No pets" never appears. Absence is the only signal, and a blank Policies block can mean StreetEasy has no
+  policy data at all (P4–P7). Never derive "no pets" from a blank. **verified**
 
 ## What we already get
 
@@ -85,55 +125,67 @@ Export vs page: the export puts everything in three columns (Building Policies, 
 |---|---|---|---|
 | Type | Property Type, Building Type | `property_type` ("Condo, Co-op, Condop or Townhouse") | `condo, coop, condop, townhouse, multi_family, other`. `house` and `single-family` map to townhouse; anything else becomes `other` with a low-confidence note |
 | Neighborhood | Neighborhood, Building Neighborhood | `neighborhood` | free text |
-| Resale / new dev | none | `new_development`, `sponsor_unit`, `income_restricted` as yes/no flags | `sponsor_unit` is a decision-provider question (`server/decide/registry.ts`); new development and income-restricted are read but have no field in `PropertyFacts` that I found |
+| Resale / new dev | none | `new_development`, `sponsor_unit`, `income_restricted` as yes/no flags | `sponsor_unit` is a decision-provider question (`server/decide/registry.ts`); new development and income-restricted are read but have no field in `PropertyFacts` |
 | Policies | Building Policies | `policies` tags | tags |
 | Amenities | Building Amenities | `amenities` tags | `deriveFromAmenities` pulls doorman level, concierge, parking, shared outdoor; the rest stay tags |
 | Features | Home Features | `features` tags | views, private outdoor, etc. derived |
 | Year built, units, stories | Units / Stories in Building | `year_built`, `building_units`, `building_stories` | read |
 
-Gaps: no field for the third value as a label ("Resale"); no HDFC or restricted-sale capture except the `income_restricted` flag; no floors-count for houses (NW-019); "Building Type" is read but the engine does not use it as a separate field.
+For Dispatch 16: the extract's type hint should list the labels StreetEasy actually shows (Condo, Co-op,
+Condop, House, N-family home), not "Townhouse"; "Two-, Three-, Four-family home" map to `multi_family`, and
+"House" to `townhouse` (or a `house` type, per NW-018 a).
 
 ## Recommended data shape
 
 ```ts
 type PropertyType =
   | 'condo' | 'coop' | 'condop' | 'townhouse' | 'house' | 'multi_family' | 'other';
-// add 'house' (whole brownstone, single-family) so it stops folding into townhouse
+// StreetEasy shows "House" for a single-family townhouse and "Two-family home" etc. for multi-family
 
 type SaleKind =                  // StreetEasy's third field; one value
-  | 'resale' | 'new_development' | 'sponsor' | 'restricted' | 'foreclosure'
+  | 'resale' | 'sponsor' | 'restricted' | 'new_development' | 'foreclosure'
   | 'auction' | 'short_sale' | 'other';
+// seen: "Resale", "Sponsor unit", "Restricted sale". New development is a card badge, kept as a flag too
 
 interface PropertyFacts {
   property_type: PropertyType;
-  property_type_label?: string;   // text as shown, kept when 'other'
+  property_type_label?: string;   // text as shown ("Three-family home")
   sale_kind?: SaleKind;
   sale_kind_label?: string;       // text as shown
-  hdfc: boolean | 'unknown';      // independent flag: co-op + income limits
+  hdfc: boolean | 'unknown';      // Co-op + "Restricted sale"; "HDFC" in the text confirms
   neighborhood?: string;          // SE name as shown
   borough?: 'Manhattan' | 'Brooklyn' | 'Queens' | 'Bronx' | 'Staten Island' | 'Other';
   floors?: number;                // townhouse / house: floors in the home (NW-019)
 }
 ```
 
-- Keep HDFC as a flag, not a type. It is a co-op with limits, and it can pair with Restricted Sale.
-- Keep `sponsor` in `SaleKind` and also keep the decision question `sponsor_unit`; the link read fills both from one signal.
-- Neighborhood: a static list `{ name, borough }` captured from `/browse`, used for a picker and for matching. Store the name as shown, and keep unknown names (do not reject).
-- Policies and amenities stay as tags. Add one derived field, `pets: 'allowed' | 'not_listed'`, and `smoke_free: boolean`. Never derive "no pets" from a blank.
+- Keep HDFC as a flag, not a type: P4 is "Co-op" with "Restricted sale".
+- Keep `sponsor` in `SaleKind` and also keep the decision question `sponsor_unit`; one signal fills both.
+- Neighborhood: the static list `{ name, borough }` is now in the repo. Store the name as shown and keep
+  unknown names.
+- Policies and amenities stay as tags. Add `pets: 'allowed' | 'not_listed'` and `smoke_free: boolean`.
 
 ### What can auto-fill from a link
 
 | Field | From a link | From the export | Notes |
 |---|---|---|---|
 | property_type | yes | yes | map the label; keep raw text when unknown |
-| sale_kind | yes, once the extract asks for the grey line's third tag | no (no column) | add "the third tag of the grey line" to the extract schema; map "Resale", "Sponsor", "New development" |
-| hdfc | partly | no | only if the page says HDFC or income-restricted; else ask |
+| sale_kind | yes, once the extract asks for the grey line's third value | no (no column) | map "Resale", "Sponsor unit", "Restricted sale" |
+| hdfc | yes when the sale kind is "Restricted sale" on a co-op | no | else ask |
 | neighborhood, borough | yes | neighborhood yes; borough from the static list | |
-| floors (house) | partly | no | usually in the description, not a labelled field |
+| floors (house) | partly | no | usually in the description |
 | pets, smoke-free | yes (policy tags) | yes | |
 
-## Still unverified (ask a person with a browser, five minutes)
+## Still unverified: Kimani's five-minute checklist
 
-1. Open one co-op, one townhouse, one new-development sponsor unit and one HDFC listing on StreetEasy and copy each grey line.
-2. Copy the Manhattan and other-borough lists from `streeteasy.com/browse`.
-3. Check whether the export's Property Type column says "Co-op" or "Coop", and whether any export row ever has a sale-kind value.
+Everything above not marked verified. Two minutes in a browser, three in an export:
+
+1. **Co-op in the export.** In StreetEasy's comp tool, export any search that includes a co-op. In the
+   `Property Type` column, is it "Co-op" or "Coop"? And the `Building Type` for it ("Co-op building"?).
+2. **A never-sold new development.** Open any unit in a building StreetEasy badges "New development" where no
+   unit has sold yet. Copy the three words of the grey line: does the third say "Sponsor unit" or
+   "New development"?
+3. **Foreclosure or short sale.** If one turns up in a search, copy its grey line's third word.
+4. **Townhouse.** If any listing's grey line says "Townhouse" rather than "House", note the link.
+5. **Photos (item 4).** Already confirmed from seven listing pages (all `photos.zillowstatic.com`). If you open
+   a listing whose photos come from another host (right-click a photo › Copy image address), send the address.
