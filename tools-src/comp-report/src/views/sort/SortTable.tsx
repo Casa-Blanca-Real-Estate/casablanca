@@ -10,6 +10,7 @@ import type { CompOut, Tier } from '../../../engine/index.ts';
 import { Info } from '../newcomp/Frame.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { CompCard, type CardStart } from './CompCard.tsx';
+import { RowThumb } from './RowThumb.tsx';
 import {
   GROUP_LABEL, monthYear, NEED_WORD, needText, nextSort, ppsfText, PRICE_LABEL, shortPrice, sizeText,
   type GroupId, type Row, type RowNeed, type SortKey, type SortState,
@@ -180,7 +181,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
       <div className={`so-row so-cols${ws.sf ? ' sf' : ''}`} onClick={toggle}>
         <span className="so-caret" aria-hidden="true">{open ? '–' : '+'}</span>
         <div className="so-addr-cell">
-          {!open && <span className="so-thumb" aria-hidden="true" />}
+          {!open && <RowThumb photo={j?.photos?.[0]} />}
           <span className="so-addr-line">
             <button
               type="button"

@@ -86,6 +86,8 @@ export interface Workspace {
   /** The agent's level for the Gate: practice (new) or full (graduated). An admin can view it as a new agent. */
   level: 'practice' | 'full';
   isAdmin: boolean;
+  /** Signed in through guest mode: an agent, with dev tools and the sample data. */
+  isGuest: boolean;
   viewAsNewAgent: boolean;
   setViewAsNewAgent: (on: boolean) => void;
   /** Admin dev scaffolding (About this screen, Build notes, Fill with sample): off by default. */

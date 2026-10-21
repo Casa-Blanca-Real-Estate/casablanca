@@ -8,7 +8,7 @@
 // Edit details, opened from a workspace's ✎: same body, its own header and
 // footer, and Cancel puts back what was there when it opened.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { api, linksApi, workspaceApi, type Me, type Report } from '../../api.ts';
+import { api, linksApi, maySample, workspaceApi, type Me, type Report } from '../../api.ts';
 import { titleFromLink } from '../../../workspace/links.ts';
 import type { Audience, Brief, Intake } from '../../../workspace/state.ts';
 import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
@@ -34,7 +34,7 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
   const [target, setTarget] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [devTools] = useBuildNotesSwitch(me.user.role === 'admin');
+  const [devTools] = useBuildNotesSwitch(maySample(me), Boolean(me.user.guest));
   const line = readHomeLine(text);
   const price = readPrice(target);
   const ready = homeLineReady(line) && !(target.trim() && price === null);
@@ -80,10 +80,11 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
     setError(null);
     try {
       const sample = await workspaceApi.sample();
-      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title: '100 Barclay Street #17L', propertyType: 'condo' } });
+      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title: sample.title, propertyType: sample.propertyType } });
       const brief: Brief = { audience: sample.brief.audience!, ...(sample.send.clientName ? { clientName: sample.send.clientName } : {}) };
       await workspaceApi.save(report.id, { brief, state: { intake: sample.intake }, sampleData: true });
       await workspaceApi.importSample(report.id);
+      void workspaceApi.captureSamplePhotos();
       markNewReport(report.id);
       onCreated(report.id);
     } catch (err) {

@@ -52,8 +52,15 @@ export function StepCta({ ws, className = 'sh-cta' }: { ws: Workspace; className
   if (!cta) return null;
   const filterIncomplete = ws.readiness.incomplete.length > 0;
   const helper = ws.screen === 'sort' ? readinessLine(ws.readiness) : '';
+  // Admins and guests can sort with the sample right where Findings is locked, to walk the report through.
+  const sampleSort = ws.canSample && cta.disabled && ws.screen === 'sort';
   return (
     <span className={className}>
+      {sampleSort && (
+        <button type="button" className="btn sh-sample-sort" disabled={Boolean(ws.busy)} onClick={() => void ws.fillSample('sort')}>
+          Sort with sample
+        </button>
+      )}
       {helper && cta.disabled && (
         filterIncomplete
           ? <button type="button" className="link sh-helper" onClick={() => ws.setSortFilter({ incomplete: true, tags: [] })}>{helper}</button>

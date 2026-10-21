@@ -96,8 +96,14 @@ export const SAMPLE_TIERS: SampleTier[] = [
 ];
 
 /** What /api/comp-report/sample serves: everything but the export, which the sample import stores. */
+/** The sample report's name and type: a report filled with all of the sample is this home. */
+export const SAMPLE_TITLE = '100 Barclay Street #17L';
+export const SAMPLE_PROPERTY_TYPE = 'condo' as const;
+
 export function sampleWalkthrough() {
   return {
+    title: SAMPLE_TITLE,
+    propertyType: SAMPLE_PROPERTY_TYPE,
     intake: SAMPLE_INTAKE,
     brief: SAMPLE_BRIEF,
     target: SAMPLE_TARGET,

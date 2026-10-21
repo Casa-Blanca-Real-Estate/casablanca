@@ -44,8 +44,13 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 export type Role = 'agent' | 'mentor' | 'admin' | 'external';
 
 export interface Me {
-  user: { email: string; name: string | null; role: Role; capability: 'practice' | 'full'; persisted: boolean };
+  user: { email: string; name: string | null; role: Role; capability: 'practice' | 'full'; persisted: boolean; guest?: boolean };
   database: 'ready' | 'not_configured';
+}
+
+/** Admins, and a guest walking a preview through (guest mode), get the sample data and dev tools. */
+export function maySample(me: Me): boolean {
+  return me.user.role === 'admin' || Boolean(me.user.guest);
 }
 
 export interface Report {
@@ -134,6 +139,8 @@ export type { GeocodeView } from '../server/buildings.ts';
 export type { NarrativeView } from '../server/api/narratives.ts';
 
 export interface SampleWalkthrough {
+  title: string;
+  propertyType: 'condo' | 'coop';
   intake: Intake;
   brief: Brief;
   target: TargetState;
@@ -180,6 +187,14 @@ export const workspaceApi = {
   mark: (reportId: string, reportCompId: string, change: { reviewed?: boolean; anchor?: boolean }) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, ...change } }),
   sortSample: (reportId: string) => api<WorkspaceData>('/api/comp-report/comps', { method: 'POST', body: { reportId, sample: true } }),
+  /**
+   * Has the site read the sample comps' StreetEasy pages for their photos, once (server/sample/photos.ts).
+   * Netlify answers 202 at once; the server does nothing if they're kept or being read. The sample
+   * import and "Fill with sample: Sort" put them on the comps once they're there.
+   */
+  captureSamplePhotos: async (): Promise<void> => {
+    await fetch('/.netlify/functions/comp-report-sample-photos-background', { method: 'POST', headers: await headers() }).catch(() => undefined);
+  },
   sample: () => api<SampleWalkthrough>('/api/comp-report/sample'),
   /** A comp read from its StreetEasy page, confirmed in one tap (§6.2). */
   confirm: (reportId: string, reportCompId: string) =>

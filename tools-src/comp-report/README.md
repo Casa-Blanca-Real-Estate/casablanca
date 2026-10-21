@@ -19,9 +19,11 @@ on Kimani: `docs/comp-report/cr1-setup.md`.
 Outside this folder:
 
 - `netlify/functions/comp-report-*.mts`: thin entry points (`/api/comp-report/…`). Each passes
-  production dependencies to a handler in `server/api/`. Two are background functions (up to 15
-  minutes): `comp-report-links-background.mts` reads one StreetEasy page, and
-  `comp-report-write-background.mts` writes one draft of the email (CR-5).
+  production dependencies to a handler in `server/api/`. Three are background functions (up to 15
+  minutes): `comp-report-links-background.mts` reads one StreetEasy page,
+  `comp-report-write-background.mts` writes one draft of the email (CR-5), and
+  `comp-report-sample-photos-background.mts` reads the sample comps' StreetEasy pages once and keeps
+  their photo URLs in the site-wide Blobs store `comp-report-sample` (`server/sample/photos.ts`).
 - `netlify/functions/identity-{validate,signup,login}.mts`: the sign-up and log-in gate.
 - `netlify/database/migrations/`: the schema. Netlify applies it on deploy. **Never edit a
   migration once it has shipped**, previews included; add a new one.
@@ -62,6 +64,7 @@ that can create roles and databases, because each test file makes a throwaway da
 | — | — | The same limit, counted apart, holds Send's "Draft from notes" and "Tidy the wording" (`/api/comp-report/lines`, logged as usage purpose `lines`): a small low-effort call each |
 | `FIRECRAWL_API_KEY` | Netlify | Reading StreetEasy links (already set for the carousel tools). Never reaches the browser |
 | `CR_LINK_READS_PER_DAY` | Netlify, optional | Links a person may have read in any 24 hours; default 60 (admins at least 200). Each read costs Firecrawl credit |
+| `CR_GUEST_KEY` | Netlify, **Deploy Previews only** | Guest mode (`server/guest.ts`): a way past sign-in on previews. Off unless it's 24+ characters and the deploy is a preview or branch deploy; never on production, whatever is set. Open `/tools/comp-report/?guest=<key>` once; `?guest=off` or Sign out leaves. A guest is one agent account, `guest@comp-report.invalid`, kept to its own reports, with the sample data and dev tools. Locally it works under `npm run dev:comp-report` too |
 | `CR_LOCAL_DATABASE_URL` | local only | Ignored wherever `NETLIFY_DB_URL` exists |
 | `CR_TEST_DATABASE_URL` | tests, CI | A server the tests may create databases on |
 | `CR_JEV_MODE` | Netlify | The decision layer (CR-D): `off` (the default; nothing is queued or sent) or `watch` (judgments recorded, never shown) |

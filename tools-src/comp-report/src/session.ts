@@ -6,11 +6,13 @@
 // Under the local dev server (npm run dev:comp-report) there is no Identity,
 // so a dev sign-in stands in for it. It exists only in dev builds:
 // import.meta.env.DEV is false in the production bundle and that branch — and
-// the module behind it — is compiled out.
+// the module behind it — is compiled out. Guest mode (guest-session.ts) is in
+// every build: it only holds a key, and the server says whether it's any good.
 import {
   acceptInvite, getSettings, getUser, handleAuthCallback, login, logout, oauthLogin,
   refreshSession, requestPasswordRecovery, updateUser,
 } from '@netlify/identity';
+import { takeGuestKeyFromUrl, withGuestMode } from './guest-session.ts';
 import { signInErrorNotice } from './sign-in-errors.ts';
 
 export type SessionState =
@@ -23,6 +25,8 @@ export type SessionState =
 
 export interface SessionProvider {
   dev: boolean;
+  /** Guest mode (guest-session.ts): no Identity, a key the server checks. */
+  guest?: boolean;
   start(): Promise<SessionState>;
   token(): Promise<string | null>;
   signInWithGoogle(): void;
@@ -111,5 +115,7 @@ let provider: SessionProvider = identity;
 if (import.meta.env.DEV) {
   provider = (await import('./dev-session.ts')).devSession;
 }
+// A guest key in this browser (?guest=<key> once) wins over both; the server decides whether it counts.
+if (takeGuestKeyFromUrl()) provider = withGuestMode(provider);
 
 export const session: SessionProvider = provider;

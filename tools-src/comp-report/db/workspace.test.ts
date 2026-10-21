@@ -186,7 +186,7 @@ describe('the walkthrough workspace', { skip: skipWithoutDatabase }, () => {
     assert.equal((await handleSample(request('sample', 'tok-ana-000000000'), deps)).status, 403);
     const sample = await handleSample(request('sample', 'tok-kimani-000000'), deps);
     assert.equal(sample.status, 200);
-    assert.deepEqual(Object.keys(await sample.json()).sort(), ['brief', 'call', 'dealTerms', 'intake', 'send', 'target']);
+    assert.deepEqual(Object.keys(await sample.json()).sort(), ['brief', 'call', 'dealTerms', 'intake', 'propertyType', 'send', 'target', 'title']);
 
     const kimaniReport = await createReport('tok-kimani-000000', 'Sample walkthrough');
     const early = await comps('tok-kimani-000000', 'POST', { reportId: kimaniReport, sample: true });

@@ -31,10 +31,10 @@ const NOTES: Record<StepId, Note> = {
       'One ★ anchor per report, on any status; starring another moves it.',
       'Notes, tags and features are saved with the comp, and the writer and QA read them where they read tiers.',
       'With no square footage, $/ft and Size are hidden here and on every other screen.',
+      'Photos: a comp added by StreetEasy link shows its listing’s photos, on its row and its opened card. The sample’s comps show theirs once the site has read their pages, which the first sample fill sets off; an export’s comps have none.',
     ],
     stubbed: [
       'Screenshots read into comps: the drop zone says to type them in for now.',
-      'Photos: neutral blocks until there’s a photo source.',
       'Hubert’s real suggestions: he points back only to sales the agent took out of an imported export.',
     ],
     decisions: [<>D-1: your number before the range. The tier labels 1st / 2nd / ✕ hold until testing with Noble.</>],

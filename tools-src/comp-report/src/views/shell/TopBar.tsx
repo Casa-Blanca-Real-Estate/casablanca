@@ -13,6 +13,8 @@ export interface Account {
   role?: Role;
   /** The local dev sign-in (never in a production build). */
   dev: boolean;
+  /** Guest mode: no Identity, a preview's guest key. */
+  guest?: boolean;
 }
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', mentor: 'Mentor', agent: 'Agent', external: 'External' };
@@ -40,7 +42,7 @@ function AccountMenu({ account, onSignOut, menuRef }: { account: Account; onSign
     };
   }, [open]);
 
-  const who = [account.role ? ROLE_LABEL[account.role] : null, account.dev ? 'dev sign-in' : null].filter(Boolean).join(' · ');
+  const who = [account.role ? ROLE_LABEL[account.role] : null, account.dev ? 'dev sign-in' : null, account.guest ? 'guest mode, sample data only' : null].filter(Boolean).join(' · ');
   return (
     <div className="sh-account" ref={wrap}>
       <button ref={pill} type="button" className="sh-pill sh-acct" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(!open)}>

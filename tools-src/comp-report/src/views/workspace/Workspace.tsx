@@ -10,7 +10,7 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, geocodeApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { ApiError, geocodeApi, maySample, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
@@ -323,8 +323,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       publishCaptureContext('report', null);
     };
   }, [reportId, reportTitle, reportSample, readOnly]);
-  const canSample = me.user.role === 'admin' && !readOnly;
-  const [buildNotes, setBuildNotes] = useBuildNotesSwitch(me.user.role === 'admin');
+  const canSample = maySample(me) && !readOnly;
+  const [buildNotes, setBuildNotes] = useBuildNotesSwitch(maySample(me), Boolean(me.user.guest));
   const hasSampleImport = (data?.imports ?? []).some((i) => i.sample);
 
   const markSample = useCallback(() => {
@@ -494,6 +494,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     homeFeatures: features,
     level,
     isAdmin: me.user.role === 'admin',
+    isGuest: Boolean(me.user.guest),
     viewAsNewAgent,
     setViewAsNewAgent: (on) => {
       setViewAsNewAgentState(on);
@@ -503,7 +504,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         /* per browser only */
       }
     },
-    devTools: me.user.role === 'admin' && buildNotes,
+    devTools: maySample(me) && buildNotes,
     readiness,
     sortFilter,
     setSortFilter,
@@ -550,6 +551,12 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         let nextState = stateRef.current;
         if (sample && all) {
           nextState = { ...nextState, intake: sample.intake };
+          // The whole report is 100 Barclay #17L now, so its name and type follow: a report started as
+          // another home ("10 Hubert St 2") kept that name over the sample's home (Kimani's notebook).
+          const { title, propertyType: sampleType } = sample;
+          setData((d) => (d ? { ...d, report: { ...d.report, title } } : d));
+          save.queue('title', title);
+          if (propertyType !== sampleType) ws.setPropertyType(sampleType);
           const nextBrief = { ...sample.brief, ...(sample.send.clientName ? { clientName: sample.send.clientName } : {}) };
           setBriefState(nextBrief);
           save.queue('brief', nextBrief);
@@ -570,9 +577,13 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         }
         if (nextState !== stateRef.current) setState(nextState);
         if (all || which === 'sort') {
-          // The sample sorts the sample export's comps, so the export comes first.
+          // The sample sorts the sample export's comps, so the export comes first. The sort also puts the
+          // sample's photos on its comps, once the site has read them; this asks for that, once.
+          void workspaceApi.captureSamplePhotos();
           let latest: WorkspaceData | null = null;
-          if (!hasSampleImport) latest = await workspaceApi.importSample(reportId);
+          // A report with comps of its own keeps them: the sample sort gives those a placeholder sort instead.
+          const ownComps = (data?.comps ?? []).some((c) => !c.removedAt);
+          if (!hasSampleImport && !ownComps) latest = await workspaceApi.importSample(reportId);
           if (all || which === 'sort') latest = await workspaceApi.sortSample(reportId);
           if (latest) ws.applyServer(latest);
         }
