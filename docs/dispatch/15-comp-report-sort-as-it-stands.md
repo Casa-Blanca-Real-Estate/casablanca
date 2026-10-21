@@ -25,7 +25,8 @@ data; don't move the card's sections, the table's columns or the flow. One PR.
 2. **NW-027 · tier hints.** A `title` on each segment (✕ says "Excluded"; keep the ✕). An ⓘ on the Tier
    header, reusing the one in `src/views/newcomp/Frame.tsx`: "1st: counts. Only 1st-tier comps set the range.
    2nd: context, shown but not counted. ✕: out of every figure. ★: the main comp; the email leads with it."
-3. **NW-028, NW-047 · the word.** "Comp tags", unless Kimani picks another on the answer sheet. Change it in
+3. **NW-028, NW-047 · the word.** **Kimani, 2026-10-21 (NB-5): "Tags", with an ⓘ**, not "Comp tags"; the ⓘ says a
+   tag can be a difference as well as a similarity. Change it in
    `needText`, `readinessLine`, `SortFirst`, `CompForm.tsx`, the card and the filter ("Needs tier, note, comp
    tags"). Show the Filter control only once some comp has a tag.
 4. **NW-030 · the note on its own.** The empty note line becomes "+ Add a note"; a filled note gets a ✎. Either
@@ -35,7 +36,7 @@ data; don't move the card's sections, the table's columns or the flow. One PR.
 6. **NW-038 · markers that lead somewhere.** A yellow marker on the empty tier control, the note line and the
    tag section, driven by the row's `needs`. "Needs tier, note, comp tags" becomes links that open the card at
    that spot.
-7. **NW-040 a · a label on the tag section** ("Comp tags", with the yellow required marker), in read and edit
+7. **NW-040 a · a label on the tag section** ("Tags" with its ⓘ, per NB-5, with the yellow required marker), in read and edit
    modes (`src/views/sort/CompCard.tsx:225`).
 8. **NW-043 · leaving edit mode.** A collapse attempt in edit mode: with no changes, leave edit mode and
    collapse; with changes, an inline "Save changes? Save · Discard" on the card (not `window.confirm`).
