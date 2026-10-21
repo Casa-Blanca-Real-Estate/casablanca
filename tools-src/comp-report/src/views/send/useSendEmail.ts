@@ -1,26 +1,27 @@
 // The email behind Send and Done (Dispatch 13's writer and QA, Dispatch 14's
-// tabs): the writer's drafts, polled while one is written; the email for each
-// length, from the template or the writer's sections; the agent's edited
-// plain text (send.draft, the source of truth) and which length it was edited
-// at; QA's checks and the issues they make; the designed email; and the
+// tabs, Dispatch 18's subject and drafts): the writer's drafts, polled while
+// one is written; the email for each length, from the template or the
+// writer's sections; the agent's edited plain text (send.drafts, the source of
+// truth), one per length; the subject, its own field; QA's checks and the
+// issues they make; the designed email and the formatted copy; and the
 // actions — edit, fix, answer, write, copy (logged), mark as sent, reopen.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
 import { ApiError, narrativesApi, type NarrativeView } from '../../api.ts';
-import { buildEmail, countedComps, hasHomeSize, headlineDrafts, htmlFromText, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
+import { buildEmail, countedComps, hasHomeSize, headlineDrafts, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
 import { clientPrice, psf } from '../../../workspace/format.ts';
 import { draftChecks, ledgerFor, qaRecord, qaStatus, syncHeadline, type Acknowledgment } from '../../../workspace/qa.ts';
 import { answerResult, estimatesChangeTheAnswer, fact, homeName } from '../../../workspace/reading.ts';
 import { noteOf, type SendState } from '../../../workspace/state.ts';
 import { writerInputFrom, writerInputKey } from '../../../workspace/writer-input.ts';
 import { entry } from '../workspace/bits.tsx';
-import { fingerprint, type Workspace } from '../workspace/model.ts';
+import type { Workspace } from '../workspace/model.ts';
 import { designedCta, designedEyebrow, formatOf, homeSub, lengthOf, monthOf, OFFICE, type Format } from './copy.ts';
-import { designedComps, designedHtml, parseEmailText } from './designed.ts';
+import { designedComps, designedHtml, emailHtml, parseEmailText } from './designed.ts';
+import { afterCopy, bodyPrint, draftsOf, LENGTHS, sentState, setSubject, subjectOf, withDraft } from './drafts.ts';
 import { applyFixes, sendIssues, type SendIssue } from './issues.ts';
 
 type Written = { headlines: string[]; sections: WrittenSections };
-const LENGTHS: EmailLength[] = ['full', 'short', 'text'];
 
 const inFlight = (n: NarrativeView) => n.origin === 'writer' && (n.status === 'queued' || n.status === 'running');
 
@@ -54,8 +55,6 @@ function useNarratives(reportId: string, enabled: boolean) {
   }, [reportId, writingId, queuedAt, reload]);
   return { narratives, setNarratives, reload, error, writing };
 }
-
-const fp = (e: { subject: string; text: string }) => fingerprint(`${e.subject}\n${e.text}`);
 
 /** Copies plain text the old way, for a browser without the clipboard API. */
 function copyByHand(text: string): boolean {
@@ -140,21 +139,15 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     written: writtenFor(len)?.sections ?? null,
   });
   const email = emailFor(length);
-  const basedOn = fp(email);
+  const basedOn = bodyPrint(email.text);
 
-  // The agent's edits: one draft, at the length it was edited at. Its fingerprint says which;
-  // one that matches no length's email any more is out of date, and shows where it is, marked.
-  const draft = send.draft;
-  let draftLength: EmailLength | null = null;
-  if (draft) {
-    if (draft.basedOn === basedOn) draftLength = length;
-    else draftLength = LENGTHS.find((len) => len !== length && fp(emailFor(len)) === draft.basedOn) ?? null;
-  }
-  const draftHere = draft && (draftLength === null || draftLength === length) ? draft : null;
-  /** The agent edited another length's email: this one shows as drafted, locked until they start it fresh. */
-  const editedElsewhere = draft && draftLength && draftLength !== length ? draftLength : null;
-  const shown = draftHere ? { subject: draftHere.subject, text: draftHere.body } : { subject: email.subject, text: email.text };
-  const stale = Boolean(draftHere && draftLength === null);
+  // The agent's edits: a draft per length, each with the fingerprint of the email it was edited
+  // from (the body; the subject is its own field). One whose email has changed since is out of date, and marked.
+  const drafts = draftsOf(send, emailFor);
+  const draftHere = drafts[length] ?? null;
+  const stale = Boolean(draftHere && draftHere.basedOn !== basedOn);
+  const subject = subjectOf(send, drafts, email.subject);
+  const shown = { subject, text: draftHere ? draftHere.body : email.text };
   const parentId = draftHere ? draftHere.parentId ?? null : usesWriter ? done!.id : null;
 
   // QA (§9): every number against the facts, the comps, the table, and what the agent stated.
@@ -174,7 +167,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
 
   /** The designed email: the Full draft (the agent's, when they edited the Full one), laid out. */
   const designed = (): string => {
-    const full = draftLength === 'full' && draft ? { subject: draft.subject, text: draft.body } : length === 'full' ? shown : emailFor('full');
+    const full = { subject, text: drafts.full ? drafts.full.body : emailFor('full').text };
     const parsed = parseEmailText(full.text, send.headline?.value);
     const { anchor, others } = designedComps(countedComps(o, result, ws.comps), { parsed, homeStreet: ws.intake.address?.value ?? null, sf: ws.sf });
     const range = o.results[result].range;
@@ -201,36 +194,52 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
 
   const now = () => new Date().toISOString();
 
-  /** An edit to the shown email: it becomes (or stays) the agent's draft. */
-  const edit = (change: { subject?: string; body?: string }) => {
-    if (off || editedElsewhere) return;
-    setSend({ draft: { subject: shown.subject, body: shown.text, ...change, basedOn: draftHere?.basedOn ?? basedOn, at: now(), parentId } });
+  /** An edit to the shown body: it becomes (or stays) this length's draft. The others are kept. */
+  const edit = (body: string) => {
+    if (off) return;
+    ws.setSend(withDraft(send, drafts, length, { body, basedOn: draftHere?.basedOn ?? basedOn, at: now(), parentId }));
   };
 
-  /** The headline; an edited body's copy of it changes with it, so the two agree (and the draft stays current). */
+  /** The subject: its own field, so editing it freezes no body into a draft. */
+  const editSubject = (value: string) => {
+    if (off) return;
+    ws.setSend(setSubject(send, value, ws.today));
+  };
+
+  /** Back to the draft or the template, for this length only. */
+  const discard = () => {
+    if (off) return;
+    ws.setSend(withDraft(send, drafts, length, undefined));
+  };
+
+  /** The headline; each edited body's copy of it changes with it, so the two agree (and a current draft stays current). */
   const setHeadline = (value: string) => {
     if (off) return;
-    const next: SendState = { ...send };
+    let next: SendState = { ...send };
     if (value) next.headline = entry(value, ws.today);
     else delete next.headline;
-    if (draft && draftLength) {
-      next.draft = { ...draft, body: syncHeadline(draft.body, send.headline?.value, value), basedOn: fp(emailFor(draftLength, value || undefined)) };
+    let all = drafts;
+    for (const len of LENGTHS) {
+      const d = drafts[len];
+      if (!d || d.basedOn !== bodyPrint(emailFor(len).text)) continue;
+      next = withDraft(next, all, len, { ...d, body: syncHeadline(d.body, send.headline?.value, value), basedOn: bodyPrint(emailFor(len, value || undefined).text) });
+      all = next.drafts ?? {};
     }
     ws.setSend(next);
   };
 
   /** QA's fixes (all of them, or one issue's): on the plain text, and on the headline where it's flagged. */
   const fix = (only?: SendIssue) => {
-    if (off || editedElsewhere) return;
+    if (off) return;
     const target = only ? [only] : issues.filter((i) => i.fix);
     if (!target.length) return;
     const fixed = applyFixes({ body: shown.text, headline }, target);
-    const next: SendState = { ...send };
+    let next: SendState = { ...send };
     const headlineChanged = fixed.headline !== headline;
     if (headlineChanged) next.headline = entry(fixed.headline, ws.today);
     const fresh = emailFor(length, headlineChanged ? fixed.headline : send.headline?.value);
-    if (draftHere) next.draft = { ...draftHere, body: fixed.body, basedOn: stale ? draftHere.basedOn : fp(fresh), at: now() };
-    else if (fixed.body !== fresh.text) next.draft = { subject: shown.subject, body: fixed.body, basedOn: fp(fresh), at: now(), parentId };
+    if (draftHere) next = withDraft(next, drafts, length, { ...draftHere, body: fixed.body, basedOn: stale ? draftHere.basedOn : bodyPrint(fresh.text), at: now() });
+    else if (fixed.body !== fresh.text) next = withDraft(next, drafts, length, { body: fixed.body, basedOn: bodyPrint(fresh.text), at: now(), parentId });
     ws.setSend(next);
   };
 
@@ -244,9 +253,10 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     setWriteError(null);
     try {
       await ws.flush(); // the server reads the lines the agent sees
-      const keep = draftHere ? { parentId, headline, subject: draftHere.subject, text: draftHere.body, acknowledgments: acks } : undefined;
+      const mineNow = drafts[len];
+      const keep = mineNow ? { parentId: mineNow.parentId ?? null, headline, subject, text: mineNow.body, acknowledgments: acks } : undefined;
       const { narrative } = await narrativesApi.write(ws.reportId, { length: len, result, ...(keep ? { keep } : {}) });
-      ws.setSend({ ...send, format: fmt, length: len, draft: undefined, useTemplate: false });
+      ws.setSend({ ...withDraft(send, drafts, len, undefined), format: fmt, length: len, useTemplate: false });
       setNarratives((list) => [narrative, ...list.filter((n) => n.id !== narrative.id)]);
       void narrativesApi.start(ws.reportId, narrative.id);
     } catch (e) {
@@ -260,20 +270,25 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     if (f === format) return;
     const len = lengthOf(f);
     const has = narratives.some((n) => n.origin === 'writer' && n.length === len && n.result === result && n.status === 'done' && n.inputKey === inputFor(len));
-    if (!off && len !== length && everWritten && !send.useTemplate && !has && !writing && !draft) void writeIt(len, f);
+    if (!off && len !== length && everWritten && !send.useTemplate && !has && !writing && !drafts[len]) void writeIt(len, f);
     else setSend({ format: f, length: len });
   }
 
-  /** Copies the shown format: Designed as HTML (with plain text beside it), Full and Short as rich text, Text as plain. Logged. */
+  /** What the Copy button puts on the clipboard: Designed and the formatted Full or Short as HTML, the plain text beside it; Text as plain. */
+  const clipboard = (): { html: string | null; text: string } => ({
+    html: format === 'text' ? null : format === 'designed' ? designed() : emailHtml(shown.text, send.headline?.value),
+    text: shown.text,
+  });
+
+  /** Copies the shown format (clipboard()). Logged. */
   async function copy(): Promise<boolean> {
     if (!copyable) return false;
-    const text = shown.text;
+    const { html, text } = clipboard();
     let ok = true;
     try {
-      if (format === 'text') {
+      if (!html) {
         await navigator.clipboard.writeText(text);
       } else {
-        const html = format === 'designed' ? designed() : draftHere ? htmlFromText(text) : email.html;
         if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
           await navigator.clipboard.write([new ClipboardItem({
             'text/html': new Blob([html], { type: 'text/html' }),
@@ -292,7 +307,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     }
     ws.toast(format === 'text' ? 'Copied. Paste it into your text.' : 'Copied. Paste into Gmail.');
     if (off) return true;
-    ws.setSend({ ...send, copiedAt: now() });
+    ws.setSend(afterCopy(send, format, now()));
     // The log: what went out, its checks and the agent's answers (§9.1). The same checks gate Copy here.
     const keys = new Set([...checks.flatMap((c) => c.items ?? []).map((i) => i.key), ...acks.filter((a) => a.key.startsWith('rounding:')).map((a) => a.key)]);
     try {
@@ -308,9 +323,22 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     return true;
   }
 
+  /** The subject alone, as plain text. Not logged: the email's copy is. */
+  async function copySubject(): Promise<boolean> {
+    let ok = true;
+    try {
+      await navigator.clipboard.writeText(subject);
+    } catch {
+      ok = copyByHand(subject);
+    }
+    ws.toast(ok ? 'Subject copied.' : 'It didn’t copy. Select the subject and copy it yourself.');
+    return ok;
+  }
+
+  /** Marked as sent, copied or not (NW-086 a): it records the tab last copied, and opens Done. */
   const markSent = () => {
-    if (off || !send.copiedAt) return;
-    ws.setSend({ ...send, format, sentAt: now() });
+    if (off) return;
+    ws.setSend(sentState(send, format, now()));
     ws.go('done');
   };
 
@@ -337,7 +365,6 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     signedAs,
     shown,
     draftHere,
-    editedElsewhere,
     stale,
     usesWriter,
     written,
@@ -354,7 +381,10 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     writeError,
     loadError,
     designed,
+    clipboard,
     edit,
+    editSubject,
+    discard,
     setSend,
     setHeadline,
     fix,
@@ -362,6 +392,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     writeIt,
     pickFormat,
     copy,
+    copySubject,
     markSent,
     reopen,
   };

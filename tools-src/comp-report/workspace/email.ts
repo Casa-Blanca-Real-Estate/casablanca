@@ -64,10 +64,8 @@ export interface WrittenSections {
 
 export interface EmailDraft {
   subject: string;
-  /** Plain text, for the textarea and the clipboard. */
+  /** Plain text, for the textarea and the clipboard. Send formats the copy from it (send/designed.ts emailHtml). */
   text: string;
-  /** The same email as HTML, so the comps paste into Gmail as links. */
-  html: string;
 }
 
 type Block =
@@ -189,44 +187,26 @@ function blocks(input: EmailInput): Block[] {
   return out;
 }
 
-const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
 export function buildEmail(input: EmailInput): EmailDraft {
   const bs = blocks(input);
   const text: string[] = [];
-  const html: string[] = [];
   bs.forEach((b, i) => {
     if (b.kind === 'p') {
       text.push(b.text, '');
-      html.push(`<p>${escape(b.text).replace(/\n/g, '<br>')}</p>`);
     } else if (b.kind === 'h') {
       text.push(b.text.toUpperCase());
-      html.push(`<p><strong>${escape(b.text)}</strong></p>`);
     } else if (b.kind === 'rows') {
       text.push(...b.rows, '');
-      html.push(`<p>${b.rows.map(escape).join('<br>')}</p>`);
     } else if (b.kind === 'points') {
       text.push(...b.points.map((x) => `- ${x.replace(/\n/g, ' ')}`), '');
-      html.push(`<ul>${b.points.map((x) => `<li>${escape(x)}</li>`).join('')}</ul>`);
     } else {
       text.push(`- ${b.name} — ${b.line}${b.url ? ` — ${b.url}` : ''}`);
       for (const note of b.notes) text.push(`  ${note.replace(/\n/g, ' ')}`);
       if (bs[i + 1]?.kind !== 'comp') text.push(''); // a blank line after each status's list
-      const name = b.url ? `<a href="${escape(b.url)}">${escape(b.name)}</a>` : escape(b.name);
-      const notes = b.notes.map((n) => `<br><span style="margin-left:1.5em">${escape(n)}</span>`).join('');
-      html.push(`<p style="margin:0 0 6px">${name} — ${escape(b.line)}${notes}</p>`);
     }
   });
   const subject = `${input.sample ? '[SAMPLE] ' : ''}${input.homeLine || 'The home'}: what the comps say`;
-  return { subject, text: text.join('\n').trimEnd(), html: html.join('\n') };
-}
-
-/** Plain text the agent edited, as HTML for the clipboard: paragraphs, and StreetEasy links made links. */
-export function htmlFromText(text: string): string {
-  return text.split(/\n{2,}/).map((para) => {
-    const body = escape(para).replace(/https:\/\/(www\.)?streeteasy\.com\/[^\s<]+/g, (u) => `<a href="${u}">${u}</a>`).replace(/\n/g, '<br>');
-    return `<p>${body}</p>`;
-  }).join('\n');
+  return { subject, text: text.join('\n').trimEnd() };
 }
 
 /** The name of a home or comp a fact rests on, from the facts' own names: "17L", "200 Chambers Street #10A". */

@@ -164,6 +164,16 @@ export interface CallState {
  * draft it came from (CR-5). `acks` are the agent's answers to QA's findings
  * (§9.1), logged with the email when it's copied.
  */
+/** An edited email: the body as the agent left it, and a fingerprint of the email it was edited from. */
+export interface SendDraft {
+  /** Before Dispatch 18 the subject travelled with the body; kept to show an old draft's subject. */
+  subject?: string;
+  body: string;
+  basedOn: string;
+  at: string;
+  parentId?: string | null;
+}
+
 export interface SendState {
   result?: ResultKind;
   /** The one sentence, the agent's (D-21): required before the email can be copied. */
@@ -177,11 +187,22 @@ export interface SendState {
   length?: 'full' | 'short' | 'text';
   clientName?: Entry<string>;
   signOff?: Entry<string>;
-  draft?: { subject: string; body: string; basedOn: string; at: string; parentId?: string | null };
+  /**
+   * The subject line, the agent's (NW-083 a): one for every length, kept apart
+   * from the body so editing it freezes no draft. Unset, it's the old draft's
+   * subject, else the template's.
+   */
+  subject?: Entry<string>;
+  /** Before Dispatch 18: one edited draft at a time. Read as that length's entry in `drafts`; never written. */
+  draft?: SendDraft;
+  /** The agent's edited plain text, one per length (Dispatch 18): editing Short keeps the Full one. */
+  drafts?: Partial<Record<'full' | 'short' | 'text', SendDraft>>;
   /** Which of the four formats Send shows (Dispatch 14): Designed renders the Full draft. */
   format?: 'full' | 'designed' | 'short' | 'text';
-  /** Marked as sent (after a copy); Reopen clears it. Done shows it. */
+  /** Marked as sent, copied or not (NW-086 a); Reopen clears it. Done shows it. */
   sentAt?: string;
+  /** The tab last copied with the Copy button: what Mark as sent records. */
+  copiedFormat?: 'full' | 'designed' | 'short' | 'text';
   /** The agent chose the template over the writer's drafts (CR-5). */
   useTemplate?: boolean;
   acks?: Acknowledgment[];

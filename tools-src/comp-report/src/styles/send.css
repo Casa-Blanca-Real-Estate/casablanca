@@ -60,8 +60,7 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
 .se-tabs button.on { background: var(--cb-black); color: #fff; }
 
 .se-writer { display: flex; align-items: center; gap: 16px; padding: 14px 28px; border-bottom: 1px solid var(--cb-line); }
-.se-writer p { margin: 0; flex: 1; font-size: 12px; line-height: 1.45; color: var(--cb-mid); }
-.se-write { display: flex; align-items: center; gap: 8px; padding: 10px 16px; }
+.se-write { display: flex; align-items: center; gap: 8px; padding: 10px 16px; margin-left: auto; }
 .se-notice {
   margin: 14px 28px 0; padding: 10px 14px; font-size: 12px; line-height: 1.5;
   background: var(--cb-bg); border-left: 3px solid var(--cb-yellow);
@@ -80,6 +79,10 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
   flex: 1; min-width: 0; border: none; border-bottom: 1px solid var(--cb-border); background: transparent; padding: 6px 0; font-size: 13px;
 }
 .se-subject-row .se-subject:focus { border-bottom-color: var(--cb-black); }
+.se-subject-block { padding-bottom: 0; }
+.se-subject-block .se-subject-row { margin-bottom: 0; }
+.se-copy-subject { flex: none; align-self: center; }
+.se-label-note { text-transform: none; letter-spacing: 0; font-weight: 400; }
 
 /* The headline's drafts. */
 .se-drafts { margin-left: auto; position: relative; font-size: 12px; color: var(--cb-mid); }

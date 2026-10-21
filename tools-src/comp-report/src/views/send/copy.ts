@@ -3,12 +3,12 @@
 import type { EmailLength } from '../../../workspace/email.ts';
 import type { Intake, Outcomes } from '../../../workspace/state.ts';
 
-/** Send's four tabs. Designed renders the Full draft; the other three are the writer's lengths. */
+/** Send's four tabs, Designed first (NW-079 a). Designed renders the Full draft; the other three are the writer's lengths. */
 export type Format = 'full' | 'designed' | 'short' | 'text';
 
 export const FORMATS: { id: Format; label: string }[] = [
-  { id: 'full', label: 'Full' },
   { id: 'designed', label: 'Designed' },
+  { id: 'full', label: 'Full' },
   { id: 'short', label: 'Short' },
   { id: 'text', label: 'Text' },
 ];
@@ -17,9 +17,9 @@ export function lengthOf(f: Format): EmailLength {
   return f === 'designed' ? 'full' : f;
 }
 
-/** The tab showing: the stored format, else the stored length (before Dispatch 14), else Full. */
+/** The tab showing: the stored format, else the stored length (before Dispatch 14), else Designed. */
 export function formatOf(send: { format?: Format | undefined; length?: EmailLength | undefined }): Format {
-  return send.format ?? send.length ?? 'full';
+  return send.format ?? send.length ?? 'designed';
 }
 
 export const COPY_LABEL: Record<Format, string> = {
