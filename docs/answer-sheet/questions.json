@@ -1,6 +1,6 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-21:</strong> the sheet moved to the Casa Blanca Claude account. Done today: the Jev keys, the profile-pic and CMS tokens, the eval key, the email-signatures credential and the account move. <strong>New:</strong> TD-18, the Anthropic key in Make. Noble's 28 questions (NB-1 to NB-28) are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
+  "since": "<strong>Updated 2026-10-21:</strong> the sheet moved to the Casa Blanca Claude account. Done today: the Jev keys, the profile-pic and CMS tokens, the eval key, the email-signatures credential and the account move. <strong>New:</strong> TD-18, the Anthropic key in Make. CR-3 recorded (wait for the eval drafts). Noble's 28 questions (NB-1 to NB-28) are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
   "newIds": [
     "NB-1",
     "NB-2",
@@ -829,7 +829,7 @@
           "short": "The writer's house voice: right?",
           "quick": false,
           "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> Claude now drafts the headlines and the email's sections in Casa's voice, in Frankie's order. The voice is a short style file: plain words, specific comparisons, numbers only from the comps, one to three lines a comp. It's quoted in full in #76's description ({repo}/tools-src/comp-report/server/house-voice.ts).</p><p><strong>Why it needs you.</strong> It's Casa's voice in front of clients. The real eval drafts (100 Barclay and Frankie's #517) come once <code>CR_EVAL_ANTHROPIC_API_KEY</code> is in the cloud environment (TD-3); read them together if you'd rather.</p>",
+          "context": "<p><strong>What this is about.</strong> Claude now drafts the headlines and the email's sections in Casa's voice, in Frankie's order. The voice is a short style file: plain words, specific comparisons, numbers only from the comps, one to three lines a comp. It's quoted in full in #76's description ({repo}/tools-src/comp-report/server/house-voice.ts).</p><p><strong>Why it needs you.</strong> It's Casa's voice in front of clients. The real eval drafts (100 Barclay and Frankie's #517) come once <code>CR_EVAL_ANTHROPIC_API_KEY</code> is in the cloud environment (TD-3); read them together if you'd rather.</p><p><strong>Your answer, 2026-10-21: C, wait for the eval drafts.</strong> \"The writer doesn't write that much right now to judge its voice. It seems fine, and maybe that's enough.\" Mason runs the real eval next, and this comes back with its drafts.</p>",
           "options": [
             [
               "A",

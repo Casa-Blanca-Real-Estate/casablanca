@@ -67,8 +67,8 @@ each was applied.
   `docs/comp-report/research/glossary-draft.md`, with 152 entries and 12 questions for Noble at the top.
 - [x] ~~The Jev keys.~~ Done 2026-10-21: `AI_GATEWAY_API_KEY` (Casa's Vercel team) and `CR_DECIDE_KEY` in Netlify and
   the cloud environment. Production reads them: the decide readout shows `jevKey` and `sessionKey` true, and zero
-  retention on. `CR_JEV_ZDR` stays unset as long as the Vercel team is on Pro. `CR_JEV_MODE` stays off until
-  Arbiter's go/no-go call passes.
+  retention on until the next deploy: Casa's Vercel team isn't on Pro, so `CR_JEV_ZDR=off` is now set. Jev stays
+  off until Casanova builds the admin toggle Kimani asked for in place of `CR_JEV_MODE`, and Arbiter's go/no-go passes.
 - [x] ~~Change the credential in the email-signatures doc.~~ Done (Kimani, 2026-10-20).
 - [ ] **Later — for Noble, the thresholds that flag most comps:**
   - the floor band (±3, from Frankie's email) flags 8 of Hannah's 11 comps;
@@ -103,6 +103,8 @@ each was applied.
 - [ ] **Soon — read the writer's house voice and its eval drafts** (Dispatch 13, phase 1's PR). The
   style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. `CR_EVAL_ANTHROPIC_API_KEY` is in the
   cloud environment (2026-10-21), so Mason can run the real eval in a new session (well under a dollar).
+  Your first read (CR-3, 2026-10-21): "It seems fine, but there's not enough writing yet to tell. That may be all it needs."
+  So the question waits for the eval drafts.
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---

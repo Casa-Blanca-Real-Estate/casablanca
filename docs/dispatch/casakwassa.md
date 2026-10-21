@@ -34,7 +34,10 @@ Casanova, and became Casakwassa that day.
   Identity Federation doesn't fit yet, because Netlify Functions get no OIDC identity token to exchange.
 - **Studio tokens** (`CB_CMS_TOKEN`, `CB_PICS_TOKEN`, `CR_DECIDE_KEY`, later `CR_INSPECT_KEY` and
   `CR_TEST_KEY`): made on the Key Maker. `CB_CMS_TOKEN` was never set before this.
-- **Vercel (Jev's AI Gateway):** a Casa team on Pro, signed in with `casacalliste` through Google.
+- **Vercel (Jev's AI Gateway):** a Casa team, signed in with `casacalliste` through Google. It isn't on Pro, so
+  `CR_JEV_ZDR=off` is set in Netlify (2026-10-21). If the team moves to Pro, unset it: zero retention is the default.
+- **Jev's go-live switch:** Kimani wants an admin toggle in the comp report instead of `CR_JEV_MODE` (passed to
+  Casanova on the ledger's notes, 2026-10-21). Jev stays off until that toggle exists.
 - **Not needed now:** `NETLIFY_BUILD_HOOK` (until the agent sites come back) and `ALLOWED_ORIGIN` (optional).
   `DEV_NOTEBOOK_KEY` stays as it is (Kimani's call).
 - **The cloud environment:** add the session keys (`DEV_NOTEBOOK_KEY`, `CR_DECIDE_KEY`, `CR_EVAL_ANTHROPIC_API_KEY`,
