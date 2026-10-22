@@ -62,6 +62,7 @@ that can create roles and databases, because each test file makes a throwaway da
 | `ANTHROPIC_API_KEY` | Netlify | The assistant and the writer. Never reaches the browser |
 | `CR_WRITES_PER_DAY` | Netlify, optional | Drafts a person may have the writer make in any 24 hours; default 40 (admins at least 200). Each is a model call, an estimated $0.05–0.10 until real usage says |
 | — | — | The same limit, counted apart, holds Send's "Draft from notes" and "Tidy the wording" (`/api/comp-report/lines`, logged as usage purpose `lines`): a small low-effort call each |
+| `CR_REVIEWS_PER_DAY` | Netlify, optional | Hubert's per-comp review calls (`/api/comp-report/comp-review`, usage purpose `comp_review`) a person may make in any 24 hours; default 150 (admins at least 400). Each is one medium-effort call on one comp |
 | `FIRECRAWL_API_KEY` | Netlify | Reading StreetEasy links (already set for the carousel tools). Never reaches the browser |
 | `CR_LINK_READS_PER_DAY` | Netlify, optional | Links a person may have read in any 24 hours; default 60 (admins at least 200). Each read costs Firecrawl credit |
 | `CR_GUEST_KEY` | Netlify, **Deploy Previews only** | Guest mode (`server/guest.ts`): a way past sign-in on previews. Off unless it's 24+ characters and the deploy is a preview or branch deploy; never on production, whatever is set. Open `/tools/comp-report/?guest=<key>` once; `?guest=off` or Sign out leaves. A guest is one agent account, `guest@comp-report.invalid`, kept to its own reports, with the sample data and dev tools. Locally it works under `npm run dev:comp-report` too |
@@ -112,6 +113,16 @@ a drawer on all three. Each reads the engine's output; none computes a figure.
   a row marks it reviewed and shows the checks with their suggested tiers, and the facts with
   their sources. The anchor is the star in an opened row. The rows' saves run one at a time, so
   each returned workspace lands in order.
+- **Review comps** (Dispatch 25, `src/views/review/ReviewFlow.tsx`): a modal flow over Sort, one
+  comp per step, untiered first. The reasoning is the comp's Sort note and tags. A practice agent
+  writes first, asks Hubert for feedback, and only then can show his take (the server refuses a
+  practice agent's take before a feedback round); a full agent sees his take on opening a comp and
+  can copy it or ask again. The agent sets the tier; Hubert's suggested tier and weak flag are
+  advice. Rounds are append-only in `reports.state.reviews` (written only by the server:
+  `server/reviews.ts`; a browser state save keeps them) and reach the browser on each comp's
+  `review`. The model call (`server/comp-review.ts`) reads `workspace/review.ts`'s input: the comp,
+  the home and the engine's measurements, never the call, the target or the tier; a point that
+  cites a figure the input lacks is dropped. The sample sort stores a review per sample comp.
 - **Findings** (`Findings.tsx`): the agent's number first (D-1). Then the one-sentence reading,
   from `headline_facts`, and the number against it, from `agent_number`, which only Findings
   shows (`workspace/reading.ts`). Then the evidence by status, with didn't sell as its own row

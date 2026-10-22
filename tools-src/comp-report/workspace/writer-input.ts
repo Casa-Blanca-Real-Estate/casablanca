@@ -84,7 +84,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 const QUALITATIVE = new Set(['views', 'outdoor_space', 'service_level', 'amenities', 'unit_type', 'building_era', 'parking']);
 
 /** The engine's comparison against the home, in words — only its own measurements, never a new figure. */
-function againstHome(k: ComparisonOut): string | null {
+export function againstHome(k: ComparisonOut): string | null {
   if (k.status !== 'compared') return null;
   const n = k.units === null ? null : Math.abs(k.units);
   // Signed so positive means the comp is worse: subject minus comp for area, rooms and floors; comp minus subject for carry.

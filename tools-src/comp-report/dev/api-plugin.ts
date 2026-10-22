@@ -32,6 +32,7 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/geocode': { module: '/server/api/geocode.ts', handler: 'handleGeocode' },
   '/api/comp-report/narratives': { module: '/server/api/narratives.ts', handler: 'handleNarratives' },
   '/api/comp-report/lines': { module: '/server/api/lines.ts', handler: 'handleLines' },
+  '/api/comp-report/comp-review': { module: '/server/api/comp-review.ts', handler: 'handleCompReview' },
 };
 
 /** Background functions: Netlify answers 202 at once and runs them on; so does this. */
