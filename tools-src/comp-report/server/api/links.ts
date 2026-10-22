@@ -217,6 +217,7 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
     if (!claimed) return json({ read: readId, started: false }, 200);
 
     const asOf = (deps.today ?? newYorkToday)();
+    const readStarted = Date.now();
     let outcome: Outcome;
     try {
       const page = await deps.reader.read(claimed.url);
@@ -238,6 +239,8 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
     }
 
     const finished = outcome;
+    // Each read's result and time, in the function's log: no address, no page text.
+    console.log('comp-report: link read', { readId, purpose: claimed.purpose, status: finished.status, error: finished.status === 'failed' ? finished.error : null, ms: Date.now() - readStarted });
     const save = async (tx: Queryable): Promise<number | null> => {
       if (finished.status === 'failed') {
         await markFailed(tx, readId, finished.error, finished.message, finished);
