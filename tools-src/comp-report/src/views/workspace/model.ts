@@ -66,7 +66,8 @@ export interface Workspace {
   /** Runs a server call with the busy flag and the error line. */
   run: (label: string, work: () => Promise<void>) => Promise<void>;
   busy: string | null;
-  fillSample: (step: 'sort' | 'findings' | 'send' | 'all') => Promise<void>;
+  /** True when it filled: the agent can decline replacing their own values, and a failure stops it. */
+  fillSample: (step: 'sort' | 'findings' | 'send' | 'all') => Promise<boolean>;
   messageCount: number;
   setMessageCount: (n: number) => void;
 

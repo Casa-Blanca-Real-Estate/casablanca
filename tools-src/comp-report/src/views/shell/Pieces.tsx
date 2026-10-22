@@ -49,12 +49,16 @@ const FILLS: { which: 'sort' | 'findings' | 'send' | 'all'; label: string }[] = 
   { which: 'all', label: 'All' },
 ];
 
-/** The admin's strip under the header, with dev tools on: Fill with sample, and About this screen. */
+/**
+ * The strip under the header: Fill with sample for an admin or a guest at every step, whether dev tools
+ * are on or not (Kimani couldn't walk the report through on production with them off); About this screen
+ * with dev tools on.
+ */
 export function DevStrip({ ws, step, fills }: { ws: Workspace; step: StepId; fills: Record<StepId, string> }) {
   return (
     <div className="sh-dev">
       <div className="sh-dev-row">
-        <span className="eyebrow lav sh-dev-label">Dev tools</span>
+        <span className="eyebrow lav sh-dev-label">{ws.devTools ? 'Dev tools' : 'Sample'}</span>
         {ws.canSample && (
           <span className="sh-dev-fill">
             Fill with sample:
@@ -75,7 +79,7 @@ export function DevStrip({ ws, step, fills }: { ws: Workspace; step: StepId; fil
           </span>
         )}
       </div>
-      <About key={step} step={step} />
+      {ws.devTools && <About key={step} step={step} />}
     </div>
   );
 }

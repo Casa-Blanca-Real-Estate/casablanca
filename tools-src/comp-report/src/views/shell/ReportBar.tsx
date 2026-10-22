@@ -33,7 +33,7 @@ export function ReportBar({ ws, setDevTools }: { ws: Workspace; setDevTools: (on
             on={ws.devTools}
             onChange={setDevTools}
             label="Dev tools"
-            hint="About this screen, build notes and Fill with sample."
+            hint="About this screen and build notes. Fill with sample shows either way."
           />
           {ws.isAdmin && <Switch
             on={ws.viewAsNewAgent}

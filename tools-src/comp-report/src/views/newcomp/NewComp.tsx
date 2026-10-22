@@ -15,7 +15,6 @@ import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
 import { readPrice } from '../comp/CompForm.tsx';
 import { AddList, GUIDANCE, ImportNotes } from '../workspace/AddComps.tsx';
 import { entry } from '../workspace/bits.tsx';
-import { useBuildNotesSwitch } from '../workspace/buildNotes.tsx';
 import { localToday, type Workspace } from '../workspace/model.ts';
 import { HomeDetails } from './Details.tsx';
 import { endNewReport, Frame, Info, isNewReport, markNewReport } from './Frame.tsx';
@@ -34,7 +33,7 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
   const [target, setTarget] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [devTools] = useBuildNotesSwitch(maySample(me), Boolean(me.user.guest));
+  const canSample = maySample(me);
   const line = readHomeLine(text);
   const price = readPrice(target);
   const ready = homeLineReady(line) && !(target.trim() && price === null);
@@ -100,9 +99,9 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
       onClose={onClose}
       footer={(
         <>
-          {devTools && (
-            <button type="button" className="link nr-back" disabled={Boolean(busy)} onClick={() => void useSample()}>
-              Use the 100 Barclay sample
+          {canSample && (
+            <button type="button" className="btn small-btn nr-sample" disabled={Boolean(busy)} onClick={() => void useSample()}>
+              Start from the sample
             </button>
           )}
           <span className="nr-foot-r">
