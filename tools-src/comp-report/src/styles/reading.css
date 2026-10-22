@@ -1,12 +1,29 @@
-/* ReadingNotice: a StreetEasy page being read. */
-.rd { border: 1px solid var(--cb-black); background: var(--cb-surface); color: var(--cb-black); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+/* Reading a StreetEasy page: the comps' box (ReadingNotice) and the home's photo header (HomeHero). */
+.rd { border: 1px solid var(--cb-black); background: var(--cb-surface); color: var(--cb-black); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .rd-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .rd-title { font-size: 14px; font-weight: 800; min-width: 0; }
 .rd-clock { margin-left: auto; font-size: 12px; color: var(--cb-mid); font-variant-numeric: tabular-nums; }
-.rd-spin { width: 14px; height: 14px; flex: none; border: 2px solid var(--cb-border); border-top-color: var(--cb-black); border-radius: 50%; animation: rd-spin .9s linear infinite; }
-.rd-bar { height: 4px; background: var(--cb-border); overflow: hidden; }
+.rd-spin { width: 16px; height: 16px; flex: none; border: 2px solid var(--cb-border); border-top-color: var(--cb-black); border-radius: 50%; animation: rd-spin .9s linear infinite; }
+.rd-bar { height: 10px; background: var(--cb-border); overflow: hidden; }
 .rd-bar span { display: block; height: 100%; background: var(--cb-black); transition: width 1s linear; }
-.rd-text { margin: 0; font-size: 12px; line-height: 1.5; color: var(--cb-mid); }
-.rd-keep { color: var(--cb-black); }
+.rd-foot { display: flex; align-items: center; gap: 12px; font-size: 12px; position: relative; }
+.rd-stage { color: var(--cb-black); min-width: 0; }
+.rd-hint { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--cb-mid); white-space: nowrap; position: relative; }
 @keyframes rd-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .rd-spin { animation: none; } .rd-bar span { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rd-spin, .hh-spin { animation: none; } .rd-bar span { transition: none; } }
+
+/* The home's photo header on New report 2 and Edit details. */
+.hh { position: relative; height: 240px; background: var(--cb-sand); background-size: cover; background-position: center; color: var(--cb-black); }
+.hh.photo { color: #fff; }
+.hh.photo::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, 0) 45%); }
+.hh-top { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; z-index: 1; }
+.hh-name { margin: 0; text-align: left; font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; min-width: 0; }
+.hh-source { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; white-space: nowrap; padding: 4px 8px; background: var(--cb-surface); color: var(--cb-black); }
+.hh-mid { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); width: min(460px, calc(100% - 48px)); display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1; }
+.hh-spin { width: 30px; height: 30px; border: 3px solid rgba(15, 15, 15, .15); border-top-color: var(--cb-black); border-radius: 50%; animation: rd-spin .9s linear infinite; }
+.hh-clock { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.hh-mid .rd-bar { width: 100%; height: 12px; background: rgba(15, 15, 15, .12); }
+.hh-mid .rd-foot { width: 100%; }
+.hh-none { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); font-size: 12px; color: var(--cb-mid); z-index: 1; }
+@media (max-width: 640px) { .hh { height: 200px; } .hh-name { font-size: 20px; } }
+.rd-hint .nr-tip { white-space: normal; text-align: left; }

@@ -345,7 +345,6 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
 
   const notices = (
     <>
-      <ReadingNotice reads={home ? inFlight([home]) : []} what="home" />
       {refused && !home && <p className="nr-note bad" role="alert">The home’s page wasn’t read: {refused} Type the details in.</p>}
       {home?.status === 'failed' && (
         <p className="nr-note bad" role="alert">The home’s page couldn’t be read: {home.errorMessage} Type the details in.</p>
