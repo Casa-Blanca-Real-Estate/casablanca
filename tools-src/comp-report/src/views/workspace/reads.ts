@@ -10,8 +10,8 @@ import { linksApi, type LinkReadView, type LinksState } from '../../api.ts';
 const POLL_MS = 2500;
 /** A read still queued this long after its last start is started again. */
 const RESTART_QUEUED_MS = 20_000;
-/** The server treats a read running this long as dead (links.ts: 6 minutes); start it again a little after. */
-const RESTART_RUNNING_MS = 7 * 60_000;
+/** The server treats a read running this long as dead (links.ts: 4 minutes); start it again a little after (the server fails it after its second try). */
+const RESTART_RUNNING_MS = 4.5 * 60_000;
 
 export function inFlight(reads: LinkReadView[]): LinkReadView[] {
   return reads.filter((r) => r.status === 'queued' || r.status === 'running');

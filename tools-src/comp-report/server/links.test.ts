@@ -112,6 +112,24 @@ test('a busy Firecrawl is waited for and tried again; one that stays down is a f
   assert.equal(down.sent.length, 3);
 });
 
+test('a read has 2½ minutes in all: no retry starts that can’t finish, and running out says so', async () => {
+  let t = 0;
+  const busy = fakeFetch([{ status: 503, body: { success: false } }, { status: 503, body: { success: false } }, page({ address: '1 A St' })]);
+  const slowFetch = (async (...args: Parameters<typeof fetch>) => {
+    t += 70_000; // each request takes 70 s
+    return busy.fn(...args);
+  }) as typeof fetch;
+  const read = await firecrawlReader({ apiKey: 'k', fetch: slowFetch, backoffMs: [1, 1], now: () => t }).read('https://streeteasy.com/sale/1');
+  assert.deepEqual(read.ok ? null : read.code, 'timeout');
+  assert.match(read.ok ? '' : read.message, /more than 3 minutes/);
+  assert.equal(busy.sent.length, 2, 'the third try would start with 10 s left: it isn’t sent');
+  assert.equal(busy.sent[0]!.body.timeout, 55_000);
+  // Firecrawl's own limit is what's left, less a margin, and never more than 55 s.
+  const short = fakeFetch([page({ address: '1 A St' })]);
+  await firecrawlReader({ apiKey: 'k', fetch: short.fn, budgetMs: 40_000, now: () => 0 }).read('https://streeteasy.com/sale/1');
+  assert.equal(short.sent[0]!.body.timeout, 35_000);
+});
+
 test('without a key nothing is sent', async () => {
   const { fn, sent } = fakeFetch([]);
   const read = await firecrawlReader({ apiKey: undefined, fetch: fn }).read('https://streeteasy.com/sale/1');

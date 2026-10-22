@@ -28,6 +28,20 @@ export function readLimit(role: Role, env: Record<string, string | undefined> = 
 
 // ─── The reader ─────────────────────────────────────────────────────────────
 
+/**
+ * How long one read may take, retries and all: 2½ minutes. With the function's
+ * start and the save, a read is done or failed by 3:00, which the bar says
+ * (ReadingNotice). A usual read takes about a minute.
+ */
+export const READ_BUDGET_MS = 150_000;
+/** One Firecrawl request's own limit, and the wait on it. */
+const SCRAPE_TIMEOUT_MS = 55_000;
+const REQUEST_WAIT_MS = 90_000;
+/** Too little time left for a request to finish: stop rather than start one. */
+const MIN_REQUEST_MS = 20_000;
+
+export const TOO_LONG = 'StreetEasy’s page took more than 3 minutes to read, so it was stopped. Try the link again, or type it in.';
+
 export type ReadFailure = 'blocked' | 'not_found' | 'timeout' | 'provider_error' | 'not_configured' | 'unreadable';
 
 export type PageRead =
@@ -61,12 +75,17 @@ export function firecrawlReader(opts: {
   fetch?: typeof fetch;
   /** Waits between retries; tests pass shorter ones. */
   backoffMs?: number[];
+  /** The whole read's limit (READ_BUDGET_MS); tests pass their own, with their own clock. */
+  budgetMs?: number;
+  now?: () => number;
 }): PageReader {
   const base = (opts.baseUrl ?? 'https://api.firecrawl.dev').replace(/\/+$/, '');
   const doFetch = opts.fetch ?? fetch;
   const backoff = opts.backoffMs ?? [5_000, 15_000];
+  const budget = opts.budgetMs ?? READ_BUDGET_MS;
+  const now = opts.now ?? Date.now;
 
-  async function scrape(url: string, stealth: boolean) {
+  async function scrape(url: string, stealth: boolean, left: number) {
     const res = await doFetch(`${base}/v1/scrape`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${opts.apiKey}`, 'Content-Type': 'application/json' },
@@ -75,11 +94,11 @@ export function firecrawlReader(opts: {
         formats: ['extract', 'markdown'],
         onlyMainContent: true,
         waitFor: 3000,
-        timeout: 55_000,
+        timeout: Math.max(5_000, Math.min(SCRAPE_TIMEOUT_MS, left - 5_000)),
         extract: { schema: LISTING_EXTRACT_SCHEMA, prompt: LISTING_EXTRACT_PROMPT },
         ...(stealth ? { proxy: 'stealth', blockAds: true } : {}),
       }),
-      signal: AbortSignal.timeout(90_000),
+      signal: AbortSignal.timeout(Math.max(1, Math.min(REQUEST_WAIT_MS, left))),
     });
     const body = (await res.json().catch(() => null)) as {
       success?: boolean;
@@ -92,31 +111,41 @@ export function firecrawlReader(opts: {
   return {
     async read(url) {
       if (!opts.apiKey) return { ok: false, code: 'not_configured', message: 'Reading links isn’t set up on this site yet (no Firecrawl key).' };
+      const deadline = now() + budget;
+      const left = () => deadline - now();
+      // Another try only when its wait still leaves time for a request.
+      const canRetry = (attempt: number) => attempt < backoff.length && left() - backoff[attempt]! >= MIN_REQUEST_MS;
       for (let attempt = 0; ; attempt++) {
         let result: Awaited<ReturnType<typeof scrape>>;
         try {
-          const started = Date.now();
-          result = await scrape(url, true);
+          const started = now();
+          result = await scrape(url, true, left());
           // A fast refusal of the stealth proxy (a plan limit: a 4xx, not busy) gets a plain request instead.
           const refused = (result.status >= 400 && result.status < 500 && result.status !== 429) || (result.status < 400 && result.body?.success === false);
-          if (refused && Date.now() - started < 8_000) {
-            result = await scrape(url, false);
+          if (refused && now() - started < 8_000 && left() >= MIN_REQUEST_MS) {
+            result = await scrape(url, false, left());
           }
         } catch (error) {
           const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
-          if (attempt < backoff.length) {
+          if (canRetry(attempt)) {
             await sleep(backoff[attempt]!);
             continue;
           }
           console.error('comp-report: Firecrawl unreachable', { url, timedOut, error: String(error).slice(0, 300) });
-          return timedOut
-            ? { ok: false, code: 'timeout', message: 'StreetEasy’s page took too long to read. Try the link again, or type the comp in.' }
+          return timedOut || left() < MIN_REQUEST_MS
+            ? { ok: false, code: 'timeout', message: TOO_LONG }
             : { ok: false, code: 'provider_error', message: 'The page couldn’t be reached. Try the link again, or type the comp in.' };
         }
         const { status, body } = result;
-        if ((status === 429 || status >= 500) && attempt < backoff.length) {
-          await sleep(backoff[attempt]!);
-          continue;
+        if (status === 429 || status >= 500) {
+          if (canRetry(attempt)) {
+            await sleep(backoff[attempt]!);
+            continue;
+          }
+          if (left() < MIN_REQUEST_MS) {
+            console.error('comp-report: Firecrawl ran out of time', { url, status });
+            return { ok: false, code: 'timeout', message: TOO_LONG };
+          }
         }
         if (status >= 400 || !body || body.success === false) {
           // What Firecrawl said, in the function's log: the agent's message stays plain.
