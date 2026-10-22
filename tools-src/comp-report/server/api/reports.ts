@@ -1,7 +1,10 @@
 // /api/comp-report/reports
 //   GET              the signed-in agent's reports, newest first
+//   GET  ?archived=1 the ones they archived
 //   GET  ?id=<uuid>  one report
 //   POST {title, propertyType?}  create a report
+//   PATCH {id, action: 'archive' | 'restore' | 'delete'}  the owner's own report only;
+//                    delete is for sample reports (Kimani, 2026-10-22), and is final
 //
 // Every query names its owner explicitly as well as running under row-level
 // security (§12: scoped both ways).
@@ -14,7 +17,7 @@ export interface ReportSummary {
   title: string;
   propertyType: 'condo' | 'coop';
   mode: 'practice' | 'full';
-  status: 'active' | 'archived';
+  status: 'active' | 'archived' | 'deleted';
   ownerEmail: string;
   /** Filled with sample data at some point: badged as a sample report (Dispatch 07). */
   sampleData: boolean;
@@ -35,7 +38,7 @@ interface ReportRow {
   title: string;
   property_type: 'condo' | 'coop';
   mode: 'practice' | 'full';
-  status: 'active' | 'archived';
+  status: 'active' | 'archived' | 'deleted';
   owner_email: string;
   sample_data: boolean;
   created_at: Date;
@@ -74,7 +77,7 @@ export const asUser = (user: SessionUser) => ({ kind: 'user' as const, email: us
 
 export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
   return respond(async () => {
-    allowMethods(req, 'GET', 'POST');
+    allowMethods(req, 'GET', 'POST', 'PATCH');
     const user = await requireUser(req, deps);
     const pool = requirePool(deps);
 
@@ -84,7 +87,7 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
         if (!UUID.test(id)) throw new HttpError(400, 'bad_id');
         const report = await withActor(pool, asUser(user), async (tx) => {
           const { rows } = await tx.query<ReportRow>(
-            `select ${COLUMNS} from comp_report.reports where id = $1 and (owner_email = $2 or $3)`,
+            `select ${COLUMNS} from comp_report.reports where id = $1 and (owner_email = $2 or $3) and status <> 'deleted'`,
             [id, user.email, user.role === 'admin'],
           );
           return rows[0];
@@ -92,6 +95,7 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
         if (!report) throw new HttpError(404, 'not_found', 'No such report.');
         return json({ report: summary(report) });
       }
+      const status = new URL(req.url).searchParams.get('archived') === '1' ? 'archived' : 'active';
       const reports = await withActor(pool, asUser(user), async (tx) => {
         // Client, side and stage for every row in one query (Dispatch 14): the stage is how far the
         // report has got — sent, then on Send, then past the Gate, else still sorting.
@@ -108,9 +112,9 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
                   (select count(*) from comp_report.report_comps rc
                     where rc.report_id = r.id and rc.removed_at is null and rc.tier is null) as unsorted
              from comp_report.reports r
-            where r.owner_email = $1 and r.status = 'active'
+            where r.owner_email = $1 and r.status = $2
             order by r.updated_at desc limit 200`,
-          [user.email],
+          [user.email, status],
         );
         return rows;
       });
@@ -118,6 +122,7 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
     }
 
     const body = await readJsonObject(req);
+    if (req.method === 'PATCH') return json(await changeStatus(pool, user, body));
     const title = typeof body.title === 'string' ? body.title.trim() : '';
     if (title.length < 1 || title.length > 200) {
       throw new HttpError(400, 'bad_title', 'Give the report a title of up to 200 characters.');
@@ -136,5 +141,41 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
     });
     if (!created) throw new HttpError(500, 'not_created');
     return json({ report: summary(created) }, 201);
+  });
+}
+
+const NEXT: Record<'archive' | 'restore', { from: ReportSummary['status']; to: ReportSummary['status'] }> = {
+  archive: { from: 'active', to: 'archived' },
+  restore: { from: 'archived', to: 'active' },
+};
+
+/** Archive, restore or delete the owner's own report: an admin reading someone else's can't. */
+async function changeStatus(pool: PoolLike, user: SessionUser, body: Record<string, unknown>) {
+  const id = body.id;
+  if (typeof id !== 'string' || !UUID.test(id)) throw new HttpError(400, 'bad_id');
+  const action = body.action;
+  if (action !== 'archive' && action !== 'restore' && action !== 'delete') {
+    throw new HttpError(400, 'bad_action', 'The action is archive, restore or delete.');
+  }
+  return withActor(pool, asUser(user), async (tx) => {
+    const { rows } = await tx.query<ReportRow>(
+      `select ${COLUMNS} from comp_report.reports where id = $1 and owner_email = $2 and status <> 'deleted' for update`,
+      [id, user.email],
+    );
+    const report = rows[0];
+    if (!report) throw new HttpError(404, 'not_found', 'No such report.');
+    if (action === 'delete') {
+      if (!report.sample_data) {
+        throw new HttpError(409, 'not_sample', 'Only a sample report can be deleted. Archive this one instead.');
+      }
+    } else if (report.status !== NEXT[action].from) {
+      throw new HttpError(409, 'bad_state', action === 'archive' ? 'This report is already archived.' : 'This report isn’t archived.');
+    }
+    const to = action === 'delete' ? 'deleted' : NEXT[action].to;
+    const updated = await tx.query<ReportRow>(
+      `update comp_report.reports set status = $2, updated_at = now() where id = $1 returning ${COLUMNS}`,
+      [id, to],
+    );
+    return { report: summary(updated.rows[0]!) };
   });
 }

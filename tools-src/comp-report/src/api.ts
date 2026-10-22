@@ -57,7 +57,7 @@ export interface Report {
   id: string;
   title: string;
   propertyType: 'condo' | 'coop';
-  status: 'active' | 'archived';
+  status: 'active' | 'archived' | 'deleted';
   ownerEmail: string;
   /** Filled with sample data at some point (Dispatch 07). */
   sampleData: boolean;

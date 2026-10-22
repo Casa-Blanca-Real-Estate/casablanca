@@ -57,6 +57,13 @@ New comp (modal)                          Workspace
                                                  (the assistant is a drawer on all three)
 ```
 
+## Your reports: archive and delete
+
+Each row has **Archive**. An archived report leaves the list for a folded **Archived** section under
+it, which has **Restore**. A sample report also has **Delete**, which asks first and can't be undone.
+A real report is never deleted (Kimani, 2026-10-22). In the database, a deleted report is
+`status = 'deleted'`: no list or route returns it, and the app role still has no DELETE.
+
 ## New comp — 1 · The home
 
 **For:** which home, and who it's for.

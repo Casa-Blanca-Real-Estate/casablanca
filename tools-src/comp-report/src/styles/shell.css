@@ -129,6 +129,17 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 .sh-rows { list-style: none; margin: 0; padding: 0; }
 .sh-row { align-items: center; padding: 22px 24px; border-top: 1px solid var(--cb-line); color: inherit; text-decoration: none; cursor: pointer; }
 .sh-row:hover { background: var(--cb-bg); }
+/* A row's Archive (and a sample's Delete) sit outside its link, in a column of their own. */
+.sh-li { display: flex; align-items: stretch; border-top: 1px solid var(--cb-line); }
+.sh-li:hover { background: var(--cb-bg); }
+.sh-li .sh-row { flex: 1; min-width: 0; border-top: 0; padding-right: 12px; }
+.sh-li .sh-row:hover { background: none; }
+.sh-row-acts { flex: 0 0 72px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; padding-right: 24px; }
+.sh-thead.with-acts { padding-right: 108px; }
+.sh-act { font-size: 12px; }
+.sh-act:disabled { opacity: .4; cursor: default; }
+.sh-archived { margin-top: 16px; }
+.sh-archived-badge { margin-left: 8px; vertical-align: 2px; }
 .sh-thumb { width: 88px; height: 64px; background: repeating-linear-gradient(135deg, var(--cb-line-2) 0 6px, var(--cb-line) 6px 12px); }
 .sh-home { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .sh-addr { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; min-width: 0; }
