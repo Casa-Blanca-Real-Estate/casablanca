@@ -211,8 +211,10 @@ think it's worth?"* The agent gives a low and a high, with an optional line, or 
 
 ## For admins while it's built
 
-- **"Use the sample"** on the modal's first screen, and "Fill with sample" per screen in the build
-  notes.
+- **"Use the sample"** on the modal's first screen, "Fill the rest with the sample" on its others, and
+  "Fill with sample" per screen in a strip under the header. All of them show for an admin or a guest
+  whatever the build-notes switch says (Kimani's demo, 2026-10-22: with the switch off there was no way
+  through without typing).
 - **Build notes:** the scaffold's "About this step" boxes, section references, stub labels and
   decision IDs, behind one switch, off by default.
 
