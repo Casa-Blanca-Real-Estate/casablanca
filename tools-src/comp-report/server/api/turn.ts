@@ -58,7 +58,7 @@ type Event = Record<string, unknown> & { type: string };
 async function prepare(pool: PoolLike, user: SessionUser, reportId: string, message: string | null, inFlightSeconds: number) {
   return withActor(pool, asUser(user), async (tx) => {
     // The conversation is the owner's; admins can read reports, not talk in them.
-    const report = await tx.query('select 1 from comp_report.reports where id = $1 and owner_email = $2', [reportId, user.email]);
+    const report = await tx.query('select 1 from comp_report.reports where id = $1 and owner_email = $2 and status <> \'deleted\'', [reportId, user.email]);
     if (!report.rowCount) throw new HttpError(404, 'not_found', 'No such report.');
 
     const stored: (StoredMessage & { answering?: boolean })[] = (await tx.query<StoredMessage & { answering: boolean }>(

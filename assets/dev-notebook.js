@@ -1,7 +1,8 @@
 /* Casa Blanca Studio — the dev notebook's capture box (docs/dev-notebook/README.md).
    Loaded by studio-header.js and the dashboard only in a browser signed in to the
-   notebook (localStorage "cb.devNotebook", written by /tools/dev-notebook/), so an
-   agent's browser never loads it. Ctrl+. / ⌘. anywhere, inside text fields too, or
+   notebook (localStorage "cb.devNotebook", written by /tools/dev-notebook/) and to the
+   studio ("cb_auth"), so an agent's browser never loads it. Signing out of the studio
+   ends the notebook session too. Ctrl+. / ⌘. anywhere, inside text fields too, or
    the ✎ button at the bottom left. Everything lives in a shadow root: no tool's CSS
    reaches in, and no keystroke typed here reaches a tool's own shortcuts. */
 (function () {
@@ -18,8 +19,10 @@
   var PARAMS = ["report","step","tab","view","id","slug","agent"];
   var MAX_SHOTS = 8;
 
+  /** The notebook's session, while this browser is also signed in to the studio: signed out, no dev tools show. */
   function session() {
     try {
+      if (!localStorage.getItem('cb_auth')) return null;
       var s = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (s && typeof s.token === 'string' && Date.parse(s.expiresAt) > Date.now()) return s;
     } catch (e) { /* storage blocked: not signed in */ }
