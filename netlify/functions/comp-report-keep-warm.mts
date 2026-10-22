@@ -1,8 +1,10 @@
 // Keeps the comp report's first-load functions warm in business hours — a
 // SCHEDULED function. Business hours are Kimani's: 9am to 9pm New York time,
-// Monday to Saturday. Outside them a reload may start cold, and that's fine. A function that hasn't run for a few minutes starts cold
-// on its next call, about a second and a half slower; a reload hits /me and
-// then the report or the list, so after a pause each reload paid that twice.
+// Monday to Saturday. Outside them a reload may start cold, and that's fine.
+//
+// A function that hasn't run for a few minutes starts cold on its next call,
+// up to about two seconds slower; a reload hits /me and then the report or the
+// list, so after a pause each reload paid that twice.
 //
 // Each ping carries no sign-in, so the function answers 401 before it touches
 // Identity or the database: it warms the function and nothing else. The

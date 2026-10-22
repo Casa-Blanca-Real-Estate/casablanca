@@ -69,7 +69,6 @@ included. A production deploy is 15 credits.
   come in (the busiest and quietest hours and days) and set the keep-warm window to match: the
   `inBusinessHours` check and the schedule in `comp-report-keep-warm.mts`. Until then it's Kimani's
   9am–9pm, Monday to Saturday.
-
 - The JS bundle is 725 KB and Vite warns it's over 500 KB. Splitting it (the engine and the
   subway data loaded when needed) would speed up the first visit; reloads now come from the cache.
 - Every request, function calls included, passes through the `block-internal` edge function. It's
