@@ -26,7 +26,7 @@ export function handleMessages(req: Request, deps: AuthDeps): Promise<Response> 
     if (!UUID.test(reportId)) throw new HttpError(400, 'bad_report');
 
     const rows = await withActor(pool, asUser(user), async (tx) => {
-      const owns = await tx.query('select 1 from comp_report.reports where id = $1 and (owner_email = $2 or $3)', [
+      const owns = await tx.query('select 1 from comp_report.reports where id = $1 and (owner_email = $2 or $3) and status <> \'deleted\'', [
         reportId, user.email, user.role === 'admin',
       ]);
       if (!owns.rowCount) throw new HttpError(404, 'not_found', 'No such report.');

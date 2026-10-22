@@ -48,15 +48,26 @@
       var who = document.createElement('button');
       who.type = 'button'; who.className = 'cb-whoami'; who.title = 'Click to sign out';
       who.textContent = '● ' + email();
-      who.onclick = function () { if (confirm('Sign out of Dev on this device?')) { localStorage.removeItem('cb_auth'); location.reload(); } };
+      // Signing out ends this browser's dev notebook session too (Kimani's notebook, 2026-10-22).
+      who.onclick = function () {
+        if (!confirm('Sign out of Dev on this device?')) return;
+        localStorage.removeItem('cb_auth');
+        var done = function () { location.reload(); };
+        try {
+          var d = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null');
+          localStorage.removeItem('cb.devNotebook');
+          if (d && d.token) { fetch('/api/dev/notebook/session', { method: 'DELETE', headers: { Authorization: 'Bearer ' + d.token }, keepalive: true }).then(done, done); return; }
+        } catch (e) { /* storage blocked */ }
+        done();
+      };
       dock.appendChild(who);
     }
 
     // The dev notebook's capture box (docs/dev-notebook/README.md): only in a browser
-    // signed in to the notebook, so nobody else downloads it.
+    // signed in to the notebook and to the studio, so nobody else downloads it.
     try {
       var dn = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null');
-      if (dn && dn.token && Date.parse(dn.expiresAt) > Date.now() && !document.querySelector('script[data-cb-dev-notebook]')) {
+      if (authed() && dn && dn.token && Date.parse(dn.expiresAt) > Date.now() && !document.querySelector('script[data-cb-dev-notebook]')) {
         var dns = document.createElement('script');
         dns.src = DN_SRC; dns.defer = true; dns.setAttribute('data-cb-dev-notebook', '1');
         document.head.appendChild(dns);

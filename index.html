@@ -135,6 +135,16 @@
   .acct-tile{width:24px;height:24px;background:var(--accent);color:var(--plum);font-size:9.5px;font-weight:800;
     display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .acct-name{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--hdr-name)}
+  /* The account menu: who's signed in, and Sign out. Clicking the name only opens it. */
+  .acct-wrap{position:relative}
+  .acct-menu{position:absolute;top:calc(100% + 12px);right:0;z-index:40;min-width:290px;background:var(--panel);color:var(--ink);
+    border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .acct-menu-label{font-size:9.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .acct-menu-email{font-size:14px;font-weight:800;overflow-wrap:anywhere;margin-top:4px}
+  .acct-menu-note{font-size:12px;line-height:1.45;color:var(--body)}
+  .acct-menu-out{font-family:inherit;font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:11px;
+    cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--bg)}
+  .acct-menu-out:hover{background:var(--plum);border-color:var(--plum);color:#fff}
 
   /* ============================== tab band ============================== */
   .tabband{flex:0 0 auto;background:var(--bg);border-bottom:1px solid var(--line);padding:0 34px}
@@ -415,10 +425,20 @@
         <span class="hdr-div" id="buildDiv" aria-hidden="true" hidden></span>
         <button class="whatsnew" id="whatsnewBtn" type="button">What&rsquo;s new<span class="dot"></span></button>
         <span class="hdr-div" aria-hidden="true"></span>
-        <button class="acct" id="devBtn" type="button">
-          <span class="acct-tile" id="acctTile" hidden></span>
-          <span class="acct-name" id="acctName">Sign in</span>
-        </button>
+        <div class="acct-wrap">
+          <button class="acct" id="devBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="acct-tile" id="acctTile" hidden></span>
+            <span class="acct-name" id="acctName">Sign in</span>
+          </button>
+          <div class="acct-menu" id="acctMenu" role="dialog" aria-label="Account" hidden>
+            <div>
+              <div class="acct-menu-label">Signed in as</div>
+              <div class="acct-menu-email" id="acctEmail"></div>
+            </div>
+            <div class="acct-menu-note" id="acctDn" hidden>The dev notebook is on in this browser. Signing out turns it off too.</div>
+            <button class="acct-menu-out" id="signOutBtn" type="button">Sign out</button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -653,8 +673,8 @@
 
 <script src="assets/feedback.js" defer></script>
 <script>
-/* The dev notebook's capture box (docs/dev-notebook/README.md): loaded only in a browser signed in to the notebook. */
-try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(dn&&dn.token&&Date.parse(dn.expiresAt)>Date.now()){var dns=document.createElement('script');dns.src='assets/dev-notebook.js';dns.defer=true;dns.setAttribute('data-cb-dev-notebook','1');document.head.appendChild(dns);}}catch(e){}
+/* The dev notebook's capture box (docs/dev-notebook/README.md): loaded only in a browser signed in to the notebook and to the studio. */
+try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localStorage.getItem('cb_auth')&&dn&&dn.token&&Date.parse(dn.expiresAt)>Date.now()){var dns=document.createElement('script');dns.src='assets/dev-notebook.js';dns.defer=true;dns.setAttribute('data-cb-dev-notebook','1');document.head.appendChild(dns);}}catch(e){}
 </script>
 <script>
 (function(){
@@ -954,17 +974,22 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(dn&&dn.
       var local=currentEmail().split('@')[0].replace(/[^a-z0-9]/g,'');
       tile.textContent=local.slice(0,2).toUpperCase(); tile.hidden=false;
       name.textContent=local.charAt(0).toUpperCase()+local.slice(1);
-      $('devBtn').title='Signed in as '+currentEmail()+' — click to sign out';
+      $('devBtn').title='Signed in as '+currentEmail();
+      $('acctEmail').textContent=currentEmail();
+      $('acctDn').hidden=!dnSignedIn();
     }else{
       tile.hidden=true; name.textContent='Sign in';
       $('devBtn').title='Sign in to unlock team tools';
+      closeAcct();
     }
     $('wEdit').hidden=!on;
     $('clAdd').hidden=!on;
     $('crCard').hidden=!on;
-    /* The dev notebook: for its developers (docs/dev-notebook/README.md). The page itself signs in with Google. */
-    $('dnCard').hidden=!(dnSignedIn() || currentEmail()==='creative@email.casa-blanca.com');
-    showBuild(dnSignedIn() || currentEmail()==='creative@email.casa-blanca.com');
+    /* The dev notebook: for its developers (docs/dev-notebook/README.md). The page itself signs in with Google.
+       Signed out of the studio, nothing of it shows, notebook session or not (Kimani's notebook, 2026-10-22). */
+    var dev=on && (dnSignedIn() || currentEmail()==='creative@email.casa-blanca.com');
+    $('dnCard').hidden=!dev;
+    showBuild(dev);
     /* Every tool in this tab is team-only — signed out it would render an empty tab. */
     $('webTab').hidden=!on;
     /* Sign out while it's open: showTab moves the aria-current highlight too, but it also
@@ -1004,7 +1029,31 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(dn&&dn.
     if(ALLOWED.indexOf(e)!==-1){localStorage.setItem('cb_auth',e);closeLogin();applyAuth();}
     else{err.textContent='That email isn’t on the list.';}
   }
-  $('devBtn').onclick=function(){ if(authed()){localStorage.removeItem('cb_auth');applyAuth();} else openLogin(); };
+  /* Signed in, the name opens the account menu; Sign out is in it. Signing out of the studio ends this
+     browser's dev notebook session too, so its capture box and the dev cards go with it. */
+  function closeAcct(){$('acctMenu').hidden=true;$('devBtn').setAttribute('aria-expanded','false');}
+  function openAcct(){$('acctMenu').hidden=false;$('devBtn').setAttribute('aria-expanded','true');$('signOutBtn').focus();}
+  function endNotebook(){
+    try{
+      var d=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');
+      localStorage.removeItem('cb.devNotebook');
+      if(d&&d.token)return fetch('/api/dev/notebook/session',{method:'DELETE',headers:{Authorization:'Bearer '+d.token},keepalive:true}).catch(function(){});
+    }catch(e){}
+    return Promise.resolve();
+  }
+  $('devBtn').onclick=function(e){
+    e.stopPropagation();
+    if(!authed()){openLogin();return;}
+    if($('acctMenu').hidden)openAcct(); else closeAcct();
+  };
+  $('signOutBtn').onclick=function(){
+    var hadNotebook=dnSignedIn();
+    localStorage.removeItem('cb_auth');
+    endNotebook().then(function(){ if(hadNotebook)location.reload(); else applyAuth(); });
+  };
+  $('acctMenu').addEventListener('click',function(e){e.stopPropagation();});
+  document.addEventListener('click',function(){ if(!$('acctMenu').hidden)closeAcct(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&!$('acctMenu').hidden){closeAcct();$('devBtn').focus();} });
   $('goBtn').onclick=tryLogin; $('cancelBtn').onclick=closeLogin;
   input.addEventListener('keydown',function(ev){if(ev.key==='Enter')tryLogin();});
   loginModal.addEventListener('click',function(ev){if(ev.target===loginModal)closeLogin();});

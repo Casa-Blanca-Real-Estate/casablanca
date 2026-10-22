@@ -39,22 +39,24 @@ npm run -s notebook -- --feedback            # the team Feedback list, no emails
    there). The notebook signs in through the site's Identity, and Identity only lets in addresses
    the comp report admits. Then **Deploys → Trigger deploy**: a variable applies from the next deploy.
 2. On production, open **`/tools/dev-notebook/`** and **Sign in with Google** with either address.
-   That browser now has the capture box on every studio page, for 30 days. Sign in once per
-   browser you use.
+   That browser now has the capture box on every studio page, for 30 days, while it's also signed in
+   to the studio (the dashboard's Sign in). Sign in once per browser you use. Signing out of the
+   studio (the account menu, or the chip on a tool) ends the notebook session in that browser too.
 3. **Keys → Make a key → Copy.** In a Claude Code session, open the cloud environment menu in the
    title bar → **Edit** → add an environment variable **`DEV_NOTEBOOK_KEY`** with that value. New
    sessions pick it up. Never paste the key into a chat; if it leaks, revoke it on the notebook page
    and make another.
 
-The dashboard shows a **Dev notebook** card when you're signed in to it (or logged in as
-creative@email.casa-blanca.com). Deploy previews can't complete Google sign-in, so the notebook runs
+The dashboard shows a **Dev notebook** card, and the build marker, when you're signed in to the studio
+and to the notebook (or signed in to the studio as creative@email.casa-blanca.com). Signed out of the
+studio, none of it shows. Deploy previews can't complete Google sign-in, so the notebook runs
 on production.
 
 ## How it works
 
 | Piece | Where |
 |---|---|
-| Capture box | `assets/dev-notebook.js` — loaded by `assets/studio-header.js` (every tool) and the dashboard, **only** in a browser signed in to the notebook |
+| Capture box | `assets/dev-notebook.js` — loaded by `assets/studio-header.js` (every tool) and the dashboard, **only** in a browser signed in to the notebook and to the studio |
 | Notebook page | `tools/dev-notebook/index.html` — sign-in, the list, one note, re-status, comment, **delete**, keys |
 | API | `netlify/functions/dev-notebook.mts` → `tools-src/dev-notebook/server/api.ts`, at `/api/dev/notebook/*` |
 | Storage | `tools-src/dev-notebook/server/store.ts` — the only code that touches the Blobs store `dev-notebook` |

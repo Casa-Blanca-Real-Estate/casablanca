@@ -96,6 +96,39 @@ describe('comp report API', { skip: skipWithoutDatabase }, () => {
     assert.equal((await handleReports(req('tok-kimani-000000', 'GET', undefined, `?id=${report.id}`), deps)).status, 200);
   });
 
+  test('the owner archives and restores a report; only a sample report can be deleted, and then it is gone', async () => {
+    const make = async (title: string) => (await (await handleReports(req('tok-ana-000000000', 'POST', { title }), deps)).json()).report;
+    const patch = (token: string, body: unknown) => handleReports(req(token, 'PATCH', body), deps);
+    const list = async (query = '') => (await (await handleReports(req('tok-ana-000000000', 'GET', undefined, query), deps)).json()).reports.map((r: { id: string }) => r.id);
+    const real = await make('1 Real Street');
+
+    // Someone else, or an admin reading it, can't touch it.
+    assert.equal((await patch('tok-ben-000000000', { id: real.id, action: 'archive' })).status, 404);
+    assert.equal((await patch('tok-kimani-000000', { id: real.id, action: 'archive' })).status, 404);
+
+    assert.equal((await patch('tok-ana-000000000', { id: real.id, action: 'archive' })).status, 200);
+    assert.ok(!(await list()).includes(real.id));
+    assert.ok((await list('?archived=1')).includes(real.id));
+    assert.equal((await patch('tok-ana-000000000', { id: real.id, action: 'archive' })).status, 409);
+    assert.equal((await patch('tok-ana-000000000', { id: real.id, action: 'delete' })).status, 409, 'a real report is only archived');
+    assert.equal((await patch('tok-ana-000000000', { id: real.id, action: 'restore' })).status, 200);
+    assert.ok((await list()).includes(real.id));
+
+    const sample = await make('100 Barclay Street #17L');
+    await withActor(pool as unknown as PoolLike, { kind: 'user', email: 'ana@casa-blanca.com', role: 'agent' }, (tx) => tx.query('update comp_report.reports set sample_data = true where id = $1', [sample.id]));
+    const deleted = await patch('tok-ana-000000000', { id: sample.id, action: 'delete' });
+    assert.equal(deleted.status, 200);
+    assert.equal((await deleted.json()).report.status, 'deleted');
+    assert.ok(!(await list()).includes(sample.id));
+    assert.ok(!(await list('?archived=1')).includes(sample.id));
+    assert.equal((await handleReports(req('tok-ana-000000000', 'GET', undefined, `?id=${sample.id}`), deps)).status, 404);
+    assert.equal((await handleReports(req('tok-kimani-000000', 'GET', undefined, `?id=${sample.id}`), deps)).status, 404);
+    assert.equal((await patch('tok-ana-000000000', { id: sample.id, action: 'restore' })).status, 404);
+
+    assert.equal((await patch('tok-ana-000000000', { id: real.id, action: 'burn' })).status, 400);
+    assert.equal((await patch('tok-ana-000000000', { id: 'nope', action: 'archive' })).status, 400);
+  });
+
   test('bad input is refused before it reaches the database', async () => {
     assert.equal((await handleReports(req('tok-ana-000000000', 'POST', { title: '' }), deps)).status, 400);
     assert.equal((await handleReports(req('tok-ana-000000000', 'POST', { title: 'x', propertyType: 'townhouse' }), deps)).status, 400);

@@ -1,8 +1,9 @@
 // The reports list (the handoff, screen 2): the hero, then a table of the agent's reports — a hatched
 // block where a photo will go (photos are a follow-up), the address with the client and a Sample badge,
 // the side, the stage with its square, and when it was updated. Headers sort; ten rows show, then
-// "Show N more". Client, side and stage come with the list in one call.
-import { useEffect, useMemo, useState } from 'react';
+// "Show N more". Client, side and stage come with the list in one call. Each row can be archived (and a
+// sample report deleted, Kimani's decision of 2026-10-22); the archived ones fold at the bottom, with Restore.
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type Me, type Report } from '../api.ts';
 import { Access } from './Access.tsx';
 import { NewCompStart } from './newcomp/NewComp.tsx';
@@ -23,6 +24,65 @@ function Hero() {
   );
 }
 
+type Action = 'archive' | 'restore' | 'delete';
+
+const DELETE_ASK = 'Delete this sample report? It can’t be brought back.';
+
+function changeStatus(r: Report, action: Action) {
+  return api<{ report: Report }>('/api/comp-report/reports', { method: 'PATCH', body: { id: r.id, action } });
+}
+
+/** Delete, for a sample report only: a real one is archived (and can be restored). */
+function DeleteButton({ r, busy, onAct }: { r: Report; busy: boolean; onAct: (r: Report, a: Action) => void }) {
+  if (!r.sampleData) return null;
+  return (
+    <button type="button" className="link sh-act" disabled={busy} onClick={() => confirm(DELETE_ASK) && onAct(r, 'delete')}>
+      Delete
+    </button>
+  );
+}
+
+/** The archived reports, folded under the list: fetched when it opens, each with Restore. */
+function Archived({ refresh, busy, onAct }: { refresh: number; busy: boolean; onAct: (r: Report, a: Action) => void }) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState<Report[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    api<{ reports: Report[] }>('/api/comp-report/reports?archived=1').then(
+      (r) => setRows(r.reports),
+      (e) => setError(e.message),
+    );
+  }, [open, refresh]);
+  return (
+    <details className="sh-access sh-archived" onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary>Archived</summary>
+      <div className="sh-access-body">
+        {error && <p className="sh-note error" role="alert">{error}</p>}
+        {rows === null && !error && <StateLine>Loading…</StateLine>}
+        {rows?.length === 0 && <p className="sh-help">Nothing archived.</p>}
+        {rows && rows.length > 0 && (
+          <ul className="sh-access-list">
+            {rows.map((r) => (
+              <li key={r.id} className="sh-access-entry">
+                <span>
+                  <span className="sh-access-who">{r.title}</span>
+                  {r.sampleData && <span className="sh-sample sh-archived-badge" title={SAMPLE_TITLE}>Sample</span>}
+                  <p className="sh-help">{r.client ? `${r.client} · ` : ''}{stageLabel(r)} · archived {updatedLabel(r.updatedAt)}</p>
+                </span>
+                <span className="sh-access-confirm">
+                  <DeleteButton r={r} busy={busy} onAct={onAct} />
+                  <button type="button" className="btn" disabled={busy} onClick={() => onAct(r, 'restore')}>Restore</button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function hrefFor(r: Report): string {
   const step = screenFor(r);
   return `?report=${r.id}${step ? `&step=${step}` : ''}`;
@@ -34,15 +94,32 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   const [starting, setStarting] = useState(false);
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [all, setAll] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const ready = me.database === 'ready';
 
+  const load = useCallback(() => api<{ reports: Report[] }>('/api/comp-report/reports').then(
+    (r) => setReports(r.reports),
+    (e) => setError(e.message),
+  ), []);
   useEffect(() => {
-    if (!ready) return;
-    api<{ reports: Report[] }>('/api/comp-report/reports').then(
-      (r) => setReports(r.reports),
-      (e) => setError(e.message),
-    );
-  }, [ready]);
+    if (ready) void load();
+  }, [ready, load]);
+
+  // Archive, restore or delete, then both lists again.
+  const act = useCallback(async (r: Report, action: Action) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await changeStatus(r, action);
+      await load();
+      setRefresh((n) => n + 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [load]);
 
   const sorted = useMemo(() => sortReports(reports ?? [], sort), [reports, sort]);
 
@@ -97,7 +174,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
 
         {reports && !empty && (
           <div className="sh-table">
-            <div className="sh-grid sh-thead">
+            <div className="sh-grid sh-thead with-acts">
               <span />
               {COLUMNS.map((c) => {
                 const active = sort.key === c.key;
@@ -116,7 +193,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
             </div>
             <ul className="sh-rows">
               {shown.map((r) => (
-                <li key={r.id}>
+                <li key={r.id} className="sh-li">
                   <a
                     className="sh-grid sh-row"
                     href={hrefFor(r)}
@@ -141,6 +218,12 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                     </span>
                     <span className="sh-updated">{updatedLabel(r.updatedAt)}</span>
                   </a>
+                  <span className="sh-row-acts">
+                    <button type="button" className="link sh-act" disabled={busy} title="Moves it to Archived, below. You can restore it." onClick={() => void act(r, 'archive')}>
+                      Archive
+                    </button>
+                    <DeleteButton r={r} busy={busy} onAct={(x, a) => void act(x, a)} />
+                  </span>
                 </li>
               ))}
             </ul>
@@ -151,6 +234,8 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
             )}
           </div>
         )}
+
+        {ready && <Archived refresh={refresh} busy={busy} onAct={(x, a) => void act(x, a)} />}
 
         {me.user.role === 'admin' && (
           <details className="sh-access">

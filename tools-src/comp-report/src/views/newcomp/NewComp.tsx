@@ -15,7 +15,6 @@ import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
 import { readPrice } from '../comp/CompForm.tsx';
 import { AddList, GUIDANCE, ImportNotes } from '../workspace/AddComps.tsx';
 import { entry } from '../workspace/bits.tsx';
-import { useBuildNotesSwitch } from '../workspace/buildNotes.tsx';
 import { localToday, type Workspace } from '../workspace/model.ts';
 import { ReadingNotice } from '../workspace/ReadingNotice.tsx';
 import { inFlight } from '../workspace/reads.ts';
@@ -36,7 +35,6 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
   const [target, setTarget] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [devTools] = useBuildNotesSwitch(maySample(me), Boolean(me.user.guest));
   const line = readHomeLine(text);
   const price = readPrice(target);
   const ready = homeLineReady(line) && !(target.trim() && price === null);
@@ -102,7 +100,7 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
       onClose={onClose}
       footer={(
         <>
-          {devTools && (
+          {maySample(me) && (
             <button type="button" className="link nr-back" disabled={Boolean(busy)} onClick={() => void useSample()}>
               Use the 100 Barclay sample
             </button>
@@ -199,6 +197,22 @@ function FootRight({ ws, error, children }: { ws: Workspace; error?: string | nu
   );
 }
 
+/** Steps 2 and 3, for an admin or a guest: the whole report filled with the sample, then the workspace. */
+function SampleRest({ ws, onDone }: { ws: Workspace; onDone: () => void }) {
+  if (!ws.canSample) return null;
+  return (
+    <button
+      type="button"
+      className="link nr-back"
+      disabled={Boolean(ws.busy)}
+      title="Fills the whole report with 100 Barclay #17L: the home, the sorted comps, the call, the terms and the email’s lines."
+      onClick={() => void ws.fillSample('all').then((ran) => ran && onDone())}
+    >
+      Fill the rest with the sample
+    </button>
+  );
+}
+
 /** "100 Barclay Street #17L": what was typed for the home, to show it back. */
 function typedHome(intake: Intake): string {
   const unit = intake.unit?.value.trim();
@@ -270,9 +284,12 @@ function HomeScreen({ ws, onScreen, onClose }: { ws: Workspace; onScreen: (s: St
       title="New report: which home?"
       onClose={onClose}
       footer={(
-        <FootRight ws={ws} error={error}>
-          <button type="button" className="btn primary" disabled={!ready || Boolean(ws.busy)} onClick={() => void next()}>Next →</button>
-        </FootRight>
+        <>
+          <SampleRest ws={ws} onDone={onClose} />
+          <FootRight ws={ws} error={error}>
+            <button type="button" className="btn primary" disabled={!ready || Boolean(ws.busy)} onClick={() => void next()}>Next →</button>
+          </FootRight>
+        </>
       )}
     >
       <HomeFields
@@ -373,6 +390,7 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
       ) : (
         <>
           <button type="button" className="link nr-back" onClick={() => onScreen('home')}>← Back</button>
+          <SampleRest ws={ws} onDone={onClose} />
           <FootRight ws={ws} error={error}>
             <button type="button" className="btn primary" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && (stillReading(), onScreen('comps')))}>Next →</button>
           </FootRight>
@@ -407,6 +425,7 @@ function CompsScreen({ ws, onScreen, onClose, onOpen }: { ws: Workspace; onScree
       footer={(
         <>
           <button type="button" className="link nr-back" onClick={() => onScreen('details')}>← Back</button>
+          <SampleRest ws={ws} onDone={onOpen} />
           <FootRight ws={ws}>
             <span className="nr-confirm-count">{count}</span>
             <button type="button" className="btn primary" onClick={leave(onOpen)}>Open workspace →</button>

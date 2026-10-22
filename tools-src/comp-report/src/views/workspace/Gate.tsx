@@ -41,6 +41,12 @@ export function Gate({ ws }: StepProps) {
     ws.go('findings');
   };
 
+  // An admin or a guest walking the report through: the sample's number and why (and its target and
+  // terms, as Findings' fill does), then on to the comps.
+  const fillWithSample = async () => {
+    if (await ws.fillSample('findings')) ws.go('findings');
+  };
+
   if (off && !ws.revealed) {
     return (
       <div className="gt-root">
@@ -91,6 +97,11 @@ export function Gate({ ws }: StepProps) {
         <div className="gt-actions">
           {practice && <span className="gt-req">All three required until you graduate</span>}
           <div className="gt-go">
+            {ws.canSample && (
+              <button type="button" className="btn gt-sample" disabled={Boolean(ws.busy)} onClick={() => void fillWithSample()}>
+                Fill with sample
+              </button>
+            )}
             {!practice && !off && <button type="button" className="gt-skip" onClick={skip}>Skip</button>}
             {off
               ? <button type="button" className="btn primary" onClick={() => ws.go('findings')}>Show the comps</button>

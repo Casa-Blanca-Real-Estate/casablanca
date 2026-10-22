@@ -52,6 +52,12 @@ const identity: SessionProvider = {
   dev: false,
 
   async start() {
+    // Already signed in in this browser (a reload): the user is read locally, so
+    // skip the settings round trip and let the first API call start sooner.
+    if (!location.hash) {
+      const user = await getUser().catch(() => null);
+      if (user?.email) return signedIn(user);
+    }
     // Until Identity is enabled, its endpoint 404s and there's nothing to sign in with.
     try {
       await getSettings();
