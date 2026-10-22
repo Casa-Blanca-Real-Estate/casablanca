@@ -16,6 +16,8 @@ import { readPrice } from '../comp/CompForm.tsx';
 import { AddList, GUIDANCE, ImportNotes } from '../workspace/AddComps.tsx';
 import { entry } from '../workspace/bits.tsx';
 import { localToday, type Workspace } from '../workspace/model.ts';
+import { ReadingNotice } from '../workspace/ReadingNotice.tsx';
+import { inFlight } from '../workspace/reads.ts';
 import { HomeDetails } from './Details.tsx';
 import { endNewReport, Frame, Info, isNewReport, markNewReport } from './Frame.tsx';
 import { HomeFields, HomeLineInput, homeLineReady, Matched, readHomeLine, targetText, TYPE_LABEL, type PropertyType } from './Home.tsx';
@@ -344,6 +346,10 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
       ws.applyLinks(await linksApi.confirmHome(ws.reportId, home.id));
     });
   }
+  // Leaving while the page is read: say it carries on (the 2026-10-22 demo).
+  const stillReading = () => {
+    if (home && inFlight([home]).length && !ws.readOnly) ws.toast('Still reading the home’s StreetEasy page. It keeps going, and the details fill in when it’s read.');
+  };
   const cancel = () => {
     if (ws.readOnly) return onClose();
     if (JSON.stringify(ws.intake) !== JSON.stringify(before.intake)) ws.setIntake(before.intake);
@@ -356,9 +362,6 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
 
   const notices = (
     <>
-      {home && (home.status === 'queued' || home.status === 'running') && (
-        <p className="nr-note" aria-live="polite">Reading the home’s StreetEasy page… Its details fill in here when it’s read. Type anything you know meanwhile.</p>
-      )}
       {refused && !home && <p className="nr-note bad" role="alert">The home’s page wasn’t read: {refused} Type the details in.</p>}
       {home?.status === 'failed' && (
         <p className="nr-note bad" role="alert">The home’s page couldn’t be read: {home.errorMessage} Type the details in.</p>
@@ -371,12 +374,15 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
       step={2}
       editing={editing}
       title={editing ? 'Edit details' : 'New report: the details'}
-      onClose={editing ? cancel : onClose}
+      onClose={() => {
+        stillReading();
+        (editing ? cancel : onClose)();
+      }}
       footer={editing ? (
         <>
           <button type="button" className="link nr-back" onClick={cancel}>Cancel</button>
           <FootRight ws={ws} error={error}>
-            <button type="button" className="btn primary" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && onClose())}>
+            <button type="button" className="btn primary" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && (stillReading(), onClose()))}>
               {ws.readOnly ? 'Close' : 'Save changes'}
             </button>
           </FootRight>
@@ -386,7 +392,7 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
           <button type="button" className="link nr-back" onClick={() => onScreen('home')}>← Back</button>
           <SampleRest ws={ws} onDone={onClose} />
           <FootRight ws={ws} error={error}>
-            <button type="button" className="btn primary" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && onScreen('comps'))}>Next →</button>
+            <button type="button" className="btn primary" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && (stillReading(), onScreen('comps')))}>Next →</button>
           </FootRight>
         </>
       )}
@@ -401,13 +407,19 @@ function CompsScreen({ ws, onScreen, onClose, onOpen }: { ws: Workspace; onScree
   const [note, setNote] = useState<string | null>(null);
   const drop = useDropTarget(ws, setNote);
   const toConfirm = ws.comps.filter((c) => c.unconfirmed).length;
-  const reading = ws.reads.filter((r) => r.purpose === 'comp' && (r.status === 'queued' || r.status === 'running')).length;
+  const readingNow = inFlight(ws.reads.filter((r) => r.purpose === 'comp'));
+  const reading = readingNow.length;
+  // Leaving while pages are read: say they carry on (the 2026-10-22 demo).
+  const leave = (go: () => void) => () => {
+    if (reading && !ws.readOnly) ws.toast(`Still reading ${reading === 1 ? '1 comp’s page' : `${reading} comps’ pages`}. ${reading === 1 ? 'It keeps' : 'They keep'} going, and each comp lands on Sort when it’s read.`);
+    go();
+  };
   const count = toConfirm ? `${toConfirm} to confirm` : reading ? `${reading} reading` : ws.comps.length ? 'All confirmed' : '';
   return (
     <Frame
       step={3}
       title="New report: add comps"
-      onClose={onClose}
+      onClose={leave(onClose)}
       drop={drop.handlers}
       veil={drop.veil}
       footer={(
@@ -416,7 +428,7 @@ function CompsScreen({ ws, onScreen, onClose, onOpen }: { ws: Workspace; onScree
           <SampleRest ws={ws} onDone={onOpen} />
           <FootRight ws={ws}>
             <span className="nr-confirm-count">{count}</span>
-            <button type="button" className="btn primary" onClick={onOpen}>Open workspace →</button>
+            <button type="button" className="btn primary" onClick={leave(onOpen)}>Open workspace →</button>
           </FootRight>
         </>
       )}
@@ -426,6 +438,7 @@ function CompsScreen({ ws, onScreen, onClose, onOpen }: { ws: Workspace; onScree
         <Info align="left" label="How to choose comps" text={`${GUIDANCE} About three of each status, where there are that many.`} />
       </div>
       {ws.readOnly ? <p className="nr-note">Read only: this is another agent’s report.</p> : <AddBar ws={ws} note={note} onNote={setNote} />}
+      <ReadingNotice reads={readingNow} what="comps" />
       <AddList ws={ws} />
       <ImportNotes ws={ws} />
     </Frame>
