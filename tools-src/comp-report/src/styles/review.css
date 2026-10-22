@@ -1,0 +1,128 @@
+/* Review comps (Dispatch 25): the per-comp review flow over Sort, one comp per step.
+   A wide white card on the new-report modal's scrim: the comp on the left, the agent's
+   reasoning and Hubert on the right, the tier in the footer between Back and Next. Prefix rv-. */
+
+.rv-scrim {
+  /* Above Hubert's drawer (50), under the toast (60), as the new-report modal. */
+  position: fixed; inset: 0; z-index: 58; overflow: auto; background: rgba(15, 15, 15, .55);
+  /* Clear of the studio bar above it (nav.js), which stays on top. */
+  padding: 64px 16px 24px; display: flex; justify-content: center; align-items: flex-start; box-sizing: border-box;
+}
+.rv-modal {
+  position: relative; width: 1080px; max-width: 100%; flex: none; margin: auto 0; background: var(--cb-surface);
+  display: flex; flex-direction: column; color: var(--cb-black); text-align: left;
+}
+.rv-modal:focus, .rv-modal:focus-visible { outline: none; }
+
+.rv-head { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--cb-line); }
+.rv-title { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.rv-count { font-size: 12px; color: var(--cb-mid); font-variant-numeric: tabular-nums; }
+.rv-progress { flex: 1; display: flex; gap: 3px; min-width: 60px; }
+.rv-progress span { flex: 1; height: 3px; background: var(--cb-border); }
+.rv-progress span.done { background: var(--cb-mid); }
+.rv-progress span.here { background: var(--cb-black); }
+.rv-x { font: inherit; font-size: 15px; line-height: 1; color: var(--cb-mid); background: none; border: none; padding: 2px; cursor: pointer; }
+.rv-x:hover { color: var(--cb-black); }
+
+.rv-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
+.rv-comp { padding: 20px 20px 20px 24px; border-right: 1px solid var(--cb-line); display: flex; flex-direction: column; gap: 14px; }
+
+/* The photo carries the comp's name: address and badges on a shade along its foot. */
+.rv-hero { position: relative; }
+.rv-hero .so-photo { width: 100%; height: 220px; }
+.rv-hero .so-photo-count { top: 6px; bottom: auto; }
+.rv-hero-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 14px 12px; pointer-events: none;
+  background: linear-gradient(to top, rgba(15, 15, 15, .78), rgba(15, 15, 15, 0)); color: #fff;
+}
+.rv-addr { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.rv-badges { display: flex; gap: 6px; margin-bottom: 6px; }
+.rv-badges:empty { display: none; }
+.rv-badge { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; background: rgba(255, 255, 255, .92); color: var(--cb-black); }
+.rv-badge.tier.primary { background: var(--cb-black); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); }
+.rv-badge.tier.secondary { background: var(--cb-lavender); color: var(--cb-deep); }
+.rv-badge.tier.excluded { background: var(--cb-sand); }
+.rv-badge.star { background: var(--cb-yellow); }
+
+.rv-facts { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; }
+.rv-facts dt { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--cb-mid); }
+.rv-facts dd { margin: 2px 0 0; font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-feats { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px; }
+.rv-feats li { font-size: 11px; padding: 2px 7px; border: 1px solid var(--cb-border); color: var(--cb-mid); }
+.rv-feats li.shared { color: var(--cb-black); border-color: var(--cb-black); }
+.rv-checks { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; }
+.rv-checks li { display: flex; align-items: center; gap: 6px; cursor: help; }
+
+.rv-work { padding: 20px 24px 20px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* The note box: the reasoning, its tags and the ask for feedback, in one bordered field. */
+.rv-notebox { border: 1px solid var(--cb-border); background: var(--cb-surface); }
+.rv-notebox:focus-within { border-color: var(--cb-black); }
+.rv-notebox.ro { background: var(--cb-bg); }
+.rv-note, .rv-ask-input {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; line-height: 1.5; padding: 10px 12px;
+  border: none; border-radius: 0; background: transparent; color: var(--cb-black);
+}
+.rv-note { resize: vertical; min-height: 96px; display: block; }
+.rv-note:focus, .rv-ask-input:focus { outline: none; }
+.rv-notebar { display: flex; align-items: center; gap: 10px; padding: 6px 8px 8px 12px; flex-wrap: wrap; }
+.rv-tagline { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.rv-tagline .so-tag { white-space: nowrap; }
+.rv-tagtoggle { font-size: 12px; margin-left: 2px; }
+.rv-notebar-r { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.rv-notebar-r .link { font-size: 12px; }
+.rv-tags { padding: 10px 12px 12px; border-top: 1px solid var(--cb-line-2); display: flex; flex-direction: column; gap: 6px; }
+.btn.small { padding: 6px 12px; font-size: 12px; }
+.rv-quiet { font-size: 12px; color: var(--cb-mid); }
+.rv-err { margin: 0; font-size: 12px; color: var(--cb-red); }
+
+.rv-hubert { background: var(--cb-bg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.rv-hubert > .rv-quiet { margin: 0; }
+.rv-weak { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 13px; padding: 8px 10px; background: var(--cb-highlight); border-left: 3px solid var(--cb-yellow); }
+.rv-weak .link { margin-left: auto; font-size: 12px; }
+.rv-round { display: flex; flex-direction: column; gap: 4px; }
+.rv-round + .rv-round, .rv-ask + .rv-round { border-top: 1px solid var(--cb-line-2); padding-top: 12px; }
+.rv-round-h { margin: 0; font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.rv-round-act { margin-left: auto; font-weight: 400; }
+.rv-round-act .link { font-size: 12px; }
+.rv-would { font-weight: 400; color: var(--cb-mid); }
+.rv-sample { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-deep); background: var(--cb-lavender); padding: 1px 6px; }
+.rv-round-text { margin: 0; font-size: 13px; line-height: 1.5; }
+.rv-round-text p { margin: 0; }
+.rv-sub { font-size: 11px; color: var(--cb-mid); margin-top: 6px !important; }
+.rv-point { padding-left: 14px; position: relative; }
+.rv-point::before { content: '–'; position: absolute; left: 0; color: var(--cb-mid); }
+.rv-ask { display: flex; align-items: center; gap: 8px; border: 1px solid var(--cb-border); background: var(--cb-surface); padding-right: 6px; }
+.rv-ask:focus-within { border-color: var(--cb-black); }
+.rv-ask-input { padding: 8px 10px; font-size: 13px; flex: 1; min-width: 0; }
+.rv-earlier summary { font-size: 12px; color: var(--cb-mid); cursor: pointer; }
+.rv-earlier > div { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--cb-line-2); }
+.rv-was { margin: 0 0 6px; font-size: 12px; color: var(--cb-mid); font-style: italic; }
+
+.rv-empty { padding: 40px 24px; color: var(--cb-mid); }
+/* Back, the tier, Next: one row. */
+.rv-foot { display: flex; align-items: center; gap: 16px; padding: 12px 24px; border-top: 1px solid var(--cb-line); flex-wrap: wrap; }
+.rv-foot-mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; min-width: 0; }
+.rv-seg { width: 220px; }
+.rv-seg button { padding: 8px 0; }
+.rv-tierhint { max-width: 220px; line-height: 1.3; }
+.rv-confirm { display: flex; align-items: center; gap: 12px; }
+.rv-foot > .rv-err { flex-basis: 100%; order: 3; text-align: center; }
+.rv-foot-r { margin-left: auto; display: flex; gap: 12px; }
+
+/* On Sort: the row's weak flag and the card's Review link. */
+.so-weak { font-size: 11px; color: var(--cb-black); background: var(--cb-highlight); padding: 1px 6px; }
+.so-review { font: inherit; font-size: 12px; background: none; border: 1px solid var(--cb-border); padding: 4px 10px; cursor: pointer; color: var(--cb-black); }
+.so-review:hover { border-color: var(--cb-black); }
+.so-weak-line { margin: 0; font-size: 12px; padding: 8px 10px; background: var(--cb-highlight); border-left: 3px solid var(--cb-yellow); }
+
+@media (max-width: 860px) {
+  .rv-body { grid-template-columns: minmax(0, 1fr); }
+  .rv-comp { border-right: none; border-bottom: 1px solid var(--cb-line); padding: 16px; }
+  .rv-work { padding: 16px; }
+  .rv-head, .rv-foot { padding-left: 16px; padding-right: 16px; }
+  .rv-hero .so-photo { height: 180px; }
+  .rv-tierhint { display: none; }
+  .rv-notebar-r { flex-basis: 100%; justify-content: flex-end; }
+  .rv-seg { width: 180px; }
+}

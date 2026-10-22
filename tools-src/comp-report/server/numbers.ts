@@ -27,6 +27,8 @@ export interface NeutralNumbers {
   revealed: boolean;
   /** Export rows the agent took out of the report: the only other sales Hubert may point to (Dispatch 14). */
   removed: CompRecord[];
+  /** The Co-op/Condo toggle the engine computed with. */
+  propertyType: 'condo' | 'coop';
 }
 
 /**
@@ -64,7 +66,7 @@ export async function neutralNumbers(tx: Queryable, reportId: string, asOf = new
   const locations = locationsFrom(await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)));
   // No prices, no deal terms: nothing here can carry the call or a target.
   const output = compute(engineInput({ asOf, intake: state.intake, comps, locations, propertyType: report.property_type }));
-  return { output, comps, state, brief: report.brief ?? {}, revealed: report.revealed, removed };
+  return { output, comps, state, brief: report.brief ?? {}, revealed: report.revealed, removed, propertyType: report.property_type };
 }
 
 export async function numbersFor(tx: Queryable, reportId: string, asOf = newYorkToday()) {

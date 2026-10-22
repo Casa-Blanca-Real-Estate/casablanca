@@ -7,7 +7,8 @@
 //         read by the engine (compRecordFromManual) and kept as an observation
 //   POST  {reportId, sample: true}
 //         admins: sort every comp the sample knows, with its sample reason,
-//         mark them reviewed and set the sample's anchor (Dispatch 07)
+//         mark them reviewed and set the sample's anchor (Dispatch 07), and
+//         store Hubert's review of each, feedback and take (Dispatch 25)
 //   PATCH {reportId, reportCompId, reviewed?, anchor?, confirmed?, tier?, note?, tags?, features?, removed?}
 //         (tags: the list's, or the agent's own (DP-6, Dispatch 20): see cleanTags)
 //         mark a comp reviewed; make it the anchor (★, one per report, any
@@ -29,7 +30,8 @@ import { compRecordFromManual, FACT_CHECKS, ParseError, PARSER_VERSION, type Man
 import { withActor, type Queryable } from '../db.ts';
 import { newYorkToday } from '../links.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
-import { SAMPLE_TIERS } from '../sample/barclay-17l.ts';
+import { SAMPLE_REVIEWS, SAMPLE_TIERS } from '../sample/barclay-17l.ts';
+import { appendReview } from '../reviews.ts';
 import { samplePhotos } from '../sample/photos.ts';
 import { mayUseSample, requireUser } from '../session.ts';
 import { cleanFeatures, isTag } from '../../workspace/features.ts';
@@ -330,6 +332,16 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
           await saveEdits(tx, reportId, comp.id, { note: sample.reason, tags: sample.tags, ...(sample.features ? { features: sample.features } : {}) });
           await setReviewed(tx, reportId, comp.id, true);
           if (sample.anchor) await setAnchor(tx, reportId, comp.id, true);
+          // Hubert's review of it (Dispatch 25 item 7): feedback on the sample's note, then his take. Once per comp.
+          const review = SAMPLE_REVIEWS[sample.propertyKey];
+          if (review) {
+            const at = new Date().toISOString();
+            const weak = review.weak ? { reason: review.weak } : null;
+            await appendReview(tx, reportId, comp.id, [
+              { at, kind: 'feedback', text: review.feedback, weak, by: user.email, note: sample.reason, tags: sample.tags, sample: true },
+              { at, kind: 'take', text: review.take, weak, by: user.email, tier: review.tier, tierWhy: review.tierWhy, sample: true },
+            ], { ifEmpty: true });
+          }
         }
         if (!comps.length) throw new HttpError(409, 'no_sample_comps', 'Import the sample export first (step 2): the sample sorts its comps.');
         // Every other comp in the report (a pasted link, one typed in) gets a placeholder sort, marked

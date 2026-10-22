@@ -8,6 +8,7 @@
 // reports.target. The call and the target never reach the assistant (§8.4).
 import type { IsoDate, LaundryState, ListingStatus, OutdoorKind, ResultKind, Tier } from '../engine/index.ts';
 import type { Acknowledgment } from './qa.ts';
+import type { ReviewEntry } from './review.ts';
 
 /**
  * One value the agent entered: when, whether it's their estimate (input
@@ -243,6 +244,13 @@ export interface WorkspaceState {
    * agent took off isn't put back.
    */
   tagsOffered?: Record<string, string[]>;
+  /**
+   * Hubert's review rounds, by report comp id (Dispatch 25, workspace/review.ts).
+   * Written only by the server's review call and the sample; the browser never
+   * sends it (a state save keeps the stored one), and it reaches the browser on
+   * each comp's `review`, not here.
+   */
+  reviews?: Record<string, ReviewEntry[]>;
 }
 
 export type ReasonType = 'property' | 'client' | 'method';
@@ -290,6 +298,13 @@ export interface CompJudgment {
    * kept them. Shown with a plain <img>; never fetched, proxied or copied.
    */
   photos?: string[];
+  /**
+   * The per-comp review (Dispatch 25): Hubert's feedback rounds and takes on
+   * this comp, oldest first, append-only, so a mentor can see the learning
+   * later. Stored in reports.state.reviews by the server alone; advice only:
+   * nothing in the engine reads it, and it never sets the tier.
+   */
+  review?: ReviewEntry[];
 }
 
 /** The source facts the agent can correct on a comp's card: a closed list, checked by the server. */

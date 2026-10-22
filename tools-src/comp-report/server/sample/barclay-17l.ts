@@ -118,3 +118,91 @@ export function sampleWalkthrough() {
     send: SAMPLE_SEND,
   };
 }
+
+/**
+ * Hubert's review of each sample comp (Dispatch 25 item 7), so a demo shows the
+ * per-comp flow with his view already there: a round of feedback on the
+ * sample's note, then his take, with the tier he'd give and his weak flag.
+ * Stored by the sample sort, marked sample, once per comp. His tier differs
+ * from the sample's on 101 Leonard: the agent decides.
+ */
+export interface SampleReview {
+  feedback: string;
+  take: string;
+  tier: Tier;
+  tierWhy: string;
+  weak?: string;
+}
+
+export const SAMPLE_REVIEWS: Record<string, SampleReview> = {
+  'pk1|ny|new york|200 chambers st|10A': {
+    feedback: 'What holds up:\n- Full service, water views and a similar size all match the home.\nLook again:\n- You call it the closest match: say what still differs, such as the lower floor, so the client sees you weighed it.',
+    take: 'A full-service Tribeca condo close in size, with water views like the home’s. It sits a few floors lower, which works slightly in the home’s favour. The best single comparison in the set.',
+    tier: 'primary',
+    tierWhy: 'Same kind of building and home, recent, and close by: it should set the range.',
+  },
+  'pk1|ny|new york|79 laight st|1A': {
+    feedback: 'What holds up:\n- A public-record closing with no listing data can’t be checked for condition.\nLook again:\n- Say what the ground floor means against a 17th-floor home: that’s the bigger gap.',
+    take: 'A ground-floor closing from public records, with no listing behind it. Nothing says what condition it was in or what it offered, and the floor is far from the home’s.',
+    tier: 'excluded',
+    tierWhy: 'Too little is known about it to lean on.',
+    weak: 'ground floor, public-record closing with no listing data',
+  },
+  'pk1|ny|new york|181 hudson st|1A': {
+    feedback: 'What holds up:\n- A loft in a small building with no doorman is a different product from a full-service condo.\nLook again:\n- Selling over its ask tells you about demand for lofts, not about the home: keep that out of the comparison.',
+    take: 'A ground-floor loft in a small walk-up-style building, much smaller than the home and without its services. Useful only to show the neighbourhood’s demand.',
+    tier: 'secondary',
+    tierWhy: 'Context at most: a different kind of home.',
+    weak: 'no doorman against a full-service home, much smaller',
+  },
+  'pk1|ny|new york|5 franklin pl|14A': {
+    feedback: 'What holds up:\n- High floor, full service and a similar size: a fair comparison.\nLook again:\n- Its size is approximate, so its price per square foot is too. Say so when you lean on it.',
+    take: 'A high-floor, full-service condo of a similar size, recently sold. Its square footage is approximate, so treat its price per square foot as a guide rather than an exact figure.',
+    tier: 'primary',
+    tierWhy: 'A close match on the things that move price here.',
+  },
+  'pk1|ny|new york|66 leonard st|12A': {
+    feedback: 'What holds up:\n- Similar floor and size in a full-service building.\nLook again:\n- Nothing on its condition or views: add what you know from the listing.',
+    take: 'Similar floor and size, in a full-service building close by. A solid comparison, though the building’s design carries a premium some buyers pay for.',
+    tier: 'primary',
+    tierWhy: 'Matches the home on floor, size and service.',
+  },
+  'pk1|ny|new york|108 leonard st|7G': {
+    feedback: 'What holds up:\n- Similar size and full service.\nLook again:\n- It’s an ask, not a sale: say what that means for how much weight it gets.',
+    take: 'A full-service condo of a similar size, still on the market. Its ask shows where sellers are pricing today; the floor is lower than the home’s.',
+    tier: 'primary',
+    tierWhy: 'Current ask evidence of the same kind of home.',
+  },
+  'pk1|ny|new york|101 leonard st|5B': {
+    feedback: 'What holds up:\n- With no floor in the export, you can’t compare it on floor.\nLook again:\n- An ask per foot far below the rest is usually a different product or condition: find out which before you keep it.',
+    take: 'No floor in the export, and its ask per foot sits far below every other comp. Something about it is different, and nothing here says what.',
+    tier: 'excluded',
+    tierWhy: 'Until you know why it’s priced so far below the rest, it would only pull the range down.',
+    weak: 'ask per foot far below the rest, with no floor to explain it',
+  },
+  'pk1|ny|new york|25 n moore st|9C': {
+    feedback: 'What holds up:\n- Similar size and floor.\nLook again:\n- It’s an ask: and what kind of building is it? Service level matters against 100 Barclay.',
+    take: 'Close in size and floor, still on the market. A fair read of current asks nearby, as long as the building’s service is comparable.',
+    tier: 'primary',
+    tierWhy: 'Current ask evidence close to the home in size and floor.',
+  },
+  'pk1|ny|new york|111 murray st|35A': {
+    feedback: 'What holds up:\n- New development on a far higher floor is a different product.\nLook again:\n- Its ask above the sold band is worth naming to the client as the top of the market, not as a comp.',
+    take: 'A new-development tower unit far higher up, asking well above what comparable homes have sold for. It shows the ceiling of the area, not the home’s value.',
+    tier: 'secondary',
+    tierWhy: 'Context for the top of the market.',
+  },
+  'pk1|ny|new york|100 barclay st|11F': {
+    feedback: 'What holds up:\n- Same building and layout: the strongest kind of evidence.\nLook again:\n- With no size, it can’t give a price per square foot. Lean on its price and the floor difference instead.',
+    take: 'Same building and layout, six floors lower. The most direct evidence there is for the home, even without a size to compare per foot.',
+    tier: 'primary',
+    tierWhy: 'Same building, same layout.',
+  },
+  'pk1|ny|new york|77 reade st|PHA': {
+    feedback: 'What holds up:\n- A penthouse is a different product from a 17th-floor unit.\nLook again:\n- Say what makes it different besides the floor: size, outdoor space, views.',
+    take: 'A penthouse, much bigger than the home. Buyers pay for different things up there, so it says little about the home’s value.',
+    tier: 'secondary',
+    tierWhy: 'Context only: a different product.',
+    weak: 'a penthouse, much bigger than the home',
+  },
+};

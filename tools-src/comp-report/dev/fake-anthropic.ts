@@ -18,6 +18,9 @@
 // notes, with no figure of its own, or the agent's lines tidied — first
 // letters capitalised, a full stop, "i" made "I".
 //
+// A review request (Dispatch 25: one comp, structured output) gets Hubert's
+// feedback on the agent's note or his take on the comp: see fakeCompReview.
+//
 // A writer request (CR-5: structured output, the report as JSON) gets a draft
 // in the writer's shape, citing only the report's own figures — unless the
 // agent's next step starts with "refuse" (a refusal) or "invent" (a draft
@@ -143,6 +146,46 @@ export function fakeLines(body: Block): Script {
   return { content: [{ type: 'text', text: JSON.stringify(out) }], stopReason: 'end_turn', delayMs: 5 };
 }
 
+/**
+ * Hubert on one comp (server/comp-review.ts): feedback on the agent's note, or his take, from the comp
+ * in the request, citing only its figures. A note starting "invent" gets a point with a figure the comp
+ * doesn't have (for the grounding to drop); the comp's first flagged check makes it weak.
+ */
+export function fakeCompReview(body: Block): Script {
+  const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;
+  const text = messages[0]?.content.map((b) => String(b.text ?? '')).join('') ?? '';
+  const input = JSON.parse(/<comp_review>\n([\s\S]*)\n<\/comp_review>/.exec(text)?.[1] ?? '{}') as {
+    comp?: { name?: string; status?: string; checks?: string[]; against_the_home?: string[] };
+    agent?: { note?: string | null; tags?: string[] };
+    agent_asks?: string;
+  };
+  const name = input.comp?.name ?? 'This comp';
+  const check = input.comp?.checks?.[0];
+  const weak = { weak: Boolean(check), weak_reason: check ?? '' };
+  if (input.agent) {
+    const note = input.agent.note ?? '';
+    const out = {
+      holds_up: [`You name what makes ${name} comparable.`],
+      look_again: [
+        input.comp?.against_the_home?.[0] ? `Weigh this too: it is ${input.comp.against_the_home[0]}.` : 'Say how it differs from the home.',
+        ...(/^\s*invent\b/i.test(note) ? ['It sold for $9,876,543, well above the rest.'] : []),
+      ],
+      ...weak,
+    };
+    return { content: [{ type: 'text', text: JSON.stringify(out) }], stopReason: 'end_turn', delayMs: 5 };
+  }
+  if (/^\s*refuse\b/i.test(input.agent_asks ?? '')) {
+    return { content: [], stopReason: 'refusal', stopDetails: { type: 'refusal', category: null, explanation: null }, delayMs: 5 };
+  }
+  const out = {
+    reasoning: `${name} is ${input.comp?.status ?? 'a sale'} nearby.${input.comp?.against_the_home?.[0] ? ` It is ${input.comp.against_the_home[0]}.` : ''}${input.agent_asks ? ' You told me something the data doesn’t show, and I took it into account.' : ''} It sold for $9,876,543.`,
+    tier: check ? 'secondary' : 'primary',
+    tier_why: check ? 'A flagged comp is context at most.' : 'It matches the home on what moves price.',
+    ...weak,
+  };
+  return { content: [{ type: 'text', text: JSON.stringify(out) }], stopReason: 'end_turn', delayMs: 5 };
+}
+
 const FIELD_WORDS: Record<string, string> = {
   'next step': 'next_step', headline: 'headline', subject: 'subject', 'how i chose the comps': 'chosen',
   'things to consider': 'consider', signed: 'signed', 'sign-off': 'signed',
@@ -150,6 +193,7 @@ const FIELD_WORDS: Record<string, string> = {
 
 function echo(body: Block): Script {
   const format = (body.output_config as Block | undefined)?.format as { schema?: { properties?: Block } } | undefined;
+  if (format?.schema?.properties && 'weak' in format.schema.properties) return fakeCompReview(body);
   if (format?.schema?.properties && !('headlines' in format.schema.properties)) return fakeLines(body);
   if (format) return fakeWriterDraft(body);
   const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;

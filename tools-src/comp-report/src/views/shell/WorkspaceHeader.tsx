@@ -5,6 +5,7 @@ import { readinessLine } from '../workspace/screens.ts';
 import type { Workspace } from '../workspace/model.ts';
 import { progressSteps, rowCta } from './progress.ts';
 import { homeSubLine } from './subline.ts';
+import { stepDone } from '../../../workspace/review.ts';
 
 export function WorkspaceHeader({ ws, onBack, saveLine }: { ws: Workspace; onBack: () => void; saveLine: ReactNode }) {
   const sub = homeSubLine({ side: ws.side, brief: ws.brief, send: ws.send, intake: ws.intake, sf: ws.sf });
@@ -54,6 +55,8 @@ export function StepCta({ ws, className = 'sh-cta' }: { ws: Workspace; className
   const helper = ws.screen === 'sort' ? readinessLine(ws.readiness) : '';
   // Admins and guests can sort with the sample right where Findings is locked, to walk the report through.
   const sampleSort = ws.canSample && cta.disabled && ws.screen === 'sort';
+  // Review comps leads Sort while any comp is still to review (Dispatch 25): the agent reasons about each before tiering it.
+  const toReview = ws.screen === 'sort' && !ws.readOnly ? ws.comps.filter((c) => c.judgment && !c.unsortable && !stepDone(c, ws.level)).length : 0;
   return (
     <span className={className}>
       {sampleSort && (
@@ -66,7 +69,10 @@ export function StepCta({ ws, className = 'sh-cta' }: { ws: Workspace; className
           ? <button type="button" className="link sh-helper" onClick={() => ws.setSortFilter({ incomplete: true, tags: [] })}>{helper}</button>
           : <span className="sh-helper plain">{helper}</span>
       )}
-      <button type="button" className="btn primary" disabled={cta.disabled} onClick={() => ws.go(cta.target)}>{cta.label}</button>
+      {toReview > 0 && (
+        <button type="button" className="btn primary sh-review" onClick={() => ws.openReview()}>Review comps ({toReview})</button>
+      )}
+      <button type="button" className={`btn${toReview > 0 ? '' : ' primary'}`} disabled={cta.disabled} onClick={() => ws.go(cta.target)}>{cta.label}</button>
     </span>
   );
 }

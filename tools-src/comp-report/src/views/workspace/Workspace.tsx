@@ -10,7 +10,7 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, geocodeApi, maySample, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { ApiError, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
@@ -32,6 +32,7 @@ import { SendStep } from './SendStep.tsx';
 import { hasSF, isScreen, sortReadiness, type Level, type ScreenId } from './screens.ts';
 import { SortFirst } from './SortFirst.tsx';
 import { SortStep } from './SortStep.tsx';
+import { ReviewFlow } from '../review/ReviewFlow.tsx';
 import { Center, DevStrip, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
 import { ReportBar } from '../shell/ReportBar.tsx';
 import { ProgressRow, WorkspaceHeader } from '../shell/WorkspaceHeader.tsx';
@@ -169,6 +170,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
   const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
+  const [reviewing, setReviewing] = useState<{ at: string | null } | null>(null);
   const today = useMemo(localToday, []);
   const save = useAutosave(reportId);
 
@@ -354,6 +356,19 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     return next;
   }, [reportId]);
 
+  // Hubert on one comp (Dispatch 25): in the same chain, so feedback reads the note just saved.
+  const askReview = useCallback((reportCompId: string, job: 'feedback' | 'take', asks?: string) => {
+    const practice = level === 'practice' && me.user.capability !== 'practice';
+    const next = compChain.current.then(async () => {
+      const r = await reviewApi.ask(reportId, reportCompId, job, { ...(asks ? { asks } : {}), ...(practice ? { practice } : {}) });
+      const d = r.workspace;
+      setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads, geocodes: d.geocodes } : d));
+      return r;
+    });
+    compChain.current = next.then(() => undefined, () => undefined);
+    return next;
+  }, [reportId, level, me.user.capability]);
+
   // The tags the data settles (NB-9 C): contradicted tags come off; a full agent's supported tags are
   // pre-filled once each, a practice agent sees them as chips. Saved in one call; one at a time.
   const settled = useMemo(
@@ -509,6 +524,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     sortFilter,
     setSortFilter,
     editComp,
+    askReview,
+    reviewing,
+    openReview: (reportCompId) => setReviewing({ at: reportCompId ?? null }),
+    closeReview: () => setReviewing(null),
     tagSuggestions: settled?.suggestions ?? {},
     setTitle: (title) => {
       setData((d) => (d ? { ...d, report: { ...d.report, title } } : d));
@@ -671,6 +690,11 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         </div>
       )}
 
+      {reviewing && screen === 'sort' && (
+        <ErrorBoundary resetKey={`review:${reviewing.at ?? ''}`} onBack={() => setReviewing(null)}>
+          <ReviewFlow ws={ws} startAt={reviewing.at} onClose={() => setReviewing(null)} />
+        </ErrorBoundary>
+      )}
       {drawerOpen && <HubertDrawer ws={ws} />}
       {toastText && (
         <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">

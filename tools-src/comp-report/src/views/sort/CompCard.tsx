@@ -17,6 +17,7 @@ import { compDistance } from '../../../workspace/distance.ts';
 import { cleanFeatures, featuresFromRecord, groupsFor, sharedCount, toggleTag, type Features, type Tag } from '../../../workspace/features.ts';
 import { isoDay, psf } from '../../../workspace/format.ts';
 import { OVERRIDE_KEYS, type OverrideKey } from '../../../workspace/state.ts';
+import { weakFlag } from '../../../workspace/review.ts';
 import { readPrice } from '../comp/CompForm.tsx';
 import { DataChip, FeaturePicker, TagPicker } from '../comp/Pickers.tsx';
 import { compPrice, listingUrl } from '../workspace/comps.tsx';
@@ -395,6 +396,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
     ) : null;
   };
 
+  const weak = weakFlag(j?.review, ws.level);
   const shownTags = editing ? draft!.tags : row.tags;
   const needs = new Set(row.needs);
   const sq = (on: boolean) => (on ? <span className="so-need-sq" aria-hidden="true" /> : null);
@@ -439,6 +441,9 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
         )}
         <div className="so-card-top">
           <div className="so-util">
+            {j && row.group !== 'unsortable' && (
+              <button type="button" className="so-review" onClick={() => ws.openReview(j.reportCompId)}>Review with Hubert</button>
+            )}
             {url && <a className="so-se" href={url} target="_blank" rel="noreferrer noopener">StreetEasy ↗</a>}
             {canEdit && !editing && (
               <button type="button" className="so-edit" onClick={startEdit}>
@@ -550,6 +555,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
           <p className="so-note empty">No note yet.</p>
         )}
 
+        {weak && <p className="so-weak-line"><strong>Hubert:</strong> looks weak, {weak.reason}. Your call: it doesn’t change the tier.</p>}
         {why && <p className="so-why"><span className="so-why-sq" aria-hidden="true" />Doesn’t count yet: {why}.</p>}
         {error && <p className="so-error" role="alert">{error}</p>}
         {editing && (
@@ -570,7 +576,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
  * <img> with no referrer, loaded lazily; one that fails to load drops out, and
  * none left shows the placeholder. Never fetched by the server.
  */
-function Photos({ photos, address, editing }: { photos: string[]; address: string; editing: boolean }) {
+export function Photos({ photos, address, editing }: { photos: string[]; address: string; editing: boolean }) {
   const [at, setAt] = useState(0);
   const [broken, setBroken] = useState<string[]>([]);
   const shown = photos.filter((p) => !broken.includes(p));

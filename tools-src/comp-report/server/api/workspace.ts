@@ -14,6 +14,7 @@
 // Every query is scoped by owner as well as by row-level security (§12).
 import { cleanListingExtract, cleanPhotoUrls, type ParseWarning } from '../../engine/index.ts';
 import { loadGeocodes, reportBuildings, type GeocodeView } from '../buildings.ts';
+import { cleanReview } from '../../workspace/review.ts';
 import type { CompJudgment, CompSource } from '../../workspace/state.ts';
 import { withActor, type Queryable } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
@@ -119,6 +120,12 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     [reportId],
   )).rows;
 
+  // Hubert's review rounds (Dispatch 25), kept in the report's state by comp: each comp carries its own.
+  const reviews = (await tx.query<{ reviews: Record<string, unknown> | null }>(
+    `select state -> 'reviews' as reviews from comp_report.reports where id = $1`,
+    [reportId],
+  )).rows[0]?.reviews ?? {};
+
   const source = (c: (typeof comps)[number]): CompSource => {
     if (c.source === 'listing' && c.raw && c.as_of) {
       return { kind: 'listing', extract: cleanExtract(c.raw), asOf: c.as_of, url: c.links?.[0] ?? null, readId: c.read_id, confirmedAt: c.confirmed_at ? iso(c.confirmed_at) : null };
@@ -127,7 +134,9 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     return { kind: 'export', importId: c.import_id };
   };
 
-  return comps.map((c) => ({
+  return comps.map((c) => {
+    const review = cleanReview(reviews[c.id]);
+    return {
     reportCompId: c.id,
     propertyKey: c.property_key,
     evidenceClass: c.evidence_class,
@@ -145,7 +154,9 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     factOverrides: c.fact_overrides ?? {},
     // A listing's photos, and a sample comp's (an export row carries none, but the sample's are kept: sample/photos.ts).
     photos: c.source === 'listing' || c.source === 'se_export' ? listingPhotos(c.raw) : [],
-  }));
+    ...(review.length ? { review } : {}),
+    };
+  });
 }
 
 /**
@@ -224,7 +235,8 @@ export async function loadWorkspace(tx: Queryable, user: SessionUser, reportId: 
     brief: report.brief ?? {},
     call: report.agent_call,
     target: report.target,
-    state: report.state ?? {},
+    // Hubert's review rounds reach the browser on each comp, not in the state it saves back.
+    state: withoutReviews(report.state),
     imports: imports.map((i) => ({
       id: i.id, filename: i.filename, format: i.format, asOf: String(i.as_of), parserVersion: i.parser_version,
       exportSchema: i.export_schema, compCount: i.comp_count, warnings: i.warnings, sample: i.sample,
@@ -235,6 +247,11 @@ export async function loadWorkspace(tx: Queryable, user: SessionUser, reportId: 
     geocodes: await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)),
     messageCount,
   };
+}
+
+function withoutReviews(state: Record<string, unknown> | null): Record<string, unknown> {
+  const { reviews: _reviews, ...rest } = state ?? {};
+  return rest;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -329,7 +346,10 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
     if ('state' in body) {
       if (!isObject(body.state)) throw new HttpError(400, 'bad_state', 'The state is an object.');
       checkSize('The intake', body.state, 64 * 1024);
-      set('state', body.state);
+      // Hubert's review rounds are the server's to write (Dispatch 25): whatever the browser sends, the stored ones stay.
+      const { reviews: _sent, ...state } = body.state;
+      values.push(JSON.stringify(state));
+      sets.push(`state = $${values.length}::jsonb || jsonb_strip_nulls(jsonb_build_object('reviews', state -> 'reviews'))`);
     }
     if (body.sampleData === true) sets.push('sample_data = true');
     if (!sets.length) throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
