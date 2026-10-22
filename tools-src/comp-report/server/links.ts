@@ -108,6 +108,7 @@ export function firecrawlReader(opts: {
             await sleep(backoff[attempt]!);
             continue;
           }
+          console.error('comp-report: Firecrawl unreachable', { url, timedOut, error: String(error).slice(0, 300) });
           return timedOut
             ? { ok: false, code: 'timeout', message: 'StreetEasy’s page took too long to read. Try the link again, or type the comp in.' }
             : { ok: false, code: 'provider_error', message: 'The page couldn’t be reached. Try the link again, or type the comp in.' };
@@ -118,6 +119,8 @@ export function firecrawlReader(opts: {
           continue;
         }
         if (status >= 400 || !body || body.success === false) {
+          // What Firecrawl said, in the function's log: the agent's message stays plain.
+          console.error('comp-report: Firecrawl refused a read', { url, status, error: String(body?.error ?? '').slice(0, 300) });
           return { ok: false, code: 'provider_error', message: 'The page couldn’t be read just now. Try the link again, or type the comp in.' };
         }
         const data = body.data ?? {};

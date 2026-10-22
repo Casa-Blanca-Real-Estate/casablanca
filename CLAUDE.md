@@ -6,7 +6,9 @@ Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/t
 
 **Current priority (from 2026-09-23): the comp report tool.** Noble's walk-through (2026-10-15) set the
 next round: `docs/comp-report/feedback/2026-10-15-noble/` (its `09-plan.md` orders Dispatches 15–24;
-`08-claude-design-handoff.md` is what goes to Claude Design). The master design is
+`08-claude-design-handoff.md` is what goes to Claude Design). The demo to Erez, Hannah and Kara (2026-10-22)
+reorders it: `docs/comp-report/feedback/2026-10-22-bosses-demo/notes.md` (Kimani's decisions at its end win).
+The master design is
 `docs/comp-report/01-design.md` — every comp report dispatch builds from it; `00-orientation.md`
 holds the research and sources behind it. Everything that was in flight before it
 is parked, with state and a resume order, in `docs/parked/2026-09-23-threads.md`.
@@ -129,6 +131,8 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 22 | [Comp report — access, the sign-in log and the activity log (CR-7e)](docs/dispatch/22-comp-report-access-and-activity-log.md) | Mason, or a second builder | 22a after 18 (merge waits on NB-23); 22b after 21 |
 | 23 | [Comp report — samples that reset, reading production safely (CR-7f)](docs/dispatch/23-comp-report-samples-and-inspection.md) | Mason, or a second builder | Items 1–2 after 22a; items 3–4 from the Casa account, after 22b |
 | 24 | [Calliste — Hubert sees what the agent sees (CR-H1)](docs/dispatch/24-calliste-hubert-sees-what-the-agent-sees.md) | Calliste (new) | Waits on the move to the Casa account |
+| 25 | [Comp report — the per-comp review, the human first (CR-8a)](docs/dispatch/25-comp-report-per-comp-review.md) | a build thread (Mason's lane) | Ready after the live listing read fix (D-29) |
+| 26 | [Comp report — the Designed email is the report, with photos (CR-8b)](docs/dispatch/26-comp-report-designed-email-first.md) | a build thread (Mason's lane) | After 25; items 1 and 5 can go first |
 
 The agent-site port runs in slices. Slices 0 and 4 (Dispatches 02 and 03) are done; Slices 2–3,
 the visual port, wait on the template capture in `agent-site-template.md` §5; Slice 5 (SEO and

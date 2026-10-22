@@ -143,11 +143,11 @@
 /* About the home: the pickers at the details' size (150px labels, 7px 12px chips, #eeece7 rules). */
 .nr-about { display: flex; flex-direction: column; }
 .nr-about > .nr-sec-h { padding-bottom: 8px; }
-.nr-about .feature-row, .nr-feat-row {
+.nr-about .feature-row, .nr-more .feature-row, .nr-feat-row {
   display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: center;
   padding: 12px 0; border-top: 1px solid var(--cb-line);
 }
-.nr-about .feature-label, .nr-feat-row > .fh { font-size: 11px; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-black); }
+.nr-about .feature-label, .nr-more .feature-label, .nr-feat-row > .fh { font-size: 11px; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-black); }
 .nr-about .chips.small, .nr-more .chips.small { gap: 6px; }
 .nr-about .chips.small .chip, .nr-more .chips.small .chip { padding: 7px 12px; }
 .nr-year { font-size: 14px; font-weight: 800; }

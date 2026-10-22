@@ -8,6 +8,7 @@ import { titleFromLink } from '../../../workspace/links.ts';
 import { CompForm, type CompPrefill } from '../comp/CompForm.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { inFlight } from '../workspace/reads.ts';
+import { ReadingNotice } from '../workspace/ReadingNotice.tsx';
 
 function readTitle(r: LinkReadView): string {
   return titleFromLink(r.url) ?? r.url.replace(/^https:\/\//, '');
@@ -37,6 +38,7 @@ export function Reads({ ws }: { ws: Workspace }) {
   if (!pending.length && !failed.length) return null;
   return (
     <div className="so-reads panel">
+      <ReadingNotice reads={pending} what="comps" />
       {pending.map((r) => (
         <div key={r.id} className="so-read" aria-busy="true">
           <span className="so-thumb" aria-hidden="true" />

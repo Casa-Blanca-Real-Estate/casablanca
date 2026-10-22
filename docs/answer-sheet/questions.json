@@ -1,6 +1,6 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-21 (evening):</strong> recorded your answers to NB-1 to NB-10, PP-1 (D-24), AC-2 to AC-4, TD-9 and TD-14; they're under each topic's settled list. CR-3 stays open until the eval drafts are in, and AC-7 is back as your reminder. NB-11 to NB-28 are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
+  "since": "<strong>Updated 2026-10-22:</strong> <strong>New:</strong> PP-3 to PP-12, the roster import's questions about the email-signatures doc (Profile pics). Each defaults to importing what the doc says. Earlier: NB-11 to NB-28 are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
   "newIds": [
     "NB-11",
     "NB-12",
@@ -24,7 +24,17 @@
     "TD-15",
     "TD-16",
     "TD-17",
-    "TD-18"
+    "TD-18",
+    "PP-3",
+    "PP-4",
+    "PP-5",
+    "PP-6",
+    "PP-7",
+    "PP-8",
+    "PP-9",
+    "PP-10",
+    "PP-11",
+    "PP-12"
   ],
   "topics": [
     {
@@ -694,8 +704,246 @@
       "prefix": "PP",
       "url": "{repo}/docs/dispatch/12-profile-pic-tracker.md",
       "linkLabel": "Open Dispatch 12",
-      "intro": "<p>Painter's roster (Dispatch 12, phase 1) is merged in #71. Phase 2 imports the roster once.</p>",
-      "questions": [],
+      "intro": "<p>Phase 2, storage, is merged in #82. The one-time roster import is drafted from the email-signatures doc: 123 agents. These are the things in the doc that look wrong. Each default is \"import it as the doc has it\", so you can skip any you're not sure of.</p>",
+      "questions": [
+        {
+          "id": "PP-3",
+          "q": "Esther Wang's email: is it w.wang@ or e.wang@?",
+          "short": "Esther Wang: w.wang@ or e.wang@?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Her signature says <code>w.wang@casa-blanca.com</code>. Every other agent's address starts with their first initial.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
+          "options": [
+            [
+              "A",
+              "w.wang@, as the doc has it",
+              "",
+              true
+            ],
+            [
+              "B",
+              "e.wang@",
+              ""
+            ],
+            [
+              "C",
+              "Something else",
+              "put it in the note"
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-4",
+          "q": "Annika Yan's email: is it a.yen@ or a.yan@?",
+          "short": "Annika Yan: a.yen@ or a.yan@?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Her signature says <code>a.yen@casa-blanca.com</code>, but her name is spelled Yan.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
+          "options": [
+            [
+              "A",
+              "a.yen@, as the doc has it",
+              "",
+              true
+            ],
+            [
+              "B",
+              "a.yan@",
+              ""
+            ],
+            [
+              "C",
+              "Something else",
+              "put it in the note"
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-5",
+          "q": "Mónica-Tezla's surname: Vega-Gorsum or Vega-Gorsun?",
+          "short": "Mónica: Gorsum or Gorsun?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Her signature says Vega-Gorsum. Her email (<code>m.vegagorsun@</code>) and her Drive folder say Gorsun.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
+          "options": [
+            [
+              "A",
+              "Vega-Gorsun",
+              "the email and the folder are right",
+              true
+            ],
+            [
+              "B",
+              "Vega-Gorsum",
+              "and her email is right anyway"
+            ],
+            [
+              "C",
+              "Something else",
+              "put it in the note"
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-6",
+          "q": "Franceiry Rosario or Franciery Rosario?",
+          "short": "Franceiry or Franciery?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The signature says Franceiry. The studio's photo library files her as <code>franciery-r</code>.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
+          "options": [
+            [
+              "A",
+              "Franceiry, as the signature has it",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Franciery",
+              ""
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-7",
+          "q": "Three phone numbers are on more than one agent. Are they right?",
+          "short": "Shared phone numbers: right?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> 301.456.5219 is on Alana Miller, Andrew Fludd and Melaina Ferguson. 646.340.2743 is on Erez, Eyal Zarur and Jeff Martin. 347.243.0953 is on Kursad Nural and Samir Sujkovic. That looks like copy-paste between signature blocks.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
+          "options": [
+            [
+              "A",
+              "Import them as they are",
+              "fix later in the CMS",
+              true
+            ],
+            [
+              "B",
+              "Here are the right numbers",
+              "put them in the note"
+            ],
+            [
+              "C",
+              "Import those agents with no phone",
+              "until someone checks"
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-8",
+          "q": "Oussama Ouatik and Sierra Jones have no phone. Do you have theirs?",
+          "short": "No phone: Oussama, Sierra",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Their signature blocks have no phone line.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
+          "options": [
+            [
+              "A",
+              "Import them with no phone",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Here they are",
+              "put them in the note"
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-9",
+          "q": "Is Cecilia Rubenstein the Cecilia in the photo library (cecilia-c)?",
+          "short": "Cecilia Rubenstein = cecilia-c?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The library has a photo filed as <code>cecilia-c</code>. The doc's only Cecilia is Cecilia Rubenstein.</p><p><strong>Why it needs you.</strong> If it's her, she imports as <code>cecilia-c</code> with her photo counted as placed. If not, she imports as <code>cecilia-r</code> with no photo.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, same person",
+              "",
+              false
+            ],
+            [
+              "B",
+              "No, someone else",
+              "",
+              false
+            ],
+            [
+              "C",
+              "Not sure",
+              "import her as cecilia-r",
+              true
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-10",
+          "q": "Emma Caldicott: import her as Emma Liuzzi?",
+          "short": "Emma Caldicott → Emma Liuzzi?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Team feedback (Oct 9) says Emma C. is now Emma Liuzzi, with a new photo. The doc still has Emma Caldicott, <code>e.caldicott@</code>.</p><p><strong>Why it needs you.</strong> The name sets her slug for good (<code>emma-c</code> or <code>emma-l</code>). Her email may have changed too.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, as Emma Liuzzi",
+              "put her new email in the note if it changed"
+            ],
+            [
+              "B",
+              "As Emma Caldicott for now",
+              "",
+              true
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-11",
+          "q": "Who's still at Casa among the people with photos but no signature?",
+          "short": "Photos but no signature: who's still here?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> These people have a photo folder or a library photo but no block in the signatures doc, so the import leaves them out. <strong>RAWS:</strong> Arianna Fotinos, Andrea Mezvinsky, Tyler W French, Yaya Barry, Logan Polish, Joshua Weidenbaum, Zein Aljabri, Shaul Batzon, Serhii Holovko, Sigmund Rhee, Amalie Nordstrand, William Monge, Nisha Saxena, Nadine Fuller. <strong>@ to do:</strong> Suraj Vishwakarma, Sharif Santiago, Nuri Daynish. <strong>Library only:</strong> brittany-f-2, kashief-e, sahara-c, shlomi-d.</p><p><strong>Why it needs you.</strong> Agents are never invented from a folder name. Anyone you name is added with just a name, and you fill in the rest in the Agent CMS.</p>",
+          "options": [
+            [
+              "A",
+              "Leave them all out",
+              "add them in the CMS when needed",
+              true
+            ],
+            [
+              "B",
+              "Add these",
+              "list the names in the note"
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        },
+        {
+          "id": "PP-12",
+          "q": "Already-filed photos: is Sept 29 fine as their generate date?",
+          "short": "Filed photos dated Sept 29: OK?",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Per PP-2, the 103 agents whose photo is in the studio's library import as placed, with all five placements done. Drive gives no real date, so they're dated 2026-09-29, the day the library was added. A new photo after that date shows as needing placing again.</p>",
+          "options": [
+            [
+              "A",
+              "Sept 29 is fine",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Use another date",
+              "put it in the note"
+            ]
+          ],
+          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
+        }
+      ],
       "settled": [
         "<strong>PP-2 · Already-filed photos: placed or to do?</strong>: recorded 2026-10-15.",
         "<strong>PP-1 · D-24: the signatures doc or FileMaker?</strong>: A, the email-signatures doc for now; Casa's own agent store and an Agent Character Poll later (D-24), recorded 2026-10-21."

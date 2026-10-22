@@ -1,11 +1,15 @@
 // New report, 2 of 3: the details (the handoff, screen 04), reused as Edit
-// details from a workspace's ✎. The address and where it came from; Buyer or
-// Seller, Co-op or Condo and the client on one line; General (the size, with
-// Estimate, or "Not listed": a co-op with no size is the normal case, and then
-// nothing in the report shows a per-SF figure; beds, baths, floor, the ask, the
-// charges and taxes); About the home (the five pickers and Year built); Notes.
-// The engine's other facts fold away under "More about the home", so nothing
-// it reads is dropped. Everything saves as it's typed.
+// details from a workspace's ✎. A home read from a link gets a photo header
+// (HomeHero): the address over the listing's photo, and while the page is read,
+// the progress in the middle of it, with only the notes below (2026-10-22).
+// Then Buyer or Seller, Co-op or Condo and the client on one line; General (the
+// size, with Estimate, or "Not listed": a co-op with no size is the normal
+// case, and then nothing in the report shows a per-SF figure; beds, baths,
+// floor, the ask, the charges and taxes); The home (washer/dryer, outdoor
+// space, views, condition) and The building (services, policies, the
+// neighborhood, year built), each with its rarer facts folded under "More
+// about…", so nothing the engine reads is dropped; Notes. Everything saves as
+// it's typed.
 //
 // Dispatch 20: with no read of the home, the size is a plain field (the
 // Estimate toggle beside it); "Not listed" only after a read that gave none.
@@ -20,6 +24,7 @@ import { entry } from '../workspace/bits.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { Info } from './Frame.tsx';
 import { TYPE_LABEL } from './Home.tsx';
+import { HomeHero } from './HomeHero.tsx';
 import { NrNumber } from './inputs.tsx';
 
 const LAUNDRY: { value: LaundryState; label: string }[] = [
@@ -38,7 +43,7 @@ function pickerType(kind: string | undefined, reportType: 'condo' | 'coop'): Pro
   if (!kind) return reportType;
   return kind === 'house' ? 'townhouse' : (kind as PropertyType);
 }
-type YesNoKey = 'dishwasher' | 'centralAir' | 'fireplace' | 'corner';
+type YesNoKey = 'dishwasher' | 'centralAir' | 'fireplace';
 
 export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNode }) {
   const { intake, today, readOnly: off } = ws;
@@ -108,23 +113,58 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
     </label>
   );
 
-  const moreFilled = (['laundry', 'dishwasher', 'centralAir', 'fireplace', 'corner', 'newDevelopment', 'outdoorSqft'] as const)
-    .filter((k) => intake[k] !== undefined).length;
+  const kindType = pickerType(intake.kind?.value, ws.propertyType);
+  const feats = ws.homeFeatures;
+  const moreHome = (['dishwasher', 'centralAir', 'fireplace', 'outdoorSqft'] as const).filter((k) => intake[k] !== undefined).length
+    + (['exposure', 'corner'] as const).filter((k) => (feats[k] ?? []).length).length;
+  const moreBuilding = (intake.newDevelopment !== undefined ? 1 : 0)
+    + (['wellness', 'shared_outdoor'] as const).filter((k) => (feats[k] ?? []).length).length;
   const hasOutdoor = Boolean(intake.outdoorKind && intake.outdoorKind.value !== 'none');
+
+  const notesSection = (
+  <section className="nr-notes" aria-label="Notes">
+    <div className="nr-label-line">
+      <label className="nr-sec-h" htmlFor="nr-home-notes">Notes</label>
+      <Info label="About the notes" text={NOTES_TIP} align="left" />
+    </div>
+    <textarea
+      id="nr-home-notes"
+      className="box"
+      rows={3}
+      value={intake.notes?.value ?? ''}
+      disabled={off}
+      maxLength={4000}
+      placeholder="Light, views, condition, layout, storage"
+      onChange={(e) => set('notes', e.target.value.trim() ? entry(e.target.value, today) : undefined)}
+    />
+  </section>
+  );
+
+  // While the home's page is read there's little to do but wait: the photo header shows the
+  // progress, and the notes stay open for anything the agent wants to say meanwhile.
+  if (home && (home.status === 'queued' || home.status === 'running')) {
+    return (
+      <>
+        <HomeHero name={ws.report.title} read={home} sourceTitle="Reading its StreetEasy page" />
+        {notices}
+        {notesSection}
+      </>
+    );
+  }
 
   return (
     <>
-      <div className="nr-titlebar">
-        <h2 className="nr-h">{ws.report.title}</h2>
-        {home && home.status !== 'failed' && (
-          <span
-            className="nr-source"
-            title={fromPage ? `${fromPage} detail${fromPage === 1 ? '' : 's'} came from its StreetEasy page. Check them: anything you change is yours.` : 'Read from its StreetEasy page'}
-          >
-            <span className="nr-dot" aria-hidden="true" />StreetEasy
-          </span>
-        )}
-      </div>
+      {home ? (
+        <HomeHero
+          name={ws.report.title}
+          read={home}
+          sourceTitle={fromPage ? `${fromPage} detail${fromPage === 1 ? '' : 's'} came from its StreetEasy page. Check them: anything you change is yours.` : 'Read from its StreetEasy page'}
+        />
+      ) : (
+        <div className="nr-titlebar">
+          <h2 className="nr-h">{ws.report.title}</h2>
+        </div>
+      )}
       {notices}
       {switchTo && (
         <div className="nr-note nr-type-note" role="status">
@@ -231,16 +271,38 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
         </div>
       </section>
 
-      <section className="nr-about" aria-label="About the home">
-        <div className="nr-sec-h">About the home</div>
-        <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} type={pickerType(intake.kind?.value, ws.propertyType)} />
-        <label className="nr-feat-row">
-          <span className="fh">Year built</span>
-          <span className="nr-tile-line nr-year-line">
-            <NrNumber className="nr-year" label="Year built" value={intake.yearBuilt} onChange={num('yearBuilt')} today={today} disabled={off} placeholder="—" plain />
-            <span className="nr-pen" aria-hidden="true"><span>✎</span></span>
-          </span>
-        </label>
+      <section className="nr-about" aria-label="The home">
+        <div className="nr-sec-h">The home</div>
+        <Choice label="Washer/dryer" value={intake.laundry?.value} options={LAUNDRY} disabled={off} onChange={(v) => set('laundry', v ? entry(v, today) : undefined)} />
+        <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} type={kindType} only={['outdoor', 'views', 'condition']} />
+      </section>
+
+      <details className="nr-more">
+        <summary>More about the home{moreHome ? <span className="nr-sub"> ({moreHome} filled)</span> : null}</summary>
+        <div className="nr-more-body">
+          <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} type={kindType} only={['exposure', 'corner']} />
+          {/* A corner unit is the Corner chip above: the same fact, kept once. */}
+          {(['dishwasher', 'centralAir', 'fireplace'] as YesNoKey[]).map((k) => (
+            <YesNo
+              key={k}
+              label={{ dishwasher: 'Dishwasher', centralAir: 'Central air', fireplace: 'Working fireplace' }[k]}
+              value={intake[k]?.value}
+              disabled={off}
+              onChange={(v) => set(k, v === undefined ? undefined : entry(v, today))}
+            />
+          ))}
+          {hasOutdoor && (
+            <label className="nr-feat-row">
+              <span className="fh">Outdoor size</span>
+              <span><NrNumber className="nr-year" label="Outdoor size in square feet" value={intake.outdoorSqft} onChange={num('outdoorSqft')} today={today} disabled={off} placeholder="—" suffix="sq ft" /></span>
+            </label>
+          )}
+        </div>
+      </details>
+
+      <section className="nr-about" aria-label="The building">
+        <div className="nr-sec-h">The building</div>
+        <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} type={kindType} only={['building', 'policies']} />
         <label className="nr-feat-row">
           <span className="fh">Neighborhood</span>
           <span className="nr-tile-line nr-year-line">
@@ -256,38 +318,19 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
             <span className="nr-pen" aria-hidden="true"><span>✎</span></span>
           </span>
         </label>
-      </section>
-
-      <section className="nr-notes" aria-label="Notes">
-        <div className="nr-label-line">
-          <label className="nr-sec-h" htmlFor="nr-home-notes">Notes</label>
-          <Info label="About the notes" text={NOTES_TIP} align="left" />
-        </div>
-        <textarea
-          id="nr-home-notes"
-          className="box"
-          rows={3}
-          value={intake.notes?.value ?? ''}
-          disabled={off}
-          maxLength={4000}
-          placeholder="Light, views, condition, layout, storage"
-          onChange={(e) => set('notes', e.target.value.trim() ? entry(e.target.value, today) : undefined)}
-        />
+        <label className="nr-feat-row">
+          <span className="fh">Year built</span>
+          <span className="nr-tile-line nr-year-line">
+            <NrNumber className="nr-year" label="Year built" value={intake.yearBuilt} onChange={num('yearBuilt')} today={today} disabled={off} placeholder="—" plain />
+            <span className="nr-pen" aria-hidden="true"><span>✎</span></span>
+          </span>
+        </label>
       </section>
 
       <details className="nr-more">
-        <summary>More about the home{moreFilled ? <span className="nr-sub"> ({moreFilled} filled)</span> : null}</summary>
+        <summary>More about the building{moreBuilding ? <span className="nr-sub"> ({moreBuilding} filled)</span> : null}</summary>
         <div className="nr-more-body">
-          <Choice label="Laundry" value={intake.laundry?.value} options={LAUNDRY} disabled={off} onChange={(v) => set('laundry', v ? entry(v, today) : undefined)} />
-          {(['dishwasher', 'centralAir', 'fireplace', 'corner'] as YesNoKey[]).map((k) => (
-            <YesNo
-              key={k}
-              label={{ dishwasher: 'Dishwasher', centralAir: 'Central air', fireplace: 'Working fireplace', corner: 'Corner unit' }[k]}
-              value={intake[k]?.value}
-              disabled={off}
-              onChange={(v) => set(k, v === undefined ? undefined : entry(v, today))}
-            />
-          ))}
+          <FeaturePicker value={ws.homeFeatures} onChange={setFeatures} disabled={off} type={kindType} only={['wellness', 'shared_outdoor']} />
           <Choice
             label="New development"
             value={intake.newDevelopment === undefined ? undefined : intake.newDevelopment.value ? 'new' : 'resale'}
@@ -295,14 +338,10 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
             disabled={off}
             onChange={(v) => set('newDevelopment', v ? entry(v === 'new', today) : undefined)}
           />
-          {hasOutdoor && (
-            <label className="nr-feat-row">
-              <span className="fh">Outdoor size</span>
-              <span><NrNumber className="nr-year" label="Outdoor size in square feet" value={intake.outdoorSqft} onChange={num('outdoorSqft')} today={today} disabled={off} placeholder="—" suffix="sq ft" /></span>
-            </label>
-          )}
         </div>
       </details>
+
+      {notesSection}
     </>
   );
 }

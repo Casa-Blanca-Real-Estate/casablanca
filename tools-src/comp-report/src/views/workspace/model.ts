@@ -66,7 +66,8 @@ export interface Workspace {
   /** Runs a server call with the busy flag and the error line. */
   run: (label: string, work: () => Promise<void>) => Promise<void>;
   busy: string | null;
-  fillSample: (step: 'sort' | 'findings' | 'send' | 'all') => Promise<void>;
+  /** False when it didn't run: no sample here, or the agent kept what they'd entered. */
+  fillSample: (step: 'sort' | 'findings' | 'send' | 'all') => Promise<boolean>;
   messageCount: number;
   setMessageCount: (n: number) => void;
 
@@ -90,7 +91,7 @@ export interface Workspace {
   isGuest: boolean;
   viewAsNewAgent: boolean;
   setViewAsNewAgent: (on: boolean) => void;
-  /** Admin dev scaffolding (About this screen, Build notes, Fill with sample): off by default. */
+  /** Admin dev scaffolding (About this screen, build notes): off by default. Fill with sample shows whenever canSample. */
   devTools: boolean;
   /** Sort → Gate: every comp has a tier, tags and (a practice agent) a note, and none waits for a confirm. */
   readiness: SortReadiness;

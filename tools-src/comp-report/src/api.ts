@@ -32,7 +32,30 @@ async function fail(res: Response): Promise<never> {
   throw new ApiError(res.status, body.error ?? 'http_' + res.status, body.message ?? `Request failed (${res.status}).`);
 }
 
+// A GET started before the view that reads it has mounted. App starts the page's
+// first data call alongside /me, so on a reload the two functions (each maybe
+// starting cold) run side by side instead of one after the other. Each is taken
+// once, by the first matching api() call, and only while fresh. The server
+// checks access on that call as on any other, so a refused /me loses nothing.
+const early = new Map<string, { at: number; result: Promise<unknown> }>();
+const EARLY_MS = 15_000;
+
+export function prefetch(path: string): void {
+  const result = request(path, {});
+  result.catch(() => undefined); // a failure surfaces to whoever takes it
+  early.set(path, { at: Date.now(), result });
+}
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  const started = (init.method ?? 'GET') === 'GET' ? early.get(path) : undefined;
+  if (started) {
+    early.delete(path);
+    if (Date.now() - started.at < EARLY_MS) return started.result as Promise<T>;
+  }
+  return request<T>(path, init);
+}
+
+async function request<T>(path: string, init: { method?: string; body?: unknown }): Promise<T> {
   const res = await fetch(path, {
     method: init.method ?? 'GET',
     headers: await headers(),
@@ -58,7 +81,7 @@ export interface Report {
   id: string;
   title: string;
   propertyType: 'condo' | 'coop';
-  status: 'active' | 'archived';
+  status: 'active' | 'archived' | 'deleted';
   ownerEmail: string;
   /** Filled with sample data at some point (Dispatch 07). */
   sampleData: boolean;

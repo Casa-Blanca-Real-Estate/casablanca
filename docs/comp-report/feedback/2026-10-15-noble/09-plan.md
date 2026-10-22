@@ -5,6 +5,10 @@ Casanova, 2026-10-15. Built from `00-items.md` (NW-001 to NW-102) and the topic 
 layout, flow or architecture, starting with what Claude Design needs to see the tool as it really is. Phase B
 is Claude Design: layout, flow, polish, responsive and motion. Small things keep shipping while he designs.
 
+**Reordered 2026-10-22 by the bosses' demo** (D-29, `../2026-10-22-bosses-demo/notes.md`): after the live
+listing read is fixed, Dispatch 25 (the per-comp review) and 26 (the Designed email as the report) come before
+21, then 23. 22 and 24 keep their places behind them.
+
 ## The phases
 
 | Phase | What | Who |

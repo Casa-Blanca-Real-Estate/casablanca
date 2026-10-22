@@ -2,7 +2,7 @@
 import './styles.css';
 import './styles/shell.css';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { api, ApiError, type Me } from './api.ts';
+import { api, ApiError, prefetch, type Me } from './api.ts';
 import { session, type SessionState } from './session.ts';
 import { leaveGuestMode } from './guest-session.ts';
 import { AcceptInvite, NotAuthorised, SetNewPassword, SignIn, Unavailable } from './views/SignIn.tsx';
@@ -35,6 +35,9 @@ export function App() {
     if (state.status !== 'signed-in') return;
     setMe(null);
     setRefusal(null);
+    // The first screen's data, asked for alongside /me rather than after it (api.ts, prefetch).
+    const id = currentReportId();
+    prefetch(id ? `/api/comp-report/workspace?report=${id}` : '/api/comp-report/reports');
     api<Me>('/api/comp-report/me').then(setMe, (e) => {
       // A guest key the server won't take (production, or out of date): back to signing in.
       if (session.guest && e instanceof ApiError && e.status === 401) {

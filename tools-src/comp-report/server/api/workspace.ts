@@ -77,7 +77,7 @@ const iso = (d: Date | string) => new Date(d).toISOString();
 /** The report, or 404. `write` insists on ownership: admins can read any report, but change only their own. */
 export async function reportFor(tx: Queryable, user: SessionUser, reportId: string, write: boolean) {
   const { rows } = await tx.query<{ id: string; owner_email: string }>(
-    `select id, owner_email from comp_report.reports where id = $1 and (owner_email = $2 or $3)`,
+    `select id, owner_email from comp_report.reports where id = $1 and (owner_email = $2 or $3) and status <> 'deleted'`,
     [reportId, user.email, !write && user.role === 'admin'],
   );
   if (!rows[0]) throw new HttpError(404, 'not_found', 'No such report.');

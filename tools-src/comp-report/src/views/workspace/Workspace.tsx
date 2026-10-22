@@ -493,7 +493,7 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       }
     },
     busy,
-    fillSample: async () => undefined, // set below: it needs the model itself
+    fillSample: async () => false, // set below: it needs the model itself
     messageCount,
     setMessageCount,
     screen,
@@ -561,9 +561,11 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
 
   if (ws) {
     ws.fillSample = async (which) => {
-      if (!canSample) return;
-      if (ownValues(which) && !confirm('Replace what you’ve entered here with the sample (100 Barclay #17L)?')) return;
+      if (!canSample) return false;
+      if (ownValues(which) && !confirm('Replace what you’ve entered here with the sample (100 Barclay #17L)?')) return false;
       const all = which === 'all';
+      // ws.run catches a failure for the error line, so this says whether the fill got to the end.
+      let filled = false;
       await ws.run(all ? 'Filling the whole report with sample data…' : 'Filling with sample…', async () => {
         const needsWalkthrough = all || which === 'findings' || which === 'send';
         const sample = needsWalkthrough ? await workspaceApi.sample() : null;
@@ -613,7 +615,9 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         }
         markSample();
         await save.flush();
+        filled = true;
       });
+      return filled;
     };
   }
 
@@ -652,10 +656,10 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         />
         <ProgressRow ws={ws} />
 
-        {(busy || actionError || ws.devTools) && (
+        {(busy || actionError || ws.canSample || ws.devTools) && (
           <div className="sh-aux">
             <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
-            {ws.devTools && <DevStrip ws={ws} step={step} fills={SAMPLE_FILLS} />}
+            {(ws.canSample || ws.devTools) && <DevStrip ws={ws} step={step} fills={SAMPLE_FILLS} />}
           </div>
         )}
 
