@@ -12,7 +12,7 @@
 // full agent sees his take on first opening a comp, can copy it into their
 // note or tell him what he's missing and ask again. Either way the agent sets
 // the tier: his is a suggestion, and his weak flag never changes it.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CompOut, Tier } from '../../../engine/index.ts';
 import { compDistance } from '../../../workspace/distance.ts';
 import { groupsFor, isTag } from '../../../workspace/features.ts';
@@ -32,7 +32,9 @@ const TIERS: { tier: Tier; label: string; name: string }[] = [
   { tier: 'secondary', label: '2nd', name: '2nd tier' },
   { tier: 'excluded', label: '✕', name: 'Excluded' },
 ];
-const TIER_WORD: Record<Tier, string> = { primary: '1st', secondary: '2nd', excluded: '✕ (out)' };
+const TIER_WORD: Record<Tier, string> = { primary: '1st', secondary: '2nd', excluded: 'Out' };
+// What a take says of the tier it would give.
+const WOULD: Record<Tier, string> = { primary: 'would tier 1st', secondary: 'would tier 2nd', excluded: 'would leave it out' };
 const TIER_INFO = '1st: counts. Only 1st-tier comps set the range. 2nd: context, shown but not counted. ✕: out of every figure. ★: the main comp; the email leads with it.';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -135,18 +137,22 @@ export function ReviewFlow({ ws, startAt, onClose }: { ws: Workspace; startAt: s
 
   const doneCount = steps.filter((r) => stepDone(r.c, ws.level)).length;
 
+  const back = <button type="button" className="link rv-back" disabled={saving} onClick={() => void go(i - 1)}>← Back</button>;
+  const next = i < steps.length - 1
+    ? <button type="button" className="btn primary" disabled={saving} onClick={() => void go(i + 1)}>Next →</button>
+    : <button type="button" className="btn primary" disabled={saving} onClick={() => void close()}>Done</button>;
+
   return (
     <div className="rv-scrim">
       <div className="rv-modal" role="dialog" aria-modal="true" aria-label="Review comps" tabIndex={-1} ref={dialog}>
         <div className="rv-head">
           <span className="rv-title">Review comps</span>
-          <span className="rv-count" aria-live="polite">{steps.length ? `${i + 1} of ${steps.length}` : 'No comps'}</span>
+          <span className="rv-count" aria-live="polite" title={`${doneCount} of ${steps.length} reviewed`}>{steps.length ? `${i + 1} / ${steps.length}` : '0'}</span>
           <span className="rv-progress" aria-hidden="true">
             {steps.map((r, k) => (
               <span key={r.rcId} className={`${k === i ? 'here' : ''}${stepDone(r.c, ws.level) ? ' done' : ''}`} />
             ))}
           </span>
-          <span className="rv-donecount">{doneCount} of {steps.length} reviewed</span>
           <button type="button" className="rv-x" aria-label="Close: what you wrote is kept" title="Close (Esc): what you wrote is kept" onClick={() => void close()}>✕</button>
         </div>
         {row ? (
@@ -161,27 +167,20 @@ export function ReviewFlow({ ws, startAt, onClose }: { ws: Workspace; startAt: s
             saving={saving}
             opened={opened.has(row.rcId!)}
             onOpened={() => setOpened((s) => new Set(s).add(row.rcId!))}
+            nav={{ back: i > 0 ? back : <span />, next, error }}
           />
         ) : (
-          <p className="rv-empty">Every comp here has been taken out of the report.</p>
+          <>
+            <p className="rv-empty">Every comp here has been taken out of the report.</p>
+            <div className="rv-foot"><span className="rv-foot-r">{next}</span></div>
+          </>
         )}
-        <div className="rv-foot">
-          <button type="button" className="link rv-back" disabled={i === 0 || saving} onClick={() => void go(i - 1)}>← Back</button>
-          {error && <p className="rv-err" role="alert">{error}</p>}
-          <span className="rv-foot-r">
-            {i < steps.length - 1 ? (
-              <button type="button" className="btn primary" disabled={saving} onClick={() => void go(i + 1)}>Next comp →</button>
-            ) : (
-              <button type="button" className="btn primary" disabled={saving} onClick={() => void close()}>Done</button>
-            )}
-          </span>
-        </div>
       </div>
     </div>
   );
 }
 
-function Step({ ws, row, out, draft, onDraft, save, saving, opened, onOpened }: {
+function Step({ ws, row, out, draft, onDraft, save, saving, opened, onOpened, nav }: {
   ws: Workspace;
   row: Row;
   out: CompOut | undefined;
@@ -191,12 +190,15 @@ function Step({ ws, row, out, draft, onDraft, save, saving, opened, onOpened }: 
   saving: boolean;
   opened: boolean;
   onOpened: () => void;
+  /** Back and Next, from the flow: the footer holds them beside the tier. */
+  nav: { back: ReactNode; next: ReactNode; error: string | null };
 }) {
   const c = row.c;
   const j = c.judgment!;
   const rcId = row.rcId!;
   const practice = ws.level === 'practice';
   const home = homeName(ws.intake, ws.report.title);
+  const [tagsOpen, setTagsOpen] = useState(() => !draft.tags.length && !ws.readOnly);
   const review = j.review ?? [];
   const feedback = latest(review, 'feedback');
   const take = latest(review, 'take');
@@ -280,208 +282,196 @@ function Step({ ws, row, out, draft, onDraft, save, saving, opened, onOpened }: 
 
   // Practice agents tier once their reasoning is saved (NB-8): the reasoning is how they decide the tier.
   const tierLocked = !canEdit || (practice && (!noteSaved || !tagsSaved));
-  const tierHint = practice && (!noteSaved || !tagsSaved) ? 'Your note and tags first: they’re how you decide its tier.' : null;
+  const tierHint = practice && (!noteSaved || !tagsSaved) ? 'Save your note and tags first: they’re how you decide its tier.' : undefined;
+
+  const facts: [string, string][] = [
+    [PRICE_LABEL[row.group], shortPrice(row.price)],
+    ...(ws.sf ? [['$/SF', psf(row.ppsf)], ['Size', sizeText(row)]] as [string, string][] : []),
+    ['Floor', countText(row.floor)],
+    ['Date', monthYear(row.date)],
+    ['DOM', countText(row.dom)],
+    ...(distance?.kind === 'miles' ? [['Distance', distance.label]] as [string, string][] : []),
+    ...(distance?.kind === 'same_building' ? [['Distance', 'Same bldg']] as [string, string][] : []),
+  ];
+  // 'None' and 'Other' say nothing on a chip without their group: the checks carry what matters.
+  const picked = groups.map((g) => ({ g, opts: (features[g.key] ?? []).filter((o) => o !== 'None' && o !== 'Other') })).filter((x) => x.opts.length);
 
   return (
-    <div className="rv-body">
-      <section className="rv-comp" aria-label={row.address}>
-        <Photos photos={j.photos ?? []} address={row.address} editing={false} />
-        <div className="rv-comp-head">
-          <h2 className="rv-addr">{row.address}</h2>
-          <span className="rv-status">
-            {status ? <><span className={`so-sw ${status}`} aria-hidden="true" />{STATUS_LABEL[status]}</> : null}
-            {row.tier && <span className={`rv-tierchip ${row.tier}`}>{TIER_WORD[row.tier]}</span>}
-            {row.anchor && <span className="rv-tierchip star">★ main comp</span>}
-          </span>
-        </div>
-        <div className="so-metrics rv-metrics">
-          <Fact label={PRICE_LABEL[row.group]} value={shortPrice(row.price)} />
-          {ws.sf && <Fact label="$/SF" value={psf(row.ppsf)} />}
-          {ws.sf && <Fact label="Size" value={sizeText(row)} />}
-          <Fact label="Floor" value={countText(row.floor)} />
-          <Fact label="Date" value={monthYear(row.date)} />
-          <Fact label="Days on market" value={countText(row.dom)} />
-          {distance?.kind === 'miles' && <Fact label="Distance" value={distance.label} />}
-          {distance?.kind === 'same_building' && <Fact label="Distance" value="Same building" />}
-        </div>
-        <div className="rv-feats">
-          {groups.map((g) => {
-            const picked = features[g.key] ?? [];
-            return picked.length ? (
-              <div key={g.key} className="so-frow">
-                <span className="so-flabel">{g.label}</span>
-                <span className="so-fopts">
-                  {picked.map((o) => <span key={o} className={`so-fchip${ws.homeFeatures[g.key]?.includes(o) ? ' shared' : ''}`}>{o}</span>)}
-                </span>
-              </div>
-            ) : null;
-          })}
-        </div>
-        {checks.length > 0 && (
-          <ul className="rv-checks" aria-label="The house’s checks">
-            {checks.map((k) => <li key={k.code} title={k.message}><span className="so-need-sq" aria-hidden="true" />{k.label}{k.suggestion ? <span className="rv-check-s"> · {k.suggestion}</span> : null}</li>)}
-          </ul>
-        )}
-      </section>
-
-      <section className="rv-work">
-        <div className="rv-yours">
-          <h3 className="rv-h">Your reasoning</h3>
-          <p className="rv-help">{practice
-            ? `Why is it a comp for ${home}, or not? Write it first: Hubert gives feedback on it, then you can see his own take.`
-            : `Why is it a comp for ${home}, or not? Hubert’s take is beside it: use it, change it, or write your own.`}</p>
-          <textarea
-            className="rv-note"
-            aria-label="Why it’s a comp"
-            rows={5}
-            maxLength={2000}
-            value={draft.note}
-            disabled={!canEdit}
-            placeholder={`What makes it comparable to ${home}, or not`}
-            onChange={(e) => onDraft({ ...draft, note: e.target.value })}
-          />
-          <div className="rv-tags">
-            <span className="rv-label">Tags <Info text={TAG_INFO} label="What a tag is" align="left" /></span>
-            <TagPicker value={draft.tags} onChange={(tags) => onDraft({ ...draft, tags })} label="Tags" disabled={!canEdit} suggested={ws.tagSuggestions[rcId] ?? []} />
+    <>
+      <div className="rv-body">
+        <section className="rv-comp" aria-label={row.address}>
+          <div className="rv-hero">
+            <Photos photos={j.photos ?? []} address={row.address} editing={false} />
+            <div className="rv-hero-cap">
+              <span className="rv-badges">
+                {status && <span className={`rv-badge ${status}`}>{STATUS_LABEL[status]}</span>}
+                {row.tier && <span className={`rv-badge tier ${row.tier}`}>{TIER_WORD[row.tier]}</span>}
+                {row.anchor && <span className="rv-badge star">★ main</span>}
+              </span>
+              <h2 className="rv-addr">{row.address}</h2>
+            </div>
           </div>
-          {canEdit && (
-            <div className="rv-actions">
-              <button type="button" className={`btn${practice ? ' primary' : ''}`} disabled={busy !== null || saving} onClick={() => void ask('feedback')}>
-                {busy === 'feedback' ? 'Hubert is reading…' : feedback ? 'Get feedback again' : 'Get feedback'}
-              </button>
-              {practice && (
-                showTake ? null : (
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={!unlocked || busy !== null || saving}
-                    title={unlocked ? undefined : 'His take shows after one round of feedback on yours.'}
-                    onClick={() => (take ? onOpened() : void ask('take'))}
-                  >
-                    {busy === 'take' ? 'Hubert is looking…' : 'Show Hubert’s take'}
-                  </button>
-                )
-              )}
-              {practice && !unlocked && <span className="rv-quiet">His take unlocks after one round of feedback.</span>}
-            </div>
+          <dl className="rv-facts">
+            {facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+          </dl>
+          {picked.length > 0 && (
+            <ul className="rv-feats" aria-label="Features">
+              {picked.flatMap(({ g, opts }) => opts.map((o) => (
+                <li key={`${g.key}-${o}`} className={ws.homeFeatures[g.key]?.includes(o) ? 'shared' : ''} title={`${g.label}${ws.homeFeatures[g.key]?.includes(o) ? ', shared with the home' : ''}`}>{o}</li>
+              )))}
+            </ul>
           )}
-          {problem && <p className="rv-err" role="alert">{problem}</p>}
-        </div>
+          {checks.length > 0 && (
+            <ul className="rv-checks" aria-label="The house’s checks">
+              {checks.map((k) => <li key={k.code} title={[k.message, k.suggestion].filter(Boolean).join(' · ')}><span className="so-need-sq" aria-hidden="true" />{k.label}</li>)}
+            </ul>
+          )}
+        </section>
 
-        <div className="rv-hubert" aria-live="polite">
-          <h3 className="rv-h">Hubert</h3>
-          {weak && (
-            <div className="rv-weak">
-              <span><strong>Looks weak:</strong> {weak.reason}.</span>
-              {canEdit && row.tier !== 'excluded' && !c.unconfirmed && (
-                <button type="button" className="link" disabled={busy !== null} onClick={() => void pickTier('excluded')}>✕ Exclude it</button>
-              )}
-              <span className="rv-quiet">Your call: the flag never changes the tier.</span>
-            </div>
-          )}
-          {feedback && <Round entry={feedback} title="Feedback on your reasoning" />}
-          {showTake && take && (
-            <div className="rv-take">
-              <Round entry={take} title="Hubert’s take" />
-              {take.tier && <p className="rv-would">He’d tier it <strong>{TIER_WORD[take.tier]}</strong>{take.tierWhy ? `: ${take.tierWhy}` : '.'}</p>}
-              {canEdit && (
-                <div className="rv-take-actions">
-                  <button
-                    type="button"
-                    className="link"
-                    onClick={() => onDraft({ ...draft, note: draft.note.trim() ? `${draft.note.trim()}\n${take.text}` : take.text })}
-                  >
-                    Copy into my note
+        <section className="rv-work">
+          <div className={`rv-notebox${canEdit ? '' : ' ro'}`}>
+            <textarea
+              className="rv-note"
+              aria-label="Why it’s a comp"
+              rows={4}
+              maxLength={2000}
+              value={draft.note}
+              disabled={!canEdit}
+              placeholder={practice ? `Why is it a comp for ${home}, or not? Write yours first.` : `Why is it a comp for ${home}, or not?`}
+              onChange={(e) => onDraft({ ...draft, note: e.target.value })}
+            />
+            <div className="rv-notebar">
+              <span className="rv-tagline">
+                {!(tagsOpen && canEdit) && draft.tags.map((t) => <span key={t} className="so-tag">{t}</span>)}
+                {canEdit && (
+                  <button type="button" className="link rv-tagtoggle" aria-expanded={tagsOpen} onClick={() => setTagsOpen(!tagsOpen)}>
+                    {tagsOpen ? 'Done' : draft.tags.length ? 'Edit tags' : '+ Tags'}
                   </button>
-                </div>
+                )}
+                <Info text={TAG_INFO} label="What a tag is" align="left" />
+              </span>
+              {canEdit && (
+                <span className="rv-notebar-r">
+                  {practice && !showTake && (
+                    <button
+                      type="button"
+                      className="link"
+                      disabled={!unlocked || busy !== null || saving}
+                      title={unlocked ? undefined : 'Unlocks after one round of feedback'}
+                      onClick={() => (take ? onOpened() : void ask('take'))}
+                    >
+                      {busy === 'take' ? 'Looking…' : 'Hubert’s take'}
+                    </button>
+                  )}
+                  <button type="button" className={`btn small${practice ? ' primary' : ''}`} disabled={busy !== null || saving} onClick={() => void ask('feedback')}>
+                    {busy === 'feedback' ? 'Reading…' : feedback ? 'Feedback again' : 'Get feedback'}
+                  </button>
+                </span>
               )}
-              {canEdit && !practice && (
+            </div>
+            {tagsOpen && canEdit && (
+              <div className="rv-tags">
+                <TagPicker value={draft.tags} onChange={(tags) => onDraft({ ...draft, tags })} label="Tags" suggested={ws.tagSuggestions[rcId] ?? []} />
+              </div>
+            )}
+          </div>
+          {problem && <p className="rv-err" role="alert">{problem}</p>}
+
+          {(weak || feedback || showTake || busy === 'take') && (
+            <div className="rv-hubert" aria-live="polite">
+              {weak && (
+                <p className="rv-weak" title="Your call: the flag never changes the tier.">
+                  <span><strong>Looks weak:</strong> {weak.reason}</span>
+                  {canEdit && row.tier !== 'excluded' && !c.unconfirmed && (
+                    <button type="button" className="link" disabled={busy !== null} onClick={() => void pickTier('excluded')}>✕ Exclude</button>
+                  )}
+                </p>
+              )}
+              {busy === 'take' && !showTake && <p className="rv-quiet">Hubert is looking at this comp…</p>}
+              {showTake && take && (
+                <Round
+                  entry={take}
+                  title="Hubert’s take"
+                  aside={take.tier ? <span className="rv-would" title={take.tierWhy}>{WOULD[take.tier]}</span> : null}
+                  action={canEdit ? (
+                    <button type="button" className="link" onClick={() => onDraft({ ...draft, note: draft.note.trim() ? `${draft.note.trim()}\n${take.text}` : take.text })}>Copy to note</button>
+                  ) : null}
+                />
+              )}
+              {showTake && take && canEdit && !practice && (
                 <div className="rv-ask">
-                  <textarea
+                  <input
                     className="rv-ask-input"
                     aria-label="Tell Hubert what he’s missing"
-                    rows={2}
                     maxLength={1000}
                     value={asks}
-                    placeholder="Tell him what he’s missing: “he’s comparing a renovated unit to an original one”"
+                    placeholder="What’s he missing? “It was gut renovated.”"
                     onChange={(e) => setAsks(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && asks.trim() && busy === null) void ask('take', asks); }}
                   />
-                  <button type="button" className="btn" disabled={busy !== null || !asks.trim()} onClick={() => void ask('take', asks)}>
-                    {busy === 'take' ? 'Hubert is looking…' : 'Ask again'}
-                  </button>
+                  <button type="button" className="btn small" disabled={busy !== null || !asks.trim()} onClick={() => void ask('take', asks)}>Ask again</button>
                 </div>
               )}
+              {feedback && <Round entry={feedback} title="Feedback on yours" />}
+              <Earlier review={review} shown={[feedback, showTake ? take : null]} practice={practice} opened={opened} />
             </div>
           )}
-          {!feedback && !showTake && (
-            <p className="rv-quiet">{busy === 'take' ? 'Hubert is looking at this comp…' : practice
-              ? 'Write your reasoning and pick tags, then ask for feedback.'
-              : ws.readOnly ? 'Hubert hasn’t looked at this comp.' : 'Hubert’s take shows here.'}</p>
-          )}
-          <Earlier review={review} shown={[feedback, showTake ? take : null]} practice={practice} opened={opened} />
-        </div>
+        </section>
+      </div>
 
-        <div className="rv-tier">
-          <span className="rv-label">Your tier <Info text={TIER_INFO} label="What the tiers mean" align="left" /></span>
+      <div className="rv-foot">
+        {nav.back}
+        <span className="rv-foot-mid">
           {c.unconfirmed ? (
             ws.readOnly ? <span className="rv-quiet">To confirm</span> : (
-              <span className="rv-confirm">
+              <span className="rv-confirm" title="Check it against its listing first: until then it counts in neither result.">
                 <button type="button" className="so-confirm-btn" disabled={busy !== null} onClick={() => void confirm(false)}>Confirm</button>
                 <button type="button" className="link" disabled={busy !== null} onClick={() => void confirm(true)}>Remove</button>
-                <span className="rv-quiet">Check it against its listing first: until then it counts in neither result.</span>
               </span>
             )
           ) : (
-            <>
-              <span className="so-seg rv-seg" role="group" aria-label={`Tier for ${row.address}`}>
-                <button type="button" className={`star${row.anchor ? ' on' : ''}`} aria-pressed={row.anchor} aria-label="Main comp" title="The main comp you’re comparing to. The email leads with it." disabled={tierLocked || busy !== null} onClick={() => void star()}>★</button>
-                {TIERS.map((t) => (
-                  <button
-                    key={t.tier}
-                    type="button"
-                    className={`${t.tier}${row.tier === t.tier ? ' on' : ''}`}
-                    aria-pressed={row.tier === t.tier}
-                    aria-label={t.name}
-                    disabled={tierLocked || busy !== null}
-                    onClick={() => void pickTier(t.tier)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </span>
-              {tierHint && <span className="rv-quiet">{tierHint}</span>}
-            </>
+            <span className="so-seg rv-seg" role="group" aria-label={`Tier for ${row.address}`} title={tierHint ?? TIER_INFO}>
+              <button type="button" className={`star${row.anchor ? ' on' : ''}`} aria-pressed={row.anchor} aria-label="Main comp" disabled={tierLocked || busy !== null} onClick={() => void star()}>★</button>
+              {TIERS.map((t) => (
+                <button
+                  key={t.tier}
+                  type="button"
+                  className={`${t.tier}${row.tier === t.tier ? ' on' : ''}`}
+                  aria-pressed={row.tier === t.tier}
+                  aria-label={t.name}
+                  disabled={tierLocked || busy !== null}
+                  onClick={() => void pickTier(t.tier)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </span>
           )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="so-metric">
-      <span className="so-metric-label">{label}</span>
-      <span className="so-metric-val">{value}</span>
-    </div>
+          {tierHint && <span className="rv-quiet rv-tierhint">{tierHint}</span>}
+        </span>
+        {nav.error && <p className="rv-err" role="alert">{nav.error}</p>}
+        <span className="rv-foot-r">{nav.next}</span>
+      </div>
+    </>
   );
 }
 
 /** One round, as Hubert said it: "What holds up:" and "Look again:" lines head their points. */
-function Round({ entry, title }: { entry: ReviewEntry; title: string }) {
+function Round({ entry, title, aside, action }: { entry: ReviewEntry; title: string; aside?: ReactNode; action?: ReactNode }) {
   const lines = entry.text.split('\n');
   return (
     <div className={`rv-round ${entry.kind}`}>
-      <p className="rv-round-h">
+      <p className="rv-round-h" title={new Date(entry.at).toLocaleString()}>
         {title}
+        {aside}
         {entry.sample && <span className="rv-sample">Sample</span>}
-        <span className="rv-when">{new Date(entry.at).toLocaleDateString()}</span>
+        {action && <span className="rv-round-act">{action}</span>}
       </p>
       {entry.kind === 'take' ? <p className="rv-round-text">{entry.text}</p> : (
         <div className="rv-round-text">
           {lines.map((l, k) => (/^[-•]\s/.test(l)
             ? <p key={k} className="rv-point">{l.replace(/^[-•]\s*/, '')}</p>
-            : <p key={k} className="rv-sub">{l}</p>))}
+            : <p key={k} className="rv-sub">{l.replace(/:$/, '')}</p>))}
         </div>
       )}
     </div>
