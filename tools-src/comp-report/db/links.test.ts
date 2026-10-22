@@ -277,23 +277,24 @@ describe('StreetEasy links and typed-in comps', { skip: skipWithoutDatabase }, (
   });
 
   test('a read that died twice isn’t started a third time: it fails as too long, and says so', async () => {
-    const twice = await createReport('tok-ana-000000000', 'Died twice');
-    const { body } = await links('tok-ana-000000000', 'POST', { reportId: twice, urls: [LINK.chambers] });
+    // Kimani's reads: Ana's and Ben's daily counts are tested below.
+    const twice = await createReport('tok-kimani-000000', 'Died twice');
+    const { body } = await links('tok-kimani-000000', 'POST', { reportId: twice, urls: [LINK.chambers] });
     const id = body.queued[0]!;
     const owner = new pg.Client({ connectionString: db.ownerUrl });
     await owner.connect();
     try {
       await owner.query(`begin`);
-      await owner.query(`select comp_report.enter('user', 'ana@casa-blanca.com', 'agent', null)`);
+      await owner.query(`select comp_report.enter('user', 'kimani@casa-blanca.com', 'admin', null)`);
       await owner.query(`update comp_report.link_reads set status = 'running', attempts = 2, started_at = now() - interval '10 minutes' where id = $1`, [id]);
       await owner.query(`commit`);
     } finally {
       await owner.end();
     }
     const before = calls.length;
-    assert.equal((await run('tok-ana-000000000', twice, id)).body.started, false);
+    assert.equal((await run('tok-kimani-000000', twice, id)).body.started, false);
     assert.equal(calls.length, before, 'no page read');
-    const read = (await workspace('tok-ana-000000000', twice)).reads.find((r) => r.id === id)!;
+    const read = (await workspace('tok-kimani-000000', twice)).reads.find((r) => r.id === id)!;
     assert.deepEqual([read.status, read.error], ['failed', 'timeout']);
     assert.match(read.errorMessage ?? '', /more than 3 minutes/);
   });
