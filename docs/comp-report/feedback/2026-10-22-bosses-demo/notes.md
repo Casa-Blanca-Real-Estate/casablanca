@@ -119,14 +119,17 @@ Agreed with everything above except where this section says otherwise.
    helps Hubert word the email ("the estimate is $20K above your budget, and here's why"). **Relabel the
    buyer's as "budget".** Kara's lowball worry is answered by the same chart: the agent sees where the
    buyer's number sits against the range.
-2. **The human drives the per-comp analysis.** The per-comp analysis is a **modal flow, one focused step per
-   listing** (not one chat across all comps).
-   - **Agents in mentorship (practice):** the agent writes the comp's paragraph first. Hubert then checks it
-     and gives feedback, and only after that can they reveal Hubert's own note for the comp. If Hubert did
-     the thinking first, a new agent wouldn't know what feedback to give.
-   - **Graduated agents (full):** Hubert writes the per-comp note, and the agent gives feedback and approves
-     it, as Erez described.
-   - The approved paragraph goes into the client piece's box for that comp.
+2. **The human drives the per-comp analysis.** It's a **modal flow, one focused step per listing** (not one
+   chat across all comps), on Sort, **for every comp, before it's tiered**: the reasoning is how the agent
+   decides the tier.
+   - **Agents in mentorship (practice):** the agent writes their reasoning first. Hubert checks it and gives
+     feedback, and only after that can they reveal Hubert's own take. If Hubert did the thinking first, a new
+     agent wouldn't know what feedback to give.
+   - **Graduated agents (full):** Hubert's take comes first, and the agent edits it, gives feedback and
+     tiers, as Erez described.
+   - **The client's words are a separate step at Send:** the overview and each comp's paragraph are written
+     for the client from the whole process, not lifted from the Sort reasoning. Practice agents write them and
+     get feedback first; full agents edit the writer's draft.
 3. **Optional fields stay.** The tool becomes part of agent training (Hannah, Noble, Kara and Kimani agree):
    new agents learn what each part is for, so they know what to do with optional fields.
 4. **Teaching is the product.** New agents have to learn CMAs anyway. The tool halves the time while teaching
