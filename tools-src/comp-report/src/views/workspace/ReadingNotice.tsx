@@ -12,8 +12,10 @@ import '../../styles/reading.css';
 
 /** About how long a read takes, for the bar: it never fills before the read lands. */
 const USUAL_MS = 60_000;
-/** Past this, it says it's slow, and what to do if it never lands. */
-export const SLOW_MS = 3 * 60_000;
+/** Past this, it says it's slow, and when it stops. */
+export const SLOW_MS = 2 * 60_000;
+/** The server stops a read by now (server/links.ts READ_BUDGET_MS, with the function's start and the save). */
+export const LIMIT_MS = 3 * 60_000;
 
 const STAGES: { at: number; text: string }[] = [
   { at: 0, text: 'Opening the StreetEasy page' },
@@ -23,6 +25,9 @@ const STAGES: { at: number; text: string }[] = [
   { at: 40_000, text: 'Checking the price history' },
   { at: 55_000, text: 'Placing it on the map' },
   { at: 75_000, text: 'Putting the details together' },
+  // Past the usual: say so, and when it stops. Then it fails with the reason, and the agent types it in.
+  { at: SLOW_MS, text: 'Still reading. It stops at 3:00 if StreetEasy hasn’t answered' },
+  { at: LIMIT_MS, text: 'Stopping the read' },
 ];
 
 export const KEEPS_GOING = 'You can close this or leave the report: the read keeps going on our side, and what it finds is here when you come back.';
@@ -33,7 +38,7 @@ export function clock(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Time since the oldest of these reads was queued, ticking once a second. */
+/** Time since the oldest of these reads started (or was queued), ticking once a second. */
 export function useElapsed(reads: LinkReadView[]): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -41,7 +46,8 @@ export function useElapsed(reads: LinkReadView[]): number {
     return () => window.clearInterval(timer);
   }, []);
   if (!reads.length) return 0;
-  const since = Math.min(...reads.map((r) => Date.parse(r.createdAt) || now));
+  // From the latest start: a read started again starts its 3 minutes again on the server too.
+  const since = Math.min(...reads.map((r) => Date.parse(r.startedAt ?? r.createdAt) || now));
   return Math.max(0, now - since);
 }
 
@@ -77,7 +83,7 @@ export function ReadingNotice({ reads, what }: { reads: LinkReadView[]; what: 'h
           <Info
             label="About reading a page"
             align="right"
-            text={`${slow ? 'Still going. If nothing lands in a few minutes, type it in. ' : ''}Each comp shows up in the list as its page is read. ${KEEPS_GOING}`}
+            text={`A read stops at 3:00 if StreetEasy hasn’t answered, and says so: then try the link again, or type it in. Each comp shows up in the list as its page is read. ${KEEPS_GOING}`}
           />
         </span>
       </div>

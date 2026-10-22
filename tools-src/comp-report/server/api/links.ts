@@ -33,13 +33,19 @@ import { withActor, type Queryable } from '../db.ts';
 import type { DecideConfig } from '../decide/config.ts';
 import { enqueueListingJudgments } from '../decide/enqueue.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
-import { checkListingLink, MAX_LINKS_PER_REQUEST, newYorkToday, readLimit, type LinkPurpose, type PageReader } from '../links.ts';
+import { checkListingLink, MAX_LINKS_PER_REQUEST, newYorkToday, readLimit, TOO_LONG, type LinkPurpose, type PageReader } from '../links.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
 import { loadJudgments, loadReads, reportFor } from './workspace.ts';
 
-/** A read claimed while running this long is taken to have died, and can be claimed again. */
-const STALE_MINUTES = 6;
+/**
+ * A read claimed while running this long is taken to have died, and can be
+ * claimed again: the reader gives up by READ_BUDGET_MS (2½ minutes), so a read
+ * still running after 4 never finished.
+ */
+const STALE_MINUTES = 4;
+/** A read that died this many times isn't started again: it fails as too long. */
+export const MAX_READ_ATTEMPTS = 2;
 
 export function handleLinks(req: Request, deps: AuthDeps & { env?: Record<string, string | undefined> }): Promise<Response> {
   return respond(async () => {
@@ -204,6 +210,14 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
     // Claim it: queued, or running so long it must have died. Exactly one caller wins.
     const claimed = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
+      // Died too often: it fails, so the agent types it in rather than waits on a read that never lands.
+      await tx.query(
+        `update comp_report.link_reads
+            set status = 'failed', finished_at = now(), error = 'timeout', error_message = $4
+          where id = $1 and report_id = $2
+            and status = 'running' and started_at < now() - make_interval(mins => $3) and attempts >= $5`,
+        [readId, reportId, STALE_MINUTES, TOO_LONG, MAX_READ_ATTEMPTS],
+      );
       const { rows } = await tx.query<{ url: string; purpose: LinkPurpose }>(
         `update comp_report.link_reads
             set status = 'running', attempts = attempts + 1, started_at = now(), error = null, error_message = null

@@ -43,7 +43,7 @@ export function HomeHero({ name, read, sourceTitle }: { name: string; read: Link
               <Info
                 label="About reading the home’s page"
                 align="right"
-                text={`${slow ? 'Still going. If nothing lands in a few minutes, type the details in. ' : ''}The details fill in by themselves when it’s read, with the listing’s photo here. ${KEEPS_GOING}`}
+                text={`A read stops at 3:00 if StreetEasy hasn’t answered, and says so: then try the link again, or type the details in. The details fill in by themselves when it’s read, with the listing’s photo here. ${KEEPS_GOING}`}
               />
             </span>
           </div>
