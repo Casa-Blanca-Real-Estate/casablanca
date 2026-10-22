@@ -24,6 +24,7 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 | D-26 | Moving Casa's work onto Casa-owned accounts | Later — after the comp report settles; keys sooner | Think (with Erez) | `docs/casa-accounts-transfer.md` |
 | D-27 | The design port: what the handoff changes | Now — Mason builds on the defaults (Dispatch 14) | Quick (object only) | Noble's walk-through |
 | D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21; NB-11 to NB-28 open) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
+| D-29 | The bosses' demo: what changes (decided 2026-10-22; two defaults to confirm) | Now — Dispatches 25 and 26 build on it | Quick (object only) | Dispatches 25, 26 |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
 each was applied.
@@ -151,6 +152,31 @@ Human Rights Law: `tools-src/comp-report/workspace/fair-housing.ts` (version `fh
    or allow the phrase as a deal term?
 
 **Answer →** _type here — who reviews the list; keep or allow "appraisal contingency"_
+
+---
+
+### D-29 · The bosses' demo: what changes
+`Now — Dispatches 25 and 26 build on it` · `Quick (object only)`
+
+Kimani demoed the comp report to Erez, Hannah and Kara on 2026-10-22. The capture and his decisions are in
+`docs/comp-report/feedback/2026-10-22-bosses-demo/notes.md`; **its last section is the record.** In short:
+
+1. **The target stays for both sides;** the buyer's is labelled "Client's budget". D-4 is unchanged.
+2. **A per-comp review, the human first** (reverses D-27 item 6 for the per-comp paragraph): a modal flow,
+   one comp per step. Practice agents write, get Hubert's feedback, then may see his version; full agents get
+   his draft to edit or approve. Hubert flags a weak comp but never tiers it. Dispatch 25.
+3. **The Designed email is the report:** first on Send, a box per comp with a real photo and its paragraph,
+   an overview on top, no price table in it. Text follows it; Full and Short stay as fallbacks. Still a
+   pasted email; a hosted page, PDF and the Gmail draft (NW-102) come later. Dispatch 26.
+4. **Optional fields stay;** the tool is part of agent training.
+5. **Order:** the live listing read fix, then 25, then 26, then 21, then 23.
+
+**Defaults to confirm** (built this way unless Kimani objects):
+- **Which comps get the per-comp step:** the ones the email shows (`countedComps`), not every tiered comp.
+- **The practice agent's paragraph starts from their Sort note,** but is saved as its own client-facing
+  field (`clientLine`), so the Sort note can stay shorthand.
+
+**Answer →** *type here*
 
 ---
 
