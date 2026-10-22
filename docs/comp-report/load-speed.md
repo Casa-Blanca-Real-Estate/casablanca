@@ -37,8 +37,10 @@ The first load in a session usually came soon after other use, with things still
 - **The built JS and CSS are cached for good** (`netlify.toml`): their names carry a content hash,
   so a release is a new file. A reload no longer asks the server about them.
 - **Keep-warm pings** (`netlify/functions/comp-report-keep-warm.mts`): a scheduled function calls
-  the four first-load functions without signing in, every 2 minutes, 12:00–23:59 UTC (8am–8pm in New
-  York in summer, 7am–7pm in winter), every day. Each answers 401
+  the four first-load functions without signing in, every 2 minutes in business hours: 9am–9pm New
+  York time, Monday to Saturday (Kimani, 2026-10-22). Outside them a reload may start cold. The
+  schedule is in UTC, so it runs across both the summer and winter windows and the function skips
+  any run outside business hours, Sundays included, before it pings. Each answers 401
   before touching Identity or the database, so the pings warm the functions and nothing else.
   Scheduled functions run only on the production deploy, so this starts with the next release.
 
@@ -49,9 +51,10 @@ Rates from Netlify's credit pricing (docs.netlify.com, "How credits work" and Ne
 credits per 10,000, database compute 10 credits per compute-unit hour, idle time before sleep
 included. A production deploy is 15 credits.
 
-- **Keeping the functions warm** (this PR, as scheduled): about 54,000 requests (about 11 credits)
-  and about 2 GB-hours (about 20 credits) a month: **roughly 30 credits a month**, two production
-  deploys' worth. Pinging around the clock would be about double; every minute, about double again. Other downsides:
+- **Keeping the functions warm** (this PR, as scheduled): about 310 business hours a month, so about
+  50,000 requests (about 10 credits) and about 1.6 GB-hours (about 16 credits): **roughly 25 credits
+  a month**, under two production deploys' worth. Every day 8am–8pm would be about 30; around the
+  clock, about 60; every minute instead of every 2, about double. Other downsides:
   a 401 in the function logs every 2 minutes, it only covers the functions it pings, and it
   can't promise a warm start (Netlify may still start a fresh instance).
 - **Keeping the database awake** (not done): the database bills by the hour while awake. Always on
@@ -61,6 +64,11 @@ included. A production deploy is 15 credits.
   inactivity") if that changes.
 
 ## Left for later
+
+- **Fit the warm window to real use.** Once enough agents use the comp report, look at when calls
+  come in (the busiest and quietest hours and days) and set the keep-warm window to match: the
+  `inBusinessHours` check and the schedule in `comp-report-keep-warm.mts`. Until then it's Kimani's
+  9am–9pm, Monday to Saturday.
 
 - The JS bundle is 725 KB and Vite warns it's over 500 KB. Splitting it (the engine and the
   subway data loaded when needed) would speed up the first visit; reloads now come from the cache.
