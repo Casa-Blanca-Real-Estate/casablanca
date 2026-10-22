@@ -62,7 +62,13 @@ export const SAMPLE_SEND: SendState = {
 };
 
 /** Hannah's own read in the briefing: "between 3.4 and 4-something". */
-export const SAMPLE_CALL: Omit<CallState, 'at'> = { low: 3_400_000, high: 4_200_000, sample: true };
+export const SAMPLE_CALL: Omit<CallState, 'at'> = {
+  low: 3_400_000,
+  high: 4_200_000,
+  // The why, as long as a practice agent's must be (PRACTICE_WHY_MIN), so the sample passes the Gate for anyone.
+  note: 'A high-floor three-bedroom with city and water views in a full-service building, with charges below most of the towers nearby. Between 3.4 and 4-something.',
+  sample: true,
+};
 
 export interface SampleTier {
   propertyKey: string;

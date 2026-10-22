@@ -545,6 +545,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       if (!canSample) return false;
       if (ownValues(which) && !confirm('Replace what you’ve entered here with the sample (100 Barclay #17L)?')) return false;
       const all = which === 'all';
+      // ws.run catches a failure for the error line, so this says whether the fill got to the end.
+      let filled = false;
       await ws.run(all ? 'Filling the whole report with sample data…' : 'Filling with sample…', async () => {
         const needsWalkthrough = all || which === 'findings' || which === 'send';
         const sample = needsWalkthrough ? await workspaceApi.sample() : null;
@@ -594,8 +596,9 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
         }
         markSample();
         await save.flush();
+        filled = true;
       });
-      return true;
+      return filled;
     };
   }
 
