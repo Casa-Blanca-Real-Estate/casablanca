@@ -186,6 +186,44 @@ export function fakeCompReview(body: Block): Script {
   return { content: [{ type: 'text', text: JSON.stringify(out) }], stopReason: 'end_turn', delayMs: 5 };
 }
 
+/**
+ * Hubert on the client's words (server/client-words.ts): feedback on the agent's overview or paragraph, or
+ * his draft of a comp's paragraph, from the input, citing only its figures. A draft asked to change says so;
+ * a draft always carries one sentence with a figure the input doesn't hold, for the grounding to drop.
+ */
+export function fakeClientWords(body: Block): Script {
+  const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;
+  const text = messages[0]?.content.map((b) => String(b.text ?? '')).join('') ?? '';
+  const input = JSON.parse(/<client_words>\n([\s\S]*)\n<\/client_words>/.exec(text)?.[1] ?? '{}') as {
+    comp?: { name?: string; status?: string; against_the_home?: string[]; agent_note?: string | null };
+    agent_paragraph?: string;
+    agent_overview?: { headline?: string };
+    agent_asks?: string;
+  };
+  const props = (((body.output_config as Block | undefined)?.format as { schema?: { properties?: Block } } | undefined)?.schema?.properties) ?? {};
+  if ('paragraph' in props) {
+    const name = input.comp?.name ?? 'This home';
+    const against = input.comp?.against_the_home?.[0];
+    const note = input.comp?.agent_note?.replace(/\d[\d,.]*/g, '').trim();
+    const paragraph = [
+      `${name.split(' #')[0]} is a fair comparison for your home.`,
+      against ? `It is ${against}.` : '',
+      note ? `In my notes: ${note.replace(/[.]$/, '')}.` : '',
+      input.agent_asks ? 'As you asked, I changed that.' : '',
+      'It would sell for $9,876,543 today.',
+    ].filter(Boolean).join(' ');
+    return { content: [{ type: 'text', text: JSON.stringify({ paragraph }) }], stopReason: 'end_turn', delayMs: 5 };
+  }
+  const overview = Boolean(input.agent_overview);
+  const out = {
+    works: [overview ? 'Your headline says what the comps show in plain words.' : 'You compare it to the client’s home, not just describe it.'],
+    unclear: [overview ? 'Say in one more word why you kept to those comps.' : 'Say what the difference means for the price.'],
+    unsupported: input.comp?.against_the_home?.[0] ? [`The facts say it is ${input.comp.against_the_home[0]}: say so.`] : [],
+    off_voice: ['Drop “stunning”: the house voice is plain.', 'It sold for $9,876,543, which is a figure you never gave.'],
+  };
+  return { content: [{ type: 'text', text: JSON.stringify(out) }], stopReason: 'end_turn', delayMs: 5 };
+}
+
 const FIELD_WORDS: Record<string, string> = {
   'next step': 'next_step', headline: 'headline', subject: 'subject', 'how i chose the comps': 'chosen',
   'things to consider': 'consider', signed: 'signed', 'sign-off': 'signed',
@@ -194,6 +232,7 @@ const FIELD_WORDS: Record<string, string> = {
 function echo(body: Block): Script {
   const format = (body.output_config as Block | undefined)?.format as { schema?: { properties?: Block } } | undefined;
   if (format?.schema?.properties && 'weak' in format.schema.properties) return fakeCompReview(body);
+  if (format?.schema?.properties && ('paragraph' in format.schema.properties || 'off_voice' in format.schema.properties)) return fakeClientWords(body);
   if (format?.schema?.properties && !('headlines' in format.schema.properties)) return fakeLines(body);
   if (format) return fakeWriterDraft(body);
   const messages = (body.messages ?? []) as Array<{ role: string; content: Array<Block> }>;

@@ -8,6 +8,7 @@
 // reports.target. The call and the target never reach the assistant (§8.4).
 import type { IsoDate, LaundryState, ListingStatus, OutdoorKind, ResultKind, Tier } from '../engine/index.ts';
 import type { Acknowledgment } from './qa.ts';
+import type { ClientLine, ClientRound } from './client-words.ts';
 import type { ReviewEntry } from './review.ts';
 
 /**
@@ -214,6 +215,8 @@ export interface SendState {
    * else does.
    */
   seen?: SeenEmail;
+  /** The client step opened on its own once (Dispatch 26): after that, the agent opens it. */
+  clientFlowSeen?: boolean;
 }
 
 /** What Send showed: written by the browser as the email changes, read by Hubert's get_email. */
@@ -251,6 +254,13 @@ export interface WorkspaceState {
    * each comp's `review`, not here.
    */
   reviews?: Record<string, ReviewEntry[]>;
+  /**
+   * Hubert's rounds on the client's words (Dispatch 26, workspace/client-words.ts):
+   * the overview's under "overview", each comp's under its report comp id.
+   * Written only by the server's client-words call and the sample; a state
+   * save keeps the stored ones, whatever the browser sends.
+   */
+  clientRounds?: Record<string, ClientRound[]>;
 }
 
 export type ReasonType = 'property' | 'client' | 'method';
@@ -305,6 +315,12 @@ export interface CompJudgment {
    * nothing in the engine reads it, and it never sets the tier.
    */
   review?: ReviewEntry[];
+  /**
+   * The comp's paragraph for the client (Dispatch 26), written on Send's
+   * client step: in the email it wins over the writer's lines and the Sort
+   * note, for every length. Null or missing: today's behaviour.
+   */
+  clientLine?: ClientLine | null;
 }
 
 /** The source facts the agent can correct on a comp's card: a closed list, checked by the server. */

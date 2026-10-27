@@ -1,12 +1,12 @@
 // Send and Done's words (Dispatch 14): buyer and seller, the tabs, the sent line.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-  COPY_LABEL, designedCta, FORMATS, designedEyebrow, formatOf, homeSub, lengthOf, monthOf, outcomeFields, parseAmount, sentLine,
-} from './copy.ts';
+import { COPY_LABEL, FALLBACK_FORMATS, FORMATS, LEAD_FORMATS, designedCta, designedEyebrow, formatOf, homeSub, lengthOf, monthOf, outcomeFields, parseAmount, sentLine } from './copy.ts';
 
-test('the tabs: Designed first and the default; a stored format wins; a report from before the tabs opens on its length', () => {
-  assert.deepEqual(FORMATS.map((f) => f.label), ['Designed', 'Full', 'Short', 'Text']);
+test('the tabs: Designed first and the default, Text next, Full and Short the fallbacks; a stored format wins (Dispatch 26)', () => {
+  assert.deepEqual(LEAD_FORMATS.map((f) => [f.id, f.label]), [['designed', 'Designed email'], ['text', 'Then text them']]);
+  assert.deepEqual(FALLBACK_FORMATS.map((f) => f.id), ['full', 'short']);
+  assert.deepEqual(FORMATS.map((f) => f.id), ['designed', 'text', 'full', 'short']);
   assert.equal(lengthOf('designed'), 'full');
   assert.equal(lengthOf('text'), 'text');
   assert.equal(formatOf({}), 'designed', 'no stored format: Designed');

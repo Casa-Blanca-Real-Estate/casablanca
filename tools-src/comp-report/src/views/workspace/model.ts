@@ -2,7 +2,8 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
+import type { ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
+import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
@@ -109,6 +110,13 @@ export interface Workspace {
    * order with the comps' edits, so it reads what was just saved; the returned workspace lands.
    */
   askReview: (reportCompId: string, job: 'feedback' | 'take', asks?: string) => Promise<ReviewReply>;
+  /** Hubert's rounds on the client's words (Dispatch 26): the overview's under "overview", each comp's by report comp id. */
+  clientRounds: Record<string, ClientRound[]>;
+  /**
+   * Hubert on the client's words: feedback on the saved overview or a comp's paragraph, or the writer's
+   * version of a comp's paragraph. Saves what's outstanding first; the returned rounds and comps land.
+   */
+  askClientWords: (target: string, job: 'feedback' | 'draft', opts?: { asks?: string; result?: 'on_facts' | 'with_estimates' }) => Promise<ClientWordsReply>;
   /** The per-comp review flow over Sort, at a comp or at the first one it walks; null when it's closed. */
   reviewing: { at: string | null } | null;
   openReview: (reportCompId?: string) => void;

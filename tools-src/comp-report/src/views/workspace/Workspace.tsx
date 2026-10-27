@@ -10,8 +10,9 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { ApiError, clientWordsApi, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
+import { cleanAllClientRounds } from '../../../workspace/client-words.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
@@ -369,6 +370,25 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     return next;
   }, [reportId, level, me.user.capability]);
 
+  // Hubert on the client's words (Dispatch 26): what's typed is saved first, so he reads what the agent sees;
+  // in the comps' chain, so a paragraph just saved is the one he reads. His rounds come back in the state, and
+  // land there without a save (the server keeps its own, whatever a save sends).
+  const askClientWords = useCallback(async (target: string, job: 'feedback' | 'draft', opts: { asks?: string; result?: 'on_facts' | 'with_estimates' } = {}) => {
+    const practice = level === 'practice' && me.user.capability !== 'practice';
+    await save.flush();
+    const next = compChain.current.then(async () => {
+      const r = await clientWordsApi.ask(reportId, target, job, { ...opts, ...(practice ? { practice } : {}) });
+      const d = r.workspace;
+      setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads, geocodes: d.geocodes } : d));
+      const rounds = (d.state as WorkspaceState).clientRounds;
+      stateRef.current = { ...stateRef.current, clientRounds: rounds ?? {} };
+      setStateState(stateRef.current);
+      return r;
+    });
+    compChain.current = next.then(() => undefined, () => undefined);
+    return next;
+  }, [reportId, level, me.user.capability, save.flush]);
+
   // The tags the data settles (NB-9 C): contradicted tags come off; a full agent's supported tags are
   // pre-filled once each, a practice agent sees them as chips. Saved in one call; one at a time.
   const settled = useMemo(
@@ -525,6 +545,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     setSortFilter,
     editComp,
     askReview,
+    clientRounds: cleanAllClientRounds(state.clientRounds),
+    askClientWords,
     reviewing,
     openReview: (reportCompId) => setReviewing({ at: reportCompId ?? null }),
     closeReview: () => setReviewing(null),
