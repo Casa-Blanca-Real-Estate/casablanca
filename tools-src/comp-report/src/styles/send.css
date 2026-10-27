@@ -168,14 +168,14 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
 
 /* Designed: the branded email on the outer color, 600px at most. */
 .se-designed { gap: 10px; }
-.se-stage { background: var(--cb-outer); padding: 28px 16px; display: flex; justify-content: center; }
+.se-stage { background: var(--cb-outer); padding: 28px 16px; display: flex; justify-content: safe center; overflow-x: auto; }
 .se-designed-card { width: 100%; max-width: 600px; background: var(--cb-surface); }
 .se-designed-card table { border-spacing: 0; }
 
 /* The card's foot: Mark as sent, then Copy with its reminder. */
-.se-foot { display: flex; align-items: center; gap: 12px; padding: 16px 28px; border-top: 1px solid var(--cb-line); }
+.se-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 28px; border-top: 1px solid var(--cb-line); }
 .se-foot-note { font-size: 12px; color: var(--cb-mid); }
-.se-foot-actions { margin-left: auto; display: flex; gap: 8px; }
+.se-foot-actions { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .se-sent { padding: 12px 20px; }
 .se-copy { position: relative; display: flex; }
 .se-tip {
@@ -217,3 +217,46 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
 .se-done-actions { display: flex; align-items: center; gap: 10px; }
 .se-done-actions .btn:not(.primary) { padding: 12px 20px; }
 .link.se-reopen { margin-left: auto; font-size: 12px; color: var(--cb-mid); }
+
+/* ─── The client's words (Dispatch 26) ──────────────────────────────────────
+   Send's first card (how far they are, and the way in), the plain-text
+   fallback under the tabs, and the client step: Sort's review modal (rv-),
+   with the comp's box as the email lays it out on the left. Prefix cw-. */
+.cw-card { gap: 10px; }
+.cw-progress { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; color: var(--cb-mid); }
+.cw-progress .on { color: var(--cb-black); font-weight: 800; }
+
+.se-fallback { padding: 0 28px; border-bottom: 1px solid var(--cb-line); }
+.se-fallback > summary { font-size: 12px; color: var(--cb-mid); cursor: pointer; padding: 10px 0; }
+.se-fallback[open] > summary { padding-bottom: 6px; }
+.se-fallback-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; }
+
+.cw-modal { width: 1120px; }
+.cw-body-overview { max-width: 760px; width: 100%; margin: 0 auto; }
+.cw-overview .opt { font-weight: 400; color: var(--cb-mid); text-transform: none; letter-spacing: 0; }
+.cw-headline {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; font-weight: 800; line-height: 1.4; padding: 10px 12px;
+  border: 1px solid var(--cb-border); background: var(--cb-surface); color: var(--cb-black); resize: vertical;
+}
+.cw-headline:focus { outline: none; border-color: var(--cb-black); }
+.cw-ask { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cw-quiet { font-size: 12px; color: var(--cb-mid); }
+.cw-rounds { margin-top: -4px; }
+
+.cw-body { grid-template-columns: minmax(0, 600px) minmax(0, 1fr); }
+.cw-box { background: var(--cb-outer); gap: 10px; }
+.cw-email { background: #fff; padding: 12px; }
+.cw-email table { border-spacing: 0; }
+.cw-email img { max-width: 100%; }
+.cw-label { margin: 0; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--cb-mid); display: flex; gap: 8px; align-items: center; }
+.cw-context { display: grid; gap: 10px; }
+.cw-ctx { background: var(--cb-bg); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.cw-ctx-text { margin: 0; font-size: 13px; line-height: 1.5; }
+.cw-para { min-height: 120px; }
+.cw-who { font-size: 12px; color: var(--cb-mid); }
+
+@media (max-width: 860px) {
+  .se-fallback { padding: 0 16px; }
+  .cw-body { grid-template-columns: minmax(0, 1fr); }
+  .cw-email { padding: 12px; }
+}

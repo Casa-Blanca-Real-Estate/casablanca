@@ -8,8 +8,9 @@
 //   POST  {reportId, sample: true}
 //         admins: sort every comp the sample knows, with its sample reason,
 //         mark them reviewed and set the sample's anchor (Dispatch 07), and
-//         store Hubert's review of each, feedback and take (Dispatch 25)
-//   PATCH {reportId, reportCompId, reviewed?, anchor?, confirmed?, tier?, note?, tags?, features?, removed?}
+//         store Hubert's review of each, feedback and take (Dispatch 25), and
+//         write each one's paragraph for the client where it has none (Dispatch 26)
+//   PATCH {reportId, reportCompId, reviewed?, anchor?, confirmed?, tier?, note?, tags?, features?, removed?, clientLine?}
 //         (tags: the list's, or the agent's own (DP-6, Dispatch 20): see cleanTags)
 //         mark a comp reviewed; make it the anchor (★, one per report, any
 //         status: starring another moves it); confirm a comp read from its
@@ -22,6 +23,8 @@
 //         comp makes it 1st, and giving the ★ comp 2nd or ✕ takes the star off.
 //         factOverrides {price?, size?, date?, floor?}: the agent's corrections
 //         to the source's facts, a value each, or null to put the source's back
+//         clientLine {text, by} or null (Dispatch 26): the comp's paragraph for
+//         the client, from Send's client step; `at` is stamped here
 //   POST  {reportId, manual, note?, tags?, features?}: a typed-in comp saves its note, tags and features with it
 //   PATCH {reportId, tagEdits: [{reportCompId, tags}]}: several comps' tags at once, for the tags the
 //         data settles (NB-9 C, Dispatch 20)
@@ -30,12 +33,13 @@ import { compRecordFromManual, FACT_CHECKS, ParseError, PARSER_VERSION, type Man
 import { withActor, type Queryable } from '../db.ts';
 import { newYorkToday } from '../links.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
-import { SAMPLE_REVIEWS, SAMPLE_TIERS } from '../sample/barclay-17l.ts';
+import { SAMPLE_CLIENT_LINES, SAMPLE_REVIEWS, SAMPLE_TIERS } from '../sample/barclay-17l.ts';
 import { appendReview } from '../reviews.ts';
 import { samplePhotos } from '../sample/photos.ts';
 import { mayUseSample, requireUser } from '../session.ts';
 import { cleanFeatures, isTag } from '../../workspace/features.ts';
 import { freeTagHardTerm, isFreeTag, MAX_FREE_TAG, MAX_TAGS, normalizeFreeTag } from '../../workspace/free-tags.ts';
+import { MAX_CLIENT_LINE, type ClientLine } from '../../workspace/client-words.ts';
 import { NO_NOTE_YET, OVERRIDE_KEYS, type FactOverride, type OverrideKey } from '../../workspace/state.ts';
 import { asUser, requirePool } from './reports.ts';
 import type { SamplePhotoDeps } from './sample-photos.ts';
@@ -120,7 +124,7 @@ export function cleanTags(raw: unknown): string[] {
 
 /** The agent's edits to a comp, validated: undefined where not given. */
 function compEdits(body: Record<string, unknown>, by = '', now = new Date()) {
-  const out: { note?: string | null; tags?: string[]; features?: Record<string, string[]>; overrides?: OverrideEdits } = {};
+  const out: { note?: string | null; tags?: string[]; features?: Record<string, string[]>; overrides?: OverrideEdits; clientLine?: ClientLine | null } = {};
   if (body.note !== undefined) {
     if (body.note !== null && typeof body.note !== 'string') throw new HttpError(400, 'bad_note', 'The note is text.');
     const note = typeof body.note === 'string' ? body.note.trim() : '';
@@ -133,7 +137,20 @@ function compEdits(body: Record<string, unknown>, by = '', now = new Date()) {
     out.features = cleanFeatures(body.features) as Record<string, string[]>;
   }
   if (body.factOverrides !== undefined) out.overrides = overrideEdits(body.factOverrides, by, now);
+  if (body.clientLine !== undefined) out.clientLine = clientLineEdit(body.clientLine, now);
   return out;
+}
+
+/** A comp's paragraph for the client (Dispatch 26): its text and who wrote it, stamped now; null or empty text clears it. */
+function clientLineEdit(raw: unknown, now: Date): ClientLine | null {
+  if (raw === null) return null;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new HttpError(400, 'bad_client_line', 'Send the paragraph as {text, by}, or null.');
+  const { text, by } = raw as Record<string, unknown>;
+  if (typeof text !== 'string') throw new HttpError(400, 'bad_client_line', 'The paragraph is text.');
+  const t = text.trim();
+  if (t.length > MAX_CLIENT_LINE) throw new HttpError(400, 'bad_client_line', `Keep the paragraph under ${MAX_CLIENT_LINE.toLocaleString('en-US')} characters.`);
+  if (by !== 'agent' && by !== 'writer' && by !== 'both') throw new HttpError(400, 'bad_client_line', 'Who wrote it: agent, writer or both.');
+  return t ? { text: t, by, at: now.toISOString() } : null;
 }
 
 async function saveEdits(tx: Queryable, reportId: string, reportCompId: string, edits: ReturnType<typeof compEdits>) {
@@ -142,6 +159,7 @@ async function saveEdits(tx: Queryable, reportId: string, reportCompId: string, 
   if (edits.note !== undefined) { values.push(edits.note); sets.push(`note = $${values.length}`); }
   if (edits.tags !== undefined) { values.push(edits.tags); sets.push(`tags = $${values.length}::text[]`); }
   if (edits.features !== undefined) { values.push(JSON.stringify(edits.features)); sets.push(`features = $${values.length}::jsonb`); }
+  if (edits.clientLine !== undefined) { values.push(edits.clientLine ? JSON.stringify(edits.clientLine) : null); sets.push(`client_line = $${values.length}::jsonb`); }
   if (edits.overrides) {
     values.push(JSON.stringify(edits.overrides.set), edits.overrides.clear);
     sets.push(`fact_overrides = (fact_overrides || $${values.length - 1}::jsonb) - $${values.length}::text[]`);
@@ -332,6 +350,14 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
           await saveEdits(tx, reportId, comp.id, { note: sample.reason, tags: sample.tags, ...(sample.features ? { features: sample.features } : {}) });
           await setReviewed(tx, reportId, comp.id, true);
           if (sample.anchor) await setAnchor(tx, reportId, comp.id, true);
+          // Its paragraph for the client (Dispatch 26 item 7), where it has none: the Designed email reads end to end.
+          const line = SAMPLE_CLIENT_LINES[sample.propertyKey];
+          if (line) {
+            await tx.query(
+              `update comp_report.report_comps set client_line = $3::jsonb where report_id = $1 and id = $2 and client_line is null`,
+              [reportId, comp.id, JSON.stringify({ text: line, by: 'agent', at: new Date().toISOString() })],
+            );
+          }
           // Hubert's review of it (Dispatch 25 item 7): feedback on the sample's note, then his take. Once per comp.
           const review = SAMPLE_REVIEWS[sample.propertyKey];
           if (review) {
@@ -425,7 +451,8 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
     let tier = body.tier as string | undefined;
     const edits = compEdits(body, user.email, new Date());
     if (reviewed === undefined && anchor === undefined && confirmed === undefined && removed === undefined && tier === undefined
-      && edits.note === undefined && edits.tags === undefined && edits.features === undefined && edits.overrides === undefined) {
+      && edits.note === undefined && edits.tags === undefined && edits.features === undefined && edits.overrides === undefined
+      && edits.clientLine === undefined) {
       throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
     }
     return json(await withActor(pool, asUser(user), async (tx) => {

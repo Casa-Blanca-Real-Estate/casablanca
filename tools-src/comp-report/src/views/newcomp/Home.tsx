@@ -22,9 +22,9 @@ export const TYPE_LABEL: Record<PropertyType, string> = { coop: 'Co-op', condo: 
 
 export const TARGET_TIP = 'Hubert, the AI assistant, doesn’t see this, so it can’t sway his read of the comps. It’s never in your client’s email and doesn’t change any number. Findings shows it against the range, and you can change it there.';
 
-/** The target's label, as the client's (NB-1 A): the client is the owner's default (Dispatch 21). */
+/** The target's label, as the client's (NB-1 A; Dispatch 26: a buyer's is their budget). The client is the owner's default (Dispatch 21). */
 export function targetLabel(side: Audience): string {
-  return side === 'buyer' ? 'Client’s offer target' : 'Client’s target price';
+  return side === 'buyer' ? 'Client’s budget' : 'Client’s target price';
 }
 
 /** A pasted link that checks out, as the clean link the tool reads (NW-004); otherwise null. */
@@ -186,7 +186,7 @@ export function HomeFields({ line, side, onSide, client, onClient, type, onType,
           <div className="fh nr-label-line">
             <label htmlFor={`${ids}-target`}>{targetLabel(side)} · optional</label>
             <span className="nr-sub">{buyer ? '(what your client hopes to pay)' : '(what you or the client want to justify)'}</span>
-            <Info label={buyer ? 'About the offer target' : 'About the target price'} text={TARGET_TIP} />
+            <Info label={buyer ? 'About the budget' : 'About the target price'} text={TARGET_TIP} />
           </div>
           <input
             id={`${ids}-target`}

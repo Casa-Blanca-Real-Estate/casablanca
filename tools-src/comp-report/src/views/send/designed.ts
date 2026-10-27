@@ -1,16 +1,23 @@
-// The Designed email (Dispatch 14, item 10; the handoff's "Designed email").
-// It renders the Full draft — the agent's plain text, the source of truth —
-// into Casa Blanca's branded 600px email: tables and inline styles, so Gmail
-// keeps it; the black header with the white wordmark (an absolute URL, so the
-// recipient's mail loads it); the range in a black block; the headline and
-// the body's paragraphs; the anchor comp, then the other comps, with neutral
-// blocks where their photos will go; the agent's sign-off; the disclaimer.
-// No separate writer run: the words are the Full draft's, read back out of
-// its plain text, and every figure beside them is the engine's.
+// The Designed email (Dispatch 14, item 10; Dispatch 26): what Send leads with
+// and what the agent sends. Casa Blanca's branded 600px email, in tables and
+// inline styles so Gmail keeps it: the black header with the white wordmark
+// (an absolute URL, so the recipient's mail loads it); the home's photo; the
+// range in a black block; the overview (the headline and how the comps were
+// chosen); then one box per comp, the anchor first and marked, each with its
+// address large and linked, its photo, its price, $/sq ft where the type shows
+// one, its status line and the paragraph written for the client on Send's
+// client step (or nothing); then things to consider, the next step, the
+// agent's sign-off and the disclaimer. No price table: the figures belong per
+// unit (Erez), and the table stays in Full and on Findings.
+//
+// The words outside the boxes are the Full draft's, read back out of its plain
+// text (the source of truth QA reads); every figure beside them is the
+// engine's. The photos are the listings' own on screen, and at copy time the
+// copies Casa keeps (server/email-photos.ts).
 import type { ListingStatus } from '../../../engine/index.ts';
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
 import { addressOf, urlOf, type EmailStatus } from '../../../workspace/email.ts';
-import { clientPrice, sqft } from '../../../workspace/format.ts';
+import { clientPrice, psf, sqft } from '../../../workspace/format.ts';
 import { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER } from '../../../workspace/frame.ts';
 
 // ─── Reading the Full draft back ─────────────────────────────────────────────
@@ -38,6 +45,9 @@ export interface ParsedEmail {
   signOff: string | null;
   disclaimer: string | null;
 }
+
+/** Nothing read back yet: every counted comp shows (the client step's boxes). */
+export const NO_PARSED: ParsedEmail = { sample: false, greeting: null, headline: null, intro: [], comps: [], consider: [], table: [], outro: [], signOff: null, disclaimer: null };
 
 const STATUS_HEADINGS = new Set(['SOLD', 'IN CONTRACT', 'ACTIVE', 'DIDN’T SELL', 'DIDN\'T SELL']);
 const COMP_LINE = /^-\s+(.+?)\s+—\s+(.+?)(?:\s+—\s+(https?:\/\/\S+))?\s*$/;
@@ -120,14 +130,21 @@ export function parseEmailText(text: string, headline?: string): ParsedEmail {
 // ─── The comps, as the designed email shows them ─────────────────────────────
 
 export interface DesignedComp {
+  /** The report comp id: the photo copy is asked for by it. */
+  id: string | null;
   name: string;
   status: ListingStatus;
   /** "Sold Aug 2026 · Floor 10", "In contract · Same building". */
   sub: string;
   /** "$4.45M", "$4.25M ask". */
   price: string;
-  note: string | null;
+  /** "$2,112 a sq ft", where the type shows one (a condo with the home's size). */
+  perSqft: string | null;
+  /** The comp's paragraph for the client (Dispatch 26), or nothing. */
+  paragraph: string | null;
   url: string | null;
+  /** The hero photo: the listing's own on screen, Casa's copy in what's copied. Null: the neutral block. */
+  photo: string | null;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -145,11 +162,18 @@ export function sameStreet(a: string | null | undefined, b: string | null | unde
  * The comps the Full email lists (email.ts countedComps), grouped by status, as
  * the designed email shows them: the anchor (★) first, the rest after. When
  * the agent has edited comps out of the text, only the ones still in it show.
- * Each comp's note is the Full draft's own line about it, as edited.
+ * Each comp's paragraph is the one written for the client (Dispatch 26), or
+ * none; its photo is `photo`'s (the hero by default), its $/sq ft `rate`'s.
  */
 export function designedComps(
   rows: { status: EmailStatus; comp: WorkspaceComp }[],
-  args: { parsed: ParsedEmail; homeStreet: string | null; sf: boolean },
+  args: {
+    parsed: ParsedEmail;
+    homeStreet: string | null;
+    sf: boolean;
+    rate?: (c: WorkspaceComp) => number | null | undefined;
+    photo?: (c: WorkspaceComp) => string | null | undefined;
+  },
 ): { anchor: DesignedComp | null; others: DesignedComp[] } {
   const named = new Map(args.parsed.comps.map((p) => [p.name, p]));
   const shown = args.parsed.comps.length ? rows.filter((r) => named.has(addressOf(r.comp))) : rows;
@@ -162,8 +186,19 @@ export function designedComps(
     else if (f.floor) parts.push(`Floor ${f.floor.value}`);
     if (args.sf && f.area_sqft) parts.push(sqft(f.area_sqft.value));
     const price = status === 'sold' ? clientPrice(f.sale_price?.value) : `${clientPrice(f.list_price?.value)} ask`;
-    const p = named.get(addressOf(comp));
-    return { name: addressOf(comp), status, sub: parts.join(' · '), price, note: p?.notes.join(' ') || null, url: urlOf(comp) };
+    const rate = args.sf ? args.rate?.(comp) ?? null : null;
+    const photo = args.photo ? args.photo(comp) ?? null : comp.judgment?.photos?.[0] ?? null;
+    return {
+      id: comp.judgment?.reportCompId ?? null,
+      name: addressOf(comp),
+      status,
+      sub: parts.join(' · '),
+      price,
+      perSqft: rate ? `${psf(rate)} a sq ft` : null,
+      paragraph: comp.judgment?.clientLine?.text.trim() || null,
+      url: urlOf(comp),
+      photo: safeUrl(photo) ? photo : null,
+    };
   };
   const anchorRow = shown.find((r) => r.comp.judgment?.anchor) ?? null;
   // The rest by status, as the handoff groups them (Sold, In contract, Active, Didn't sell); the email's order within each.
@@ -200,6 +235,8 @@ export interface DesignedInput {
   subject: string;
   /** The home's StreetEasy page, when known: the title links there. */
   titleUrl?: string | null;
+  /** The home's own photo, for the header block; without it, the neutral block. */
+  homePhoto?: string | null;
 }
 
 // Email-safe: no Object Sans, which only the app embeds. A font the reader's mail
@@ -218,8 +255,9 @@ const EYEBROW = 'font-size:10px;font-weight:bold;letter-spacing:.24em;text-trans
 
 /** The one escape: everything typed or read reaches the HTML through it, in text and attributes alike. */
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-/** A link we write: https only, else none. */
-export const safeUrl = (url: string | null | undefined): string | null => (url && /^https:\/\/[^\s"<>]+$/i.test(url) ? url : null);
+/** A link we write: https only, else none (http only from the local dev server, so a copy there keeps its photos). */
+export const safeUrl = (url: string | null | undefined): string | null =>
+  (url && /^(?:https:\/\/|http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/)[^\s"<>]+$/i.test(url) ? url : null);
 const lines = (s: string) => esc(s).replace(/\n/g, '<br>');
 
 function swatch(status: ListingStatus, border: boolean): string {
@@ -237,6 +275,37 @@ function quiet(text: string, url: string | null | undefined, style: string): str
 }
 
 const name = (c: DesignedComp, style: string) => quiet(c.name, c.url, style);
+
+/** A box's photo: 494 × 330 inside its 1px border and 20px padding (536px within the email's 32px gutters). */
+const PHOTO_W = 494;
+const PHOTO_H = 330;
+
+/**
+ * One comp's box: a thin border (the anchor's heavier, with its ★ line), the
+ * address large and bold on top and linked, the photo (or the neutral block),
+ * the price with $/sq ft beside it, the status line, then the client's
+ * paragraph, if there is one. Tables, so Gmail keeps the layout.
+ */
+export function compBox(c: DesignedComp, anchor: boolean, firstOther = false): string {
+  const photo = safeUrl(c.photo);
+  const picture = photo
+    ? `<img src="${esc(photo)}" alt="${esc(c.name)}" width="${PHOTO_W}" height="${PHOTO_H}" style="display:block;width:100%;max-width:${PHOTO_W}px;height:${PHOTO_H}px;object-fit:cover;border:0;">`
+    : `<div style="height:${PHOTO_H}px;${HATCH}font-size:0;line-height:0;">&nbsp;</div>`;
+  return (firstOther ? `<div style="${EYEBROW}padding:8px 0 12px;">Other comps</div>` : '')
+    + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:${anchor ? `2px solid ${INK}` : '1px solid #d8d6d0'};margin:0 0 18px;">`
+    + `<tr><td style="${CELL}padding:20px 20px 0;">`
+    + (anchor ? `<div style="${EYEBROW}padding-bottom:8px;"><span style="color:#e8b923;font-size:13px;letter-spacing:0;">★</span>&nbsp; The closest match</div>` : '')
+    + `<div style="font-size:22px;font-weight:bold;letter-spacing:-.02em;line-height:1.15;">${name(c, 'font-size:22px;font-weight:bold;')}</div></td></tr>`
+    + `<tr><td style="${CELL}padding:14px 20px 0;font-size:0;line-height:0;">${picture}</td></tr>`
+    + `<tr><td style="${CELL}padding:14px 20px 20px;">`
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
+    + `<td style="${CELL}vertical-align:baseline;font-size:22px;font-weight:bold;letter-spacing:-.02em;white-space:nowrap;">${esc(c.price)}</td>`
+    + (c.perSqft ? `<td align="right" style="${CELL}text-align:right;vertical-align:baseline;font-size:14px;font-weight:bold;white-space:nowrap;">${esc(c.perSqft)}</td>` : '')
+    + '</tr></table>'
+    + `<div style="font-size:12px;color:#888680;margin-top:6px;">${swatch(c.status, true)}${esc(c.sub)}</div>`
+    + (c.paragraph ? `<div style="font-size:14px;line-height:1.55;margin-top:12px;">${lines(c.paragraph)}</div>` : '')
+    + '</td></tr></table>';
+}
 
 const row = (inner: string, pad = '32px 32px 0') => `<tr><td style="${CELL}padding:${pad};">${inner}</td></tr>`;
 const para = (text: string, style = '') => `<p style="margin:0 0 14px;${style}">${lines(text)}</p>`;
@@ -256,7 +325,10 @@ export function designedHtml(d: DesignedInput): string {
     + `<td style="${CELL}vertical-align:middle;">${wordmark(18)}</td>`
     + `<td align="right" style="${CELL}text-align:right;vertical-align:middle;${EYEBROW}color:#aaa3cf;">Comp report</td></tr></table></td></tr>`);
   if (e.sample) out.push(`<tr><td bgcolor="#fbf0c4" style="${CELL}background:#fbf0c4;padding:10px 32px;font-size:11px;font-weight:bold;">${esc(SAMPLE_BANNER)}</td></tr>`);
-  out.push(`<tr><td height="240" bgcolor="#eeece7" style="${CELL}height:240px;${HATCH}font-size:0;line-height:0;">&nbsp;</td></tr>`);
+  const homePhoto = safeUrl(d.homePhoto);
+  out.push(homePhoto
+    ? `<tr><td height="240" bgcolor="#eeece7" style="${CELL}height:240px;padding:0;font-size:0;line-height:0;"><img src="${esc(homePhoto)}" alt="${esc(d.title)}" width="600" height="240" style="display:block;width:100%;max-width:600px;height:240px;object-fit:cover;border:0;"></td></tr>`
+    : `<tr><td height="240" bgcolor="#eeece7" style="${CELL}height:240px;${HATCH}font-size:0;line-height:0;">&nbsp;</td></tr>`);
   out.push(row(
     `<div style="${EYEBROW}color:#888680;">Prepared for ${esc(d.preparedFor)} · ${esc(d.month)}</div>`
     + `<div style="font-size:30px;font-weight:bold;letter-spacing:-.03em;line-height:1.05;margin-top:6px;">${quiet(d.title, d.titleUrl, 'font-size:30px;font-weight:bold;')}</div>`
@@ -274,46 +346,19 @@ export function designedHtml(d: DesignedInput): string {
     ...e.intro.map((p) => para(p)),
   ].join('');
   if (intro) out.push(row(`<div style="font-size:15px;line-height:1.6;">${intro}</div>`, '24px 32px 0'));
-  if (d.anchor) {
-    const a = d.anchor;
+  // One box per comp (Dispatch 26), the anchor first and marked; every box the same width, its photo the same size.
+  const boxes = [d.anchor, ...d.others].filter((c): c is DesignedComp => Boolean(c));
+  if (boxes.length) {
     out.push(row(
-      `<div style="${EYEBROW}padding-bottom:12px;"><span style="color:#e8b923;font-size:13px;letter-spacing:0;">★</span>&nbsp; The closest match</div>`
-      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
-      + `<td width="48%" height="150" bgcolor="#eeece7" style="${CELL}width:48%;height:150px;${HATCH}font-size:0;line-height:0;">&nbsp;</td>`
-      + `<td width="4%" style="${CELL}width:4%;font-size:0;">&nbsp;</td>`
-      + `<td width="48%" style="${CELL}width:48%;vertical-align:top;">`
-      + `<div>${name(a, 'font-size:17px;font-weight:bold;')}</div>`
-      + `<div style="font-size:12px;color:#888680;margin-top:6px;">${swatch(a.status, false)}${esc(a.sub)}</div>`
-      + `<div style="font-size:24px;font-weight:bold;letter-spacing:-.02em;margin-top:6px;">${esc(a.price)}</div>`
-      + (a.note ? `<div style="font-size:13px;line-height:1.5;color:#3c3654;margin-top:6px;">${lines(a.note)}</div>` : '')
-      + '</td></tr></table>',
-    ));
-  }
-  if (d.others.length) {
-    out.push(row(
-      `<div style="${EYEBROW}padding-bottom:10px;">${d.anchor ? 'Other comps' : 'The comps'}</div>`
-      + d.others.map((c) => '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #eeece7;"><tr>'
-        + `<td width="72" style="${CELL}width:72px;padding:12px 0;vertical-align:middle;"><div style="width:72px;height:52px;${HATCH}font-size:0;line-height:0;">&nbsp;</div></td>`
-        + `<td width="14" style="${CELL}width:14px;font-size:0;">&nbsp;</td>`
-        + `<td style="${CELL}padding:12px 0;vertical-align:middle;"><div>${name(c, 'font-size:14px;font-weight:bold;')}</div>`
-        + `<div style="font-size:12px;color:#888680;margin-top:3px;">${swatch(c.status, true)}${esc(c.sub)}</div></td>`
-        + `<td align="right" style="${CELL}text-align:right;padding:12px 0 12px 12px;vertical-align:middle;font-size:15px;font-weight:bold;white-space:nowrap;">${esc(c.price)}</td>`
-        + '</tr></table>').join(''),
+      (d.anchor ? '' : `<div style="${EYEBROW}padding-bottom:12px;">The comps</div>`)
+      + boxes.map((c) => compBox(c, c === d.anchor, d.anchor !== null && c === d.others[0])).join(''),
+      '28px 32px 0',
     ));
   }
   const after: string[] = [];
   if (e.consider.length) {
     after.push(`<div style="${EYEBROW}padding-bottom:10px;">Things to consider</div>`);
     after.push(...e.consider.map((p) => para(p)));
-  }
-  if (e.table.length) {
-    after.push(`<div style="${EYEBROW}padding:8px 0 10px;">Price per square foot</div>`);
-    after.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;">'
-      + e.table.map((t) => {
-        const [rate, price] = t.split(/\s+-\s+/);
-        return `<tr><td style="${CELL}padding:8px 0;border-top:1px solid #eeece7;font-size:13px;color:#888680;">${esc(rate ?? t)} a sq ft</td>`
-          + `<td align="right" style="${CELL}text-align:right;padding:8px 0;border-top:1px solid #eeece7;font-size:14px;font-weight:bold;">${esc(price ?? '')}</td></tr>`;
-      }).join('') + '</table>');
   }
   after.push(...e.outro.map((p) => para(p)));
   if (after.length) out.push(row(`<div style="font-size:15px;line-height:1.6;">${after.join('')}</div>`));
