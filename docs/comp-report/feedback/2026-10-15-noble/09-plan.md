@@ -74,7 +74,7 @@ Calliste                 (after the move) 24
 
 **Files with an owner this round.** `workspace/features.ts` and `subject.ts` belong to Abacus (16). Mason edits
 `Chat.tsx` once (15), then hands it to Calliste. Nobody touches `assets/studio-header.js`. 23's items 3–4 and 24 both edit `api/turn.ts` and the write deps (23 makes `productionAnthropic` take the user): the second to open rebases on the first.
-**Migrations.** Reserved: `20261016000000` (15); `20261016120000` (22a; it shipped as `20261027120000`, after #92–#97's migrations) and `20261016120100` (22b, take a timestamp after 22a's), or one
+**Migrations.** Reserved: `20261016000000` (15); `20261016120000` (22a; it shipped as `20261027120000`, after #92–#97's migrations, with `20261027130000` for the mentees list) and `20261016120100` (22b, take a timestamp after 22a's), or one
 PR on `20261016120000` if 22 ships whole; `20261017000000` (23, only if items 3–4 ship: items 1–2 have none).
 Dispatch 20 has no migration.
 
