@@ -13,7 +13,12 @@ import { handleSample } from '../server/api/sample.ts';
 import { handleWorkspace, type WorkspaceData } from '../server/api/workspace.ts';
 import type { PoolLike } from '../server/db.ts';
 import type { IdentityUser } from '../server/identity.ts';
-import { SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
+import { SAMPLE_INTAKE, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
+import { ENGINE_VERSION } from '../engine/index.ts';
+import { neutralNumbers } from '../server/numbers.ts';
+import { withActor } from '../server/db.ts';
+import { answerResult } from '../workspace/reading.ts';
+import type { RevealPin } from '../workspace/state.ts';
 import type { AuthDeps } from '../server/session.ts';
 import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
 
@@ -87,7 +92,10 @@ describe('the walkthrough workspace', { skip: skipWithoutDatabase }, () => {
     const fresh = testPool(db.ownerUrl, 1);
     try {
       const { body } = await workspace('tok-ana-000000000', anaReport, { ...deps, pool: fresh as unknown as PoolLike });
-      assert.deepEqual([body.state, body.brief, body.target, body.call], [state, brief, target, call]);
+      // The call pinned the reveal beside what was saved (no comps yet, so no range in it).
+      const { reveal, ...saved } = body.state as { reveal?: Record<string, unknown> };
+      assert.deepEqual([saved, body.brief, body.target, body.call], [state, brief, target, call]);
+      assert.deepEqual([reveal?.low, reveal?.base, reveal?.high], [null, null, null]);
     } finally {
       await fresh.end();
     }
@@ -106,6 +114,14 @@ describe('the walkthrough workspace', { skip: skipWithoutDatabase }, () => {
     assert.deepEqual(await bad({ call: { low: 3400000.5, high: 4200000, at: 'x' } }), [400, 'bad_call']);
     assert.deepEqual(await bad({ call: { low: 3400000, high: 4200000 } }), [400, 'bad_call']);
     assert.deepEqual(await bad({ target: { price: { value: -1 } } }), [400, 'bad_target']);
+    assert.deepEqual(await bad({ target: { price: { value: 4250000, asOf: '2026-09-29' }, owner: 'broker' } }), [400, 'bad_target']);
+    assert.deepEqual(await bad({ brief: { client: { priorities: ['price', 'price'] } } }), [400, 'bad_client']);
+    assert.deepEqual(await bad({ brief: { client: { priorities: ['location'] } } }), [400, 'bad_client']);
+    assert.deepEqual(await bad({ brief: { client: { urgency: { by: { value: 'soon', asOf: '2026-09-29' } } } } }), [400, 'bad_client']);
+    assert.deepEqual(await bad({ brief: { client: { nonNegotiables: { value: 'Adults only building', asOf: '2026-09-29' } } } }), [400, 'fair_housing']);
+    assert.deepEqual(await bad({ state: { dealTerms: { template: 'buyer_traditional', financing: { value: 'barter', asOf: '2026-09-29' } } } }), [400, 'bad_terms']);
+    assert.deepEqual(await bad({ state: { dealTerms: { template: 'buyer_traditional', preApprovalAmount: { value: 0, asOf: '2026-09-29' } } } }), [400, 'bad_terms']);
+    assert.deepEqual(await bad({ state: { dealTerms: { template: 'buyer_traditional', flexibility: { value: 'Wants a safe neighborhood', asOf: '2026-09-29' } } } }), [400, 'fair_housing']);
     assert.deepEqual(await bad({ state: [] }), [400, 'bad_state']);
     assert.deepEqual(await bad({ state: { big: 'x'.repeat(70 * 1024) } }), [413, 'too_large']);
     assert.deepEqual(await bad({}), [400, 'nothing_to_save']);
@@ -219,5 +235,146 @@ describe('the walkthrough workspace', { skip: skipWithoutDatabase }, () => {
     // The flag is sticky: false is not a way to clear it.
     await handleWorkspace(request('workspace', 'tok-kimani-000000', 'PATCH', { reportId: kimaniReport, sampleData: false, brief: {} }), deps);
     assert.equal((await workspace('tok-kimani-000000', kimaniReport)).body.report.sampleData, true);
+  });
+});
+
+// §8.4's backstop (Dispatch 21, item 4): the range the agent first saw, pinned
+// by the server under state.reveal. The browser never writes it.
+describe('the reveal pin', { skip: skipWithoutDatabase }, () => {
+  let db: TestDatabase;
+  let pool: pg.Pool;
+  let superuser: pg.Pool;
+  let deps: AuthDeps;
+  const KIMANI = 'tok-kimani-000000';
+  const ANA = 'tok-ana-000000000';
+
+  before(async () => {
+    db = await createTestDatabase();
+    pool = testPool(db.ownerUrl, 4);
+    // A superuser with triggers off: it stages what the tests need (a call with no pin) behind the app's back.
+    superuser = new pg.Pool({ connectionString: db.urlAs(new URL(process.env.CR_TEST_DATABASE_URL!).username || 'postgres'), max: 1, options: '-c session_replication_role=replica' });
+    superuser.on('error', () => undefined);
+    deps = {
+      verifier: {
+        async verify(token: string) {
+          const email = PEOPLE[token];
+          return email ? ({ id: `id-${token}`, email, confirmed: true, provider: 'google', name: null } as IdentityUser) : null;
+        },
+        emailConfirmationRequired: async () => true,
+      },
+      access: accessConfig({ CR_ADMIN_EMAILS: 'kimani@casa-blanca.com' }),
+      pool: pool as unknown as PoolLike,
+    };
+  });
+  after(async () => {
+    await pool.end();
+    await superuser.end();
+    await db?.drop();
+  });
+
+  const request = (path: string, token: string, method = 'GET', body?: unknown) =>
+    new Request(`https://site/api/comp-report/${path}`, {
+      method,
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  const patch = async (token: string, body: unknown) => {
+    const res = await handleWorkspace(request('workspace', token, 'PATCH', body), deps);
+    assert.equal(res.status, 200, JSON.stringify(await res.clone().json()));
+    return res.json() as Promise<{ saved: true; reveal?: RevealPin }>;
+  };
+  const load = async (token: string, reportId: string) => {
+    const res = await handleWorkspace(request(`workspace?report=${reportId}`, token), deps);
+    assert.equal(res.status, 200);
+    return (await res.json()) as WorkspaceData;
+  };
+  const stored = async (reportId: string) =>
+    (await superuser.query<{ reveal: RevealPin | null }>(`select state -> 'reveal' as reveal from comp_report.reports where id = $1`, [reportId])).rows[0]!.reveal;
+  const unpin = (reportId: string) => superuser.query(`update comp_report.reports set state = state - 'reveal', agent_call = null where id = $1`, [reportId]);
+  const call = (at = new Date().toISOString()) => ({ low: 3400000, high: 4200000, at });
+  const intake = { ...SAMPLE_INTAKE, areaSqft: { value: 2000, asOf: '2026-09-23' } };
+
+  /** A report with the sample's comps, tiered as the sample tiers them, and a size: one with a range. */
+  const sampleReport = async (token = KIMANI) => {
+    const id = (await (await handleReports(request('reports', token, 'POST', { title: '100 Barclay Street, #17L' }), deps)).json()).report.id as string;
+    assert.equal((await handleImports(request('imports', KIMANI, 'POST', { reportId: id, sample: true }), deps)).status, token === KIMANI ? 201 : 404);
+    return id;
+  };
+  let report = '';
+  /** The engine's numbers for the report, from what's stored: what the pin must hold. */
+  let engine: { low: number | null; base: number | null; high: number | null } = { low: null, base: null, high: null };
+
+  before(async () => {
+    report = await sampleReport();
+    await handleComps(request('comps', KIMANI, 'POST', { reportId: report, sample: true }), deps);
+    await patch(KIMANI, { reportId: report, state: { intake } });
+    const n = await withActor(pool as unknown as PoolLike, { kind: 'user', email: PEOPLE[KIMANI]!, role: 'admin' }, (tx) => neutralNumbers(tx, report));
+    const r = n!.output.results[answerResult(n!.output)];
+    engine = { low: r.range?.low.value ?? null, base: r.base?.value ?? null, high: r.range?.high.value ?? null };
+    assert.ok(engine.low && engine.high && engine.base, 'the sample with a size has a range and a base');
+  });
+
+  test('(a) a state PATCH carrying a reveal, with none stored, stores none', async () => {
+    await patch(KIMANI, { reportId: report, state: { intake, reveal: { at: 'x', low: 1, base: 2, high: 3, engineVersion: 'forged' } } });
+    assert.equal(await stored(report), null);
+  });
+
+  test('(g) the call pins the engine’s numbers, whatever the body says; (e) a reveal outside state is ignored', async () => {
+    const res = await patch(KIMANI, { reportId: report, call: call(), reveal: { at: 'x', low: 1, base: 2, high: 3, engineVersion: 'forged' } });
+    const pin = await stored(report);
+    assert.ok(pin);
+    assert.deepEqual({ low: pin.low, base: pin.base, high: pin.high }, engine);
+    assert.equal(pin.engineVersion, ENGINE_VERSION);
+    assert.equal(pin.late, undefined);
+    assert.deepEqual(res.reveal, pin, 'the PATCH answers with the pin');
+  });
+
+  test('(b) a state PATCH without a reveal keeps the stored one; (c) one with a changed reveal keeps it too', async () => {
+    const before = await stored(report);
+    await patch(KIMANI, { reportId: report, state: { intake, reached: 'findings' } });
+    assert.deepEqual(await stored(report), before);
+    await patch(KIMANI, { reportId: report, state: { intake, reveal: { ...before, low: 1 } } });
+    assert.deepEqual(await stored(report), before);
+    assert.equal((await load(KIMANI, report)).state.reached, undefined, 'the rest of the state is the latest save');
+  });
+
+  test('(d) clearing the call and giving a new one leaves the pin as it was', async () => {
+    const before = await stored(report);
+    await patch(KIMANI, { reportId: report, call: null });
+    assert.deepEqual(await stored(report), before);
+    // Fewer comps now: a fresh pin would differ, but the stored one stays.
+    await patch(KIMANI, { reportId: report, state: { intake: SAMPLE_INTAKE }, call: { ...call(), low: 3000000 } });
+    assert.deepEqual(await stored(report), before);
+    await patch(KIMANI, { reportId: report, state: { intake } });
+  });
+
+  test('(f) a state autosave and a call at once leave exactly one pin, the engine’s', async () => {
+    for (let i = 0; i < 4; i++) {
+      await unpin(report);
+      await Promise.all([
+        patch(KIMANI, { reportId: report, state: { intake, reached: 'findings' } }),
+        patch(KIMANI, { reportId: report, call: call() }),
+      ]);
+      const pin = await stored(report);
+      assert.ok(pin, `round ${i}: pinned`);
+      assert.deepEqual({ low: pin.low, base: pin.base, high: pin.high }, engine, `round ${i}`);
+      const s = (await superuser.query<{ state: Record<string, unknown> }>('select state from comp_report.reports where id = $1', [report])).rows[0]!.state;
+      assert.equal(s.reached, 'findings', `round ${i}: the autosave landed`);
+    }
+  });
+
+  test('(h) a report with a call and no pin gets a late one on the owner’s first load; an admin’s load writes nothing', async () => {
+    const anas = (await (await handleReports(request('reports', ANA, 'POST', { title: 'Ana’s report' }), deps)).json()).report.id as string;
+    await patch(ANA, { reportId: anas, call: call('2026-10-01T15:00:00.000Z') });
+    await superuser.query(`update comp_report.reports set state = state - 'reveal' where id = $1`, [anas]);
+    assert.equal((await load(KIMANI, anas)).state.reveal, undefined);
+    assert.equal(await stored(anas), null, 'the admin wrote nothing');
+    const reveal = (await load(ANA, anas)).state.reveal as RevealPin;
+    assert.deepEqual(reveal, { at: '2026-10-01T15:00:00.000Z', low: null, base: null, high: null, engineVersion: ENGINE_VERSION, late: true });
+    assert.deepEqual(await stored(anas), reveal);
+    // The owner's own sample report, revealed before the pin existed, gets the engine's numbers.
+    await superuser.query(`update comp_report.reports set state = state - 'reveal' where id = $1`, [report]);
+    const late = (await load(KIMANI, report)).state.reveal as RevealPin;
+    assert.deepEqual({ low: late.low, base: late.base, high: late.high, late: late.late }, { ...engine, late: true });
   });
 });

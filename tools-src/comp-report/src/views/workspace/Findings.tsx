@@ -3,21 +3,25 @@
 // (D-1). Then the top card: the true estimate (a Findings label only, never in
 // the email), the legend and the range bar on a fixed axis, the verdict, and
 // How Hubert got there beside Your reasoning. Then the status tiles and the
-// accordions: the price table (with a size only), the comps that count, the
-// target (D-4), pricing details and how this was worked out. Every figure is
-// the engine's; the sentences only word them (src/views/findings/findings.ts).
+// accordions, each with an ⓘ (Dispatch 21): the price table (five rows and a
+// calculator, with a size only), the comps that count, the target (D-4, whose
+// it is, and how far the range has moved since the reveal), pricing details
+// and how this was worked out. Every figure is the engine's; the sentences only
+// word them (src/views/findings/findings.ts).
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import type { CompOut, EngineOutput, Figure, ListingStatus, PairOut, Result, ResultKind } from '../../../engine/index.ts';
 import { clientPrice, countWord, pct, psf, sqft, usd } from '../../../workspace/format.ts';
 import { answerResult, estimatesChangeTheAnswer } from '../../../workspace/reading.ts';
 import { noteOf } from '../../../workspace/state.ts';
 import { at, fixedAxis, span } from '../findings/axis.ts';
-import { engineWhy, hubertTake, statusTiles, verdictLine } from '../findings/findings.ts';
+import { engineWhy, hubertTake, statusTiles, stillNeeded, verdictLine, type TakeSegment } from '../findings/findings.ts';
+import { MoneyInput } from '../findings/MoneyInput.tsx';
+import { Info } from '../newcomp/Frame.tsx';
 import { compAddress, compPrice, compStatus, listingUrl, rowPsf, STATUS_LABEL, STATUS_ORDER } from './comps.tsx';
 import { Gate } from './Gate.tsx';
 import type { StepProps, Workspace } from './model.ts';
 import { homeName } from './screens.ts';
-import { PricingDetails, TargetSection, targetLabel } from './Terms.tsx';
+import { againstEstimate, PricingDetails, TargetSection, targetLabel } from './Terms.tsx';
 import { TypeMismatch } from '../comp/TypeMismatch.tsx';
 import '../../styles/findings.css';
 
@@ -71,7 +75,7 @@ function FindingsBody({ ws, o }: { ws: Workspace; o: EngineOutput }) {
 
 // ─── The top card ────────────────────────────────────────────────────────────
 
-function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean; take: string }) {
+function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean; take: TakeSegment[] }) {
   const r = o.results[kind];
   const range = r.range;
   const facts = o.headline_facts[kind].facts;
@@ -104,7 +108,9 @@ function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; 
       <div className="fi-compare">
         <div className="fi-col">
           <span className="fi-label"><span className="fi-spark" aria-hidden="true">✦</span>How Hubert got there</span>
-          <div className="fi-take">{take}</div>
+          <div className="fi-take">
+            {take.map((seg, i) => ('text' in seg ? <Fragment key={i}>{seg.text}</Fragment> : <span key={i} className="fi-take-comp" title={seg.title || undefined}>{seg.name}</span>))}
+          </div>
         </div>
         <div className="fi-col fi-yours">
           <span className="fi-label">Your reasoning <span className="fi-from">(from the gate)</span></span>
@@ -228,6 +234,8 @@ function Tiles({ ws, o, kind }: { ws: Workspace; o: EngineOutput; kind: ResultKi
 interface Item {
   key: string;
   title: string;
+  /** The ⓘ: what the section is for, in a line. */
+  info: string;
   sub: string;
   body: ReactNode;
 }
@@ -240,12 +248,31 @@ function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kin
   const area = ws.intake.areaSqft?.value ?? null;
   const ask = ws.intake.askingPrice?.value ?? null;
   const timing = ws.dealTerms?.template === 'seller_pricing' ? ws.dealTerms.timing?.value ?? '' : '';
+  const r = o.results[kind];
+  // Five rows need a size and two counting sales: with one, every row would repeat it.
+  const table = ws.sf && area !== null && r.evidence.sold.counts.included >= 2;
+  const needed = stillNeeded(o.gaps);
   const items: Item[] = [
-    ...(ws.sf ? [{ key: 'pt', title: 'Price table', sub: area ? sqft(area) : '', body: <PriceTable ws={ws} r={o.results[kind]} /> }] : []),
-    { key: 'cc', title: 'Comps that count', sub: String(counted.length), body: <CountingComps ws={ws} outById={outById} kind={kind} counted={counted} /> },
-    { key: 'tp', title: 'Target price', sub: target ? clientPrice(target) : '—', body: <TargetSection ws={ws} /> },
-    { key: 'pd', title: 'Pricing details', sub: ws.side === 'buyer' ? (ask ? `Asking ${clientPrice(ask)}` : '') : timing, body: <PricingDetails ws={ws} kind={kind} /> },
-    { key: 'hw', title: 'How this was worked out', sub: o.gaps.length ? `${o.gaps.length} still needed` : '', body: <WorkedOut ws={ws} output={o} both={both} kind={kind} /> },
+    ...(table ? [{
+      key: 'pt', title: 'Price table', sub: area ? sqft(area) : '', body: <PriceTable ws={ws} r={r} />,
+      info: 'What the home comes to at each $/sq ft across your closest sales. The calculator tries any price or rate; nothing in it is saved.',
+    }] : []),
+    {
+      key: 'cc', title: 'Comps that count', sub: String(counted.length), body: <CountingComps ws={ws} outById={outById} kind={kind} counted={counted} />,
+      info: 'The comps the numbers use: your 1st tier. Change a tier on Sort and this list follows.',
+    },
+    {
+      key: 'tp', title: targetLabel(ws), sub: target ? clientPrice(target) : '—', body: <TargetSection ws={ws} />,
+      info: 'A number to hold against the range. It never goes into the calculation and isn’t in the email.',
+    },
+    {
+      key: 'pd', title: 'Pricing details', sub: ws.side === 'buyer' ? (ask ? `Asking ${clientPrice(ask)}` : '') : timing, body: <PricingDetails ws={ws} kind={kind} />,
+      info: 'The asking price, monthly charges and how your sales went against their asks, then the deal terms.',
+    },
+    {
+      key: 'hw', title: 'How this was worked out', sub: needed.fillable.length ? `${needed.fillable.length} still needed` : '', body: <WorkedOut ws={ws} output={o} both={both} kind={kind} />,
+      info: 'The method, what was left out, and what the tool still needs from you. For checking your work, not for the client.',
+    },
   ];
   return (
     <section className="fi-acc" aria-label="The details">
@@ -254,12 +281,18 @@ function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kin
         const id = `fi-acc-${item.key}`;
         return (
           <div key={item.key} className="fi-acc-item">
-            <button type="button" className="fi-acc-head" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen({ ...open, [item.key]: !isOpen })}>
-              <span className="fi-acc-n">{String(i + 3).padStart(2, '0')}</span>
-              {item.title}
-              {item.sub && <span className="fi-acc-sub">{item.sub}</span>}
-              <span className="fi-acc-sign" aria-hidden="true">{isOpen ? '–' : '+'}</span>
-            </button>
+            {/* The ⓘ is its own button, so it sits beside the header's, not inside it. */}
+            <div className="fi-acc-row">
+              <button type="button" className="fi-acc-head" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen({ ...open, [item.key]: !isOpen })}>
+                <span className="fi-acc-n">{String(i + 3).padStart(2, '0')}</span>
+                {item.title}
+              </button>
+              <span className="fi-info"><Info label={`About ${item.title.toLowerCase()}`} text={item.info} align="left" /></span>
+              <button type="button" className="fi-acc-rest" tabIndex={-1} aria-hidden="true" onClick={() => setOpen({ ...open, [item.key]: !isOpen })}>
+                {item.sub && <span className="fi-acc-sub">{item.sub}</span>}
+                <span className="fi-acc-sign">{isOpen ? '–' : '+'}</span>
+              </button>
+            </div>
             {isOpen && <div className="fi-acc-body" id={id}>{item.body}</div>}
           </div>
         );
@@ -268,26 +301,86 @@ function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kin
   );
 }
 
-/** The price table, as in Frankie's email: the home at each $/sq ft step across the range (§6.5). With a size only. */
+/**
+ * The price table (NW-065 a): what the home's size comes to across the span of
+ * the closest sales' $/sq ft, in five even rows (low, a quarter, the middle,
+ * three-quarters, high: Dispatch 19's `five_rows`), then a calculator. The
+ * calculator is the browser's arithmetic only: never saved, never fed to the
+ * engine. With a size and two or more counting sales only (the caller checks).
+ */
 function PriceTable({ ws, r }: { ws: Workspace; r: Result }) {
   const t = r.price_table;
+  const home = homeName(ws.intake, ws.report.title);
   if (!t) return <p className="fi-quiet">No price table yet{r.price_table_unavailable_because ? `: ${engineWhy(r.price_table_unavailable_because)}` : ''}.</p>;
   const byId = new Map(ws.comps.map((c) => [c.id, c]));
+  const STEP = { low: 'Lowest', quarter: 'A quarter up', middle: 'The middle', three_quarter: 'Three-quarters up', high: 'Highest' } as const;
   return (
     <>
+      <p className="fi-pt-lead">What {home}’s {sqft(t.subject_area.value)} comes to, from the lowest to the highest $/sq ft of your closest sales.</p>
       <div className="fi-pt">
-        {t.rows.map((row) => {
-          const who = row.kind === 'comp' ? row.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join(', ') : row.kind === 'range_end' ? 'An end of your range' : '';
+        {t.five_rows.map((row) => {
+          const who = row.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join(', ');
           return (
-            <div key={`${row.kind}:${row.per_sqft.value}`} className={`fi-pt-cell fi-pt-${row.kind}`} title={who || undefined}>
+            <div key={row.step} className={`fi-pt-cell fi-pt-${row.step}`} title={who || undefined}>
+              <span className="fi-pt-step">{STEP[row.step]}</span>
               <span className="fi-pt-rate">{psf(row.per_sqft.value)} / sq ft</span>
               <span className="fi-pt-price" title={usd(row.price.value)}>{clientPrice(row.price.value)}</span>
+              {who && <span className="fi-pt-who">{who}</span>}
             </div>
           );
         })}
       </div>
-      <p className="fi-quiet">{t.basis}</p>
+      <Calculator ws={ws} area={t.subject_area.value} />
     </>
+  );
+}
+
+/** $/sq ft and a size give a price; a price gives its $/sq ft and where it sits against the true estimate. Nothing here is saved. */
+function Calculator({ ws, area }: { ws: Workspace; area: number }) {
+  const [rate, setRate] = useState<number | null>(null);
+  const [size, setSize] = useState<number | null>(Math.round(area));
+  const [price, setPrice] = useState<number | null>(null);
+  const kind = ws.output ? answerResult(ws.output) : 'on_facts';
+  const priced = rate !== null && size ? rate * size : null;
+  const priceRate = price !== null && size ? price / size : null;
+  const where = price !== null ? againstEstimate(ws.output, kind, price) : null;
+  return (
+    <div className="fi-calc" aria-label="Price calculator">
+      <span className="fi-sub-k">Try a number <span className="fi-opt">(not saved)</span></span>
+      <div className="fi-calc-row">
+        <label className="fi-calc-field">
+          <span className="fi-k">$/sq ft</span>
+          <MoneyInput id="fi-calc-rate" className="fi-line-input" value={rate} placeholder="e.g. 2,300" onChange={setRate} />
+        </label>
+        <span className="fi-calc-op" aria-hidden="true">×</span>
+        <label className="fi-calc-field">
+          <span className="fi-k">Size (sq ft)</span>
+          <input
+            id="fi-calc-size"
+            className="fi-line-input"
+            inputMode="numeric"
+            autoComplete="off"
+            value={size === null ? '' : size.toLocaleString('en-US')}
+            placeholder="2,000"
+            onChange={(e) => {
+              const n = Number(e.target.value.replace(/[,\s]/g, ''));
+              setSize(e.target.value.trim() && Number.isFinite(n) && n > 0 ? Math.round(n) : null);
+            }}
+          />
+        </label>
+        <span className="fi-calc-op" aria-hidden="true">=</span>
+        <output className="fi-calc-out" htmlFor="fi-calc-rate fi-calc-size">{priced !== null ? usd(Math.round(priced)) : '—'}</output>
+      </div>
+      <div className="fi-calc-row">
+        <label className="fi-calc-field">
+          <span className="fi-k">A price</span>
+          <MoneyInput id="fi-calc-price" className="fi-line-input" value={price} placeholder="e.g. 4,500,000" onChange={setPrice} />
+        </label>
+        <output className="fi-calc-out" htmlFor="fi-calc-price fi-calc-size">
+          {priceRate !== null ? `${psf(priceRate)} / sq ft${where ? `, ${where}` : ''}` : '—'}
+        </output>
+      </div>
+    </div>
   );
 }
 
@@ -297,6 +390,7 @@ function CountingComps({ ws, outById, kind, counted }: { ws: Workspace; outById:
   const ordered = STATUS_ORDER.flatMap((s: ListingStatus) => counted.filter((c) => compStatus(c) === s));
   return (
     <div className="fi-cc">
+      <p className="fi-cc-lead">Your 1st-tier comps. Only the sales set the range; the asks show where the market is.</p>
       {ordered.map((c) => {
         const status = compStatus(c);
         const url = listingUrl(c);
@@ -313,7 +407,10 @@ function CountingComps({ ws, outById, kind, counted }: { ws: Workspace; outById:
                 <button type="button" className="fi-cc-addr" onClick={() => ws.go('sort')}>{compAddress(c)}</button>
                 {url && <a className="fi-cc-link" href={url} target="_blank" rel="noreferrer noopener" aria-label={`${compAddress(c)} on StreetEasy`}>StreetEasy ↗</a>}
               </span>
-              <span className="fi-cc-note">{note ?? 'No note yet. Edit to say why it’s here.'}</span>
+              <span className="fi-cc-note">
+                {note ?? 'No note yet. Edit to say why it’s here.'}
+                {(c.judgment?.tags ?? []).map((t) => <span key={t} className="fi-cc-tag">{t}</span>)}
+              </span>
             </span>
             <span className="fi-cc-price">
               {price.value !== null ? clientPrice(price.value) : '—'}
@@ -343,6 +440,8 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
   const byId = new Map(ws.comps.map((c) => [c.id, c]));
   // Without a size, a warning that's about $/sqft doesn't apply to what the agent sees.
   const warnings = output.warnings.filter((w) => ws.sf || (w.code !== 'approx_area' && !/\$\/sq ?ft/i.test(w.message)));
+  // Still needed: what the agent can fill in (NW-077 a). What follows from it, or no form asks, goes under Warnings.
+  const needed = stillNeeded(output.gaps);
   const r = output.results[kind];
   const n = r.range?.comp_ids.length ?? 0;
   const size = ws.intake.areaSqft;
@@ -394,11 +493,12 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
       {kinds.map((k) => <Pairs key={`pairs:${k}`} ws={ws} r={output.results[k]} label={both ? output.results[k].label : null} />)}
       <div className="fi-sub">
         <span className="fi-sub-k">What the tool still needs</span>
-        {output.gaps.length === 0 ? <p className="fi-quiet">Nothing.</p> : (
+        {needed.fillable.length === 0 ? <p className="fi-quiet">Nothing you can fill in.</p> : (
           <ul className="fi-plain">
-            {output.gaps.map((g, i) => (
+            <li className="fi-needed-sum">{needed.words}.</li>
+            {needed.fillable.map((g, i) => (
               <li key={i}>
-                {g.message}{g.results.length === 1 ? <span className="fi-quiet-inline"> ({RESULT_WORDS[g.results[0]!]})</span> : null}
+                {engineWhy(g.message)}{g.results.length === 1 ? <span className="fi-quiet-inline"> ({RESULT_WORDS[g.results[0]!]})</span> : null}
                 {g.target === 'subject' && !ws.readOnly && <> <button type="button" className="link" onClick={() => ws.openStart('details')}>Fill it in</button></>}
                 {g.target && g.target !== 'subject' && byId.get(g.target) && <span className="fi-quiet-inline"> — {compAddress(byId.get(g.target)!)}</span>}
               </li>
@@ -406,12 +506,18 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
           </ul>
         )}
       </div>
-      {warnings.length > 0 && (
+      {warnings.length + needed.rest.length > 0 && (
         <div className="fi-sub">
           <span className="fi-sub-k">Warnings</span>
           <ul className="fi-plain">
+            {needed.rest.map((g, i) => (
+              <li key={`gap:${i}`}>
+                {engineWhy(g.message)}{g.results.length === 1 ? <span className="fi-quiet-inline"> ({RESULT_WORDS[g.results[0]!]})</span> : null}
+                {g.target && g.target !== 'subject' && byId.get(g.target) && <span className="fi-quiet-inline"> — {compAddress(byId.get(g.target)!)}</span>}
+              </li>
+            ))}
             {warnings.map((w, i) => (
-              <li key={i}>{w.message}{w.comp_ids.length > 0 && <span className="fi-quiet-inline"> — {w.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join('; ')}</span>}</li>
+              <li key={i}>{engineWhy(w.message)}{w.comp_ids.length > 0 && <span className="fi-quiet-inline"> — {w.comp_ids.map((id) => (byId.get(id) ? compAddress(byId.get(id)!) : id)).join('; ')}</span>}</li>
             ))}
           </ul>
         </div>

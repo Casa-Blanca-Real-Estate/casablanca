@@ -6,7 +6,7 @@ import type { GeocodeView } from '../server/buildings.ts';
 import type { Acknowledgment } from '../workspace/qa.ts';
 import type { ClientRound } from '../workspace/client-words.ts';
 import type { ReviewEntry } from '../workspace/review.ts';
-import type { Brief, CallState, DealTermsState, Intake, ReasonType, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
+import type { Brief, CallState, DealTermsState, Intake, ReasonType, RevealPin, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
 import { session } from './session.ts';
 
 export class ApiError extends Error {
@@ -205,7 +205,7 @@ export interface CompEdit {
 export const workspaceApi = {
   load: (reportId: string) => api<WorkspaceData>(`/api/comp-report/workspace?report=${reportId}`),
   save: (reportId: string, patch: WorkspacePatch) =>
-    api<{ saved: true; updatedAt: string }>('/api/comp-report/workspace', { method: 'PATCH', body: { reportId, ...patch } }),
+    api<{ saved: true; updatedAt: string; reveal?: RevealPin }>('/api/comp-report/workspace', { method: 'PATCH', body: { reportId, ...patch } }),
   importFile: (reportId: string, file: { filename: string; contentBase64: string; asOf: string }) =>
     api<WorkspaceData>('/api/comp-report/imports', { method: 'POST', body: { reportId, ...file } }),
   importSample: (reportId: string) => api<WorkspaceData>('/api/comp-report/imports', { method: 'POST', body: { reportId, sample: true } }),

@@ -7,7 +7,7 @@ import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
-import type { CompJudgment, Outcomes, Reached } from '../../../workspace/state.ts';
+import type { CompJudgment, Outcomes, Reached, RevealPin } from '../../../workspace/state.ts';
 import type { ScreenId, SortReadiness } from './screens.ts';
 import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
@@ -63,6 +63,8 @@ export interface Workspace {
   engineError: string | null;
   /** The call is given or skipped, so the range shows (§3.1). */
   revealed: boolean;
+  /** The range the agent first saw, as the server pinned it (§8.4's backstop); null before the reveal. */
+  reveal: RevealPin | null;
 
   /** Runs a server call with the busy flag and the error line. */
   run: (label: string, work: () => Promise<void>) => Promise<void>;
