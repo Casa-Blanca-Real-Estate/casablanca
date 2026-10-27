@@ -69,6 +69,8 @@ export interface Workspace {
   busy: string | null;
   /** False when it didn't run: no sample here, or the agent kept what they'd entered. */
   fillSample: (step: 'sort' | 'findings' | 'send' | 'all') => Promise<boolean>;
+  /** A sample report starts over (Dispatch 23): a fresh copy opens and this one is archived. Only on a sample report. */
+  resetSample: (() => Promise<void>) | null;
   messageCount: number;
   setMessageCount: (n: number) => void;
 

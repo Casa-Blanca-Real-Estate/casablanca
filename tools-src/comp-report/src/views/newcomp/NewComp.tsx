@@ -75,15 +75,13 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
     }
   }
 
-  async function useSample() {
-    setBusy('Filling in the 100 Barclay sample…');
+  // The sample report is built on the server, in one go (Dispatch 23): the home, and its export imported.
+  async function useSample(kind: PropertyType) {
+    setBusy(`Filling in the 100 Barclay sample (${TYPE_LABEL[kind].toLowerCase()})…`);
     setError(null);
     try {
-      const sample = await workspaceApi.sample();
-      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title: sample.title, propertyType: sample.propertyType } });
-      const brief: Brief = { audience: sample.brief.audience!, ...(sample.send.clientName ? { clientName: sample.send.clientName } : {}) };
-      await workspaceApi.save(report.id, { brief, state: { intake: sample.intake }, sampleData: true });
-      await workspaceApi.importSample(report.id);
+      const sample = await workspaceApi.sample(kind);
+      const { report } = await workspaceApi.newSample(kind, sample.title);
       void workspaceApi.captureSamplePhotos();
       markNewReport(report.id);
       onCreated(report.id);
@@ -101,9 +99,12 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
       footer={(
         <>
           {maySample(me) && (
-            <button type="button" className="link nr-back" disabled={Boolean(busy)} onClick={() => void useSample()}>
-              Use the 100 Barclay sample
-            </button>
+            <span className="nr-back">
+              Use the 100 Barclay sample:{' '}
+              <button type="button" className="link" disabled={Boolean(busy)} onClick={() => void useSample('condo')}>Condo</button>
+              <span aria-hidden="true"> · </span>
+              <button type="button" className="link" disabled={Boolean(busy)} onClick={() => void useSample('coop')}>Co-op</button>
+            </span>
           )}
           <span className="nr-foot-r">
             {busy && <span className="nr-busy" aria-live="polite">{busy}</span>}

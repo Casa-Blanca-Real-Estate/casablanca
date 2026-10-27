@@ -224,7 +224,13 @@ export const workspaceApi = {
   captureSamplePhotos: async (): Promise<void> => {
     await fetch('/.netlify/functions/comp-report-sample-photos-background', { method: 'POST', headers: await headers() }).catch(() => undefined);
   },
-  sample: () => api<SampleWalkthrough>('/api/comp-report/sample'),
+  sample: (kind: 'condo' | 'coop' = 'condo') => api<SampleWalkthrough>(`/api/comp-report/sample?kind=${kind}`),
+  /** A new sample report, built on the server (Dispatch 23): the home, and its export imported, unsorted. */
+  newSample: (kind: 'condo' | 'coop', title: string) =>
+    api<{ report: Report }>('/api/comp-report/sample', { method: 'POST', body: { action: 'fill', kind, title } }),
+  /** A fresh copy of this sample report, with an empty Hubert; the old one is archived. */
+  resetSample: (reportId: string) =>
+    api<{ report: Report; archived: string }>('/api/comp-report/sample', { method: 'POST', body: { action: 'reset', reportId } }),
   /** A comp read from its StreetEasy page, confirmed in one tap (§6.2). */
   confirm: (reportId: string, reportCompId: string) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, confirmed: true } }),

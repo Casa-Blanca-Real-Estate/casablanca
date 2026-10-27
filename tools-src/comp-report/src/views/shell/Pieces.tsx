@@ -77,6 +77,17 @@ export function DevStrip({ ws, step, fills }: { ws: Workspace; step: StepId; fil
             ))}
           </span>
         )}
+        {ws.resetSample && (
+          <button
+            type="button"
+            className="link sh-dev-reset"
+            disabled={Boolean(ws.busy)}
+            title="Opens a fresh copy of this sample, unsorted and with Hubert starting afresh. This one is archived."
+            onClick={() => void ws.resetSample?.()}
+          >
+            Reset the sample
+          </button>
+        )}
       </div>
       {ws.devTools && <About key={step} step={step} />}
     </div>

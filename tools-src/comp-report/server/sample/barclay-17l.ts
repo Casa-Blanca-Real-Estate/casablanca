@@ -101,16 +101,44 @@ export const SAMPLE_TIERS: SampleTier[] = [
   { propertyKey: 'pk1|ny|new york|77 reade st|PHA', tier: 'secondary', reasonType: 'property', reason: 'A penthouse — a different product from a 17th-floor unit.' , tags: ['Much bigger'] },
 ];
 
-/** What /api/comp-report/sample serves: everything but the export, which the sample import stores. */
 /** The sample report's name and type: a report filled with all of the sample is this home. */
 export const SAMPLE_TITLE = '100 Barclay Street #17L';
 export const SAMPLE_PROPERTY_TYPE = 'condo' as const;
 
-export function sampleWalkthrough() {
+/** The two samples (Dispatch 23): the condo is Hannah's export; the co-op is the same read as co-ops, with no sizes. */
+export type SampleKind = 'condo' | 'coop';
+export const SAMPLE_KINDS: readonly SampleKind[] = ['condo', 'coop'];
+export const isSampleKind = (v: unknown): v is SampleKind => v === 'condo' || v === 'coop';
+
+/** The tags a co-op sample can't carry: it has no sizes. */
+const SIZE_TAGS = new Set(['Similar size', 'Smaller', 'Bigger', 'Much smaller', 'Much bigger']);
+
+/** The sample's home for that kind: a co-op has no size. */
+export function sampleIntake(kind: SampleKind): Intake {
+  if (kind === 'condo') return SAMPLE_INTAKE;
+  const { areaSqft: _size, ...rest } = SAMPLE_INTAKE;
+  return rest;
+}
+
+/**
+ * The sample's sort for that kind. A co-op's comps have no size, so the size
+ * tags come off; the penthouse, left with none, is tagged as one, so every comp
+ * still has a tag and the sample reaches Findings.
+ */
+export function sampleTiers(kind: SampleKind): SampleTier[] {
+  if (kind === 'condo') return SAMPLE_TIERS;
+  return SAMPLE_TIERS.map((t) => {
+    const tags = t.tags.filter((tag) => !SIZE_TAGS.has(tag));
+    return { ...t, tags: tags.length ? tags : ['Penthouse'] };
+  });
+}
+
+/** What /api/comp-report/sample serves: everything but the export, which the sample import stores. */
+export function sampleWalkthrough(kind: SampleKind = SAMPLE_PROPERTY_TYPE) {
   return {
     title: SAMPLE_TITLE,
-    propertyType: SAMPLE_PROPERTY_TYPE,
-    intake: SAMPLE_INTAKE,
+    propertyType: kind,
+    intake: sampleIntake(kind),
     brief: SAMPLE_BRIEF,
     target: SAMPLE_TARGET,
     dealTerms: SAMPLE_DEAL_TERMS,

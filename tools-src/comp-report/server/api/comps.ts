@@ -33,7 +33,7 @@ import { compRecordFromManual, FACT_CHECKS, ParseError, PARSER_VERSION, type Man
 import { withActor, type Queryable } from '../db.ts';
 import { newYorkToday } from '../links.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
-import { SAMPLE_CLIENT_LINES, SAMPLE_REVIEWS, SAMPLE_TIERS } from '../sample/barclay-17l.ts';
+import { SAMPLE_CLIENT_LINES, SAMPLE_REVIEWS, sampleTiers } from '../sample/barclay-17l.ts';
 import { appendReview } from '../reviews.ts';
 import { samplePhotos } from '../sample/photos.ts';
 import { mayUseSample, requireUser } from '../session.ts';
@@ -341,8 +341,12 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
              join comp_report.properties p on p.id = rc.property_id where rc.report_id = $1`,
           [reportId],
         )).rows;
+        // A co-op report's sort carries no size tags (Dispatch 23): its comps have no sizes.
+        const kind = (await tx.query<{ property_type: 'condo' | 'coop' }>(
+          'select property_type from comp_report.reports where id = $1', [reportId],
+        )).rows[0]!.property_type;
         const matched = new Set<string>();
-        for (const sample of SAMPLE_TIERS) {
+        for (const sample of sampleTiers(kind)) {
           const comp = comps.find((c) => c.property_key === sample.propertyKey);
           if (!comp) continue;
           matched.add(comp.id);
