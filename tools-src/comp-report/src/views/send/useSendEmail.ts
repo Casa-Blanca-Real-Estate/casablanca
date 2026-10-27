@@ -7,7 +7,8 @@
 // actions — edit, fix, answer, write, copy (logged), mark as sent, reopen.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
-import { ApiError, narrativesApi, type HubertEmailEdit, type NarrativeView } from '../../api.ts';
+import { cleanPhotoUrls } from '../../../engine/index.ts';
+import { ApiError, clientWordsApi, narrativesApi, type EmailPhotos, type HubertEmailEdit, type NarrativeView } from '../../api.ts';
 import { buildEmail, countedComps, hasHomeSize, headlineDrafts, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
 import { clientPrice, psf } from '../../../workspace/format.ts';
 import { draftChecks, ledgerFor, qaRecord, qaStatus, syncHeadline, type Acknowledgment } from '../../../workspace/qa.ts';
@@ -154,7 +155,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
   const agentNumber = o.headline_facts[result].agent_number?.facts.map((f) => f.value) ?? [];
   const ledger = ledgerFor({
     output: o, result, comps: ws.comps, intake: ws.intake,
-    agentText: [send.chosen?.value, send.consider?.value, send.nextStep?.value, signedAs, client, ...ws.comps.map((c) => noteOf(c.judgment))],
+    agentText: [send.chosen?.value, send.consider?.value, send.nextStep?.value, signedAs, client, ...ws.comps.map((c) => noteOf(c.judgment)), ...ws.comps.map((c) => c.judgment?.clientLine?.text)],
     agentFigures: [...agentNumber, ws.target?.price.value, ws.dealTerms?.price?.value, ws.dealTerms?.sellerTarget?.value].filter((v): v is number => typeof v === 'number'),
   });
   const acks = send.acks ?? [];
@@ -165,11 +166,34 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
   const copyable = status.ready && issues.every((i) => !i.blocking);
   const headlinePicks = written ? written.headlines : codeDrafts;
 
-  /** The designed email: the Full draft (the agent's, when they edited the Full one), laid out. */
-  const designed = (): string => {
+  const outById = new Map(o.comps.map((c) => [c.id, c]));
+  const homeRead = ws.reads.filter((r) => r.purpose === 'subject' && r.status === 'done').at(-1);
+  const homePhoto = homeRead?.extract ? cleanPhotoUrls([homeRead.extract['heroImageUrl'], ...(Array.isArray(homeRead.extract['photos']) ? homeRead.extract['photos'] : [])])[0] ?? null : null;
+  const shownRows = () => {
+    const full = drafts.full ? drafts.full.body : emailFor('full').text;
+    const parsed = parseEmailText(full, send.headline?.value);
+    return { parsed, ...designedComps(countedComps(o, result, ws.comps), { parsed, homeStreet: ws.intake.address?.value ?? null, sf: ws.sf }) };
+  };
+
+  /**
+   * The designed email: the Full draft's words (the agent's, when they edited the Full one), laid out with a box
+   * per comp. On screen its photos are the listings' own; `copies` swaps in the ones Casa keeps (at copy time).
+   */
+  const designed = (copies?: EmailPhotos): string => {
     const full = { subject, text: drafts.full ? drafts.full.body : emailFor('full').text };
     const parsed = parseEmailText(full.text, send.headline?.value);
-    const { anchor, others } = designedComps(countedComps(o, result, ws.comps), { parsed, homeStreet: ws.intake.address?.value ?? null, sf: ws.sf });
+    const { anchor, others } = designedComps(countedComps(o, result, ws.comps), {
+      parsed,
+      homeStreet: ws.intake.address?.value ?? null,
+      sf: ws.sf,
+      rate: (c) => outById.get(c.id)?.per_result[result].price_per_sqft?.value ?? null,
+      photo: (c) => {
+        if (!copies) return c.judgment?.photos?.[0] ?? null;
+        const id = c.judgment?.reportCompId;
+        const kept = id ? copies.comps[id] : undefined;
+        return kept ? `${location.origin}${kept}` : c.judgment?.photos?.[0] ?? null;
+      },
+    });
     const range = o.results[result].range;
     const h = o.headline_facts[result];
     const lowSf = fact(h, 'range.low_per_sqft');
@@ -189,7 +213,23 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
       agent: { name: signedAs, office: OFFICE, email: ws.report.ownerEmail || null },
       cta: designedCta(ws.side),
       subject: full.subject,
+      homePhoto: copies ? (copies.home ? `${location.origin}${copies.home}` : homePhoto) : homePhoto,
     });
+  };
+
+  /**
+   * The photos for a copy (Dispatch 26 item 4): each shown comp's hero photo, and the home's, copied into Casa's
+   * store and served from this site. If the copy fails, the listings' own links stand in, as on screen.
+   */
+  const photoCopies = async (): Promise<EmailPhotos | undefined> => {
+    const { anchor, others } = shownRows();
+    const ids = [anchor, ...others].map((c) => c?.id).filter((id): id is string => Boolean(id));
+    try {
+      return await clientWordsApi.photos(ws.reportId, ids);
+    } catch (e) {
+      console.warn('comp report: the email’s photos weren’t copied; the listings’ own links stand in', e);
+      return undefined;
+    }
   };
 
   const now = () => new Date().toISOString();
@@ -328,9 +368,13 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     else setSend({ format: f, length: len });
   }
 
-  /** What the Copy button puts on the clipboard: Designed and the formatted Full or Short as HTML, the plain text beside it; Text as plain. */
-  const clipboard = (): { html: string | null; text: string } => ({
-    html: format === 'text' ? null : format === 'designed' ? designed() : emailHtml(shown.text, send.headline?.value),
+  /**
+   * What the Copy button puts on the clipboard: Designed (with Casa's copies of the photos) and the formatted
+   * Full or Short as HTML, the plain text beside it; Text as plain. Designed's HTML is a promise: the photos are
+   * copied first, and the clipboard item takes the promise so the copy keeps the click's permission.
+   */
+  const clipboard = (): { html: Promise<string> | string | null; text: string } => ({
+    html: format === 'text' ? null : format === 'designed' ? photoCopies().then((copies) => designed(copies)) : emailHtml(shown.text, send.headline?.value),
     text: shown.text,
   });
 
@@ -345,7 +389,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
       } else {
         if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
           await navigator.clipboard.write([new ClipboardItem({
-            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/html': Promise.resolve(html).then((h) => new Blob([h], { type: 'text/html' })),
             'text/plain': new Blob([text], { type: 'text/plain' }),
           })]);
         } else {

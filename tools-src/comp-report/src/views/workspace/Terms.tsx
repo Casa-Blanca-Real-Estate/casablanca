@@ -20,9 +20,9 @@ export function againstEstimate(output: EngineOutput | null, kind: ResultKind, p
   return price < r.low.value ? AGAINST.below : price > r.high.value ? AGAINST.above : AGAINST.within;
 }
 
-/** "Offer target" for a buyer, "Target list price" for a seller (renderVals). */
+/** "Client’s budget" for a buyer (Dispatch 26), "Target list price" for a seller (renderVals). */
 export function targetLabel(ws: Workspace): string {
-  return ws.side === 'buyer' ? 'Offer target' : 'Target list price';
+  return ws.side === 'buyer' ? 'Client’s budget' : 'Target list price';
 }
 
 /** The target: the agent's price goal, and where it sits against the true estimate. */

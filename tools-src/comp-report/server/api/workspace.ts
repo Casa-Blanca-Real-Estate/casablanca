@@ -14,6 +14,7 @@
 // Every query is scoped by owner as well as by row-level security (§12).
 import { cleanListingExtract, cleanPhotoUrls, type ParseWarning } from '../../engine/index.ts';
 import { loadGeocodes, reportBuildings, type GeocodeView } from '../buildings.ts';
+import { cleanClientLine } from '../../workspace/client-words.ts';
 import { cleanReview } from '../../workspace/review.ts';
 import type { CompJudgment, CompSource } from '../../workspace/state.ts';
 import { withActor, type Queryable } from '../db.ts';
@@ -100,10 +101,10 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     source: 'se_export' | 'se_pdf' | 'listing' | 'agent' | null; import_id: string | null; raw: unknown; as_of: string | null; links: string[] | null;
     read_id: string | null; confirmed_at: Date | null;
     note: string | null; tags: string[] | null; features: Record<string, string[]> | null; removed_at: Date | null;
-    fact_overrides: CompJudgment['factOverrides'] | null;
+    fact_overrides: CompJudgment['factOverrides'] | null; client_line: unknown;
   }>(
     `select rc.id, p.property_key, rc.evidence_class, rc.tier, rc.is_anchor, rc.reviewed_at,
-            rc.note, rc.tags, rc.features, rc.removed_at, rc.fact_overrides,
+            rc.note, rc.tags, rc.features, rc.removed_at, rc.fact_overrides, rc.client_line,
             o.source, o.import_id, o.raw, o.as_of::text as as_of, o.links,
             lr.id as read_id, lr.confirmed_at
        from comp_report.report_comps rc
@@ -139,6 +140,7 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
 
   return comps.map((c) => {
     const review = cleanReview(reviews[c.id]);
+    const clientLine = cleanClientLine(c.client_line);
     return {
     reportCompId: c.id,
     propertyKey: c.property_key,
@@ -158,6 +160,7 @@ export async function loadJudgments(tx: Queryable, reportId: string): Promise<Co
     // A listing's photos, and a sample comp's (an export row carries none, but the sample's are kept: sample/photos.ts).
     photos: c.source === 'listing' || c.source === 'se_export' ? listingPhotos(c.raw) : [],
     ...(review.length ? { review } : {}),
+    ...(clientLine ? { clientLine } : {}),
     };
   });
 }
@@ -349,10 +352,11 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
     if ('state' in body) {
       if (!isObject(body.state)) throw new HttpError(400, 'bad_state', 'The state is an object.');
       checkSize('The intake', body.state, 64 * 1024);
-      // Hubert's review rounds are the server's to write (Dispatch 25): whatever the browser sends, the stored ones stay.
-      const { reviews: _sent, ...state } = body.state;
+      // Hubert's rounds are the server's to write (Dispatch 25's reviews, Dispatch 26's clientRounds):
+      // whatever the browser sends, the stored ones stay.
+      const { reviews: _sent, clientRounds: _sentRounds, ...state } = body.state;
       values.push(JSON.stringify(state));
-      sets.push(`state = $${values.length}::jsonb || jsonb_strip_nulls(jsonb_build_object('reviews', state -> 'reviews'))`);
+      sets.push(`state = $${values.length}::jsonb || jsonb_strip_nulls(jsonb_build_object('reviews', state -> 'reviews', 'clientRounds', state -> 'clientRounds'))`);
     }
     if (body.sampleData === true) sets.push('sample_data = true');
     if (!sets.length) throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');

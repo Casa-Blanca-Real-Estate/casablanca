@@ -4,6 +4,7 @@ import type { NarrativeView as Narrative } from '../server/api/narratives.ts';
 import type { LinkReadView, WorkspaceData } from '../server/api/workspace.ts';
 import type { GeocodeView } from '../server/buildings.ts';
 import type { Acknowledgment } from '../workspace/qa.ts';
+import type { ClientRound } from '../workspace/client-words.ts';
 import type { ReviewEntry } from '../workspace/review.ts';
 import type { Brief, CallState, DealTermsState, Intake, ReasonType, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
 import { session } from './session.ts';
@@ -199,6 +200,8 @@ export interface CompEdit {
   removed?: boolean;
   /** Corrections to the source's facts (Dispatch 15): a value sets one, null puts the source's back. */
   factOverrides?: { price?: number | null; size?: number | null; date?: string | null; floor?: number | null };
+  /** The comp's paragraph for the client (Dispatch 26), or null to clear it. The server stamps when. */
+  clientLine?: { text: string; by: 'agent' | 'writer' | 'both' } | null;
 }
 
 export const workspaceApi = {
@@ -316,9 +319,39 @@ export interface LinesOffer {
 }
 
 export const linesApi = {
-  ask: (reportId: string, job: 'draft' | 'rewrite', result: EmailToLog['result']) =>
-    api<LinesOffer>('/api/comp-report/lines', { method: 'POST', body: { reportId, job, result } }),
+  ask: (reportId: string, job: 'draft' | 'rewrite', result: EmailToLog['result'], practice = false) =>
+    api<LinesOffer>('/api/comp-report/lines', { method: 'POST', body: { reportId, job, result, ...(practice ? { practice } : {}) } }),
 };
+
+// ─── The client's words on Send (Dispatch 26) ────────────────────────────────
+
+/** One round with Hubert on the overview or a comp's paragraph, as stored, and the workspace with it. */
+export interface ClientWordsReply {
+  workspace: WorkspaceData;
+  round: ClientRound;
+  /** Points or sentences that cited a figure the report doesn't hold: never shown. */
+  dropped: number;
+}
+
+export const clientWordsApi = {
+  /**
+   * Feedback on the agent's saved overview or paragraph, or the writer's version of a comp's paragraph.
+   * `practice` asks as a new agent (an admin viewing as one): the version waits for a feedback round.
+   */
+  ask: (reportId: string, target: string, job: 'feedback' | 'draft', opts: { result?: EmailToLog['result']; asks?: string; practice?: boolean } = {}) =>
+    api<ClientWordsReply>('/api/comp-report/client-words', { method: 'POST', body: { reportId, target, job, ...opts } }),
+  /**
+   * The email's photos, copied into Casa's store for the client's mail to load (NB-3 B): each shown comp's
+   * hero photo, and the home's. Paths on this site, by report comp id; missing where there's no photo.
+   */
+  photos: (reportId: string, reportCompIds: string[]) =>
+    api<EmailPhotos>('/api/comp-report/email-photos', { method: 'POST', body: { reportId, reportCompIds } }),
+};
+
+export interface EmailPhotos {
+  comps: Record<string, string>;
+  home: string | null;
+}
 
 // ─── The per-comp review on Sort (Dispatch 25) ───────────────────────────────
 

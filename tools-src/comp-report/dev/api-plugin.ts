@@ -13,6 +13,8 @@
 //   CR_DEV_FIRECRAWL_BASE_URL   read them from the fake instead (dev/fake-firecrawl.ts)
 //   CR_DEV_GEOSEARCH_BASE_URL   look buildings up in the fake GeoSearch (dev/fake-geosearch.ts)
 //                               instead of NYC Planning's own, which needs no key
+//   CR_DEV_PHOTO_FILE           a local JPEG the email's photo copy serves for every photo,
+//                               instead of fetching StreetEasy's image (no network needed)
 //
 // Nothing under dev/ is imported by a deployed function.
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -34,6 +36,9 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/lines': { module: '/server/api/lines.ts', handler: 'handleLines' },
   '/api/comp-report/comp-review': { module: '/server/api/comp-review.ts', handler: 'handleCompReview' },
   '/api/comp-report/mentees': { module: '/server/api/mentees.ts', handler: 'handleMentees' },
+  '/api/comp-report/client-words': { module: '/server/api/client-words.ts', handler: 'handleClientWords' },
+  '/api/comp-report/email-photos': { module: '/server/api/email-photos.ts', handler: 'handleEmailPhotos' },
+  '/api/comp-report/email-photo': { module: '/server/api/email-photos.ts', handler: 'handleEmailPhoto' },
 };
 
 /** Background functions: Netlify answers 202 at once and runs them on; so does this. */
@@ -69,6 +74,7 @@ async function send(res: ServerResponse, response: Response) {
 }
 
 let devSamplePhotos: unknown;
+let devEmailPhotos: unknown;
 
 async function deps(server: ViteDevServer) {
   const load = (m: string) => server.ssrLoadModule(m);
@@ -78,6 +84,8 @@ async function deps(server: ViteDevServer) {
   const { guestConfig } = await load('/server/guest.ts');
   const { memorySamplePhotoStore } = await load('/server/sample/photos.ts');
   devSamplePhotos ??= memorySamplePhotoStore();
+  const { memoryEmailPhotoStore, fetchListingPhoto } = await load('/server/email-photos.ts');
+  devEmailPhotos ??= memoryEmailPhotoStore();
   const { firecrawlReader } = await load('/server/links.ts');
   const { nycGeoSearch } = await load('/server/geocode.ts');
   const { default: Anthropic } = await import('@comp-report/anthropic-sdk');
@@ -88,6 +96,11 @@ async function deps(server: ViteDevServer) {
     pool: databasePool(process.env),
     guest: guestConfig(process.env, 'dev'), // CR_GUEST_KEY, to try guest mode locally
     samplePhotos: devSamplePhotos, // in memory: kept until the dev server restarts
+    emailPhotos: devEmailPhotos, // the email's copied photos, in memory too
+    // CR_DEV_PHOTO_FILE: serve this local image for every photo, for a walk with no network (StreetEasy's images).
+    fetchPhoto: process.env.CR_DEV_PHOTO_FILE
+      ? async () => ({ ok: true, data: new Uint8Array(await (await import('node:fs/promises')).readFile(process.env.CR_DEV_PHOTO_FILE!)).buffer, contentType: 'image/jpeg' })
+      : fetchListingPhoto,
     env: process.env,
     reader: firecrawlReader(fake ? { apiKey: 'dev-fake', baseUrl: fake, backoffMs: [500] } : { apiKey: process.env.FIRECRAWL_API_KEY }),
     geocoder: nycGeoSearch({ baseUrl: process.env.CR_DEV_GEOSEARCH_BASE_URL || undefined }),

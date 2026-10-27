@@ -1,7 +1,7 @@
 // POST /api/comp-report/lines — the agent's lines on Send, drafted or tidied
 // (server/lines.ts; dev note dn_mviipah6rs3v).
 //
-//   body: {reportId, job: 'draft' | 'rewrite', result?}
+//   body: {reportId, job: 'draft' | 'rewrite', result?, practice?}
 //   reply: {lines: {chosen?, consider?, nextStep?}, dropped: [...]}
 //
 // What the model reads is built here, from what's stored — the browser saves
@@ -11,8 +11,13 @@
 // browser offers the lines, and the agent keeps or undoes them. Only the
 // report's owner asks, after the reveal, within the writer's daily limit
 // (counted apart from the drafts), and every call's usage is logged.
+//
+// The lines are the overview of the client step (Dispatch 26), so a practice
+// agent writes them first: a draft is refused until Hubert has given feedback
+// on their overview (api/client-words.ts). Tidying their own words isn't.
 import type Anthropic from '@comp-report/anthropic-sdk';
 import type { ResultKind } from '../../engine/index.ts';
+import { cleanClientRounds, OVERVIEW, versionUnlocked } from '../../workspace/client-words.ts';
 import { answerResult } from '../../workspace/reading.ts';
 import { writerInputFrom } from '../../workspace/writer-input.ts';
 import { usageTotals } from '../assistant.ts';
@@ -44,6 +49,7 @@ export function handleLines(req: Request, deps: LinesDeps): Promise<Response> {
     const job = JOBS.find((j) => j === body.job);
     if (!job) throw new HttpError(400, 'bad_job', 'Draft your lines, or tidy them?');
     const asked = RESULTS.find((r) => r === body.result);
+    const level = user.capability === 'practice' || body.practice === true ? 'practice' : 'full';
 
     const prepared = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
@@ -61,6 +67,9 @@ export function handleLines(req: Request, deps: LinesDeps): Promise<Response> {
       const current: AgentLines = { chosen: send.chosen?.value ?? '', consider: send.consider?.value ?? '', nextStep: send.nextStep?.value ?? '' };
       const written = LINE_KEYS.filter((k) => current[k].trim());
       if (job === 'draft' && written.length === LINE_KEYS.length) throw new HttpError(409, 'nothing_to_draft', 'Every line is already yours. Tidy them instead.');
+      if (job === 'draft' && !versionUnlocked(cleanClientRounds(n.state.clientRounds?.[OVERVIEW]), level)) {
+        throw new HttpError(409, 'feedback_first', 'Write your overview and get Hubert’s feedback on it first: drafting from your notes opens after that.');
+      }
       if (job === 'rewrite' && !written.length) throw new HttpError(409, 'nothing_to_tidy', 'Write a line first, or draft them from your notes.');
 
       const report = writerInputFrom({ output: n.output, comps: n.comps, intake: n.state.intake, brief: n.brief, send, result: asked ?? answerResult(n.output), length: 'full' });

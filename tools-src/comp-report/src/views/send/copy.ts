@@ -3,15 +3,22 @@
 import type { EmailLength } from '../../../workspace/email.ts';
 import type { Intake, Outcomes } from '../../../workspace/state.ts';
 
-/** Send's four tabs, Designed first (NW-079 a). Designed renders the Full draft; the other three are the writer's lengths. */
+/** Send's four formats. Designed renders the Full draft; the other three are the writer's lengths. */
 export type Format = 'full' | 'designed' | 'short' | 'text';
 
-export const FORMATS: { id: Format; label: string }[] = [
-  { id: 'designed', label: 'Designed' },
+/** What Send leads with (Dispatch 26): the Designed email, then the text that follows it. */
+export const LEAD_FORMATS: { id: Format; label: string }[] = [
+  { id: 'designed', label: 'Designed email' },
+  { id: 'text', label: 'Then text them' },
+];
+
+/** The plain-text fallbacks, for a mail app that mangles the designed email. */
+export const FALLBACK_FORMATS: { id: Format; label: string }[] = [
   { id: 'full', label: 'Full' },
   { id: 'short', label: 'Short' },
-  { id: 'text', label: 'Text' },
 ];
+
+export const FORMATS: { id: Format; label: string }[] = [...LEAD_FORMATS, ...FALLBACK_FORMATS];
 
 export function lengthOf(f: Format): EmailLength {
   return f === 'designed' ? 'full' : f;

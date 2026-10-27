@@ -206,3 +206,23 @@ export const SAMPLE_REVIEWS: Record<string, SampleReview> = {
     weak: 'a penthouse, much bigger than the home',
   },
 };
+
+/**
+ * The client's paragraph for each sample comp (Dispatch 26 item 7), as an agent
+ * would write it on Send's client step, so a demo shows a finished Designed
+ * email end to end. Written by the sample sort, marked as the agent's, only
+ * where the comp has none. No figures: the box above it shows them.
+ */
+export const SAMPLE_CLIENT_LINES: Record<string, string> = {
+  'pk1|ny|new york|200 chambers st|10A': 'The closest match to your home: a full-service Tribeca condo of a similar size, with water views like yours. It sits a few floors lower, which works in your favour.',
+  'pk1|ny|new york|79 laight st|1A': 'A ground-floor closing from public records, with no listing to say what condition it was in. I’ve left it out of the range.',
+  'pk1|ny|new york|181 hudson st|1A': 'A ground-floor loft in a small building without a doorman. It sold well, which shows demand in the area, but it’s a different kind of home from yours.',
+  'pk1|ny|new york|5 franklin pl|14A': 'A high-floor, full-service condo of a similar size that sold recently. Its square footage is approximate, so I read its price per square foot as a guide.',
+  'pk1|ny|new york|66 leonard st|12A': 'Similar floor and size, in a full-service building close by. A solid comparison for your home.',
+  'pk1|ny|new york|108 leonard st|7G': 'Still on the market: a full-service condo of a similar size on a lower floor. Its ask shows where sellers are pricing today.',
+  'pk1|ny|new york|101 leonard st|5B': 'Asking far less per foot than everything else nearby, with nothing in the listing to explain why. I show it for context only.',
+  'pk1|ny|new york|25 n moore st|9C': 'Close to your home in size and floor, and still on the market. A fair read of what nearby sellers are asking now.',
+  'pk1|ny|new york|111 murray st|35A': 'A new-development tower unit far higher up, asking well above what comparable homes have sold for. It marks the top of the market, not your home’s value.',
+  'pk1|ny|new york|100 barclay st|11F': 'In your building, with the same layout, six floors lower. The most direct evidence there is for your home.',
+  'pk1|ny|new york|77 reade st|PHA': 'A penthouse, much bigger than your home. Buyers pay for different things up there, so it says little about your price.',
+};

@@ -13,6 +13,9 @@
 // agent's own lines and notes fill them, as the template did before the
 // writer: it's the fallback when the writer fails (Dispatch 13).
 //
+// A comp's paragraph for the client, written on Send's client step (Dispatch
+// 26, client-words.ts), wins over both, at every length.
+//
 // Empty sections are left out (Kara). Every figure comes from the engine's
 // output or from what the agent wrote; nothing here computes a number (§4.1).
 // The headline drafts cite only the engine's headline facts (§10.2). A draft
@@ -160,8 +163,11 @@ function blocks(input: EmailInput): Block[] {
     if (!list.length) continue;
     out.push({ kind: 'h', text: STATUS_HEADINGS[status] });
     for (const { comp, line } of list) {
+      // The comp's paragraph for the client (Dispatch 26) wins over the writer's lines and the Sort note.
+      const own = comp.judgment?.clientLine?.text.trim();
       let notes: string[];
-      if (w) notes = (writtenLines.get(comp.id) ?? []).slice(0, input.length === 'full' ? 3 : 1);
+      if (own) notes = [own];
+      else if (w) notes =(writtenLines.get(comp.id) ?? []).slice(0, input.length === 'full' ? 3 : 1);
       else {
         const note = input.length === 'full' ? noteOf(comp.judgment) : null;
         notes = note ? [note] : [];
