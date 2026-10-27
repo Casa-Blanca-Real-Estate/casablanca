@@ -34,7 +34,7 @@ export function WorkspaceHeader({ ws, onBack, saveLine }: { ws: Workspace; onBac
       </div>
       <div className="sh-head-side">
         {ws.readOnly && (
-          <span className="sh-readonly" title={`${ws.report.ownerEmail}’s report. Admins can read it; only its owner can change it.`}>Read only</span>
+          <span className="sh-readonly" title={`${ws.report.ownerEmail}’s report. Admins and mentors can read it; only its owner can change it.`}>Read only</span>
         )}
         {saveLine}
       </div>

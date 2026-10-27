@@ -56,7 +56,7 @@ describe('comp_report schema — owner can create roles (Neon-like)', { skip: sk
     assert.equal(who, 'comp_report_app');
   });
 
-  test("an agent sees only their own reports; an admin sees everyone's", async () => {
+  test("an agent sees only their own reports; an admin and a mentor see everyone's", async () => {
     const a = await newReport(pool, AGENT_A as Actor & { kind: 'user' }, 'Ana — 25 N Moore 9C');
     const b = await newReport(pool, AGENT_B as Actor & { kind: 'user' }, 'Ben — 100 Barclay 17L');
     const ids = (actor: Actor) =>
@@ -64,7 +64,7 @@ describe('comp_report schema — owner can create roles (Neon-like)', { skip: sk
     assert.deepEqual(await ids(AGENT_A), [a]);
     assert.deepEqual(await ids(AGENT_B), [b]);
     assert.deepEqual((await ids(ADMIN)).sort(), [a, b].sort());
-    assert.deepEqual(await ids(MENTOR), [], 'mentors see users, not reports');
+    assert.deepEqual((await ids(MENTOR)).sort(), [a, b].sort(), 'mentors read every report (NB-23 A)');
   });
 
   test("an agent can't create a report in someone else's name, or take one over", async () => {

@@ -6,6 +6,7 @@ import { withActor } from '../db.ts';
 import { allowMethods, HttpError, json, respond, UUID } from '../http.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
+import { reportFor } from './workspace.ts';
 
 interface Row {
   seq: number;
@@ -26,10 +27,7 @@ export function handleMessages(req: Request, deps: AuthDeps): Promise<Response> 
     if (!UUID.test(reportId)) throw new HttpError(400, 'bad_report');
 
     const rows = await withActor(pool, asUser(user), async (tx) => {
-      const owns = await tx.query('select 1 from comp_report.reports where id = $1 and (owner_email = $2 or $3) and status <> \'deleted\'', [
-        reportId, user.email, user.role === 'admin',
-      ]);
-      if (!owns.rowCount) throw new HttpError(404, 'not_found', 'No such report.');
+      await reportFor(tx, user, reportId, false);
       return (await tx.query<Row>(
         `select seq, role, content, model, stop_reason, in_context, created_at
            from comp_report.messages where report_id = $1 order by seq`,

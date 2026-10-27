@@ -1,7 +1,7 @@
 // Sign-in and the states around it, on the handoff's card (screen 1): Google first, the email form
 // behind a link. Every state keeps its logic: the invitation, the new password, a refusal, Identity not
 // switched on, and the dev sign-in under the local dev server.
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { ApiError } from '../api.ts';
 import { session, type SessionState } from '../session.ts';
 
@@ -148,14 +148,23 @@ export function SetNewPassword({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function NotAuthorised({ email, error, onSignOut }: { email: string; error: ApiError; onSignOut: () => void }) {
+export function NotAuthorised({ email, error, onSignOut, onRetry }: { email: string; error: ApiError; onSignOut: () => void; onRetry: () => void }) {
   const refused = error.status === 403;
+  const signedOut = error.status === 401;
+  // A 401 says what was sent, so a refused first sign-in can be told from a stale session (NW-091 a).
+  const [hadToken, setHadToken] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!signedOut) return;
+    session.token().then((t) => setHadToken(Boolean(t)), () => setHadToken(false));
+  }, [signedOut]);
   return (
     <div className="sh-card">
       <p className="eyebrow mid">{refused ? 'Not authorised' : 'Something went wrong'}</p>
       <h1 className="sh-card-title sm">{refused ? `${email} can’t use the comp report.` : 'We couldn’t check your access.'}</h1>
       <p className="sh-help">{error.message}</p>
+      {signedOut && hadToken !== null && <p className="sh-help"><code>{error.code}, {hadToken ? 'token present' : 'no token'}</code></p>}
       <div>
+        {signedOut && <button type="button" className="btn primary" onClick={onRetry}>Try again</button>}{' '}
         <button type="button" className="btn" onClick={onSignOut}>Sign out</button>
       </div>
     </div>
