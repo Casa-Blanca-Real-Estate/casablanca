@@ -16,8 +16,9 @@ agent training. Existing agents get it afterwards, through a rundown at a Tuesda
 signs in, starts a report from a StreetEasy link, reviews and tiers each comp on Sort, reads Findings, and sends
 the Designed email with real photos, all on production, with no hiccups along the way.
 
-**Done so far.** First comp report commit 2026-10-06. Eight work days since then (Oct 6, 9, 13, 14, 15, 21, 22, 27).
-The four heavy ones (Oct 14, 15, 21, 22) merged 5–6 PRs each. Phase A: 15–20 and 25 are merged.
+**Done so far.** Kimani started the comp report on 2026-09-23. It's had about 12 work days since, over about
+four working weeks: four of planning and setup before the first commit, then eight with commits (Oct 6, 9, 13,
+14, 15, 21, 22, 27). The four heavy ones (Oct 14, 15, 21, 22) each merged 5–6 PRs. Phase A: 15–20 and 25 are merged.
 
 **What's left, in order**
 
