@@ -37,7 +37,9 @@ async function shot(p, name, full = true) {
   log.push(file);
 }
 const url = (id, q) => `${base}/tools/comp-report/?report=${id}&${q}`;
-const tab = (p, label) => p.locator('.se-tabs button', { hasText: new RegExp(`^${label}$`) });
+const tab = (p, label) => p.locator('.se-tabs button', { hasText: new RegExp(`^${label === 'Text' ? 'Then text them' : label}$`) });
+/** Full and Short sit under "Plain-text fallback" (Dispatch 26). */
+const openFallback = (p) => p.locator('.se-fallback').evaluate((d) => { d.open = true; });
 const expect = (ok, what) => { if (!ok) errors.push(what); };
 
 /** The clipboard's HTML, on a page of its own: no app CSS, the browser's defaults. */
@@ -70,10 +72,11 @@ const p = await page('send');
 await p.goto(url(id, 'step=send'));
 await settle(p);
 expect(await tab(p, 'Designed').getAttribute('aria-pressed') === 'true', 'Designed is not the default tab');
-expect((await p.locator('.se-tabs button').allTextContents()).join(',') === 'Designed,Full,Short,Text', 'tab order');
+expect((await p.locator('.se-tabs button').allTextContents()).join(',') === 'Designed,Then text them,Full,Short', 'tab order');
 expect(!(await p.getByText('Hubert drafts the headline').count()), 'the line above Write it is still there');
 await shot(p, '01-designed-default');
 
+await openFallback(p);
 await tab(p, 'Full').click();
 await settle(p);
 await p.locator('.se-drafts summary').click();
@@ -104,6 +107,7 @@ expect(await p.locator('.se-foot .btn.primary.se-sent').count() === 1, 'Mark as 
 const order = await p.locator('.se-foot-actions button').allTextContents();
 expect(order[0]?.startsWith('Copy') && order[1] === 'Mark as sent', `footer order: ${order}`);
 
+await openFallback(p);
 await tab(p, 'Short').click();
 await settle(p);
 await body.click();
@@ -114,6 +118,7 @@ await p.getByRole('button', { name: /^Copy the email$/ }).click();
 await settle(p);
 await pasted(p, '05-short-copied-as-pasted');
 await shot(p, '06-short');
+await openFallback(p);
 await tab(p, 'Full').click();
 await settle(p);
 expect((await body.inputValue()).includes('A line I added to the full email.'), 'the Full draft was lost after editing Short');
@@ -129,6 +134,7 @@ await p.getByRole('button', { name: 'Copy the designed email' }).click();
 await settle(p);
 await pasted(p, '08-designed-copied-as-pasted');
 // Mark as sent: records the tab last copied (Designed), opens Done.
+await openFallback(p);
 await tab(p, 'Short').click();
 await settle(p);
 await p.getByRole('button', { name: 'Mark as sent' }).click();

@@ -70,10 +70,10 @@ await p.waitForTimeout(300);
 const shown = await line.inputValue();
 check(!shown.includes('?') && !shown.includes('www.'), `1: the pasted link wasn't cleaned: ${shown}`);
 if (type === 'condo') await p.getByRole('button', { name: /^condo$/i }).first().click();
-await p.getByLabel(/client’s offer target/i).fill('3.9M');
+await p.getByLabel(/client’s budget/i).fill('3.9M');
 await p.getByLabel(/^client$/i).or(p.locator('.nr-client')).first().fill('Jordan and Sam');
 await tall(p, 1100);
-await p.getByRole('button', { name: /about the offer target/i }).hover();
+await p.getByRole('button', { name: /about the budget/i }).hover();
 if (shots) await shot(p, '01-step1-link-cleaned-and-target', false);
 await p.mouse.move(0, 0);
 

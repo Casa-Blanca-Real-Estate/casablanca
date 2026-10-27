@@ -12,6 +12,8 @@ import type { GeocodeDeps } from './api/geocode.ts';
 import type { LinkReadDeps } from './api/links.ts';
 import type { SamplePhotoCaptureDeps, SamplePhotoDeps } from './api/sample-photos.ts';
 import type { SamplePhotoStore } from './sample/photos.ts';
+import type { EmailPhotoDeps } from './api/email-photos.ts';
+import { fetchListingPhoto, type EmailPhotoStore } from './email-photos.ts';
 import type { WriteDeps } from './api/narratives.ts';
 import { productionAnthropic } from './api/turn.ts';
 import type { AuthDeps } from './session.ts';
@@ -56,6 +58,34 @@ export function productionSampleDeps(req: Request): SamplePhotoDeps {
 /** Reading the sample's photos once: Firecrawl, with the key the link reads use. */
 export function productionSamplePhotoCaptureDeps(req: Request): SamplePhotoCaptureDeps {
   return { ...productionSampleDeps(req), reader: firecrawlReader({ apiKey: process.env.FIRECRAWL_API_KEY }) };
+}
+
+/**
+ * The Designed email's photos (Dispatch 26): one site-wide Blobs store, so a
+ * photo copied on a preview still loads once production replaces it. Strong
+ * consistency: the client's mail asks for a photo seconds after it's copied.
+ */
+export function productionEmailPhotoStore(): EmailPhotoStore {
+  const store = getStore({ name: 'comp-report-email-photos', consistency: 'strong' });
+  return {
+    getPhoto: async (key) => {
+      const got = await store.getWithMetadata(`p/${key}`, { type: 'arrayBuffer' });
+      if (!got) return null;
+      const type = (got.metadata as { contentType?: unknown }).contentType;
+      return typeof type === 'string' ? { data: got.data, contentType: type } : null;
+    },
+    setPhoto: async (key, data, meta) => {
+      await store.set(`p/${key}`, data, { metadata: meta });
+    },
+    getIndex: (name) => store.get(`i/${name}`, { type: 'text' }),
+    setIndex: async (name, key) => {
+      await store.set(`i/${name}`, key);
+    },
+  };
+}
+
+export function productionEmailPhotoDeps(req: Request): EmailPhotoDeps {
+  return { ...productionAuthDeps(req), emailPhotos: productionEmailPhotoStore(), fetchPhoto: fetchListingPhoto };
 }
 
 export function productionGateDeps(): GateDeps {

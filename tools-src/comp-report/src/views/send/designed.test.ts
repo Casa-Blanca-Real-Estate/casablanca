@@ -52,7 +52,7 @@ test('the writer’s points, a sample banner, and an edited headline still read 
   assert.ok(!p.intro.includes(SAMPLE_BANNER));
 });
 
-test('the designed comps follow the edited text: the anchor first, a comp taken out stays out, a note as edited', () => {
+test('the designed comps follow the edited text: the anchor first, a comp taken out stays out, no paragraph without the client’s', () => {
   const text = buildEmail(base).text;
   const p = parseEmailText(text, HEADLINE);
   const anchorRow = rows.find((r) => r.comp.judgment?.anchor)!;
@@ -79,7 +79,7 @@ test('the designed comps follow the edited text: the anchor first, a comp taken 
   const q = designedComps(rows, { parsed: parseEmailText(edited, HEADLINE), homeStreet: '100 Barclay Street', sf: false });
   assert.equal(q.others.length, rows.length - 2);
   assert.ok(!q.others.some((c) => c.name === addressOf(other.comp)));
-  assert.equal(q.anchor?.note, 'Closest in every way.');
+  assert.equal(q.anchor?.paragraph, null, 'an edited Full note isn’t the client’s paragraph (Dispatch 26)');
   assert.ok(!/sq ft/.test(q.anchor!.sub), 'no size without the home’s size');
 });
 
@@ -148,7 +148,7 @@ test('Designed pastes centred, upright and dark: the wrapper, every cell’s sty
   assert.ok(html.includes('color:#888680;color:#0f0f0f;text-decoration:none;">3 bd · 3 ba · Floor 17</a>') || html.includes('>3 bd · 3 ba · Floor 17</a>'));
   const noPages = designedInput();
   const bare = designedHtml({ ...noPages, others: noPages.others.map((c) => ({ ...c, url: null })) });
-  assert.ok(bare.includes(`<a style="font-size:14px;font-weight:bold;color:#0f0f0f;text-decoration:none;">${noPages.others[0]!.name}</a>`), 'no page: an anchor with no href');
+  assert.ok(bare.includes(`<a style="font-size:22px;font-weight:bold;color:#0f0f0f;text-decoration:none;">${noPages.others[0]!.name}</a>`), 'no page: an anchor with no href');
   assert.ok(bare.includes('<a style="font-size:30px;font-weight:bold;color:#0f0f0f;text-decoration:none;">100 Barclay Street #17L</a>'));
 });
 
@@ -229,4 +229,65 @@ test('escaping: markup typed anywhere arrives as text in Designed, Full and Shor
   assert.ok(html.includes('Prepared for Jordan &quot;&gt;&lt;script&gt;'), 'designed: the client’s name as text');
   assert.ok(html.includes('subject=Subject%20%3Cimg'), 'the subject, encoded in the mailto');
   assert.ok(!html.includes('<a href="javascript') && !html.includes('href="http://streeteasy.com/x"'), 'a non-https page links nowhere');
+});
+
+// ─── Dispatch 26: a box per comp, with photos and the client's paragraph ─────
+
+const PHOTO = 'https://photos.zillowstatic.com/fp/abc-se_large_800_400.jpg';
+const withLines = comps.map((c, i) => (c.judgment ? {
+  ...c,
+  judgment: {
+    ...c.judgment,
+    photos: i % 2 ? [] : [PHOTO],
+    ...(i === 0 ? { clientLine: { text: 'Written for Jordan and Sam.', by: 'agent' as const, at: '2026-10-27T00:00:00Z' } } : {}),
+  },
+} : c)) as typeof comps;
+const lineRows = countedComps(output, result, withLines);
+
+test('one box per comp: the anchor first and marked, the address large, the photo or a neutral block, the paragraph or nothing', () => {
+  const p = parseEmailText(buildEmail({ ...base, comps: withLines }).text, HEADLINE);
+  const shown = designedComps(lineRows, { parsed: p, homeStreet: '100 Barclay Street', sf: true, rate: () => 2112 });
+  const html = designedHtml({ ...designedInput(), email: p, ...shown });
+  const boxes = html.match(/<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:/g) ?? [];
+  assert.equal(boxes.length, lineRows.length, 'a box for every comp the email lists');
+  assert.ok(html.indexOf('The closest match') < html.indexOf(shown.others[0]!.name), 'the anchor’s box first');
+  assert.match(html, /border:2px solid #0f0f0f;[^"]*"><tr><td[^>]*>\s*<div[^>]*><span[^>]*>★<\/span>&nbsp; The closest match/, 'the anchor marked');
+  assert.ok(html.includes(`<img src="${PHOTO}"`) && html.includes('width="494" height="330"'), 'the photo, one size for every box');
+  const withPhoto = [shown.anchor, ...shown.others].filter((c) => c?.photo).length;
+  const hatched = (html.match(/<div style="height:330px;background-color:#eeece7/g) ?? []).length;
+  assert.equal(withPhoto + hatched, lineRows.length, 'a comp without a photo keeps the neutral block, the same size');
+  assert.ok(html.includes('$2,112 a sq ft'), '$/sq ft where the type shows one');
+  const anchorRow = lineRows.find((r) => r.comp.judgment?.anchor)!;
+  const own = anchorRow.comp.judgment?.clientLine ? 'Written for Jordan and Sam.' : null;
+  if (own) assert.ok(html.includes(own), 'the client’s paragraph');
+  const paragraphs = [shown.anchor, ...shown.others].filter((c) => c?.paragraph).length;
+  assert.equal(paragraphs, withLines.filter((c) => c.judgment?.clientLine && lineRows.some((r) => r.comp.id === c.id)).length, 'only comps with one have a paragraph');
+  assert.ok(!html.includes('Price per square foot'), 'no price table in the Designed email');
+  for (const c of shown.others) assert.ok(c.name && html.includes(c.name));
+});
+
+test('no $/sq ft on a co-op or a home without a size; the home’s photo fills the header; an off-site photo is never written', () => {
+  const p = parseEmailText(buildEmail({ ...base, comps: withLines }).text, HEADLINE);
+  const noSf = designedComps(lineRows, { parsed: p, homeStreet: '100 Barclay Street', sf: false, rate: () => 2112 });
+  assert.ok([noSf.anchor, ...noSf.others].every((c) => c?.perSqft === null));
+  const html = designedHtml({ ...designedInput(), email: p, ...noSf, homePhoto: PHOTO });
+  assert.ok(!html.includes('a sq ft'));
+  assert.match(html, new RegExp(`<img src="${PHOTO.replace(/[.?]/g, '\\$&')}" alt="100 Barclay Street #17L" width="600" height="240"`));
+  const off = designedComps(lineRows, { parsed: p, homeStreet: null, sf: false, photo: () => 'http://evil.example/x.jpg' });
+  assert.ok([off.anchor, ...off.others].every((c) => c?.photo === null), 'only an https photo is written');
+  const copied = designedComps(lineRows, { parsed: p, homeStreet: null, sf: false, photo: () => 'https://casa.example/api/comp-report/email-photo?k=abc' });
+  assert.ok([copied.anchor, ...copied.others].every((c) => c?.photo?.startsWith('https://casa.example/api/comp-report/email-photo')), 'the copies, when given');
+});
+
+test('the client’s paragraph wins over the writer’s lines and the Sort note, in Full and Short (Dispatch 26)', () => {
+  const anchorRow = lineRows.find((r) => r.comp.judgment?.clientLine)!;
+  const written = { chosen: '', comps: lineRows.map((r) => ({ id: r.comp.id, lines: ['The writer’s line.'] })), consider: [], nextStep: '' };
+  const full = buildEmail({ ...base, comps: withLines, written }).text;
+  const short = buildEmail({ ...base, comps: withLines, written, length: 'short' }).text;
+  assert.ok(full.includes('  Written for Jordan and Sam.'));
+  if (anchorRow.status === 'sold') assert.ok(short.includes('  Written for Jordan and Sam.'));
+  const others = lineRows.filter((r) => r !== anchorRow).length;
+  assert.equal(full.split('The writer’s line.').length - 1, others, 'the rest keep the writer’s');
+  const noWriter = buildEmail({ ...base, comps: withLines }).text;
+  assert.ok(noWriter.includes('  Written for Jordan and Sam.') && !noWriter.includes(`  ${anchorRow.comp.judgment!.reasons.at(-1)!.reason}`), 'over the Sort note too');
 });

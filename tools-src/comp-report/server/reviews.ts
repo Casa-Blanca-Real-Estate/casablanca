@@ -6,6 +6,7 @@
 import type { Queryable } from './db.ts';
 import { cleanReview, MAX_ROUNDS, type ReviewEntry } from '../workspace/review.ts';
 import type { Role } from './db.ts';
+import { cleanClientRounds, MAX_CLIENT_ROUNDS, type ClientRound } from '../workspace/client-words.ts';
 
 /** Review calls a person may make in any 24 hours: CR_REVIEWS_PER_DAY, default 150 (admins at least 400). Each is one small call. */
 export function reviewLimit(role: Role, env: Record<string, string | undefined> = process.env): number {
@@ -36,5 +37,30 @@ export async function appendReview(
                               coalesce(state -> 'reviews', '{}'::jsonb) || jsonb_build_object($2::text, $3::jsonb))
       where id = $1`,
     [reportId, reportCompId, JSON.stringify(list)],
+  );
+}
+
+/**
+ * Appends rounds on the client's words (Dispatch 26) to state.clientRounds,
+ * under the overview's key or a comp's, keeping the newest MAX_CLIENT_ROUNDS.
+ * Locked as appendReview is. `ifEmpty` writes only when there are none yet.
+ */
+export async function appendClientRounds(
+  tx: Queryable, reportId: string, key: string, entries: ClientRound[], opts: { ifEmpty?: boolean } = {},
+): Promise<void> {
+  const current = (await tx.query<{ list: unknown }>(
+    `select state -> 'clientRounds' -> $2 as list from comp_report.reports where id = $1 for update`,
+    [reportId, key],
+  )).rows[0];
+  if (!current) return;
+  const before = cleanClientRounds(current.list);
+  if (opts.ifEmpty && before.length) return;
+  const list = [...before, ...entries].slice(-MAX_CLIENT_ROUNDS);
+  await tx.query(
+    `update comp_report.reports
+        set state = jsonb_set(coalesce(state, '{}'::jsonb), '{clientRounds}',
+                              coalesce(state -> 'clientRounds', '{}'::jsonb) || jsonb_build_object($2::text, $3::jsonb))
+      where id = $1`,
+    [reportId, key, JSON.stringify(list)],
   );
 }
