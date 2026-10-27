@@ -97,11 +97,14 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const ready = me.database === 'ready';
+  // Admins and mentors read everyone's reports (NW-088 a, NB-23 A); only the owner changes one.
+  const everyone = me.user.role === 'admin' || me.user.role === 'mentor';
+  const mine = (r: Report) => r.ownerEmail.toLowerCase() === me.user.email.toLowerCase();
 
-  const load = useCallback(() => api<{ reports: Report[] }>('/api/comp-report/reports').then(
+  const load = useCallback(() => api<{ reports: Report[] }>(`/api/comp-report/reports${everyone ? '?scope=all' : ''}`).then(
     (r) => setReports(r.reports),
     (e) => setError(e.message),
-  ), []);
+  ), [everyone]);
   useEffect(() => {
     if (ready) void load();
   }, [ready, load]);
@@ -150,7 +153,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
       <Hero />
       <main className="sh-reports">
         <div className="sh-reports-head">
-          <h2 className="sh-reports-title">Your reports</h2>
+          <h2 className="sh-reports-title">{everyone ? 'Everyone’s reports' : 'Your reports'}</h2>
           <span className="sh-reports-count">{reports && !empty ? reports.length : ''}</span>
           <span className="sh-reports-new">{!empty && newComp}</span>
         </div>
@@ -209,7 +212,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                         {r.title}
                         {r.sampleData && <span className="sh-sample" title={SAMPLE_TITLE}>Sample</span>}
                       </span>
-                      <span className="sh-client">{r.client ?? ''}</span>
+                      <span className="sh-client">{mine(r) ? (r.client ?? '') : [r.client, r.ownerEmail].filter(Boolean).join(' · ')}</span>
                     </span>
                     <span className="sh-side">{r.side === 'seller' ? 'Seller' : r.side === 'buyer' ? 'Buyer' : ''}</span>
                     <span className="sh-stage">
@@ -219,10 +222,14 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                     <span className="sh-updated">{updatedLabel(r.updatedAt)}</span>
                   </a>
                   <span className="sh-row-acts">
-                    <button type="button" className="link sh-act" disabled={busy} title="Moves it to Archived, below. You can restore it." onClick={() => void act(r, 'archive')}>
-                      Archive
-                    </button>
-                    <DeleteButton r={r} busy={busy} onAct={(x, a) => void act(x, a)} />
+                    {mine(r) && (
+                      <>
+                        <button type="button" className="link sh-act" disabled={busy} title="Moves it to Archived, below. You can restore it." onClick={() => void act(r, 'archive')}>
+                          Archive
+                        </button>
+                        <DeleteButton r={r} busy={busy} onAct={(x, a) => void act(x, a)} />
+                      </>
+                    )}
                   </span>
                 </li>
               ))}
@@ -233,6 +240,12 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
               </button>
             )}
           </div>
+        )}
+
+        {reports && !empty && (
+          <p className="sh-help">{everyone
+            ? 'You can open any agent’s report to read it. Only its owner can change it.'
+            : 'Mentors and admins can read your reports. Only you can change them.'}</p>
         )}
 
         {ready && <Archived refresh={refresh} busy={busy} onAct={(x, a) => void act(x, a)} />}

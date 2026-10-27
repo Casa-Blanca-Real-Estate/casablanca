@@ -23,7 +23,7 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 | D-25 | The fair-housing list, and "appraisal contingency" | Soon — before agents copy writer drafts | Think (Hannah) | QA's compliance list (Dispatch 13) |
 | D-26 | Moving Casa's work onto Casa-owned accounts | Later — after the comp report settles; keys sooner | Think (with Erez) | `docs/casa-accounts-transfer.md` |
 | D-27 | The design port: what the handoff changes | Now — Mason builds on the defaults (Dispatch 14) | Quick (object only) | Noble's walk-through |
-| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21; NB-11 to NB-28 open) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
+| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21, NB-23 on 2026-10-27; the rest of NB-11 to NB-28 open) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
 | D-29 | The bosses' demo: what changes (answered 2026-10-22) | Now — Dispatches 25 and 26 build on it | — | Dispatches 25, 26 |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
@@ -201,7 +201,7 @@ as **NB-1 to NB-28**, each with its context and a recommended default. The bigge
 
 **What waits for your answer, not the default:** NB-1 (NW-002's relabel), NB-2 (the type model, NW-018 a) and
 NB-8 (NW-046, which changes D-27's Save rule) are built only on an A answer. Dispatch 22a doesn't merge until
-NB-23: deploying it lets every mentor read every report. Samples stay admin-only on the server until NB-24.
+NB-23: deploying it lets every mentor read every report (answered A, 2026-10-27: 22a can merge). Samples stay admin-only on the server until NB-24.
 Dispatch 21 item 1 builds on NB-19 A (B moves it to Calliste). Dispatch 23 items 3–4 (the inspection and test
 keys) wait on NB-22 and TD-14, and run from Casa's account only.
 
@@ -221,7 +221,13 @@ NB-5 and NB-9.
 | NB-9 | NW-059 b, derived tags | **C: pre-filled for full agents, suggested for practice agents**; contradictions clear themselves | Dispatches 16 (#80) and 20 |
 | NB-10 | NW-045, 059, the size scale | A: Similar within ±10%; smaller or bigger 10–25%; much past 25% (house-method configuration; TD-17, Noble's word, still open) | Dispatch 16 (#80) |
 
-NB-11 to NB-28 are still open on the sheet.
+**Kimani, 2026-10-27 (answer sheet), NB-23.** As recommended.
+
+| NB | Item | Answer | Applied |
+|---|---|---|---|
+| NB-23 | NW-088 a, what mentors see | A: every agent's report, read-only (no assignment to keep up). Agents are told in the list's copy that mentors and admins can read their reports | Dispatch 22a, mergeable once reviewed |
+
+The rest of NB-11 to NB-28 are still open on the sheet.
 
 ---
 

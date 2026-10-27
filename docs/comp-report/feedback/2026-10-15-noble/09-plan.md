@@ -28,7 +28,7 @@ listing read is fixed, Dispatch 25 (the per-comp review) and 26 (the Designed em
 | 19 | The engine for Findings (CR-2.4) | Abacus | `casa-r13-5` | this account | 16 and 15 merged | — |
 | 20 | The new report and the home, filled from the read (CR-7c) | Mason | `casa-r13-6` | this account | 16 and 18 merged; 17 for transit only | part of `casa-r12-1`; DP-6 from `casa-r10-1` |
 | 21 | Findings: plainer, whose target, the client's facts (CR-7d) | Mason | `casa-r13-7` | this account | 19 and 20 merged | — |
-| 22 | Who sees what, the sign-in log, the activity log (CR-7e). Ships as **22a** (items 1–2: mentors read every report, the invite fix) and **22b** (the log tables); 22a is not merged until Kimani answers NW-088 a | Mason | `casa-r13-8` | this account (Mason); Casa's account if a second builder takes 22 then 23 | 15 merged; 22a first in Mason's queue if no second builder (see below), 22b after 21 | `casa-r12-2`; part of `casa-r12-1` |
+| 22 | Who sees what, the sign-in log, the activity log (CR-7e). Ships as **22a** (items 1–2: mentors read every report, the invite fix) and **22b** (the log tables); 22a waited on NW-088 a, answered 2026-10-27 as NB-23 A (every report, read-only) | Mason | `casa-r13-8` | this account (Mason); Casa's account if a second builder takes 22 then 23 | 15 merged; 22a first in Mason's queue if no second builder (see below), 22b after 21 | `casa-r12-2`; part of `casa-r12-1` |
 | 23 | Samples that reset, and reading production safely (CR-7f). Two PRs under the one line: items 1–2 (the sample reset, the co-op sample), then items 3–4 (the inspection API, the test user) | Mason | `casa-r13-9` | any account for items 1–2; **Casa's account for items 3–4** (its keys live there; D-26 Q3) | 15 merged (items 1–2); 22b merged, Kimani on NW-090 a, and the two keys (items 3–4). NW-054 only widens items 1–2's gate: admin-only until he answers | — |
 | 24 | Calliste: Hubert sees what the agent sees (CR-H1) | Calliste (new) | `casa-r13-10` | **Casa's account** | the account move; 15 merged; 22a merged before it edits `api/messages.ts`; item 1 after 21; copy last, after 20 and 21 | part of `casa-r12-1` |
 
@@ -74,7 +74,7 @@ Calliste                 (after the move) 24
 
 **Files with an owner this round.** `workspace/features.ts` and `subject.ts` belong to Abacus (16). Mason edits
 `Chat.tsx` once (15), then hands it to Calliste. Nobody touches `assets/studio-header.js`. 23's items 3–4 and 24 both edit `api/turn.ts` and the write deps (23 makes `productionAnthropic` take the user): the second to open rebases on the first.
-**Migrations.** Reserved: `20261016000000` (15); `20261016120000` (22a) and `20261016120100` (22b), or one
+**Migrations.** Reserved: `20261016000000` (15); `20261016120000` (22a; it shipped as `20261027120000`, after #92–#97's migrations) and `20261016120100` (22b, take a timestamp after 22a's), or one
 PR on `20261016120000` if 22 ships whole; `20261017000000` (23, only if items 3–4 ship: items 1–2 have none).
 Dispatch 20 has no migration.
 
@@ -112,7 +112,7 @@ in Blobs. The full record is D-28 in `docs/decisions.md`.
 | NW-065 b | Five rows in the email too? | Yes, one table everywhere | the email's table (after 19) |
 | NW-070 | Default owner of the target | Client | 21 |
 | NW-074 | Pre-approval: yes/no, or with the amount? | With the amount | 21 |
-| NW-088 a | Mentors see every report, or assigned agents only? | Every report, read-only | 22a (built on the recommendation; not merged until he answers) |
+| NW-088 a | Mentors see every report, or assigned agents only? | Every report, read-only | **Answered A, 2026-10-27 (NB-23).** 22a builds it |
 | NW-054 | Who may reset samples; is a new link per reset OK? | Admins and mentors; yes. Built admin-only on the server until he answers; the server check changes with his answer | 23 items 1–2 (not blocked: admin-only until then) |
 | NW-090 a | Reading production: inspection API or a database role? Text on request? | The API, behind a key, redacted by an allowlist. `text=1` only on one report's views, logged first, 20 an hour and 100 a day, and it fails closed. A copy to the test user always redacts and has no text flag | 23 items 3–4 |
 | NW-063 (NB-19) | Who writes "How Hubert got there"? (Answer sheet NB-19) | A: a plainer template with comps as chips. B, Hubert's live words from a model call, moves the item to Calliste | 21 item 1 |

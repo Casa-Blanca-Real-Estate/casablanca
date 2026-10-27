@@ -1,7 +1,8 @@
 // /api/comp-report/reports
-//   GET              the signed-in agent's reports, newest first
+//   GET              the signed-in user's own reports, newest first (200 at most)
 //   GET  ?archived=1 the ones they archived
-//   GET  ?id=<uuid>  one report
+//   GET  ?id=<uuid>  one report: the owner's, or any for an admin or mentor (read-only)
+//   GET  ?scope=all[&owner=<email>]  admins and mentors: everyone's (NW-088 a); ignored for anyone else
 //   POST {title, propertyType?}  create a report
 //   PATCH {id, action: 'archive' | 'restore' | 'delete'}  the owner's own report only;
 //                    delete is for sample reports (Kimani, 2026-10-22), and is final
@@ -10,7 +11,9 @@
 // security (§12: scoped both ways).
 import { withActor, type PoolLike } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
+import { normalizeEmail } from '../access.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
+import { readsEveryReport, reportFor } from './workspace.ts';
 
 export interface ReportSummary {
   id: string;
@@ -86,16 +89,23 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
       if (id !== null) {
         if (!UUID.test(id)) throw new HttpError(400, 'bad_id');
         const report = await withActor(pool, asUser(user), async (tx) => {
-          const { rows } = await tx.query<ReportRow>(
-            `select ${COLUMNS} from comp_report.reports where id = $1 and (owner_email = $2 or $3) and status <> 'deleted'`,
-            [id, user.email, user.role === 'admin'],
-          );
+          await reportFor(tx, user, id, false);
+          const { rows } = await tx.query<ReportRow>(`select ${COLUMNS} from comp_report.reports where id = $1`, [id]);
           return rows[0];
         });
         if (!report) throw new HttpError(404, 'not_found', 'No such report.');
         return json({ report: summary(report) });
       }
-      const status = new URL(req.url).searchParams.get('archived') === '1' ? 'archived' : 'active';
+      const params = new URL(req.url).searchParams;
+      const status = params.get('archived') === '1' ? 'archived' : 'active';
+      // Everyone's reports (NW-088 a, NB-23 A): admins and mentors only. From anyone else
+      // scope=all is ignored and they get their own. The owner clause stays in the SQL.
+      const everyone = params.get('scope') === 'all' && readsEveryReport(user);
+      let owner: string | null = null;
+      if (everyone && params.has('owner')) {
+        owner = normalizeEmail(params.get('owner'));
+        if (owner === null || owner !== params.get('owner')) throw new HttpError(400, 'bad_owner', 'Give the owner as a lower-case email address.');
+      }
       const reports = await withActor(pool, asUser(user), async (tx) => {
         // Client, side and stage for every row in one query (Dispatch 14): the stage is how far the
         // report has got — sent, then on Send, then past the Gate, else still sorting.
@@ -112,9 +122,9 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
                   (select count(*) from comp_report.report_comps rc
                     where rc.report_id = r.id and rc.removed_at is null and rc.tier is null) as unsorted
              from comp_report.reports r
-            where r.owner_email = $1 and r.status = $2
+            where ($3 or r.owner_email = $1) and ($4::text is null or r.owner_email = $4) and r.status = $2
             order by r.updated_at desc limit 200`,
-          [user.email, status],
+          [user.email, status, everyone, owner],
         );
         return rows;
       });
