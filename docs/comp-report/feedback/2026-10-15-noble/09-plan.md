@@ -9,6 +9,40 @@ is Claude Design: layout, flow, polish, responsive and motion. Small things keep
 listing read is fixed, Dispatch 25 (the per-comp review) and 26 (the Designed email as the report) come before
 21, then 23. 22 and 24 keep their places behind them.
 
+## Status and dates (2026-10-27)
+
+**Deadline: usable by agents on Friday 2026-11-13**, set by Kimani for Erez. "Usable" means an agent signs
+in, starts a report from a StreetEasy link, reviews and tiers each comp on Sort, reads Findings, and sends the
+Designed email with real photos, all on production.
+
+**Done so far.** First comp report commit 2026-10-06. Eight work days since then (Oct 6, 9, 13, 14, 15, 21, 22, 27).
+The four heavy ones (Oct 14, 15, 21, 22) merged 5–6 PRs each. Phase A: 15–20 and 25 are merged.
+
+**What's left, in order**
+
+| When | What | Who |
+|---|---|---|
+| Oct 27–28 | 26 (Designed email, with photos), 21 (Findings), 22a (mentors and the invite fix), 23 items 1–2 (sample reset, co-op sample) | the build threads |
+| Oct 29 on | One batched release (credits reset Oct 29), then a live run with real fetches and photos (Erez's "see it live first") | Kimani |
+| Next 1–2 work days | Claude Design pass on `08-claude-design-handoff.md` | Kimani |
+| Next 1–2 work days | The builds from that pass, released, plus the fixes from the live run | the build threads |
+| By Nov 13 | Second release, then the curl check and a run-through as an agent | Casanova, Kimani |
+
+**Why Nov 13 holds.** Kimani works about six days between now and then. What's left fills four to six of them.
+The pace backs that up: each item left in Phase A is about one PR, and the four heavy days so far each merged
+5–6 PRs. The design was ported in #77 and polished through Noble's round, so the pass touches existing
+screens rather than starting new ones. That leaves about two days of buffer, which goes to fixes from the live run.
+
+**Not needed by Nov 13, so it ships after:** 22b (the sign-in and activity logs), 23 items 3–4 (the inspection
+API), 24 (Calliste), Jev live, the Gmail draft (NB-28), and phase 2 (comps found from the anchor).
+
+**What would move the date, all on Kimani**
+- **NB-23 by Oct 28.** 22a doesn't merge until it's answered, and without 22a, invited agents can't get in
+  properly. NB-11 to NB-28 build on their defaults otherwise.
+- The Design pass running past two days.
+- Netlify credits: the plan needs two or three production deploys (15 each) after the Oct 29 reset.
+- The Gmail and Apple Mail paste check on the Designed email, before agents send it to clients.
+
 ## The phases
 
 | Phase | What | Who |

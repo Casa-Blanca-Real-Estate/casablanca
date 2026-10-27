@@ -8,6 +8,7 @@ Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/t
 next round: `docs/comp-report/feedback/2026-10-15-noble/` (its `09-plan.md` orders Dispatches 15–24;
 `08-claude-design-handoff.md` is what goes to Claude Design). The demo to Erez, Hannah and Kara (2026-10-22)
 reorders it: `docs/comp-report/feedback/2026-10-22-bosses-demo/notes.md` (Kimani's decisions at its end win).
+**Deadline: usable by agents 2026-11-13.** The schedule, its case and its risks are in `09-plan.md`, "Status and dates".
 The master design is
 `docs/comp-report/01-design.md` — every comp report dispatch builds from it; `00-orientation.md`
 holds the research and sources behind it. Everything that was in flight before it
