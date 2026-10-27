@@ -319,7 +319,7 @@ function buildingFacts(i: Intake): PropertyFacts {
   return facts;
 }
 
-/** The deal-terms module (§6.7), as the engine takes it. Financing only when it's complete. */
+/** The deal-terms module (§6.7), as the engine takes it. Financing only when it's complete, and never for cash. */
 export function dealTermsInput(terms: DealTermsState | null | undefined): DealTerms | undefined {
   if (!terms) return undefined;
   const n = (e: Entry<number> | undefined) => (e && Number.isFinite(e.value) ? e.value : undefined);
@@ -340,7 +340,8 @@ export function dealTermsInput(terms: DealTermsState | null | undefined): DealTe
   const down = n(terms.downPaymentPercent);
   const rate = n(terms.ratePercent);
   const term = n(terms.termYears);
-  const financing = down !== undefined && rate !== undefined && term !== undefined && down >= 0 && down <= 100 && rate >= 0 && term > 0
+  // A cash buyer gets no mortgage, even with rate, down payment and term still stored (NW-074 a).
+  const financing = terms.financing?.value !== 'cash' && down !== undefined && rate !== undefined && term !== undefined && down >= 0 && down <= 100 && rate >= 0 && term > 0
     ? { down_payment: { percent: down }, annual_rate_percent: rate, term_years: Math.round(term) }
     : undefined;
   return {

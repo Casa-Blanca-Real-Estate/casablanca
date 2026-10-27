@@ -8,15 +8,21 @@
 //                          saves what the agent entered. Each field given
 //                          replaces the stored one; sampleData can only be set;
 //                          propertyType is the Co-op/Condo toggle (Dispatch 14).
-//                          The call follows the Gate's rule for the agent's level
+//                          The call follows the Gate's rule for the agent's level.
+//                          The first call (or skip) pins the range the agent
+//                          first saw in state.reveal (§8.4's backstop): only
+//                          the server writes it, and it never changes
 //
 // The owner or an admin can read a report; only its owner can change it.
 // Every query is scoped by owner as well as by row-level security (§12).
-import { cleanListingExtract, cleanPhotoUrls, type ParseWarning } from '../../engine/index.ts';
+import { cleanListingExtract, cleanPhotoUrls, ENGINE_VERSION, type ParseWarning } from '../../engine/index.ts';
 import { loadGeocodes, reportBuildings, type GeocodeView } from '../buildings.ts';
 import { cleanClientLine } from '../../workspace/client-words.ts';
+import { fairHousingFindings } from '../../workspace/fair-housing.ts';
+import { answerResult } from '../../workspace/reading.ts';
 import { cleanReview } from '../../workspace/review.ts';
-import type { CompJudgment, CompSource } from '../../workspace/state.ts';
+import { CLIENT_PRIORITIES, TARGET_OWNERS, type CompJudgment, type CompSource, type RevealPin } from '../../workspace/state.ts';
+import { neutralNumbers } from '../numbers.ts';
 import { withActor, type Queryable } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
@@ -301,6 +307,111 @@ function checkTarget(target: unknown) {
   if (!isObject(target) || !isObject(target.price) || !money(target.price.value)) {
     throw new HttpError(400, 'bad_target', 'Give the target as a price in whole dollars.');
   }
+  if (target.owner !== undefined && !(TARGET_OWNERS as readonly unknown[]).includes(target.owner)) {
+    throw new HttpError(400, 'bad_target', 'Whose target: the client’s, yours or both.');
+  }
+}
+
+/** Free text a client fact or a deal term holds: a hard fair-housing term is refused on save (§8.6). */
+function checkText(field: string, entry: unknown, max = 500) {
+  if (entry === undefined) return;
+  if (!isObject(entry) || typeof entry.value !== 'string' || entry.value.length > max) {
+    throw new HttpError(400, 'bad_text', `${field} is text of up to ${max} characters.`);
+  }
+  const hard = fairHousingFindings(entry.value).find((f) => f.level === 'hard');
+  if (hard) throw new HttpError(400, 'fair_housing', `${field}: “${hard.term}” can’t be saved. It reads as a preference on ${hard.basis} (fair housing).`);
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The client's facts on the brief (NW-074 a): each optional, each in its own shape. */
+function checkClient(client: unknown) {
+  if (client === undefined) return;
+  if (!isObject(client)) throw new HttpError(400, 'bad_client', 'The client’s facts are an object.');
+  const { urgency, paysMoreFor, nonNegotiables, priorities } = client;
+  if (urgency !== undefined) {
+    if (!isObject(urgency)) throw new HttpError(400, 'bad_client', 'Urgency is an object.');
+    checkText('How soon', urgency.text);
+    if (urgency.by !== undefined && (!isObject(urgency.by) || typeof urgency.by.value !== 'string' || !ISO_DATE.test(urgency.by.value))) {
+      throw new HttpError(400, 'bad_client', 'Give the close-by date as a date.');
+    }
+  }
+  checkText('What they’d pay more for', paysMoreFor);
+  checkText('Non-negotiables', nonNegotiables);
+  if (priorities !== undefined) {
+    const ok = Array.isArray(priorities)
+      && priorities.every((p) => (CLIENT_PRIORITIES as readonly unknown[]).includes(p))
+      && new Set(priorities).size === priorities.length;
+    if (!ok) throw new HttpError(400, 'bad_client', 'Priorities are price, speed and certainty, each at most once.');
+  }
+}
+
+/** The deal terms' new facts (NW-074 a) and their free text (§8.6). The rest are checked where the engine reads them. */
+function checkDealTerms(terms: unknown) {
+  if (terms === undefined || terms === null) return;
+  if (!isObject(terms)) throw new HttpError(400, 'bad_terms', 'The deal terms are an object.');
+  const { financing, preApproved, preApprovalAmount } = terms;
+  if (financing !== undefined && (!isObject(financing) || (financing.value !== 'cash' && financing.value !== 'mortgage'))) {
+    throw new HttpError(400, 'bad_terms', 'Financing is cash or a mortgage.');
+  }
+  if (preApproved !== undefined && (!isObject(preApproved) || typeof preApproved.value !== 'boolean')) {
+    throw new HttpError(400, 'bad_terms', 'Pre-approved is yes or no.');
+  }
+  if (preApprovalAmount !== undefined && (!isObject(preApprovalAmount) || !money(preApprovalAmount.value))) {
+    throw new HttpError(400, 'bad_terms', 'Give the pre-approval as an amount in whole dollars.');
+  }
+  checkText('Timing', terms.timing);
+  checkText('Flexibility', terms.flexibility);
+}
+
+/**
+ * The pin (§8.4's backstop, NW-069 a): the range and base Findings leads with
+ * (answerResult: "on the facts" when it has a range, else "with estimates"),
+ * computed here from the stored comps and state with the neutral numbers,
+ * never from the request.
+ */
+export async function revealPinFor(tx: Queryable, reportId: string, at: string, late = false): Promise<RevealPin | null> {
+  const n = await neutralNumbers(tx, reportId);
+  if (!n) return null;
+  const r = n.output.results[answerResult(n.output)];
+  return {
+    at,
+    low: r.range?.low.value ?? null,
+    base: r.base?.value ?? null,
+    high: r.range?.high.value ?? null,
+    engineVersion: ENGINE_VERSION,
+    ...(late ? { late: true as const } : {}),
+  };
+}
+
+/** Writes the pin once: a stored one is never overwritten, whatever happens to the call after. Returns the stored pin. */
+export async function pinReveal(tx: Queryable, reportId: string, at: string, late = false): Promise<RevealPin | null> {
+  const pin = await revealPinFor(tx, reportId, at, late);
+  if (pin) {
+    await tx.query(
+      `update comp_report.reports set state = jsonb_set(state, '{reveal}', $2::jsonb)
+        where id = $1 and jsonb_typeof(state -> 'reveal') is distinct from 'object'`,
+      [reportId, JSON.stringify(pin)],
+    );
+  }
+  const { rows } = await tx.query<{ reveal: RevealPin | null }>(`select state -> 'reveal' as reveal from comp_report.reports where id = $1`, [reportId]);
+  return rows[0]?.reveal ?? null;
+}
+
+/**
+ * Reports revealed before the pin existed (a call and no pin: Noble's, the
+ * samples): pinned on the owner's first load, marked late, at the call's own
+ * time. The engine runs in code, so a migration couldn't compute it.
+ */
+async function backfillReveal(tx: Queryable, reportId: string): Promise<void> {
+  const { rows } = await tx.query<{ at: string | null; due: boolean }>(
+    `select agent_call ->> 'at' as at, agent_call is not null and jsonb_typeof(state -> 'reveal') is distinct from 'object' as due
+       from comp_report.reports where id = $1`,
+    [reportId],
+  );
+  const row = rows[0];
+  if (!row?.due) return;
+  await pinReveal(tx, reportId, row.at && !Number.isNaN(Date.parse(row.at)) ? row.at : new Date().toISOString(), true);
 }
 
 export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response> {
@@ -312,7 +423,12 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
     if (req.method === 'GET') {
       const reportId = new URL(req.url).searchParams.get('report') ?? '';
       if (!UUID.test(reportId)) throw new HttpError(400, 'bad_report', 'Which report?');
-      return json(await withActor(pool, asUser(user), (tx) => loadWorkspace(tx, user, reportId)));
+      return json(await withActor(pool, asUser(user), async (tx) => {
+        // Only the owner's load pins a late reveal: an admin reading another agent's report writes nothing.
+        const report = await reportFor(tx, user, reportId, false);
+        if (report.owner_email === user.email) await backfillReveal(tx, reportId);
+        return loadWorkspace(tx, user, reportId);
+      }));
     }
 
     const body = await readJsonObject(req, 256 * 1024);
@@ -334,6 +450,7 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
     if ('brief' in body) {
       if (!isObject(body.brief)) throw new HttpError(400, 'bad_brief', 'The brief is an object.');
       checkSize('The brief', body.brief, 16 * 1024);
+      checkClient(body.brief.client);
       set('brief', body.brief);
     }
     if ('call' in body) {
@@ -352,24 +469,34 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
     if ('state' in body) {
       if (!isObject(body.state)) throw new HttpError(400, 'bad_state', 'The state is an object.');
       checkSize('The intake', body.state, 64 * 1024);
-      // Hubert's rounds are the server's to write (Dispatch 25's reviews, Dispatch 26's clientRounds):
-      // whatever the browser sends, the stored ones stay.
-      const { reviews: _sent, clientRounds: _sentRounds, ...state } = body.state;
+      checkDealTerms(body.state.dealTerms);
+      // Hubert's rounds are the server's to write (Dispatch 25's reviews, Dispatch 26's clientRounds),
+      // and so is the reveal pin: whatever the browser sends, the stored ones stay.
+      const { reviews: _sent, clientRounds: _sentRounds, reveal: _sentReveal, ...state } = body.state;
       values.push(JSON.stringify(state));
-      sets.push(`state = $${values.length}::jsonb || jsonb_strip_nulls(jsonb_build_object('reviews', state -> 'reviews', 'clientRounds', state -> 'clientRounds'))`);
+      const n = values.length;
+      // The pin carries over inside this one UPDATE, so a slow autosave can't erase one written meanwhile.
+      sets.push(`state = case when jsonb_typeof(reports.state -> 'reveal') = 'object'
+          then ($${n}::jsonb - 'reveal') || jsonb_build_object('reveal', reports.state -> 'reveal')
+          else ($${n}::jsonb - 'reveal') end
+        || jsonb_strip_nulls(jsonb_build_object('reviews', reports.state -> 'reviews', 'clientRounds', reports.state -> 'clientRounds'))`);
     }
     if (body.sampleData === true) sets.push('sample_data = true');
     if (!sets.length) throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
 
-    const updatedAt = await withActor(pool, asUser(user), async (tx) => {
+    // A call given or skipped pins the reveal, after the other fields are saved.
+    const pins = 'call' in body && body.call !== null;
+    const saved = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
       const { rows } = await tx.query<{ updated_at: Date }>(
         `update comp_report.reports set ${sets.join(', ')} where id = $1 and owner_email = $2 returning updated_at`,
         values,
       );
-      return rows[0]?.updated_at;
+      if (!rows[0]) return null;
+      const reveal = pins ? await pinReveal(tx, reportId, new Date().toISOString()) : null;
+      return { updatedAt: rows[0].updated_at, reveal };
     });
-    if (!updatedAt) throw new HttpError(404, 'not_found', 'No such report.');
-    return json({ saved: true, updatedAt: iso(updatedAt) });
+    if (!saved) throw new HttpError(404, 'not_found', 'No such report.');
+    return json({ saved: true, updatedAt: iso(saved.updatedAt), ...(saved.reveal ? { reveal: saved.reveal } : {}) });
   });
 }

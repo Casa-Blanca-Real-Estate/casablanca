@@ -17,7 +17,7 @@ import { homeFeatures } from '../../../workspace/features.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
-  isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type Outcomes, type Reached, type SendState, type TargetState, type WorkspaceState,
+  isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type Outcomes, type Reached, type RevealPin, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
@@ -52,7 +52,10 @@ type SaveStatus =
  * a time; a failed one keeps its fields queued for the next attempt. Leaving
  * the page with a save outstanding asks first.
  */
-function useAutosave(reportId: string) {
+function useAutosave(reportId: string, onReveal: (reveal: RevealPin) => void) {
+  // The server answers a call with the reveal it pinned (§8.4's backstop): the state takes it without saving it back.
+  const revealRef = useRef(onReveal);
+  revealRef.current = onReveal;
   const queued = useRef<Partial<Record<Field, unknown>>>({});
   const timer = useRef<number | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
@@ -69,7 +72,10 @@ function useAutosave(reportId: string) {
     if (!Object.keys(patch).length) return;
     setStatus({ kind: 'saving' });
     const saving = workspaceApi.save(reportId, patch as WorkspacePatch).then(
-      () => setStatus(Object.keys(queued.current).length ? { kind: 'pending' } : { kind: 'saved' }),
+      (res) => {
+        if (res.reveal) revealRef.current(res.reveal);
+        setStatus(Object.keys(queued.current).length ? { kind: 'pending' } : { kind: 'saved' });
+      },
       (e: unknown) => {
         queued.current = { ...patch, ...queued.current };
         setStatus({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
@@ -173,7 +179,10 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
   const [reviewing, setReviewing] = useState<{ at: string | null } | null>(null);
   const today = useMemo(localToday, []);
-  const save = useAutosave(reportId);
+  const save = useAutosave(reportId, (reveal) => {
+    stateRef.current = { ...stateRef.current, reveal };
+    setStateState(stateRef.current);
+  });
 
   useEffect(() => {
     let live = true;
@@ -501,6 +510,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     output,
     engineError,
     revealed: isRevealed(call),
+    reveal: state.reveal ?? null,
     run: async (label, work) => {
       setBusy(label);
       setActionError(null);

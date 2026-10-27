@@ -5,10 +5,10 @@
 //
 // The target keeps D-4: Hubert doesn't see it until his own math is done, it's
 // never in the email, and it stays editable on Findings. It's one number,
-// labelled as the client's (NB-1 A, Dispatch 20): Dispatch 21 changes the label
-// when the target's owner changes.
+// labelled by whose it is and the side (Dispatch 21, NW-070): the client's by
+// default. Edit details follows the owner Findings set.
 import { useId, type ReactNode } from 'react';
-import type { Audience } from '../../../workspace/state.ts';
+import type { Audience, TargetOwner } from '../../../workspace/state.ts';
 import { checkListingLink, titleFromLink, type LinkCheck } from '../../../workspace/links.ts';
 import { readPrice } from '../comp/CompForm.tsx';
 import { splitTitle } from '../workspace/model.ts';
@@ -22,9 +22,16 @@ export const TYPE_LABEL: Record<PropertyType, string> = { coop: 'Co-op', condo: 
 
 export const TARGET_TIP = 'Hubert, the AI assistant, doesn’t see this, so it can’t sway his read of the comps. It’s never in your client’s email and doesn’t change any number. Findings shows it against the range, and you can change it there.';
 
-/** The target's label, as the client's (NB-1 A; Dispatch 26: a buyer's is their budget). The client is the owner's default (Dispatch 21). */
-export function targetLabel(side: Audience): string {
-  return side === 'buyer' ? 'Client’s budget' : 'Client’s target price';
+const TARGET_LABEL: Record<TargetOwner, Record<Audience, string>> = {
+  // A buyer's own number is their budget (Kimani, 2026-10-22).
+  client: { buyer: 'Client’s budget', seller: 'Client’s target price' },
+  agent: { buyer: 'Your offer target', seller: 'Your list price' },
+  both: { buyer: 'Shared target', seller: 'Shared target' },
+};
+
+/** The target's label, one scheme by whose it is and the side (NW-070). The client's is the default. */
+export function targetLabel(side: Audience, owner: TargetOwner = 'client'): string {
+  return TARGET_LABEL[owner][side];
 }
 
 /** A pasted link that checks out, as the clean link the tool reads (NW-004); otherwise null. */
@@ -127,7 +134,7 @@ export function targetText(price: number | null | undefined): string {
 }
 
 /** The fields under the home: For a, Client, Type and the target. */
-export function HomeFields({ line, side, onSide, client, onClient, type, onType, target, onTarget, onTargetBlur, disabled }: {
+export function HomeFields({ line, side, onSide, client, onClient, type, onType, target, onTarget, onTargetBlur, owner, disabled }: {
   line: ReactNode;
   side: Audience;
   onSide: (a: Audience) => void;
@@ -138,6 +145,8 @@ export function HomeFields({ line, side, onSide, client, onClient, type, onType,
   target: string;
   onTarget: (v: string) => void;
   onTargetBlur: () => void;
+  /** Whose target, as Findings set it: the label follows it. */
+  owner?: TargetOwner | undefined;
   disabled?: boolean;
 }) {
   const ids = useId();
@@ -184,7 +193,7 @@ export function HomeFields({ line, side, onSide, client, onClient, type, onType,
         </div>
         <div className="nr-col">
           <div className="fh nr-label-line">
-            <label htmlFor={`${ids}-target`}>{targetLabel(side)} · optional</label>
+            <label htmlFor={`${ids}-target`}>{targetLabel(side, owner)} · optional</label>
             <span className="nr-sub">{buyer ? '(what your client hopes to pay)' : '(what you or the client want to justify)'}</span>
             <Info label={buyer ? 'About the budget' : 'About the target price'} text={TARGET_TIP} />
           </div>

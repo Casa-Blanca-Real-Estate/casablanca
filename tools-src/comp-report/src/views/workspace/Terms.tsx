@@ -1,13 +1,19 @@
 // The target price and the pricing details, in Findings' accordions (the
 // handoff, screen 8; `02-screens.md`, Findings, items 7 and 8). The target is
 // editable here (D-4): it never enters a number, Hubert gets it only after the
-// math is done, and it isn't in the email (§8.4). Pricing details shows only
-// rows with data, then the deal terms behind them (§6.7, D-10).
+// math is done, and it isn't in the email (§8.4). Whose target it is sets its
+// label (NW-070), and once the range has moved since the reveal, the section
+// says how far toward or away from it (§8.4's backstop). Pricing details shows
+// only rows with data, in plain sentences (NW-071 a, NW-072), then the deal
+// terms behind them (§6.7, D-10): the report side's template only (NW-073 a),
+// with cash or a mortgage and the pre-approval (NW-074 a).
 import type { EngineOutput, ResultKind } from '../../../engine/index.ts';
-import { againstAsk, clientPrice, pct, psf, usd } from '../../../workspace/format.ts';
+import { clientPrice, isoDay, pct, psf, usd } from '../../../workspace/format.ts';
 import { answerResult } from '../../../workspace/reading.ts';
-import type { DealTermsState } from '../../../workspace/state.ts';
+import { TARGET_OWNERS, type DealTermsState, type TargetOwner } from '../../../workspace/state.ts';
+import { daysOnMarketLine, movedLine, saleToAskLine } from '../findings/findings.ts';
 import { MoneyInput } from '../findings/MoneyInput.tsx';
+import { targetLabel as labelFor } from '../newcomp/Home.tsx';
 import { DecisionTag, entry, Field, NumberInput, TextInput } from './bits.tsx';
 import type { StepProps, Workspace } from './model.ts';
 
@@ -20,10 +26,12 @@ export function againstEstimate(output: EngineOutput | null, kind: ResultKind, p
   return price < r.low.value ? AGAINST.below : price > r.high.value ? AGAINST.above : AGAINST.within;
 }
 
-/** "Client’s budget" for a buyer (Dispatch 26), "Target list price" for a seller (renderVals). */
+/** The target's label: one scheme, by whose it is and the side (NW-070; `Home.tsx`). */
 export function targetLabel(ws: Workspace): string {
-  return ws.side === 'buyer' ? 'Client’s budget' : 'Target list price';
+  return labelFor(ws.side, ws.target?.owner);
 }
+
+const OWNER_WORD: Record<TargetOwner, string> = { client: 'Client’s', agent: 'Yours', both: 'Both' };
 
 /** The target: the agent's price goal, and where it sits against the true estimate. */
 export function TargetSection({ ws }: StepProps) {
@@ -36,6 +44,9 @@ export function TargetSection({ ws }: StepProps) {
   const note = price === null ? null
     : where ? `${rate !== null ? `${psf(rate)} / SF · ${where}` : where.charAt(0).toUpperCase() + where.slice(1)}`
       : 'No true estimate to set it against yet';
+  const range = output?.results[kind].range;
+  const moved = movedLine(ws.reveal, range ? { low: range.low.value, high: range.high.value } : null, price, targetLabel(ws));
+  const owner = ws.target?.owner ?? 'client';
   return (
     <div className="fi-target">
       <div className="fi-target-row">
@@ -53,7 +64,27 @@ export function TargetSection({ ws }: StepProps) {
         </label>
         {note && <span className="fi-target-note">{note}</span>}
       </div>
+      {moved && <p className="fi-moved">{moved}</p>}
       {(ws.target || !off) && (
+        <div className="fi-target-row">
+        <div className="fi-owner" role="radiogroup" aria-label="Whose target">
+          <span className="fi-k">Whose</span>
+          <div className="seg small">
+            {TARGET_OWNERS.map((o) => (
+              <button
+                key={o}
+                type="button"
+                role="radio"
+                aria-checked={owner === o}
+                className={owner === o ? 'on' : undefined}
+                disabled={off || !ws.target}
+                onClick={() => ws.target && ws.setTarget({ ...ws.target, owner: o })}
+              >
+                {OWNER_WORD[o]}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="fi-target-whose" htmlFor="fi-target-whose">
           <span className="fi-k">Whose, and why <span className="fi-opt">(optional)</span></span>
           <input
@@ -70,6 +101,7 @@ export function TargetSection({ ws }: StepProps) {
             }}
           />
         </label>
+        </div>
       )}
       <p className="fi-only">Only you see this. Hubert never sees it, and it isn’t in the email.</p>
     </div>
@@ -98,8 +130,19 @@ export function pricingRows(ws: Workspace, kind: ResultKind): DetailRow[] {
     rows.push({ k: 'Asking price', v: `${usd(ask)}${where ? ` · ${where}` : ''}` });
   }
   if (t?.template === 'seller_pricing') {
-    if (t.timing?.value) rows.push({ k: 'Timing', v: t.timing.value });
+    if (t.timing?.value) rows.push({ k: 'Seller’s timing', v: t.timing.value });
     if (t.flexibility?.value) rows.push({ k: 'Strategy', v: t.flexibility.value });
+  }
+  if (t?.template === 'buyer_traditional') {
+    if (t.targetClosing?.value) rows.push({ k: 'Buyer’s closing', v: isoDay(t.targetClosing.value) });
+    if (t.timing?.value) rows.push({ k: 'Buyer’s timing', v: t.timing.value });
+    if (t.flexibility?.value) rows.push({ k: 'Flexibility', v: t.flexibility.value });
+    const cash = t.financing?.value === 'cash';
+    if (t.financing) rows.push({ k: 'Financing', v: cash ? 'Cash' : 'Mortgage' });
+    if (!cash && t.preApproved) {
+      const amount = t.preApproved.value && t.preApprovalAmount ? ` for ${usd(t.preApprovalAmount.value)}` : '';
+      rows.push({ k: 'Pre-approved', v: t.preApproved.value ? `Yes${amount}` : 'Not yet' });
+    }
   }
   const carry = r.carry;
   if (carry.subject && carry.comp_median) {
@@ -109,14 +152,14 @@ export function pricingRows(ws: Workspace, kind: ResultKind): DetailRow[] {
   }
   const sta = r.sale_to_ask;
   if (sta) {
-    rows.push({ k: 'Sales against ask', v: `A median ${againstAsk(sta.median.value, '')}, across ${sta.n} sale${sta.n === 1 ? '' : 's'}` });
+    rows.push({ k: 'Sales against ask', v: saleToAskLine(sta) });
     // For a buyer: the comps' typical discount, on this home's ask — where an offer has room.
     if (ws.side === 'buyer' && ask) {
       rows.push({ k: 'Room on price', v: `At the comps’ median (${pct(sta.median.value)}), the ${clientPrice(ask)} ask points to a sale near ${clientPrice(ask * (1 + sta.median.value / 100))}` });
     }
   }
   const dom = r.days_on_market.sold;
-  if (dom) rows.push({ k: 'Days on market', v: `Sales took a median of ${Math.round(dom.median.value)} days` });
+  if (dom) rows.push({ k: 'Days on market', v: daysOnMarketLine(dom) });
   const dt = o.deal_terms;
   for (const p of dt?.price_evaluations ?? []) {
     const where = againstEstimate(o, kind, p.price);
@@ -132,7 +175,7 @@ export function DealTerms({ ws }: StepProps) {
   const { dealTerms: terms, today, readOnly: off } = ws;
   const setTerm = <K extends keyof DealTermsState>(key: K) => (value: DealTermsState[K] | undefined) =>
     terms && ws.setDealTerms(withField(terms, key, value));
-  const num = (key: 'price' | 'depositPercent' | 'downPaymentPercent' | 'ratePercent' | 'termYears' | 'sellerTarget', label: string, opts: { prefix?: string; integer?: boolean; hint?: string } = {}) => (
+  const num = (key: 'price' | 'depositPercent' | 'downPaymentPercent' | 'ratePercent' | 'termYears' | 'sellerTarget' | 'preApprovalAmount', label: string, opts: { prefix?: string; integer?: boolean; hint?: string } = {}) => (
     <Field label={label} sample={terms?.[key]?.sample} {...(opts.hint ? { hint: opts.hint } : {})}>
       <NumberInput
         label={label}
@@ -145,7 +188,16 @@ export function DealTerms({ ws }: StepProps) {
       />
     </Field>
   );
+  const text = (key: 'timing' | 'flexibility', label: string, placeholder: string, opts: { wide?: boolean; info?: string } = {}) => (
+    <Field label={label} sample={terms?.[key]?.sample} {...(opts.wide ? { wide: true } : {})} {...(opts.info ? { info: opts.info } : {})}>
+      <TextInput label={label} value={terms?.[key]} onChange={setTerm(key)} today={today} disabled={off} placeholder={placeholder} />
+    </Field>
+  );
   const t = ws.output?.deal_terms ?? null;
+  // Only the report side's template (NW-073 a); one stored from the other side still shows, so it can be cleared.
+  const mine: DealTermsState['template'] = ws.side === 'buyer' ? 'buyer_traditional' : 'seller_pricing';
+  const offered = [mine, ...(terms && terms.template !== mine ? [terms.template] : [])];
+  const cash = terms?.financing?.value === 'cash';
 
   return (
     <div className="fi-terms">
@@ -163,43 +215,70 @@ export function DealTerms({ ws }: StepProps) {
           }}
         >
           <option value="">None</option>
-          <option value="buyer_traditional">Buyer — traditional purchase</option>
-          <option value="seller_pricing">Seller — pricing</option>
+          {offered.map((o) => <option key={o} value={o}>{TEMPLATE_LABEL[o]}</option>)}
         </select>
       </div>
       {terms?.template === 'buyer_traditional' && (
         <div className="grid">
           {num('price', 'Price', { prefix: '$' })}
           {num('depositPercent', 'Deposit (%)', { integer: false })}
-          {num('downPaymentPercent', 'Down payment (%)', { integer: false })}
-          {num('ratePercent', 'Interest rate (%)', { integer: false })}
-          {num('termYears', 'Term (years)')}
-          <Field label="Target closing" sample={terms.targetClosing?.sample}>
+          <Field label="Financing" sample={terms.financing?.sample}>
+            <select
+              aria-label="Financing"
+              value={terms.financing?.value ?? ''}
+              disabled={off}
+              onChange={(e) => setTerm('financing')(e.target.value ? entry(e.target.value as 'cash' | 'mortgage', today) : undefined)}
+            >
+              <option value="">—</option>
+              <option value="mortgage">Mortgage</option>
+              <option value="cash">Cash</option>
+            </select>
+          </Field>
+          {/* Cash hides the mortgage, and the engine computes none (dealTermsInput) even with these still stored. */}
+          {!cash && num('downPaymentPercent', 'Down payment (%)', { integer: false })}
+          {!cash && num('ratePercent', 'Interest rate (%)', { integer: false })}
+          {!cash && num('termYears', 'Term (years)')}
+          {!cash && (
+            <Field label="Pre-approved" sample={terms.preApproved?.sample}>
+              <select
+                aria-label="Pre-approved"
+                value={terms.preApproved ? (terms.preApproved.value ? 'yes' : 'no') : ''}
+                disabled={off}
+                onChange={(e) => setTerm('preApproved')(e.target.value ? entry(e.target.value === 'yes', today) : undefined)}
+              >
+                <option value="">—</option>
+                <option value="yes">Yes</option>
+                <option value="no">Not yet</option>
+              </select>
+            </Field>
+          )}
+          {!cash && terms.preApproved?.value && num('preApprovalAmount', 'Pre-approved for', { prefix: '$' })}
+          <Field label="Buyer’s closing" sample={terms.targetClosing?.sample}>
             <input
               type="date"
-              aria-label="Target closing"
+              aria-label="Buyer’s closing"
               value={terms.targetClosing?.value ?? ''}
               disabled={off}
               onChange={(e) => setTerm('targetClosing')(e.target.value ? entry(e.target.value, today) : undefined)}
             />
           </Field>
+          {text('timing', 'Buyer’s timing', 'e.g. Wants to be in by spring')}
+          {text('flexibility', 'Flexibility', 'e.g. Can stretch for the right outdoor space', { wide: true })}
         </div>
       )}
       {terms?.template === 'seller_pricing' && (
         <div className="grid">
           {num('sellerTarget', 'Seller’s target', { prefix: '$' })}
-          <Field label="Timing" sample={terms.timing?.sample}>
-            <TextInput label="Timing" value={terms.timing} onChange={setTerm('timing')} today={today} disabled={off} placeholder="e.g. List in October" />
-          </Field>
-          <Field label="Flexibility" sample={terms.flexibility?.sample} wide>
-            <TextInput label="Flexibility" value={terms.flexibility} onChange={setTerm('flexibility')} today={today} disabled={off} placeholder="e.g. Near the top, with room for a quick, clean close" />
-          </Field>
+          {text('timing', 'Seller’s timing', 'e.g. List in October', { info: 'When your client plans to list.' })}
+          {text('flexibility', 'Flexibility', 'e.g. Near the top, with room for a quick, clean close', { wide: true })}
         </div>
       )}
       {t && t.not_computed_in_v1.length > 0 && <p className="fi-quiet">Kept, not calculated yet: {t.not_computed_in_v1.join('; ')}.</p>}
     </div>
   );
 }
+
+const TEMPLATE_LABEL: Record<DealTermsState['template'], string> = { buyer_traditional: 'Buyer’s terms', seller_pricing: 'Seller’s terms' };
 
 /** Pricing details: the rows with data, then the terms. */
 export function PricingDetails({ ws, kind }: { ws: Workspace; kind: ResultKind }) {

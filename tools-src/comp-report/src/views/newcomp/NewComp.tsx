@@ -316,6 +316,7 @@ function HomeScreen({ ws, onScreen, onClose }: { ws: Workspace; onScreen: (s: St
         target={target}
         onTarget={onTarget}
         onTargetBlur={() => price && setTarget(targetText(price))}
+        owner={ws.target?.owner}
         disabled={off}
       />
     </Frame>

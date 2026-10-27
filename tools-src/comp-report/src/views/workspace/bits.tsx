@@ -4,6 +4,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Entry } from '../../../workspace/state.ts';
 import { useBuildNotes } from './buildNotes.tsx';
+import { Info } from '../newcomp/Frame.tsx';
 
 // `show` is required: a value's flag is often undefined, and undefined must never show the tag.
 // A sample report has one banner (the workspace's); the per-value mark is a build note.
@@ -52,13 +53,15 @@ interface FieldProps {
   from?: boolean | undefined;
   children: ReactNode;
   wide?: boolean;
+  /** An ⓘ beside the label: what the field is for, in a line. */
+  info?: string;
 }
 
-export function Field({ label, hint, sample, estimate, from, children, wide }: FieldProps) {
+export function Field({ label, hint, sample, estimate, from, children, wide, info }: FieldProps) {
   return (
     <div className={`field${wide ? ' wide' : ''}`}>
       <span className="field-label">
-        {label} <SampleTag show={sample} /> <EstimateTag show={estimate} />
+        {label}{info && <span className="fi-info"> <Info label={`About ${label.toLowerCase()}`} text={info} align="left" /></span>} <SampleTag show={sample} /> <EstimateTag show={estimate} />
       </span>
       {children}
       <ListingTag show={from} />

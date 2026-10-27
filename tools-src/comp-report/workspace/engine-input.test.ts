@@ -93,6 +93,31 @@ test('deal terms: the two templates D-10 recommends; financing only when it’s 
   assert.equal(dealTermsInput(null), undefined);
 });
 
+test('a cash buyer gets no mortgage, even with rate, down payment and term still stored (NW-074 a)', () => {
+  const e = <T>(value: T) => ({ value, asOf: AS_OF });
+  const stale = { template: 'buyer_traditional' as const, price: e(3500000), downPaymentPercent: e(20), ratePercent: e(6.25), termYears: e(30) };
+  assert.deepEqual(dealTermsInput({ ...stale, financing: e('cash' as const) }), { template: 'buyer_traditional', price: 3500000 });
+  assert.ok(dealTermsInput({ ...stale, financing: e('mortgage' as const) })?.financing, 'a mortgage still computes');
+  const comps = workspaceComps(imports, sampleJudgments());
+  const out = compute(engineInput({ asOf: AS_OF, intake: { ...SAMPLE_INTAKE, areaSqft: e(2000) }, dealTerms: { ...stale, financing: e('cash' as const) }, comps }));
+  assert.equal(out.deal_terms?.monthly_cost, null, 'no monthly cost for cash');
+});
+
+test('the client’s facts and the new deal terms never move the range or the base', () => {
+  const e = <T>(value: T) => ({ value, asOf: AS_OF });
+  const comps = workspaceComps(imports, sampleJudgments());
+  const intake = { ...SAMPLE_INTAKE, areaSqft: e(2000) };
+  const plain = { template: 'buyer_traditional' as const, price: e(3500000) };
+  const full = { ...plain, financing: e('mortgage' as const), preApproved: e(true), preApprovalAmount: e(3000000), timing: e('By spring'), flexibility: e('Can stretch for a terrace') };
+  const a = compute(engineInput({ asOf: AS_OF, intake, dealTerms: plain, comps }));
+  const b = compute(engineInput({ asOf: AS_OF, intake, dealTerms: full, comps }));
+  for (const k of ['on_facts', 'with_estimates'] as const) {
+    assert.deepEqual(b.results[k].range, a.results[k].range, k);
+    assert.deepEqual(b.results[k].base, a.results[k].base, k);
+  }
+  assert.ok(a.results.on_facts.range, 'there is a range to compare');
+});
+
 test('a newer import of the same property replaces its record; comps with no address can’t be sorted', () => {
   const newer: ParsedImport = { importId: 'imp-2', createdAt: '2026-09-30T10:00:00.000Z', parsed: { ...parsed, as_of: '2026-09-30', comps: parsed.comps.slice(0, 2) } };
   const comps = workspaceComps([...imports, newer], []);

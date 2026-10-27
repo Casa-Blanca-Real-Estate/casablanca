@@ -128,20 +128,38 @@ label.gt-field, .gt-label {
 /* The accordions. */
 .fi-acc { background: var(--cb-surface); display: flex; flex-direction: column; }
 .fi-acc-item + .fi-acc-item { border-top: 1px solid var(--cb-line); }
+.fi-acc-row { display: flex; align-items: center; position: relative; }
 .fi-acc-head {
-  font: inherit; width: 100%; text-align: left; background: none; border: none; color: var(--cb-black); cursor: pointer; user-select: none;
+  font: inherit; width: auto; flex: none; text-align: left; background: none; border: none; color: var(--cb-black); cursor: pointer; user-select: none;
   display: flex; align-items: center; gap: 10px; padding: 16px 28px; font-size: 14px; font-weight: 800;
 }
-.fi-acc-head:hover .fi-acc-sign { color: var(--cb-black); }
+.fi-acc-head { padding-right: 8px; }
+.fi-acc-rest {
+  font: inherit; flex: 1; align-self: stretch; display: flex; align-items: center; gap: 10px; padding: 0 28px 0 10px;
+  background: none; border: none; cursor: pointer; color: var(--cb-black); text-align: left;
+}
+.fi-acc-row:hover .fi-acc-sign { color: var(--cb-black); }
+/* An ⓘ positions its own tip, under it (Frame.tsx's Info). */
+.fi-info { position: relative; display: inline-block; }
+.fi-info .nr-tip { top: 20px; width: 260px; }
 .fi-acc-n { color: var(--cb-lavender); }
 .fi-acc-sub { font-weight: 400; color: var(--cb-mid); font-size: 13px; }
 .fi-acc-sign { margin-left: auto; color: var(--cb-mid); font-size: 16px; }
 .fi-acc-body { padding: 0 28px 24px 52px; }
 
+.fi-pt-lead { margin: 0 0 10px; font-size: 13px; }
 .fi-pt { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
 .fi-pt-cell { background: var(--cb-bg); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .fi-pt-rate { font-size: 12px; color: var(--cb-mid); }
 .fi-pt-price { font-size: 20px; font-weight: 800; }
+.fi-pt-step { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cb-mid); }
+.fi-pt-who { font-size: 11px; color: var(--cb-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fi-calc { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--cb-line); display: flex; flex-direction: column; gap: 10px; }
+.fi-calc-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.fi-calc-field { display: flex; flex-direction: column; gap: 4px; width: 150px; font-size: 12px; text-transform: none; letter-spacing: normal; font-weight: 400; }
+.fi-calc-op { padding-bottom: 8px; color: var(--cb-mid); }
+.fi-calc-out { padding-bottom: 7px; font-weight: 800; }
+.fi-take-comp { font-weight: 800; border-bottom: 1px dotted var(--cb-mid); cursor: help; }
 
 .fi-cc { display: flex; flex-direction: column; }
 .fi-cc-row {
@@ -156,6 +174,8 @@ label.gt-field, .gt-label {
 .fi-cc-addr:hover { text-decoration: underline; }
 .fi-cc-link { font-size: 11px; color: var(--cb-mid); text-decoration: none; border-bottom: 1px solid var(--cb-lavender); }
 .fi-cc-note { color: var(--cb-mid); line-height: 1.45; }
+.fi-cc-lead { margin: 0 0 8px; font-size: 13px; color: var(--cb-mid); }
+.fi-cc-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; font-size: 11px; background: var(--cb-bg); color: var(--cb-deep); }
 .fi-cc-price { text-align: right; font-weight: 800; display: flex; flex-direction: column; }
 .fi-cc-sub { font-size: 11px; font-weight: 400; color: var(--cb-mid); }
 .fi-star { color: var(--cb-yellow); }
@@ -181,6 +201,9 @@ label.fi-target-whose { max-width: 520px; }
 }
 .fi-line-input:focus { border-bottom-color: var(--cb-black); }
 .fi-opt { color: var(--cb-mid); }
+.fi-moved { margin: 0; font-size: 13px; padding: 10px 12px; background: var(--cb-bg); }
+.fi-owner { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.fi-needed-sum { font-weight: 800; }
 .fi-only { margin: 0; font-size: 12px; color: var(--cb-deep); }
 
 .fi-rows { display: flex; flex-direction: column; }

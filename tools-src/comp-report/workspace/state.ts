@@ -110,6 +110,27 @@ export interface Brief {
   clientNote?: Entry<string>;
   /** CR-3a's question. No longer asked; kept for the reports that have one. */
   question?: Entry<string>;
+  /** The client's facts (NW-074 a, Dispatch 21). The engine never reads them. */
+  client?: ClientFacts;
+}
+
+/** What a client weighs most (D-7 B). */
+export const CLIENT_PRIORITIES = ['price', 'speed', 'certainty'] as const;
+export type ClientPriority = (typeof CLIENT_PRIORITIES)[number];
+
+/**
+ * The client's facts (NW-074 a): data for Claude Design's client section
+ * (NW-074 b) and for the writer's client profile (Dispatch 13 phase 2). No
+ * screen asks them yet; the writer doesn't see them yet (writer-input.ts).
+ */
+export interface ClientFacts {
+  /** How soon, in words, and a date to close by. */
+  urgency?: { text?: Entry<string>; by?: Entry<IsoDate> };
+  /** What the client would pay more for. */
+  paysMoreFor?: Entry<string>;
+  nonNegotiables?: Entry<string>;
+  /** Most important first: each at most once. */
+  priorities?: ClientPriority[];
 }
 
 /** The furthest screen a report has reached, for the reports list's Stage (Dispatch 14). */
@@ -133,14 +154,41 @@ export interface DealTermsState {
   termYears?: Entry<number>;
   targetClosing?: Entry<IsoDate>;
   sellerTarget?: Entry<number>;
+  /** When: for a seller, when they plan to list; for a buyer, how soon (NW-071 a, NW-074 a). */
   timing?: Entry<string>;
   flexibility?: Entry<string>;
+  /** Buyer: cash hides the mortgage fields, and no mortgage is computed (NW-074 a). */
+  financing?: Entry<'cash' | 'mortgage'>;
+  /** Buyer: pre-approved, and for how much (NW-074, the recommendation). */
+  preApproved?: Entry<boolean>;
+  preApprovalAmount?: Entry<number>;
 }
 
 /** Step 1, a price goal. Never an input to the numbers, never shown to the assistant (§2, §8.4). */
 export interface TargetState {
   price: Entry<number>;
   note?: Entry<string>;
+  /** Whose target it is (NW-070): the client's by default. The label follows it and the side. */
+  owner?: TargetOwner;
+}
+
+export const TARGET_OWNERS = ['client', 'agent', 'both'] as const;
+export type TargetOwner = (typeof TARGET_OWNERS)[number];
+
+/**
+ * The range and base the agent first saw (§8.4's backstop, NW-069 a): pinned
+ * by the server the first time the result is revealed, from the stored comps
+ * and state, and never written by the browser. `late` marks a report revealed
+ * before the pin existed, pinned on its owner's next load. Dispatch 24 reads
+ * it to decide whether Hubert may see the target.
+ */
+export interface RevealPin {
+  at: string;
+  low: number | null;
+  base: number | null;
+  high: number | null;
+  engineVersion: string;
+  late?: true;
 }
 
 /**
@@ -261,6 +309,8 @@ export interface WorkspaceState {
    * save keeps the stored ones, whatever the browser sends.
    */
   clientRounds?: Record<string, ClientRound[]>;
+  /** The server's pin of the first revealed range (RevealPin): a state save never writes it. */
+  reveal?: RevealPin;
 }
 
 export type ReasonType = 'property' | 'client' | 'method';
