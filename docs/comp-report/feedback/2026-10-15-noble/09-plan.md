@@ -11,9 +11,10 @@ listing read is fixed, Dispatch 25 (the per-comp review) and 26 (the Designed em
 
 ## Status and dates (2026-10-27)
 
-**Deadline: usable by agents on Friday 2026-11-13**, set by Kimani for Erez. "Usable" means an agent signs
-in, starts a report from a StreetEasy link, reviews and tiers each comp on Sort, reads Findings, and sends the
-Designed email with real photos, all on production.
+**Deadline: in Noble's hands on Friday 2026-11-13**, set by Kimani for Erez, so Noble can build it into
+agent training. Existing agents get it afterwards, through a rundown at a Tuesday meeting. "Ready" means an agent
+signs in, starts a report from a StreetEasy link, reviews and tiers each comp on Sort, reads Findings, and sends
+the Designed email with real photos, all on production, with no hiccups along the way.
 
 **Done so far.** First comp report commit 2026-10-06. Eight work days since then (Oct 6, 9, 13, 14, 15, 21, 22, 27).
 The four heavy ones (Oct 14, 15, 21, 22) merged 5–6 PRs each. Phase A: 15–20 and 25 are merged.
@@ -24,14 +25,17 @@ The four heavy ones (Oct 14, 15, 21, 22) merged 5–6 PRs each. Phase A: 15–20
 |---|---|---|
 | Oct 27–28 | 26 (Designed email, with photos), 21 (Findings), 22a (mentors and the invite fix), 23 items 1–2 (sample reset, co-op sample) | the build threads |
 | Oct 29 on | One batched release (credits reset Oct 29), then a live run with real fetches and photos (Erez's "see it live first") | Kimani |
-| Next 1–2 work days | Claude Design pass on `08-claude-design-handoff.md` | Kimani |
-| Next 1–2 work days | The builds from that pass, released, plus the fixes from the live run | the build threads |
-| By Nov 13 | Second release, then the curl check and a run-through as an agent | Casanova, Kimani |
+| Week of Nov 2, 1–2 days | Claude Design pass on `08-claude-design-handoff.md` | Kimani |
+| Week of Nov 2 | The builds from that pass, released, plus the fixes from the live run | the build threads |
+| Week of Nov 9 | Kimani runs the whole workflow with Noble and an agent; fixes ship as they come up | Kimani, the build threads |
+| Nov 13 | Handed to Noble | Kimani |
 
-**Why Nov 13 holds.** Kimani works about six days between now and then. What's left fills four to six of them.
+**Why Nov 13 holds.** The build work (Phase A, the Design pass and its builds) has to finish by about Nov 6,
+which leaves the week of Nov 9 for the run-through. That's about four of Kimani's work days, and the work fills
+three or four of them.
 The pace backs that up: each item left in Phase A is about one PR, and the four heavy days so far each merged
 5–6 PRs. The design was ported in #77 and polished through Noble's round, so the pass touches existing
-screens rather than starting new ones. That leaves about two days of buffer, which goes to fixes from the live run.
+screens rather than starting new ones. The run-through week is the buffer: it's there to find and fix hiccups, not to build anything new.
 
 **Not needed by Nov 13, so it ships after:** 22b (the sign-in and activity logs), 23 items 3–4 (the inspection
 API), 24 (Calliste), Jev live, the Gmail draft (NB-28), and phase 2 (comps found from the anchor).
