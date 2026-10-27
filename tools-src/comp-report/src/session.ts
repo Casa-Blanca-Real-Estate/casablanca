@@ -101,7 +101,19 @@ const identity: SessionProvider = {
   },
 
   async acceptInvite(token, password) {
-    return signedIn(await acceptInvite(token, password));
+    const user = await acceptInvite(token, password);
+    // @netlify/identity 2.0.0's acceptInvite() never writes the nf_jwt cookie that token() reads
+    // (login() does), so the first /me went out with no token and the new user was refused (NW-091 a).
+    // Signing in with the password just chosen writes it. If that fails, the accepted user stands
+    // and the refusal screen offers Try again.
+    if (user.email) {
+      try {
+        return signedIn(await login(user.email, password));
+      } catch {
+        /* fall through */
+      }
+    }
+    return signedIn(user);
   },
 
   async sendPasswordReset(email) {

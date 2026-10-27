@@ -78,7 +78,7 @@ export function App() {
   else if (state.status === 'invite') body = <AcceptInvite token={state.token} onDone={setState} />;
   else if (state.status === 'recovery') body = <SetNewPassword onDone={() => session.start().then(setState)} />;
   else if (state.status === 'signed-out') body = <SignIn notice={state.notice} onSignedIn={setState} />;
-  else if (refusal) body = <NotAuthorised email={state.email} error={refusal} onSignOut={signOut} />;
+  else if (refusal) body = <NotAuthorised email={state.email} error={refusal} onSignOut={signOut} onRetry={() => setState({ ...state })} />;
   else if (!me) body = <StateLine>Checking your access…</StateLine>;
   else if (reportId) {
     framed = false;

@@ -21,6 +21,10 @@ line when it opens. **Dispatch 24 waits on 22a merged**, not 22b: item 1 is what
 six items go in one PR, it is one migration, `20261016120000_comp_report_access_and_activity.sql`, and 24 waits
 on it.
 
+**NW-088 a was answered 2026-10-27 as NB-23 A: every report, read-only.** 22a's migration shipped as
+`20261027120000_comp_report_mentor_reads.sql`, since migrations up to `20261022000000` had landed by then;
+22b takes a timestamp after it. What follows is the brief as written.
+
 **NW-088 a is still open** (`docs/decisions.md`). Item 1 builds on its recommendation, and PR 22a is marked
 "do not merge until Kimani answers NW-088 a". If he answers "assigned agents only", only the mentor clause
 changes, in the two places item 1 names. Item 2 does not depend on his answer: if he hasn't answered when it is

@@ -35,6 +35,7 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/narratives': { module: '/server/api/narratives.ts', handler: 'handleNarratives' },
   '/api/comp-report/lines': { module: '/server/api/lines.ts', handler: 'handleLines' },
   '/api/comp-report/comp-review': { module: '/server/api/comp-review.ts', handler: 'handleCompReview' },
+  '/api/comp-report/mentees': { module: '/server/api/mentees.ts', handler: 'handleMentees' },
   '/api/comp-report/client-words': { module: '/server/api/client-words.ts', handler: 'handleClientWords' },
   '/api/comp-report/email-photos': { module: '/server/api/email-photos.ts', handler: 'handleEmailPhotos' },
   '/api/comp-report/email-photo': { module: '/server/api/email-photos.ts', handler: 'handleEmailPhoto' },

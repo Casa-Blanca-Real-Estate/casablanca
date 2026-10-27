@@ -149,7 +149,7 @@ attention, as they hold the security work. The ledger has `casa-r13-1` to `-10`:
   - Abacus: 16, then 19.
   - Surveyor: 17.
   - Calliste: 24, after the move.
-- Hold 22a's merge until NB-23 is answered.
+- NB-23 answered A (2026-10-27): 22a can merge once reviewed.
 - Before 23 items 3–4 go out, run one more blockers-only check of 23. The last check found two blockers, fixed in
   602f408; 22's last check found none.
 - At each merge, update D-27 if NB-8 is A. Dispatch 15 reverses its Save rule.

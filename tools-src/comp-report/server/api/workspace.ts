@@ -75,11 +75,14 @@ export interface WorkspaceData {
 
 const iso = (d: Date | string) => new Date(d).toISOString();
 
-/** The report, or 404. `write` insists on ownership: admins can read any report, but change only their own. */
+/** Admins and mentors read every report (NW-088 a, NB-23 A); only the owner changes one. */
+export const readsEveryReport = (user: SessionUser) => user.role === 'admin' || user.role === 'mentor';
+
+/** The report, or 404. `write` insists on ownership: admins and mentors can read any report, but change only their own. */
 export async function reportFor(tx: Queryable, user: SessionUser, reportId: string, write: boolean) {
   const { rows } = await tx.query<{ id: string; owner_email: string }>(
     `select id, owner_email from comp_report.reports where id = $1 and (owner_email = $2 or $3) and status <> 'deleted'`,
-    [reportId, user.email, !write && user.role === 'admin'],
+    [reportId, user.email, !write && readsEveryReport(user)],
   );
   if (!rows[0]) throw new HttpError(404, 'not_found', 'No such report.');
   return rows[0];
