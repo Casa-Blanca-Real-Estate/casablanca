@@ -4,6 +4,7 @@ import type { NarrativeView as Narrative } from '../server/api/narratives.ts';
 import type { LinkReadView, WorkspaceData } from '../server/api/workspace.ts';
 import type { GeocodeView } from '../server/buildings.ts';
 import type { Acknowledgment } from '../workspace/qa.ts';
+import type { ReviewEntry } from '../workspace/review.ts';
 import type { Brief, CallState, DealTermsState, Intake, ReasonType, SendState, TargetState, WorkspaceState } from '../workspace/state.ts';
 import { session } from './session.ts';
 
@@ -315,4 +316,23 @@ export interface LinesOffer {
 export const linesApi = {
   ask: (reportId: string, job: 'draft' | 'rewrite', result: EmailToLog['result']) =>
     api<LinesOffer>('/api/comp-report/lines', { method: 'POST', body: { reportId, job, result } }),
+};
+
+// ─── The per-comp review on Sort (Dispatch 25) ───────────────────────────────
+
+/** One round with Hubert on one comp, as the server stored it, and the workspace with it. */
+export interface ReviewReply {
+  workspace: WorkspaceData;
+  entry: ReviewEntry;
+  /** Points or sentences that cited a figure the report doesn't hold: never shown. */
+  dropped: number;
+}
+
+export const reviewApi = {
+  /**
+   * Feedback on the agent's saved note and tags, or Hubert's take on the comp. `practice` asks as a new
+   * agent (an admin viewing as one): the take then waits for a feedback round, as it does for them.
+   */
+  ask: (reportId: string, reportCompId: string, job: 'feedback' | 'take', opts: { asks?: string; practice?: boolean } = {}) =>
+    api<ReviewReply>('/api/comp-report/comp-review', { method: 'POST', body: { reportId, reportCompId, job, ...opts } }),
 };

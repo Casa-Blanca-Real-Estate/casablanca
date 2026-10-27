@@ -21,6 +21,7 @@ import { TypeMismatch } from '../comp/TypeMismatch.tsx';
 import { StepCta } from '../shell/WorkspaceHeader.tsx';
 import { compAddress, compStatus, STATUS_LABEL } from './comps.tsx';
 import '../../styles/sort.css';
+import '../../styles/review.css';
 
 export function SortStep({ ws }: StepProps) {
   const outById = useMemo(() => new Map<string, CompOut>((ws.output?.comps ?? []).map((c) => [c.id, c])), [ws.output]);

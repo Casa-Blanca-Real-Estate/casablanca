@@ -11,6 +11,7 @@ import { Info } from '../newcomp/Frame.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { CompCard, type CardStart } from './CompCard.tsx';
 import { RowThumb } from './RowThumb.tsx';
+import { weakFlag } from '../../../workspace/review.ts';
 import {
   GROUP_LABEL, monthYear, NEED_WORD, needText, nextSort, ppsfText, PRICE_LABEL, shortPrice, sizeText,
   type GroupId, type Row, type RowNeed, type SortKey, type SortState,
@@ -174,6 +175,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
       });
   }
 
+  const weak = weakFlag(j?.review, ws.level);
   const needLinks = row.needs.filter((n): n is Exclude<RowNeed, 'confirm'> => n !== 'confirm');
 
   return (
@@ -196,6 +198,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
               {row.address}
             </button>
             {row.tags.map((t) => <span key={t} className="so-flag">{t}</span>)}
+            {weak && <span className="so-weak" title={`Hubert: ${weak.reason}`}>Weak</span>}
             {incomplete && (row.needs.includes('confirm') || ws.readOnly ? (
               <span className="so-need"><span className="so-need-sq" aria-hidden="true" />{needText(row.needs)}</span>
             ) : (

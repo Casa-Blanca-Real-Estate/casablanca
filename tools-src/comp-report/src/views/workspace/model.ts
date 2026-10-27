@@ -2,7 +2,7 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, WorkspaceData } from '../../api.ts';
+import type { CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
@@ -104,6 +104,15 @@ export interface Workspace {
   setTitle: (title: string) => void;
   /** One comp's edits, saved in order with the others; the server returns the workspace. */
   editComp: (reportCompId: string, edit: CompEdit) => Promise<void>;
+  /**
+   * Hubert on one comp (Dispatch 25): feedback on the agent's saved note and tags, or his take. Run in
+   * order with the comps' edits, so it reads what was just saved; the returned workspace lands.
+   */
+  askReview: (reportCompId: string, job: 'feedback' | 'take', asks?: string) => Promise<ReviewReply>;
+  /** The per-comp review flow over Sort, at a comp or at the first one it walks; null when it's closed. */
+  reviewing: { at: string | null } | null;
+  openReview: (reportCompId?: string) => void;
+  closeReview: () => void;
   /** Export rows the agent took out: the only sales Hubert may point back to. */
   suggestions: { judgment: CompJudgment; record: CompRecord }[];
   /** Every comp the agent took out, for Sort's "Removed" fold (Dispatch 15): each can be put back. */
