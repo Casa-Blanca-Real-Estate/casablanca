@@ -153,7 +153,7 @@ function SaveLine({ status, onRetry }: { status: SaveStatus; onRetry: () => void
   return <span className={`sh-save ${status.kind}`} aria-live="polite">{text}</span>;
 }
 
-export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; onBack: () => void }) {
+export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; me: Me; onBack: () => void; onOpen: (id: string) => void }) {
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [loadError, setLoadError] = useState<ApiError | Error | null>(null);
   const [brief, setBriefState] = useState<Brief>({});
@@ -514,6 +514,16 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
     },
     busy,
     fillSample: async () => false, // set below: it needs the model itself
+    resetSample: canSample && data.report.sampleData
+      ? async () => {
+        if (!confirm('Start this sample over? A fresh copy opens, with Hubert starting afresh, and this one is archived.')) return;
+        let next = null as string | null;
+        await ws!.run('Resetting the sample…', async () => {
+          next = (await workspaceApi.resetSample(reportId)).report.id;
+        });
+        if (next) onOpen(next);
+      }
+      : null,
     messageCount,
     setMessageCount,
     screen,
@@ -590,7 +600,8 @@ export function Workspace({ reportId, me, onBack }: { reportId: string; me: Me; 
       let filled = false;
       await ws.run(all ? 'Filling the whole report with sample data…' : 'Filling with sample…', async () => {
         const needsWalkthrough = all || which === 'findings' || which === 'send';
-        const sample = needsWalkthrough ? await workspaceApi.sample() : null;
+        // The report's own kind: a co-op gets the co-op sample, with no size (Dispatch 23).
+        const sample = needsWalkthrough ? await workspaceApi.sample(propertyType) : null;
         let nextState = stateRef.current;
         if (sample && all) {
           nextState = { ...nextState, intake: sample.intake };

@@ -263,6 +263,8 @@ body:has(.hubert-drawer.resizing) { cursor: col-resize; user-select: none; }
 .sh-dev-fill > span:first-of-type { margin-left: 6px; }
 .sh-dev-fill .link { font-size: 12px; }
 .sh-dev-fill .link:disabled { opacity: .4; cursor: default; }
+.sh-dev-reset { font-size: 12px; }
+.sh-dev-reset:disabled { opacity: .4; cursor: default; }
 .sh-about { border-top: 1px dashed var(--cb-border); padding-top: 8px; }
 .sh-about summary { cursor: pointer; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--cb-deep); }
 .sh-about p { margin: 8px 0 0; }

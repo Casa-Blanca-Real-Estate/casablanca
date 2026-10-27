@@ -33,7 +33,7 @@ export interface ReportSummary {
 
 export type ReportStage = 'sort' | 'findings' | 'send' | 'sent';
 
-interface ReportRow {
+export interface ReportRow {
   id: string;
   title: string;
   property_type: 'condo' | 'coop';
@@ -49,9 +49,9 @@ interface ReportRow {
   unsorted?: number | string;
 }
 
-const COLUMNS = 'id, title, property_type, mode, status, owner_email, sample_data, created_at, updated_at';
+export const COLUMNS = 'id, title, property_type, mode, status, owner_email, sample_data, created_at, updated_at';
 
-function summary(r: ReportRow): ReportSummary {
+export function summary(r: ReportRow): ReportSummary {
   return {
     id: r.id,
     title: r.title,

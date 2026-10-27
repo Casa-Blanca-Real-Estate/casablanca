@@ -82,7 +82,7 @@ export function App() {
   else if (!me) body = <StateLine>Checking your access…</StateLine>;
   else if (reportId) {
     framed = false;
-    body = <Workspace key={reportId} reportId={reportId} me={me} onBack={() => open(null)} />;
+    body = <Workspace key={reportId} reportId={reportId} me={me} onBack={() => open(null)} onOpen={(id) => open(id)} />;
   } else {
     framed = false;
     body = <Reports me={me} onOpen={open} />;
