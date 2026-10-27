@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type Me, type Report } from '../api.ts';
 import { Access } from './Access.tsx';
+import { MenteePicker, loadMentees, type MenteesState } from './Mentees.tsx';
 import { NewCompStart } from './newcomp/NewComp.tsx';
 import { Center, StateLine } from './shell/Pieces.tsx';
 import {
@@ -97,16 +98,36 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const ready = me.database === 'ready';
-  // Admins and mentors read everyone's reports (NW-088 a, NB-23 A); only the owner changes one.
-  const everyone = me.user.role === 'admin' || me.user.role === 'mentor';
+  // Admins and mentors read everyone's reports (NW-088 a, NB-23 A) on a tab of their own; only the
+  // owner changes one. A mentor's Everyone's opens on their mentees when they have any (Kimani, 2026-10-27).
+  const reader = me.user.role === 'admin' || me.user.role === 'mentor';
+  const mentor = me.user.role === 'mentor';
+  const [tab, setTab] = useState<'mine' | 'everyone'>('mine');
+  const [mentees, setMentees] = useState<MenteesState | null>(null);
+  const [allAgents, setAllAgents] = useState(false);
+  const [picking, setPicking] = useState(false);
   const mine = (r: Report) => r.ownerEmail.toLowerCase() === me.user.email.toLowerCase();
+  const onEveryone = reader && tab === 'everyone';
+  const byMentees = onEveryone && mentor && !allAgents && Boolean(mentees?.mentees.length);
 
-  const load = useCallback(() => api<{ reports: Report[] }>(`/api/comp-report/reports${everyone ? '?scope=all' : ''}`).then(
+  useEffect(() => {
+    if (ready && mentor) loadMentees().then(setMentees, () => setMentees({ mentees: [], agents: [] }));
+  }, [ready, mentor]);
+
+  // A mentor's Everyone's waits for their mentees, so it doesn't flash every agent's reports first.
+  const url = !onEveryone ? '/api/comp-report/reports'
+    : mentor && !mentees ? null
+      : `/api/comp-report/reports?scope=all${byMentees ? '&mentees=1' : ''}`;
+  const load = useCallback(() => (url ? api<{ reports: Report[] }>(url).then(
     (r) => setReports(r.reports),
     (e) => setError(e.message),
-  ), [everyone]);
+  ) : Promise.resolve()), [url]);
   useEffect(() => {
-    if (ready) void load();
+    if (!ready) return;
+    setReports(null);
+    setError(null);
+    setAll(false);
+    void load();
   }, [ready, load]);
 
   // Archive, restore or delete, then both lists again.
@@ -153,15 +174,60 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
       <Hero />
       <main className="sh-reports">
         <div className="sh-reports-head">
-          <h2 className="sh-reports-title">{everyone ? 'Everyone’s reports' : 'Your reports'}</h2>
+          {reader ? (
+            <div className="sh-seg" role="tablist" aria-label="Reports">
+              {(['mine', 'everyone'] as const).map((t) => (
+                <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
+                  {t === 'mine' ? 'Your reports' : 'Everyone’s'}
+                </button>
+              ))}
+            </div>
+          ) : <h2 className="sh-reports-title">Your reports</h2>}
           <span className="sh-reports-count">{reports && !empty ? reports.length : ''}</span>
-          <span className="sh-reports-new">{!empty && newComp}</span>
+          <span className="sh-reports-new">{!empty && !onEveryone && newComp}</span>
         </div>
+        {onEveryone && mentor && mentees && (
+          <div className="sh-filter">
+            {mentees.mentees.length ? (
+              <>
+                <div className="sh-seg" role="group" aria-label="Whose reports">
+                  <button type="button" aria-pressed={!allAgents} className={allAgents ? '' : 'on'} onClick={() => setAllAgents(false)}>
+                    Your mentees ({mentees.mentees.length})
+                  </button>
+                  <button type="button" aria-pressed={allAgents} className={allAgents ? 'on' : ''} onClick={() => setAllAgents(true)}>All agents</button>
+                </div>
+                <button type="button" className="link" onClick={() => setPicking(true)}>Edit mentees</button>
+              </>
+            ) : (
+              <>
+                <span className="sh-help">Showing every agent’s reports. Pick your mentees to see just theirs.</span>
+                <button type="button" className="link" onClick={() => setPicking(true)}>Pick your mentees</button>
+              </>
+            )}
+          </div>
+        )}
+        {picking && mentees && (
+          <MenteePicker
+            state={mentees}
+            onSaved={(list) => {
+              setMentees({ ...mentees, mentees: list });
+              setAllAgents(false);
+              setPicking(false);
+            }}
+            onClose={() => setPicking(false)}
+          />
+        )}
         {starting && <NewCompStart me={me} onCreated={(id) => onOpen(id, 'details')} onClose={() => setStarting(false)} />}
         {error && <p className="sh-note error" role="alert">{error}</p>}
         {reports === null && !error && <StateLine>Loading…</StateLine>}
 
-        {empty && (
+        {empty && onEveryone && (
+          <div className="sh-empty">
+            <p className="sh-empty-title">{byMentees ? 'Your mentees have no reports yet' : 'No reports yet'}</p>
+          </div>
+        )}
+
+        {empty && !onEveryone && (
           <div className="sh-empty">
             <div className="sh-empty-squares" aria-hidden="true">
               <span style={{ background: 'var(--cb-black)' }} />
@@ -212,7 +278,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                         {r.title}
                         {r.sampleData && <span className="sh-sample" title={SAMPLE_TITLE}>Sample</span>}
                       </span>
-                      <span className="sh-client">{mine(r) ? (r.client ?? '') : [r.client, r.ownerEmail].filter(Boolean).join(' · ')}</span>
+                      <span className="sh-client">{mine(r) ? (r.client ?? '') : [r.ownerName ?? r.ownerEmail, r.client].filter(Boolean).join(' · ')}</span>
                     </span>
                     <span className="sh-side">{r.side === 'seller' ? 'Seller' : r.side === 'buyer' ? 'Buyer' : ''}</span>
                     <span className="sh-stage">
@@ -243,12 +309,12 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
         )}
 
         {reports && !empty && (
-          <p className="sh-help">{everyone
+          <p className="sh-help">{onEveryone
             ? 'You can open any agent’s report to read it. Only its owner can change it.'
             : 'Mentors and admins can read your reports. Only you can change them.'}</p>
         )}
 
-        {ready && <Archived refresh={refresh} busy={busy} onAct={(x, a) => void act(x, a)} />}
+        {!onEveryone && <Archived refresh={refresh} busy={busy} onAct={(x, a) => void act(x, a)} />}
 
         {me.user.role === 'admin' && (
           <details className="sh-access">

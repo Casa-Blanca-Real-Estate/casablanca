@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import pg from 'pg';
 import { accessConfig } from '../server/access.ts';
+import { handleMentees } from '../server/api/mentees.ts';
 import { handleMessages } from '../server/api/messages.ts';
 import { handleReports } from '../server/api/reports.ts';
 import { handleWorkspace } from '../server/api/workspace.ts';
@@ -33,11 +34,12 @@ const SIGN_IN: Actor = { kind: 'system', does: 'sign-in' };
 
 const as = <T>(pool: PoolLike, actor: Actor, fn: (tx: Queryable) => Promise<T>) => withActor(pool, actor, fn);
 
-/** Every write policy in comp_report, by name, with its expressions as Postgres prints them. */
+/** Every write policy in comp_report, by name, with its expressions as Postgres prints them.
+ *  The mentees table is new in this migration and tested on its own, below. */
 async function writePolicies(client: pg.Client) {
   const { rows } = await client.query<{ policyname: string; cmd: string; roles: string; qual: string | null; with_check: string | null }>(
     `select policyname, cmd, roles::text, qual, with_check from pg_policies
-      where schemaname = 'comp_report' and cmd in ('INSERT', 'UPDATE', 'ALL') order by policyname`,
+      where schemaname = 'comp_report' and cmd in ('INSERT', 'UPDATE', 'ALL') and tablename <> 'mentees' order by policyname`,
   );
   return rows;
 }
@@ -232,5 +234,45 @@ describe('mentors read every report, read-only (Dispatch 22a)', { skip: skipWith
       body: JSON.stringify({ id: report, action: 'archive' }),
     }), deps);
     assert.equal(res.status, 404);
+  });
+
+  const mentees = (token: string, method = 'GET', body?: unknown) => handleMentees(new Request('https://site/api/comp-report/mentees', {
+    method,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }), deps);
+
+  test("a mentor's mentees: picked from the agents, kept, and the filter on Everyone's", async () => {
+    const first = await (await mentees(tok('mentor'))).json();
+    assert.deepEqual(first.mentees, []);
+    assert.deepEqual(first.agents.map((a: { email: string }) => a.email).sort(), [OWNER.email, AGENT.email].sort(), 'only agents can be picked');
+
+    assert.equal((await mentees(tok('mentor'), 'PUT', { emails: [OWNER.email] })).status, 200);
+    const ids = async (query: string) =>
+      ((await (await handleReports(get(tok('mentor'), `reports${query}`), deps)).json()).reports as Array<{ id: string }>).map((r) => r.id).sort();
+    assert.deepEqual(await ids('?scope=all&mentees=1'), [report]);
+    assert.deepEqual(await ids('?scope=all'), [report, agentReport].sort(), 'all agents is still a click away');
+
+    // Replacing the list keeps the removed row, stamped, and re-adding brings it back.
+    await mentees(tok('mentor'), 'PUT', { emails: [AGENT.email] });
+    assert.deepEqual(await ids('?scope=all&mentees=1'), [agentReport]);
+    await mentees(tok('mentor'), 'PUT', { emails: [OWNER.email, AGENT.email] });
+    assert.deepEqual((await (await mentees(tok('mentor'))).json()).mentees, [OWNER.email, AGENT.email].sort());
+    const rows = await as(pool, MENTOR, async (tx) => (await tx.query('select 1 from comp_report.mentees')).rowCount);
+    assert.equal(rows, 2);
+
+    // Only an agent can be a mentee; only a mentor keeps a list; nobody else sees a mentor's list.
+    assert.equal((await mentees(tok('mentor'), 'PUT', { emails: [ADMIN.email] })).status, 400);
+    assert.equal((await mentees(tok('mentor'), 'PUT', { emails: ['not an email'] })).status, 400);
+    for (const who of ['admin', 'agent', 'external', 'owner']) assert.equal((await mentees(tok(who))).status, 403, who);
+    assert.deepEqual(await (async () => {
+      const r = await handleReports(get(tok('agent'), 'reports?scope=all&mentees=1'), deps);
+      return ((await r.json()).reports as Array<{ id: string }>).map((x) => x.id);
+    })(), [agentReport], 'mentees=1 from an agent is ignored, like scope=all');
+    const seen = await as(pool, AGENT, async (tx) => (await tx.query('select 1 from comp_report.mentees')).rowCount);
+    assert.equal(seen, 0);
+    await assert.rejects(as(pool, AGENT, (tx) => tx.query(
+      "insert into comp_report.mentees (mentor_email, agent_email) values ($1, $2)", [AGENT.email, OWNER.email])), /row-level security/);
+    await assert.rejects(as(pool, MENTOR, (tx) => tx.query('delete from comp_report.mentees')), /append-only|refuse|not allowed|permission|row-level/i);
   });
 });

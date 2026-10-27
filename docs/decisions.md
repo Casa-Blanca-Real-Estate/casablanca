@@ -227,6 +227,10 @@ NB-5 and NB-9.
 |---|---|---|---|
 | NB-23 | NW-088 a, what mentors see | A: every agent's report, read-only (no assignment to keep up). Agents are told in the list's copy that mentors and admins can read their reports | Dispatch 22a, mergeable once reviewed |
 
+Then, the same day, in the thread: everyone's reports go on a tab of their own, apart from your own, for admins and
+mentors; and each mentor keeps a list of their mentees, picked by name, which Everyone's filters to by default
+(All agents is one click). The list is a filter, not a permission: mentors still read every report. Built in 22a (#101).
+
 The rest of NB-11 to NB-28 are still open on the sheet.
 
 ---

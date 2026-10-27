@@ -83,6 +83,8 @@ export interface Report {
   propertyType: 'condo' | 'coop';
   status: 'active' | 'archived' | 'deleted';
   ownerEmail: string;
+  /** The owner's name, on Everyone's reports. */
+  ownerName?: string | null;
   /** Filled with sample data at some point (Dispatch 07). */
   sampleData: boolean;
   createdAt: string;
