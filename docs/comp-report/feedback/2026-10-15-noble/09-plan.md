@@ -37,8 +37,8 @@ screens rather than starting new ones. That leaves about two days of buffer, whi
 API), 24 (Calliste), Jev live, the Gmail draft (NB-28), and phase 2 (comps found from the anchor).
 
 **What would move the date, all on Kimani**
-- **NB-23 by Oct 28.** 22a doesn't merge until it's answered, and without 22a, invited agents can't get in
-  properly. NB-11 to NB-28 build on their defaults otherwise.
+- ~~NB-23 by Oct 28~~ (22a's merge gate): answered on the sheet 2026-10-27. The rest of NB-11 to NB-28 build
+  on their defaults.
 - The Design pass running past two days.
 - Netlify credits: the plan needs two or three production deploys (15 each) after the Oct 29 reset.
 - The Gmail and Apple Mail paste check on the Designed email, before agents send it to clients.
