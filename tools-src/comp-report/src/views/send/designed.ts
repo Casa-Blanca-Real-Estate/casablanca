@@ -255,8 +255,9 @@ const EYEBROW = 'font-size:10px;font-weight:bold;letter-spacing:.24em;text-trans
 
 /** The one escape: everything typed or read reaches the HTML through it, in text and attributes alike. */
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-/** A link we write: https only, else none. */
-export const safeUrl = (url: string | null | undefined): string | null => (url && /^https:\/\/[^\s"<>]+$/i.test(url) ? url : null);
+/** A link we write: https only, else none (http only from the local dev server, so a copy there keeps its photos). */
+export const safeUrl = (url: string | null | undefined): string | null =>
+  (url && /^(?:https:\/\/|http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/)[^\s"<>]+$/i.test(url) ? url : null);
 const lines = (s: string) => esc(s).replace(/\n/g, '<br>');
 
 function swatch(status: ListingStatus, border: boolean): string {
