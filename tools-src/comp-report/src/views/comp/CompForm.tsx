@@ -11,12 +11,13 @@ import { useMemo, useState, type FormEvent } from 'react';
 import type { ListingStatus } from '../../../engine/index.ts';
 import { workspaceApi } from '../../api.ts';
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
-import { cleanFeatures, isTag, type Features, type Tag } from '../../../workspace/features.ts';
+import { cleanFeatures, featuresFromRecord, isTag, type Features, type Tag } from '../../../workspace/features.ts';
 import { noteOf } from '../../../workspace/state.ts';
 import { compAddress, compPrice, compStatus, STATUS_LABEL, STATUS_ORDER } from '../workspace/comps.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { homeName, noteRequired } from '../workspace/screens.ts';
 import { Info, useCloseGuard } from '../newcomp/Frame.tsx';
+import { photoImg } from '../sort/elements.ts';
 import { TAG_INFO } from '../sort/table.ts';
 import { FeaturePicker, TagPicker } from './Pickers.tsx';
 import '../../styles/compform.css';
@@ -62,6 +63,11 @@ interface Draft {
   features: Features;
 }
 
+function compFeaturesOf(c: WorkspaceComp): Features {
+  const own = c.judgment?.features;
+  return own && Object.keys(own).length ? cleanFeatures(own) : featuresFromRecord(c.record);
+}
+
 function draftFrom(c: WorkspaceComp | null, prefill: CompPrefill | null): Draft {
   if (!c) {
     const addr = [prefill?.address?.trim(), prefill?.unit?.trim() ? (prefill.unit.trim().startsWith('#') ? prefill.unit.trim() : `#${prefill.unit.trim()}`) : '']
@@ -78,7 +84,8 @@ function draftFrom(c: WorkspaceComp | null, prefill: CompPrefill | null): Draft 
     date: f.status_date?.value ?? '',
     note: noteOf(c.judgment) ?? '',
     tags: c.judgment?.tags ?? [],
-    features: cleanFeatures(c.judgment?.features ?? {}),
+    // The agent's features, else what its page or the export says, as the Sort card shows them (Kimani's notebook, 2026-10-27).
+    features: compFeaturesOf(c),
   };
 }
 
@@ -100,6 +107,10 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
   // A comp from the export or a link keeps its source's facts.
   const factsFixed = editing && comp!.judgment!.source.kind !== 'manual';
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
+  // A comp read from its page shows its first photo, as its Sort row does.
+  const [brokenPhoto, setBrokenPhoto] = useState<string | null>(null);
+  const firstPhoto = comp?.judgment?.photos?.[0];
+  const photo = firstPhoto && firstPhoto !== brokenPhoto ? firstPhoto : null;
 
   const address = hideAddress ? (prefill?.address ?? '') : d.address;
   // In the new-report modal, Escape asks before a half-filled comp is dropped (Dispatch 20).
@@ -168,14 +179,18 @@ export function CompForm({ ws, comp = null, prefill = null, hideAddress = false,
         </label>
       )}
       <div className="cf-row">
-        <button
-          type="button"
-          className="cf-photo"
-          title="Photos aren’t in this version yet"
-          onClick={() => ws.toast('Photos aren’t in this version yet.')}
-        >
-          + Photo
-        </button>
+        {photo ? (
+          <span className="cf-photo has">{photoImg(photo, d.address, () => setBrokenPhoto(photo))}</span>
+        ) : (
+          <button
+            type="button"
+            className="cf-photo"
+            title="Photos aren’t in this version yet"
+            onClick={() => ws.toast('Photos aren’t in this version yet.')}
+          >
+            + Photo
+          </button>
+        )}
         <div className="cf-status">
           <span className="fh">Status</span>
           <div className="chips" role="radiogroup" aria-label="Status">

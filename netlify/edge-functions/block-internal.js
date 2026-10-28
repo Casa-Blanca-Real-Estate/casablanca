@@ -44,7 +44,7 @@ main{min-height:100%;display:flex;flex-direction:column;justify-content:center;p
 h1{font-weight:800;font-size:clamp(40px,8vw,80px);line-height:.92;letter-spacing:-.05em;text-transform:uppercase;margin:.3em 0 .4em}
 a{color:#0f0f0f;font-size:13px;text-decoration:none;border-bottom:1px solid #aaa3cf}
 </style></head><body><main><div class="l">404</div><h1>Nothing<br>here.</h1>
-<a href="/">Back to the Creative Studio</a></main></body></html>`;
+<a href="/">Back to the Studio</a></main></body></html>`;
 
 export default async (request, context) => {
   const { pathname } = new URL(request.url);

@@ -411,7 +411,7 @@ export function kindFromListing(record: CompRecord): HomeKind | null {
   return t;
 }
 
-const KIND_LABEL: Record<HomeKind, string> = {
+export const KIND_LABEL: Record<HomeKind, string> = {
   condo: 'Condo', coop: 'Co-op', condop: 'Condop', townhouse: 'Townhouse', house: 'House', multi_family: 'Multi-family',
 };
 

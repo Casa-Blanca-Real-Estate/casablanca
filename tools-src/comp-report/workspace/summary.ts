@@ -16,6 +16,7 @@ import type { WorkspaceComp } from './engine-input.ts';
 import { hasHomeSize } from './email.ts';
 import { estimateWords } from './format.ts';
 import { noteOf, type Intake } from './state.ts';
+import { onMarket, onMarketFacts, type OnMarket } from './on-market.ts';
 
 const KINDS: ResultKind[] = ['on_facts', 'with_estimates'];
 
@@ -91,7 +92,15 @@ function removedRow(r: CompRecord) {
   };
 }
 
-export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceComp[]; intake: Intake | undefined; revealed: boolean; removed?: CompRecord[] }) {
+export function numbersSummary(args: {
+  output: EngineOutput;
+  comps: WorkspaceComp[];
+  intake: Intake | undefined;
+  revealed: boolean;
+  removed?: CompRecord[];
+  /** The home's time on the market, from its StreetEasy page (on-market.ts). */
+  homeOnMarket?: OnMarket | null;
+}) {
   const { output, comps, revealed } = args;
   // No size for the home (or a co-op): Hubert gets no per-SF figure to quote, as no screen shows one (Dispatch 14).
   const sized = hasHomeSize(output);
@@ -113,6 +122,8 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
       address: subjectAddress?.value ?? null,
       unit: unit?.value ?? null,
       facts: Object.fromEntries(Object.entries(facts).map(([k, e]) => [k, e.estimate ? { value: e.value, agent_estimate: true } : e.value])),
+      // How long it's been listed and what its ask did, from its StreetEasy page: absent when the home wasn't read from one.
+      ...(args.homeOnMarket ? { on_the_market: onMarketFacts(args.homeOnMarket) } : {}),
     },
     comps: comps.map((c) => {
       const out = outById.get(c.id);
@@ -139,6 +150,10 @@ export function numbersSummary(args: { output: EngineOutput; comps: WorkspaceCom
         beds: f.beds?.value ?? null,
         baths: f.baths?.value ?? null,
         floor: f.floor?.value ?? null,
+        ...(() => {
+          const m = onMarketFacts(onMarket(c.record, output.meta.as_of));
+          return m ? { on_the_market: m } : {};
+        })(),
         ...(c.record.flags.closing_record ? { public_record_closing: true } : {}),
         ...(out?.checks.some((k) => k.status === 'flagged')
           ? { checks: out.checks.filter((k) => k.status === 'flagged').map((k) => `${k.message}${k.suggestion ? ` — suggests ${k.suggestion}` : ''}`) }

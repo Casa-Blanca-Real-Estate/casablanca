@@ -281,7 +281,7 @@ const PHOTO_W = 494;
 const PHOTO_H = 330;
 
 /**
- * One comp's box: a thin border (the anchor's heavier, with its ★ line), the
+ * One comp's box: a thin border (the anchor's heavier, labelled, with a large ★ top right), the
  * address large and bold on top and linked, the photo (or the neutral block),
  * the price with $/sq ft beside it, the status line, then the client's
  * paragraph, if there is one. Tables, so Gmail keeps the layout.
@@ -294,7 +294,11 @@ export function compBox(c: DesignedComp, anchor: boolean, firstOther = false): s
   return (firstOther ? `<div style="${EYEBROW}padding:8px 0 12px;">Other comps</div>` : '')
     + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:${anchor ? `2px solid ${INK}` : '1px solid #d8d6d0'};margin:0 0 18px;">`
     + `<tr><td style="${CELL}padding:20px 20px 0;">`
-    + (anchor ? `<div style="${EYEBROW}padding-bottom:8px;"><span style="color:#e8b923;font-size:13px;letter-spacing:0;">★</span>&nbsp; The closest match</div>` : '')
+    // The anchor's ★ sits large in the box's top right, beside its label (Kimani's notebook, 2026-10-27).
+    + (anchor ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
+      + `<td style="${CELL}${EYEBROW}vertical-align:middle;padding-bottom:6px;">The closest match</td>`
+      + `<td align="right" style="${CELL}text-align:right;vertical-align:middle;padding-bottom:6px;color:#e8b923;font-size:34px;line-height:1;">★</td>`
+      + '</tr></table>' : '')
     + `<div style="font-size:22px;font-weight:bold;letter-spacing:-.02em;line-height:1.15;">${name(c, 'font-size:22px;font-weight:bold;')}</div></td></tr>`
     + `<tr><td style="${CELL}padding:14px 20px 0;font-size:0;line-height:0;">${picture}</td></tr>`
     + `<tr><td style="${CELL}padding:14px 20px 20px;">`

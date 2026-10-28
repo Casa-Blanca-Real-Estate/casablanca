@@ -39,7 +39,7 @@
     if (document.querySelector('.cb-home')) return;
     var home = document.createElement('a');
     home.className = 'cb-home'; home.href = '../../';
-    home.title = 'Back to Creative Studio'; home.setAttribute('aria-label', 'Back to Creative Studio');
+    home.title = 'Back to the Studio'; home.setAttribute('aria-label', 'Back to the Studio');
     home.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Studio';
     document.body.appendChild(home);
 

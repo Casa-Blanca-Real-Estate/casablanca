@@ -276,6 +276,9 @@ function CompStep({ ws, m, comp, box, draft, onDraft, save, saving, nav }: {
               <div className="rv-notebar">
                 <span className="rv-tagline cw-who">{whoLine(draft, j.clientLine?.by)}</span>
                 <span className="rv-notebar-r">
+                  <span className={`rv-tagline cw-count${draft.text.trim().length > MAX_CLIENT_LINE ? ' over' : ''}`} aria-live="polite">
+                    {draft.text.trim().length}/{MAX_CLIENT_LINE}
+                  </span>
                   {practice && !(showVersion && lastDraft) && (
                     <button
                       type="button"

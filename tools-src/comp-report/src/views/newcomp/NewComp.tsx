@@ -20,7 +20,7 @@ import { ReadingNotice } from '../workspace/ReadingNotice.tsx';
 import { inFlight } from '../workspace/reads.ts';
 import { HomeDetails } from './Details.tsx';
 import { endNewReport, Frame, Info, isNewReport, markNewReport } from './Frame.tsx';
-import { HomeFields, HomeLineInput, homeLineReady, Matched, readHomeLine, targetText, TYPE_LABEL, type PropertyType } from './Home.tsx';
+import { HomeFields, HomeLineInput, homeLineReady, Matched, readHomeLine, targetText, TYPE_LABEL, typeFromPageKey, type PropertyType } from './Home.tsx';
 
 export type StartScreen = 'home' | 'details' | 'comps';
 
@@ -32,6 +32,8 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
   const [side, setSide] = useState<Audience>('buyer');
   const [client, setClient] = useState('');
   const [type, setType] = useState<PropertyType>('coop');
+  // Left alone, the type follows the home's page once it's read (Details' typeFromPage; Kimani's notebook, 2026-10-27).
+  const [typePicked, setTypePicked] = useState(false);
   const [target, setTarget] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,13 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
       // The workspace starts the read as it opens, and the details fill in when it lands.
       // If the link can't be read (today's limit), the report is made anyway, and the details say why.
       if (url) {
+        if (!typePicked) {
+          try {
+            sessionStorage.setItem(typeFromPageKey(report.id), '1');
+          } catch {
+            // Private mode: step 2 offers the switch instead.
+          }
+        }
         const added = await linksApi.add(report.id, [url], 'subject').catch(() => null);
         const refusal = added ? added.refused[0]?.reason : 'The home’s page couldn’t be queued for reading.';
         if (refusal) {
@@ -121,7 +130,7 @@ export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (i
           client={client}
           onClient={setClient}
           type={type}
-          onType={setType}
+          onType={(t) => { setType(t); setTypePicked(true); }}
           target={target}
           onTarget={setTarget}
           onTargetBlur={() => price && setTarget(targetText(price))}

@@ -18,6 +18,8 @@
 .hh.photo::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, 0) 45%); }
 .hh-top { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; z-index: 1; }
 .hh-name { margin: 0; text-align: left; font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; min-width: 0; }
+.hh-source { text-decoration: none; }
+a.hh-source:hover { background: var(--cb-black); color: #fff; }
 .hh-source { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; white-space: nowrap; padding: 4px 8px; background: var(--cb-surface); color: var(--cb-black); }
 .hh-mid { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); width: min(460px, calc(100% - 48px)); display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1; }
 .hh-spin { width: 30px; height: 30px; border: 3px solid rgba(15, 15, 15, .15); border-top-color: var(--cb-black); border-radius: 50%; animation: rd-spin .9s linear infinite; }

@@ -11,6 +11,7 @@
 // agent's "from the data" chips (NB-9 C), one click each; and only the feature
 // groups that apply to the comp's type.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { CompOut } from '../../../engine/index.ts';
 import { workspaceApi, type CompEdit } from '../../api.ts';
 import { compDistance } from '../../../workspace/distance.ts';
@@ -579,6 +580,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
 export function Photos({ photos, address, editing }: { photos: string[]; address: string; editing: boolean }) {
   const [at, setAt] = useState(0);
   const [broken, setBroken] = useState<string[]>([]);
+  const [big, setBig] = useState(false);
   const shown = photos.filter((p) => !broken.includes(p));
   const n = shown.length;
   const i = n ? at % n : 0;
@@ -586,7 +588,10 @@ export function Photos({ photos, address, editing }: { photos: string[]; address
     <div className={`so-photo${n ? ' has' : ''}`}>
       {n > 0 ? (
         <>
-          {photoImg(shown[i]!, `${address}, photo ${i + 1} of ${n}`, () => setBroken((b) => [...b, shown[i]!]))}
+          <button type="button" className="so-photo-open" aria-label={`See ${address}’s photos larger`} title="See it larger" onClick={(e) => { e.stopPropagation(); setBig(true); }}>
+            {photoImg(shown[i]!, `${address}, photo ${i + 1} of ${n}`, () => setBroken((b) => [...b, shown[i]!]))}
+          </button>
+          {big && <Lightbox photos={shown} at={i} address={address} onAt={setAt} onClose={() => setBig(false)} />}
           {n > 1 && (
             <>
               <button type="button" className="so-photo-nav prev" aria-label="The photo before" onClick={() => setAt((i + n - 1) % n)}>‹</button>
@@ -597,5 +602,70 @@ export function Photos({ photos, address, editing }: { photos: string[]; address
         </>
       ) : editing && <span className="so-photo-later">No photos from StreetEasy for this one</span>}
     </div>
+  );
+}
+
+/**
+ * One listing's photos, large (Kimani's notebook, 2026-10-27): only that listing's, with ‹ › and the
+ * arrow keys, and Escape or a click outside closes it. Its keys are caught first, so Escape and the
+ * arrows here never close or step the review flow under it.
+ */
+function Lightbox({ photos, at, address, onAt, onClose }: {
+  photos: string[];
+  at: number;
+  address: string;
+  onAt: (i: number) => void;
+  onClose: () => void;
+}) {
+  const n = photos.length;
+  const step = (by: number) => onAt((at + by + n) % n);
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    box.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') closeRef.current();
+      else stepRef.current(e.key === 'ArrowLeft' ? -1 : 1);
+    };
+    addEventListener('keydown', onKey, true);
+    return () => {
+      removeEventListener('keydown', onKey, true);
+      before?.focus({ preventScroll: true });
+    };
+  }, []);
+  return createPortal(
+    <div className="so-lightbox" role="dialog" aria-modal="true" aria-label={`${address}: photos`} tabIndex={-1} ref={box} onClick={(e) => {
+      // A portal's clicks still bubble through React to the card: they stop here.
+      e.stopPropagation();
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <div className="so-lb-head">
+        <span className="so-lb-name">{address}</span>
+        <span className="so-lb-count">{at + 1} / {n}</span>
+        <button type="button" className="so-lb-x" aria-label="Close the photos" title="Close (Esc)" onClick={onClose}>✕</button>
+      </div>
+      <div className="so-lb-stage" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        {n > 1 && <button type="button" className="so-lb-nav prev" aria-label="The photo before" onClick={() => step(-1)}>‹</button>}
+        {photoImg(photos[at]!, `${address}, photo ${at + 1} of ${n}`)}
+        {n > 1 && <button type="button" className="so-lb-nav next" aria-label="The next photo" onClick={() => step(1)}>›</button>}
+      </div>
+      {n > 1 && (
+        <div className="so-lb-strip">
+          {photos.map((p, k) => (
+            <button key={p} type="button" className={`so-lb-thumb${k === at ? ' on' : ''}`} aria-label={`Photo ${k + 1}`} aria-current={k === at || undefined} onClick={() => onAt(k)}>
+              {photoImg(p, '')}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>,
+    document.body,
   );
 }

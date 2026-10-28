@@ -35,7 +35,10 @@ export interface ClientLine {
   at: string;
 }
 
-export const MAX_CLIENT_LINE = 1200;
+/** The longest paragraph an agent or Hubert may save for one comp's box in the email (Kimani's notebook, 2026-10-27). */
+export const MAX_CLIENT_LINE = 500;
+/** What a stored paragraph may be when read: ones saved before the 500 cap (up to 1,200) still show, so they can be cut down. */
+const MAX_STORED_CLIENT_LINE = 1200;
 const BY: readonly ClientLineBy[] = ['agent', 'writer', 'both'];
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -44,7 +47,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 export function cleanClientLine(raw: unknown): ClientLine | null {
   if (!isObject(raw)) return null;
   const text = typeof raw.text === 'string' ? raw.text.trim() : '';
-  if (!text || text.length > MAX_CLIENT_LINE) return null;
+  if (!text || text.length > MAX_STORED_CLIENT_LINE) return null;
   const by = BY.find((b) => b === raw.by);
   if (!by || typeof raw.at !== 'string' || Number.isNaN(Date.parse(raw.at))) return null;
   return { text, by, at: raw.at };

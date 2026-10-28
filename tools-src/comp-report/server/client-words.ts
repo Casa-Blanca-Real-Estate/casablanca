@@ -27,7 +27,7 @@
 // server-side fallbacks, the stop reason checked before the content is read.
 // It runs in the request: one paragraph at low effort returns in seconds.
 import Anthropic from '@comp-report/anthropic-sdk';
-import type { ClientCompInput, ClientOverviewInput, ClientRoundKind } from '../workspace/client-words.ts';
+import { MAX_CLIENT_LINE, type ClientCompInput, type ClientOverviewInput, type ClientRoundKind } from '../workspace/client-words.ts';
 import { fairHousingFindings } from '../workspace/fair-housing.ts';
 import { CURRENT_HOUSE_VOICE } from './house-voice.ts';
 import { figuresIn } from './lines.ts';
@@ -81,7 +81,7 @@ export const CLIENT_WORDS_PROMPTS: Record<string, ClientWordsPrompt> = {
     system: [
       ...SHARED,
       'You get, as JSON, one comp: its facts, how it differs from the home (against_the_home), the agent\'s note and tags from sorting it, and your take on it from sorting (hubert_take_on_sort).',
-      'Write the comp\'s paragraph for the client (paragraph): two to four short sentences on how it compares to the client\'s home and what it says about the home\'s price, in the agent\'s first person where it needs a voice. The box already shows the address, price, price per square foot and status above the paragraph, so don\'t open by repeating them. Use the agent\'s note: they know things the data doesn\'t. Keep their meaning; write it for the client.',
+      'Write the comp\'s paragraph for the client (paragraph): two to four short sentences, under 400 characters in all, on how it compares to the client\'s home and what it says about the home\'s price, in the agent\'s first person where it needs a voice. The box already shows the address, price, price per square foot and status above the paragraph, so don\'t open by repeating them. Use the agent\'s note: they know things the data doesn\'t. Keep their meaning; write it for the client.',
       'If the agent asks you to change something (agent_asks, about last_draft), make that change and keep the rest.',
       CURRENT_HOUSE_VOICE.text,
     ].join('\n\n'),
@@ -198,7 +198,13 @@ export function parseClientWords(text: string, w: ClientWordsInput): ClientWords
       }
       return true;
     });
-    const paragraph = kept.join(' ');
+    // The box holds MAX_CLIENT_LINE characters: whole sentences up to it, never a cut one.
+    let paragraph = '';
+    for (const s of kept) {
+      const next = paragraph ? `${paragraph} ${s}` : s;
+      if (next.length > MAX_CLIENT_LINE) break;
+      paragraph = next;
+    }
     return paragraph ? { text: paragraph, dropped } : null;
   }
 

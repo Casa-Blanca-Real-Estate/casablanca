@@ -15,15 +15,16 @@
 // Estimate toggle beside it); "Not listed" only after a read that gave none.
 // The page's type, when it isn't the report's, with a one-tap switch (NW-011);
 // rooms and the neighborhood; the pickers that apply to the home's kind.
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { compRecordFromListing, type LaundryState, type PropertyType } from '../../../engine/index.ts';
-import { typeFromListing, withHomeFeatures, type Features } from '../../../workspace/features.ts';
-import type { Entry, Intake } from '../../../workspace/state.ts';
+import { KIND_LABEL, typeFromListing, withHomeFeatures, type Features } from '../../../workspace/features.ts';
+import { onMarket, onMarketLine } from '../../../workspace/on-market.ts';
+import { HOME_KINDS, type Entry, type HomeKind, type Intake } from '../../../workspace/state.ts';
 import { FeaturePicker } from '../comp/Pickers.tsx';
 import { entry } from '../workspace/bits.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { Info } from './Frame.tsx';
-import { TYPE_LABEL } from './Home.tsx';
+import { TYPE_LABEL, typeFromPageKey } from './Home.tsx';
 import { HomeHero } from './HomeHero.tsx';
 import { NrNumber } from './inputs.tsx';
 
@@ -63,15 +64,34 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
   const showSize = Boolean(size) || sizeOpen || !readGaveNoSize;
   const fromPage = (Object.values(intake) as ({ from?: string } | undefined)[]).filter((v) => v?.from === 'listing').length;
   // The page's type (NW-011): never written over the report's, offered as a switch when it differs.
-  const pageType = useMemo(() => {
+  const pageRecord = useMemo(() => {
     if (!home || home.status !== 'done' || !home.extract) return null;
     try {
-      return typeFromListing(compRecordFromListing(home.extract, { as_of: home.asOf ?? today, url: home.url }).record);
+      return compRecordFromListing(home.extract, { as_of: home.asOf ?? today, url: home.url }).record;
     } catch {
       return null;
     }
   }, [home?.id, home?.status]);
+  const pageType = useMemo(() => (pageRecord ? typeFromListing(pageRecord) : null), [pageRecord]);
+  // How long it's been listed and what its ask did, from its page (Kimani's notebook, 2026-10-27).
+  const marketLine = useMemo(() => (pageRecord ? onMarketLine(onMarket(pageRecord, today)) : null), [pageRecord, today]);
   const switchTo = pageType?.asReportType && pageType.asReportType !== ws.propertyType ? pageType.asReportType : null;
+  // Left alone on step 1, Co-op or Condo follows the page, once, and says so (Kimani's notebook, 2026-10-27).
+  const [setFromPage, setSetFromPage] = useState<'condo' | 'coop' | null>(null);
+  useEffect(() => {
+    if (!pageType || off) return;
+    let flagged = false;
+    try {
+      flagged = sessionStorage.getItem(typeFromPageKey(ws.reportId)) === '1';
+      sessionStorage.removeItem(typeFromPageKey(ws.reportId));
+    } catch {
+      // Private mode: the switch below is offered instead.
+    }
+    if (flagged && switchTo) {
+      ws.setPropertyType(switchTo);
+      setSetFromPage(switchTo);
+    }
+  }, [pageType]);
 
   const setFeatures = (f: Features) => {
     const next = withHomeFeatures(ws.intake, f, today);
@@ -166,6 +186,12 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
         </div>
       )}
       {notices}
+      {marketLine && <p className="nr-onmarket" title="From its StreetEasy page">{marketLine}</p>}
+      {setFromPage && !switchTo && (
+        <div className="nr-note nr-type-note" role="status">
+          <span>Its StreetEasy page lists it as a {TYPE_LABEL[setFromPage].toLowerCase()}, so this report is one too. Change it below if that’s wrong.</span>
+        </div>
+      )}
       {switchTo && (
         <div className="nr-note nr-type-note" role="status">
           <span>Its StreetEasy page says {pageType!.label ?? TYPE_LABEL[switchTo]}, and this report is a {TYPE_LABEL[ws.propertyType].toLowerCase()}.</span>
@@ -195,6 +221,18 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
             </button>
           ))}
         </div>
+        {/* The home's kind, read from its page when there is one (Kimani's notebook, 2026-10-27): a label, never a number's input. */}
+        <select
+          className="u-input nr-kind"
+          aria-label="Property type"
+          title="Property type: a label for the home. Pricing stays co-op or condo."
+          value={intake.kind?.value ?? ''}
+          disabled={off}
+          onChange={(e) => set('kind', e.target.value ? entry(e.target.value as HomeKind, today) : undefined)}
+        >
+          <option value="">Property type</option>
+          {HOME_KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+        </select>
         <input
           className="u-input nr-client"
           aria-label="Client"

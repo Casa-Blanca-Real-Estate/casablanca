@@ -30,6 +30,9 @@ const TARGET_LABEL: Record<TargetOwner, Record<Audience, string>> = {
 };
 
 /** The target's label, one scheme by whose it is and the side (NW-070). The client's is the default. */
+/** Set on step 1 when the agent left Co-op or Condo alone: the home's page, once read, decides it. */
+export const typeFromPageKey = (reportId: string) => `cr-type-from-page:${reportId}`;
+
 export function targetLabel(side: Audience, owner: TargetOwner = 'client'): string {
   return TARGET_LABEL[owner][side];
 }

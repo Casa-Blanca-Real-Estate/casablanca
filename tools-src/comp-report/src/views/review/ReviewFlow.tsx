@@ -113,6 +113,14 @@ export function ReviewFlow({ ws, startAt, onClose }: { ws: Workspace; startAt: s
     setError(null);
     setAt(next);
   };
+  /** One comp back or on, from the arrows in the head or the keyboard: never past either end. */
+  const step = (by: -1 | 1) => {
+    const to = i + by;
+    if (saving || to < 0 || to >= steps.length) return;
+    void go(to);
+  };
+  const stepRef = useRef(step);
+  stepRef.current = step;
 
   // Opening a comp in the flow is reviewing it, as opening its row is.
   useEffect(() => {
@@ -126,7 +134,14 @@ export function ReviewFlow({ ws, startAt, onClose }: { ws: Workspace; startAt: s
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) void closeRef.current();
+      if (e.defaultPrevented) return;
+      if (e.key === 'Escape') void closeRef.current();
+      // ← and → step through the comps, except while typing (Kimani's notebook, 2026-10-27).
+      const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable="true"]');
+      if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        stepRef.current(e.key === 'ArrowLeft' ? -1 : 1);
+      }
     };
     addEventListener('keydown', onKey);
     return () => {
@@ -147,7 +162,11 @@ export function ReviewFlow({ ws, startAt, onClose }: { ws: Workspace; startAt: s
       <div className="rv-modal" role="dialog" aria-modal="true" aria-label="Review comps" tabIndex={-1} ref={dialog}>
         <div className="rv-head">
           <span className="rv-title">Review comps</span>
-          <span className="rv-count" aria-live="polite" title={`${doneCount} of ${steps.length} reviewed`}>{steps.length ? `${i + 1} / ${steps.length}` : '0'}</span>
+          <span className="rv-arrows">
+            <button type="button" className="rv-arrow" aria-label="Previous comp" title="Previous comp (←)" disabled={saving || i <= 0} onClick={() => step(-1)}>‹</button>
+            <span className="rv-count" aria-live="polite" title={`${doneCount} of ${steps.length} reviewed`}>{steps.length ? `${i + 1} / ${steps.length}` : '0'}</span>
+            <button type="button" className="rv-arrow" aria-label="Next comp" title="Next comp (→)" disabled={saving || i >= steps.length - 1} onClick={() => step(1)}>›</button>
+          </span>
           <span className="rv-progress" aria-hidden="true">
             {steps.map((r, k) => (
               <span key={r.rcId} className={`${k === i ? 'here' : ''}${stepDone(r.c, ws.level) ? ' done' : ''}`} />

@@ -286,6 +286,32 @@
 /* The listing's photos (Dispatch 20, NW-020 a): a plain <img> in the photo area, ‹ › through the rest. */
 .so-photo.has { background: var(--cb-line); overflow: hidden; }
 .so-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.so-photo-open { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+
+/* One listing's photos, large (the lightbox): over everything, the review flow and the studio chrome (100000) included. */
+.so-lightbox {
+  position: fixed; inset: 0; z-index: 100001; display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 24px 20px; background: rgba(15, 15, 15, .92); color: #fff; box-sizing: border-box;
+}
+.so-lightbox:focus { outline: none; }
+.so-lb-head { display: flex; align-items: center; gap: 14px; }
+.so-lb-name { font-size: 14px; font-weight: 800; }
+.so-lb-count { font-size: 12px; color: var(--cb-white); font-variant-numeric: tabular-nums; }
+.so-lb-x { margin-left: auto; font: inherit; font-size: 18px; color: #fff; background: none; border: 0; cursor: pointer; padding: 4px; }
+.so-lb-stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.so-lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.so-lb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 0;
+  background: rgba(255, 255, 255, .14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; padding: 0 0 3px;
+}
+.so-lb-nav:hover { background: rgba(255, 255, 255, .28); }
+.so-lb-nav.prev { left: 0; }
+.so-lb-nav.next { right: 0; }
+.so-lb-strip { display: flex; gap: 6px; overflow-x: auto; justify-content: center; flex: none; }
+.so-lb-thumb { flex: none; width: 72px; height: 50px; padding: 0; border: 2px solid transparent; background: none; cursor: pointer; opacity: .6; }
+.so-lb-thumb.on { border-color: #fff; opacity: 1; }
+.so-lb-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 600px) { .so-lightbox { padding: 12px 16px; } .so-lb-thumb { width: 56px; height: 40px; } }
 .so-photo-nav {
   position: absolute; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border: none; border-radius: 0;
   background: rgba(15, 15, 15, .55); color: #fff; font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
