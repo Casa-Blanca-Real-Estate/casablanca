@@ -1,6 +1,7 @@
-# Casa Blanca Creative Studio — repo guide for Claude sessions
+# Casa Blanca Studio — repo guide for Claude sessions
 
-Internal browser-based tools for Casa Blanca, a boutique NYC residential brokerage.
+Internal browser-based tools for Casa Blanca, a boutique NYC residential brokerage. Called **Casa Blanca Studio**,
+or the Studio, on every surface (Erez renamed it from "Creative Studio", 2026-10-28; older docs keep the old name).
 Deployed on Netlify. Used by ~200 agents and by Kimani (sole marketing/content/tools person,
 3 days a week, working in blocks across several tracks).
 
@@ -73,7 +74,7 @@ file points you there by section when you need it.
 
 | Path | What |
 |---|---|
-| `index.html` | Creative Studio dashboard (redesigned 2026-08-28, reference for other surfaces) |
+| `index.html` | Studio dashboard (redesigned 2026-08-28, reference for other surfaces) |
 | `tools/*/` | One directory per tool, single-file HTML each |
 | `agents/` | Static agent-site generator: `data/*.json` + `template.html` → `build.js` → `<slug>/index.html`. Schema and build contract: `agents/SCHEMA.md`. Runs on deploy |
 | `netlify/functions/` | Serverless: StreetEasy import, Claude copy generation, image proxy, sessions |

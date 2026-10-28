@@ -5,11 +5,12 @@
 // It reads only what it needs. The call itself is never selected: the database
 // says whether one exists (the range is revealed), not what it is. The target
 // and the deal terms aren't read at all (§8.4).
-import { compute, parseExport, type EngineOutput } from '../engine/index.ts';
+import { compRecordFromListing, compute, parseExport, type EngineOutput } from '../engine/index.ts';
 import { engineInput, locationsFrom, removedExportComps, workspaceComps, type ParsedImport, type WorkspaceComp } from '../workspace/engine-input.ts';
 import type { CompRecord } from '../engine/index.ts';
 import type { Brief, WorkspaceState } from '../workspace/state.ts';
 import { numbersSummary } from '../workspace/summary.ts';
+import { onMarket, type OnMarket } from '../workspace/on-market.ts';
 import { loadGeocodes, reportBuildings } from './buildings.ts';
 import type { Queryable } from './db.ts';
 import { loadJudgments } from './api/workspace.ts';
@@ -72,5 +73,24 @@ export async function neutralNumbers(tx: Queryable, reportId: string, asOf = new
 export async function numbersFor(tx: Queryable, reportId: string, asOf = newYorkToday()) {
   const n = await neutralNumbers(tx, reportId, asOf);
   if (!n) return null;
-  return numbersSummary({ output: n.output, comps: n.comps, intake: n.state.intake, revealed: n.revealed, removed: n.removed });
+  return numbersSummary({
+    output: n.output, comps: n.comps, intake: n.state.intake, revealed: n.revealed, removed: n.removed,
+    homeOnMarket: await homeOnMarket(tx, reportId, asOf),
+  });
+}
+
+/** The home's time on the market, from its latest StreetEasy read: null when it has none, or the page can't be read now. */
+export async function homeOnMarket(tx: Queryable, reportId: string, asOf = newYorkToday()): Promise<OnMarket | null> {
+  const read = (await tx.query<{ url: string; as_of: string | null; extract: unknown }>(
+    `select url, as_of::text as as_of, extract from comp_report.link_reads
+      where report_id = $1 and purpose = 'subject' and status = 'done' and dismissed_at is null and extract is not null
+      order by seq desc limit 1`,
+    [reportId],
+  )).rows[0];
+  if (!read) return null;
+  try {
+    return onMarket(compRecordFromListing(read.extract, { as_of: read.as_of ?? asOf, url: read.url }).record, asOf);
+  } catch {
+    return null;
+  }
 }

@@ -225,3 +225,6 @@ button.nr-act.nr-act-quiet { color: var(--cb-mid); }
 .nr-type-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .nr-type-note > span { flex: 1; min-width: 240px; }
 .nr-notes .nr-label-line .nr-tip { top: 26px; }
+
+/* The home's time on the market, from its page (on-market.ts). */
+.nr-onmarket { margin: -8px 0 0; font-size: 13px; color: var(--cb-mid); }

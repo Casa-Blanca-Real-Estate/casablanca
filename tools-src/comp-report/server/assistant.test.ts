@@ -13,6 +13,7 @@ const SHIPPED: Record<string, string> = {
   'cr3a-2026-09-29': 'da66a77b3f72a2c1d117f6f86375ad15eeffbb2f26363ada3506dbbe837e7ae6',
   'cr6-2026-10-15': '1a4ed4fa534c60910971dac5682a355e3c0c68db0d593127c4d6ea068a25fee9',
   'hb-send-2026-10-21': '300dcae38c1ed9873fe7e1ab2587aac4824e9ac0e7569fd456d0bdb02bedd85d',
+  'hb-listing-2026-10-28': '19c6a2619012d5d098719f2d1cf6564d5de61a797a7a6eecf98e1e5ec31b437e',
 };
 
 test('shipped prompt versions are unchanged, byte for byte', () => {

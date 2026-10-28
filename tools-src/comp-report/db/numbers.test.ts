@@ -18,7 +18,7 @@ import { handleWorkspace, type WorkspaceData } from '../server/api/workspace.ts'
 import { CURRENT_PROMPT, PROMPTS } from '../server/assistant.ts';
 import { withActor, type PoolLike } from '../server/db.ts';
 import type { IdentityUser } from '../server/identity.ts';
-import { newYorkToday } from '../server/numbers.ts';
+import { newYorkToday, numbersFor } from '../server/numbers.ts';
 import { startFakeAnthropic, type FakeAnthropic, type Script } from '../dev/fake-anthropic.ts';
 import { engineInput, namedPrices, workspaceComps } from '../workspace/engine-input.ts';
 import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
@@ -171,5 +171,18 @@ describe('get_numbers and prompt versions', { skip: skipWithoutDatabase }, () =>
     }
     assert.ok(results.with_estimates!.base, 'with estimates has a base from the estimated size');
     assert.equal(results.on_facts!.base, null, 'on the facts has none: the size is only an estimate');
+  });
+  test('the home’s time on the market, from its StreetEasy read, reaches get_numbers', async () => {
+    const reportId = await createReport('100 Barclay Street #17L');
+    const asOf = newYorkToday();
+    await withActor(pool as unknown as PoolLike, ana, (tx) => tx.query(
+      `insert into comp_report.link_reads (report_id, purpose, url, status, as_of, extract)
+       values ($1, 'subject', 'https://streeteasy.com/building/100-barclay-street-new_york/17l', 'done', $2, $3)`,
+      [reportId, asOf, JSON.stringify({ address: '100 Barclay Street', unit: '#17L', status: 'For sale', last_ask: '$4,250,000', original_ask: '$4,500,000', days_on_market: '72 days' })],
+    ));
+    const numbers = await withActor(pool as unknown as PoolLike, ana, (tx) => numbersFor(tx, reportId));
+    assert.deepEqual((numbers!.subject as Record<string, unknown>).on_the_market, {
+      days_on_market: 72, days_on_market_is: 'as the listing or export says', original_asking_price: 4_500_000,
+    });
   });
 });

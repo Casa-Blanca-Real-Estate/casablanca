@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { compRecordFromListing, type LaundryState, type PropertyType } from '../../../engine/index.ts';
 import { KIND_LABEL, typeFromListing, withHomeFeatures, type Features } from '../../../workspace/features.ts';
+import { onMarket, onMarketLine } from '../../../workspace/on-market.ts';
 import { HOME_KINDS, type Entry, type HomeKind, type Intake } from '../../../workspace/state.ts';
 import { FeaturePicker } from '../comp/Pickers.tsx';
 import { entry } from '../workspace/bits.tsx';
@@ -63,14 +64,17 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
   const showSize = Boolean(size) || sizeOpen || !readGaveNoSize;
   const fromPage = (Object.values(intake) as ({ from?: string } | undefined)[]).filter((v) => v?.from === 'listing').length;
   // The page's type (NW-011): never written over the report's, offered as a switch when it differs.
-  const pageType = useMemo(() => {
+  const pageRecord = useMemo(() => {
     if (!home || home.status !== 'done' || !home.extract) return null;
     try {
-      return typeFromListing(compRecordFromListing(home.extract, { as_of: home.asOf ?? today, url: home.url }).record);
+      return compRecordFromListing(home.extract, { as_of: home.asOf ?? today, url: home.url }).record;
     } catch {
       return null;
     }
   }, [home?.id, home?.status]);
+  const pageType = useMemo(() => (pageRecord ? typeFromListing(pageRecord) : null), [pageRecord]);
+  // How long it's been listed and what its ask did, from its page (Kimani's notebook, 2026-10-27).
+  const marketLine = useMemo(() => (pageRecord ? onMarketLine(onMarket(pageRecord, today)) : null), [pageRecord, today]);
   const switchTo = pageType?.asReportType && pageType.asReportType !== ws.propertyType ? pageType.asReportType : null;
   // Left alone on step 1, Co-op or Condo follows the page, once, and says so (Kimani's notebook, 2026-10-27).
   const [setFromPage, setSetFromPage] = useState<'condo' | 'coop' | null>(null);
@@ -182,9 +186,10 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
         </div>
       )}
       {notices}
+      {marketLine && <p className="nr-onmarket" title="From its StreetEasy page">{marketLine}</p>}
       {setFromPage && !switchTo && (
         <div className="nr-note nr-type-note" role="status">
-          <span>Its StreetEasy page says {pageType?.label ?? TYPE_LABEL[setFromPage]}, so this report is now a {TYPE_LABEL[setFromPage].toLowerCase()}.</span>
+          <span>Its StreetEasy page lists it as a {TYPE_LABEL[setFromPage].toLowerCase()}, so this report is one too. Change it below if that’s wrong.</span>
         </div>
       )}
       {switchTo && (

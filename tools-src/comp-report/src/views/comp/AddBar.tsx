@@ -1,18 +1,21 @@
 // The handoff's paste bar (New report 3 of 3, and Sort's "+ Add comps"):
 // paste StreetEasy links (each read in the background, its row filling in as
 // the read finishes; a pasted link shows as the clean link, NW-004), or type an address (the comp's form opens with
-// it), or "Type one in". Drop the StreetEasy export anywhere on the screen
+// it), or "Type one in". Drop the StreetEasy export (or its PDF: the links are read here) anywhere on the screen
 // that holds it (useDropTarget). Screenshots aren't read in this version: the
 // screen says so where they're dropped.
 import { useState, type DragEvent, type ReactNode } from 'react';
 import { parseExport } from '../../../engine/index.ts';
 import { linksApi, workspaceApi } from '../../api.ts';
 import { checkListingLink, MAX_LINKS_PER_REQUEST } from '../../../workspace/links.ts';
+import { looksLikePdf, pdfLinks } from '../../../workspace/pdf-links.ts';
 import { toBase64, type Workspace } from '../workspace/model.ts';
 import { CompForm, type CompPrefill } from './CompForm.tsx';
 import '../../styles/compform.css';
 
 const MAX_EXPORT_BYTES = 2 * 1024 * 1024;
+/** A StreetEasy PDF is read here, never uploaded: this only keeps a wrong file from hanging the tab. */
+const MAX_PDF_BYTES = 100 * 1024 * 1024;
 const LINKISH = /^(https?:\/\/|www\.|streeteasy)/i;
 
 /** Pastes, links and the export: what the bar and a drop both do. */
@@ -29,7 +32,7 @@ async function addLinks(ws: Workspace, text: string): Promise<string | null> {
     ws.applyLinks(added);
     note = [
       added.already.length ? `${added.already.length} already here` : null,
-      ...added.refused.map((r) => r.reason),
+      ...new Set(added.refused.map((r) => r.reason)),
       ...bad.map((b) => (b.check.ok ? '' : b.check.reason)),
       added.limit.left <= 5 ? `${added.limit.left} of today’s ${added.limit.perDay} reads left` : null,
     ].filter(Boolean).join(' · ') || null;
@@ -38,8 +41,10 @@ async function addLinks(ws: Workspace, text: string): Promise<string | null> {
 }
 
 async function addExport(ws: Workspace, file: File): Promise<string | null> {
-  if (file.size > MAX_EXPORT_BYTES) return 'That file is larger than a StreetEasy export should be (2 MB).';
+  if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') return addPdf(ws, file);
+  if (file.size > MAX_EXPORT_BYTES) return 'That file is larger than a StreetEasy export should be (2 MB). A StreetEasy PDF can be dropped too.';
   const bytes = new Uint8Array(await file.arrayBuffer());
+  if (looksLikePdf(bytes)) return addPdf(ws, file);
   try {
     if (!parseExport(bytes, { as_of: ws.today, filename: file.name }).comps.length) return 'That export has no comps in it.';
   } catch (e) {
@@ -49,6 +54,35 @@ async function addExport(ws: Workspace, file: File): Promise<string | null> {
     ws.applyServer(await workspaceApi.importFile(ws.reportId, { filename: file.name, contentBase64: toBase64(bytes), asOf: ws.today }));
   });
   return null;
+}
+
+/**
+ * A StreetEasy PDF (Kimani, 2026-10-28): its comps' links, read in this browser.
+ * The file never leaves it; only the links are sent, each read as a pasted one.
+ */
+async function addPdf(ws: Workspace, file: File): Promise<string | null> {
+  if (file.size > MAX_PDF_BYTES) return `That PDF is over ${MAX_PDF_BYTES / 1024 / 1024} MB. Paste its links instead.`;
+  let links: string[] | null = null;
+  await ws.run(`Finding the listing links in ${file.name}…`, async () => {
+    try {
+      links = await pdfLinks(new Uint8Array(await file.arrayBuffer()));
+    } catch {
+      links = null;
+    }
+  });
+  if (!links) return 'That PDF couldn’t be read. Paste its links instead.';
+  const home = ws.reads.filter((r) => r.purpose === 'subject').map((r) => r.url);
+  const listings = [...new Set((links as string[]).flatMap((l) => {
+    const c = checkListingLink(l);
+    return c.ok && !home.includes(c.url) ? [c.url] : [];
+  }))];
+  if (!listings.length) return 'That PDF has no StreetEasy listing links in it. Paste the links, or drop the CSV export.';
+  const notes: string[] = [`Found ${listings.length} listing link${listings.length === 1 ? '' : 's'} in ${file.name}`];
+  for (let i = 0; i < listings.length; i += MAX_LINKS_PER_REQUEST) {
+    const said = await addLinks(ws, listings.slice(i, i + MAX_LINKS_PER_REQUEST).join(' '));
+    if (said) notes.push(said);
+  }
+  return [...new Set(notes)].join(' · ');
 }
 
 /** Every word a StreetEasy link that checks out: the clean links, a space apart. Otherwise null. */
@@ -92,7 +126,7 @@ export function useDropTarget(ws: Workspace, onNote: (note: string | null) => vo
       if (text.trim()) void addLinks(ws, text).then(onNote);
     },
   };
-  const veil: ReactNode = dragging ? <div className="drop-veil" aria-hidden="true">Drop the export, a link or listing screenshots</div> : null;
+  const veil: ReactNode = dragging ? <div className="drop-veil" aria-hidden="true">Drop the export, its PDF, a link or listing screenshots</div> : null;
   return { dragging, handlers, veil };
 }
 
@@ -154,7 +188,7 @@ export function AddBar({ ws, note, onNote }: { ws: Workspace; note: string | nul
         {hasPaste && <button type="button" className="btn primary paste-add" disabled={Boolean(ws.busy)} onClick={() => void add()}>Add</button>}
         <button type="button" className="link paste-type" onClick={() => setForm({ typed: false, prefill: null, key: Date.now() })}>Type one in</button>
       </div>
-      <div className="paste-hint">Or drop the StreetEasy export or listing screenshots anywhere here</div>
+      <div className="paste-hint">Or drop the StreetEasy export (CSV, XLSX or PDF) or listing screenshots anywhere here</div>
       {note && <p className="paste-note" role="status">{note}</p>}
       {form && (
         <CompForm
