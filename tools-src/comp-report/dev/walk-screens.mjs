@@ -4,6 +4,7 @@
 // Chromium at /opt/pw-browsers (never 'playwright install').
 //   node tools-src/comp-report/dev/walk-screens.mjs <base> <outDir> <buyer|seller> <coop|condo> [email]
 import { chromium } from 'playwright-core';
+import { chromePath } from './chrome-path.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -17,7 +18,7 @@ const tag = `${side}-${type}`;
 const errors = [];
 const log = [];
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const browser = await chromium.launch({ executablePath: chromePath() });
 async function context(signedIn = true, asNewAgent = false) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
   if (signedIn) await ctx.addInitScript((e) => sessionStorage.setItem('cr-dev-session', e), email);
@@ -142,8 +143,10 @@ const ctx = await context(true);
   const p = await page(ctx, '09');
   await p.goto(url(id, 'step=send'));
   await settle(p);
+  // Send opens the client step by itself the first time (Dispatch 26): close it to reach the email.
+  if (await p.locator('.cw-modal').count()) { await p.keyboard.press('Escape'); await settle(p); }
   await shot(p, '09-send-full');
-  const designed = p.getByRole('tab', { name: /designed/i }).or(p.getByRole('radio', { name: /designed/i })).or(p.getByRole('button', { name: /^designed$/i })).first();
+  const designed = p.getByRole('tab', { name: /designed/i }).or(p.getByRole('radio', { name: /designed/i })).or(p.getByRole('button', { name: /^designed( email)?$/i })).first();
   if (await designed.count()) { await designed.click(); await settle(p); await shot(p, '10-send-designed'); }
   else errors.push('10: no Designed tab');
   await p.close();
