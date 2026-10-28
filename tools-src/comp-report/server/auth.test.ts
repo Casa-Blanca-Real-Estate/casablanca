@@ -236,8 +236,9 @@ describe('the sign-up and log-in gate, before the database exists', () => {
     await gate('ana@casa-blanca.com');
     await gate('Someone.Private@gmail.com');
     const [admitted, refused] = lines.map((l) => JSON.parse(l) as Record<string, unknown>);
-    assert.deepEqual(admitted, { gate: 'comp-report', event: 'signup', email: 'ana@casa-blanca.com', provider: 'google', allowed: true, via: 'domain' });
-    assert.deepEqual(refused, { gate: 'comp-report', event: 'signup', domain: 'gmail.com', provider: 'google', allowed: false });
+    const noIp = { present: false, family: null, bucket: null };
+    assert.deepEqual(admitted, { gate: 'comp-report', event: 'signup', email: 'ana@casa-blanca.com', provider: 'google', allowed: true, via: 'domain', ip: noIp });
+    assert.deepEqual(refused, { gate: 'comp-report', event: 'signup', domain: 'gmail.com', provider: 'google', allowed: false, ip: noIp });
     assert.equal(lines.join('\n').includes('someone.private'), false);
   });
 

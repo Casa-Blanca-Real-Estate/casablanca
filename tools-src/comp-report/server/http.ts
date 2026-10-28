@@ -61,4 +61,43 @@ export async function readJsonObject(req: Request, maxBytes = 64 * 1024): Promis
   return parsed as Record<string, unknown>;
 }
 
+/**
+ * The body as text, refused with 413 once it passes maxBytes: by Content-Length before reading,
+ * then by counting bytes as they stream, so an oversized body is never read whole or parsed.
+ */
+export async function readBoundedText(req: Request, maxBytes: number): Promise<string> {
+  const declared = Number(req.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxBytes) throw new HttpError(413, 'body_too_large');
+  if (!req.body) return '';
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw new HttpError(413, 'body_too_large');
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+/** readJsonObject, with the size counted in bytes as the body streams (readBoundedText). */
+export async function readBoundedJsonObject(req: Request, maxBytes: number): Promise<Record<string, unknown>> {
+  const text = await readBoundedText(req, maxBytes);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text || '{}');
+  } catch {
+    throw new HttpError(400, 'invalid_json');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new HttpError(400, 'invalid_body', 'Send a JSON object.');
+  }
+  return parsed as Record<string, unknown>;
+}
+
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

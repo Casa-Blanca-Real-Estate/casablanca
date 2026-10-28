@@ -35,11 +35,12 @@ const SIGN_IN: Actor = { kind: 'system', does: 'sign-in' };
 const as = <T>(pool: PoolLike, actor: Actor, fn: (tx: Queryable) => Promise<T>) => withActor(pool, actor, fn);
 
 /** Every write policy in comp_report, by name, with its expressions as Postgres prints them.
- *  The mentees table is new in this migration and tested on its own, below. */
+ *  The mentees table is new in this migration and tested on its own, below; the log tables are
+ *  Dispatch 22b's, tested in access-and-activity.test.ts. */
 async function writePolicies(client: pg.Client) {
   const { rows } = await client.query<{ policyname: string; cmd: string; roles: string; qual: string | null; with_check: string | null }>(
     `select policyname, cmd, roles::text, qual, with_check from pg_policies
-      where schemaname = 'comp_report' and cmd in ('INSERT', 'UPDATE', 'ALL') and tablename <> 'mentees' order by policyname`,
+      where schemaname = 'comp_report' and cmd in ('INSERT', 'UPDATE', 'ALL') and tablename not in ('mentees', 'access_events', 'activity', 'signin_error_buckets', 'signin_salt') order by policyname`,
   );
   return rows;
 }

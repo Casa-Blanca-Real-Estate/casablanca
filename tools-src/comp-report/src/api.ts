@@ -377,3 +377,15 @@ export const reviewApi = {
   ask: (reportId: string, reportCompId: string, job: 'feedback' | 'take', opts: { asks?: string; practice?: boolean } = {}) =>
     api<ReviewReply>('/api/comp-report/comp-review', { method: 'POST', body: { reportId, reportCompId, job, ...opts } }),
 };
+
+// ── The sign-in and activity logs, and agents' levels (Dispatch 22b): admins only ──
+
+export type { AccessLine, ActivityLine } from '../server/api/access-log.ts';
+
+export interface Person {
+  email: string;
+  name: string | null;
+  role: Role;
+  capability: 'practice' | 'full';
+  lastSeenAt: string | null;
+}

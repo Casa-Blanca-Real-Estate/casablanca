@@ -93,7 +93,7 @@ export function App() {
   return (
     <Shell account={account} onSignOut={() => void signOut()}>
       <div className="sh-app">
-        <ErrorBoundary resetKey={`${state.status}:${reportId ?? ''}`} onBack={() => open(null)}>
+        <ErrorBoundary resetKey={`${state.status}:${reportId ?? ''}`} reportId={reportId} onBack={() => open(null)}>
           {framed ? <Center>{body}</Center> : body}
         </ErrorBoundary>
       </div>
