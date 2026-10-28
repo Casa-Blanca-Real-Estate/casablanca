@@ -9,14 +9,22 @@
 //   Every request needs `Authorization: Bearer <CB_PICS_TOKEN>`, reads included.
 //   Unset, the function refuses everything; set to the same value as
 //   CB_CMS_TOKEN, it refuses too, because then the photo tool's token would be
-//   the one that publishes agent sites. This token can't create, publish,
-//   suspend or delete an agent, and can't change anything outside `pic` and
-//   `placements`: a body naming anything else is refused, not partly applied.
+//   the one that publishes agent sites. This token can't publish, suspend or
+//   delete an agent, and can't change anything outside `pic` and `placements`:
+//   a body naming anything else is refused, not partly applied. It can create
+//   an agent, as a draft with a name and a title and nothing else, so a photo
+//   can be saved for someone the CMS hasn't met yet (Kimani's notebook,
+//   2026-10-27). A draft is never on the public site until the CMS publishes it.
 //   Reads return names and titles, never the CMS's contact details.
+//
+//   The CMS token reads one thing here: a stored file's bytes (GET ?slug=&file=),
+//   so the agent CMS can show the photos. It already reads the record that lists
+//   them, and can delete the agent outright; nothing else takes it.
 //
 //   GET                       the roster: one row per agent, with the derived status
 //   GET  ?slug=<slug>         one agent's photo side, with its unfinished uploads
 //   POST {action:'update', slug, pic?, placements?, by?}
+//   POST {action:'create', slug, name, title?, by?}   → a draft agent; 409 if the slug is taken
 //
 //   Files (phase 2):
 //   POST {action:'upload-start', slug, role:'raw'|'output', filename, bytes,
@@ -60,6 +68,7 @@ const MAX_BODY = 32 * 1024;
 /** What each action's body may name. Anything else is refused whole, not partly applied. */
 const BODY_KEYS: Record<string, string[]> = {
   update: ['action', 'slug', 'pic', 'placements', 'by'],
+  create: ['action', 'slug', 'name', 'title', 'by'],
   'upload-start': ['action', 'slug', 'role', 'filename', 'bytes', 'variant', 'capturedAt', 'width', 'height', 'by'],
   'upload-finish': ['action', 'slug', 'upload', 'by'],
   'upload-abort': ['action', 'slug', 'upload', 'by'],
@@ -117,6 +126,14 @@ async function readIndex(store: AgentBlobs): Promise<string[]> {
   return [...new Set([...(Array.isArray(idx) ? idx : []), ...listed])].filter(isSlug);
 }
 
+async function writeIndex(store: AgentBlobs, slugs: string[]): Promise<void> {
+  await store.set(INDEX_KEY, JSON.stringify([...new Set(slugs)].filter(isSlug)));
+}
+
+function randomToken(): string {
+  return [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 /* ───────────────────────────── handler ───────────────────────────── */
 
 export async function handlePics(req: Request, deps: PicsDeps): Promise<Response> {
@@ -142,11 +159,15 @@ export async function handlePics(req: Request, deps: PicsDeps): Promise<Response
       message: 'CB_PICS_TOKEN is the same as CB_CMS_TOKEN. Give the photo tool its own token: the CMS one publishes agent sites.',
     }, 503);
   }
-  if (!safeEqual(bearer(req), secret)) return json({ error: 'unauthorized' }, 401);
+  const url = new URL(req.url);
+  const given = bearer(req);
+  // The CMS token: a stored file's bytes, and nothing else (see SECURITY above).
+  const cmsFileRead = req.method === 'GET' && url.searchParams.has('slug') && url.searchParams.has('file')
+    && !url.searchParams.has('upload') && Boolean(deps.env.CB_CMS_TOKEN) && safeEqual(given, deps.env.CB_CMS_TOKEN);
+  if (!safeEqual(given, secret) && !cmsFileRead) return json({ error: 'unauthorized' }, 401);
 
   try {
     const { store } = deps;
-    const url = new URL(req.url);
 
     const slug = (url.searchParams.get('slug') || '').toLowerCase();
     const uploadId = url.searchParams.get('upload');
@@ -222,10 +243,34 @@ export async function handlePics(req: Request, deps: PicsDeps): Promise<Response
       if (!isSlug(slug)) return json({ error: 'Bad slug' }, 400);
 
       const rec = await readRecord(store, slug);
-      // Agents are created in the agent CMS, or by the one-time import — never here.
-      if (!rec) return json({ error: 'Not found', message: 'No agent with that slug. Add agents in the agent CMS.' }, 404);
       const now = deps.now();
       const by = clean(b.by, 120);
+
+      // A new agent, from the generator: a draft as agent-store's `create` makes one,
+      // with only a name and a title. The CMS fills in the rest, and publishes.
+      if (b.action === 'create') {
+        if (rec) return json({ error: 'exists', message: `${slug} is already in the roster. Pick it instead.`, agent: agentView(rec) }, 409);
+        const name = clean(b.name, 80);
+        if (!name) return json({ error: 'Bad name', message: 'A name is required.' }, 400);
+        const at = new Date(now).toISOString();
+        const next: AgentRecord = {
+          slug,
+          status: 'draft',
+          draft: { identity: { name, displayName: '', title: clean(b.title, 80), licenseNumber: '' } },
+          live: null,
+          previewToken: randomToken(),
+          createdAt: at,
+          updatedAt: at,
+          updatedBy: by,
+          publishedAt: '',
+        };
+        await store.set(slug, JSON.stringify(next));
+        await writeIndex(store, [...(await readIndex(store)), slug]);
+        return json({ ok: true, agent: agentView(next) });
+      }
+
+      // Agents are otherwise created in the agent CMS, or by the one-time import.
+      if (!rec) return json({ error: 'Not found', message: 'No agent with that slug. Add agents in the agent CMS.' }, 404);
 
       /** Write the photo side back. Everything but `pic` goes back exactly as it was read. */
       const savePic = async (pic: Pic) => {

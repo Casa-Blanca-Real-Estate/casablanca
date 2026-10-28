@@ -10,6 +10,10 @@
 <script>
   /* Theme before first paint, so switching never flashes the other palette. */
   try { var t = localStorage.getItem('cb_theme'); if (t === 'night' || t === 'day') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  /* The dev notebook's capture box (docs/dev-notebook/README.md). This page doesn't load
+     studio-header.js (see the masthead note below), so it loads the box itself, on the same
+     terms: only in a browser signed in to the notebook and to the studio. */
+  try { var dn = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null'); if (localStorage.getItem('cb_auth') && dn && dn.token && Date.parse(dn.expiresAt) > Date.now()) { var dns = document.createElement('script'); dns.src = '../../assets/dev-notebook.js'; dns.defer = true; dns.setAttribute('data-cb-dev-notebook', '1'); document.head.appendChild(dns); } } catch (e) {}
 </script>
 <style>
   @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
@@ -209,6 +213,20 @@
   .heroband .face{width:78px;height:78px;background:#1c1a22;border-color:#2e2a38}
   .heroband .face span{color:var(--hdr-ph)}
   .hb-txt{display:flex;flex-direction:column;gap:6px;min-width:0}
+
+  /* Photos from the profile pic generator: .face's tile at gallery scale. */
+  .pic-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .pic-facts{font-size:12.5px;color:var(--body);line-height:1.5}
+  .pic-facts .sep{color:var(--wireline);padding:0 6px}
+  .pics{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+  .pic{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .pic-img{aspect-ratio:1;background:var(--wire);border:1px solid var(--wireline);display:flex;align-items:center;
+    justify-content:center;overflow:hidden;transition:border-color .15s}
+  .pic:hover .pic-img{border-color:var(--accent)}
+  .pic-img img{width:100%;height:100%;object-fit:contain;display:block}
+  .pic-img span{font-size:11px;color:var(--muted)}
+  .pic-cap{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--caption);
+    overflow-wrap:anywhere}
   .hb-name{font-size:clamp(24px,4.4vw,40px);font-weight:800;letter-spacing:-.045em;line-height:.94;
     text-transform:uppercase;color:#fff;overflow-wrap:anywhere}
   .hb-sub{font-size:12px;color:var(--hdr-muted);line-height:1.5}
@@ -417,8 +435,8 @@
     <p class="tight">This tool writes the public sites of real agents, so the backend checks a
       shared secret on every request &mdash; the dashboard&rsquo;s email sign-in is a UI affordance
       and doesn&rsquo;t protect anything.</p>
-    <p>Paste the CMS token (Netlify env <code>CB_CMS_TOKEN</code>). It&rsquo;s held for this tab only
-      and never written to disk.</p>
+    <p>Paste the CMS token (Netlify env <code>CB_CMS_TOKEN</code>). This browser remembers it, in every
+      tab, until you lock the CMS or sign out of the studio.</p>
     <label for="tokenInput">CMS token</label>
     <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
     <div class="err" id="tokenErr"></div>
@@ -518,21 +536,25 @@
    change both together, and neither unilaterally.
 
    All data-derived DOM is built with textContent / createElement,
-   never innerHTML. The CMS token lives in sessionStorage and any
-   script on this origin could read it, so the page loads nothing
-   third-party. See security-model.md §4.
+   never innerHTML. The CMS token lives in localStorage, remembered
+   across tabs until Lock or the studio's sign-out clears it (Kimani's
+   notebook, 2026-10-27), and any script on this origin could read
+   it, so the page loads nothing third-party. See security-model.md §4.
    ═══════════════════════════════════════════════════════════════ */
 
 var BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
 var STORE=BACKEND+'/.netlify/functions/agent-store';
 var COPY=BACKEND+'/.netlify/functions/agent-copy';
+var PICS=BACKEND+'/.netlify/functions/agent-pics';
 var TOKEN_KEY='cb_cms_token';
 
 function $(id){return document.getElementById(id);}
 function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;
   if(text!=null)n.textContent=text;return n;}
-function tok(){try{return sessionStorage.getItem(TOKEN_KEY)||'';}catch(e){return '';}}
-function setTok(v){try{v?sessionStorage.setItem(TOKEN_KEY,v):sessionStorage.removeItem(TOKEN_KEY);}catch(e){}}
+function tok(){try{return localStorage.getItem(TOKEN_KEY)||'';}catch(e){return '';}}
+function setTok(v){try{v?localStorage.setItem(TOKEN_KEY,v):localStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TOKEN_KEY);}catch(e){}}
+// A token typed before it was remembered lives in this tab's sessionStorage: keep it.
+try{var older=sessionStorage.getItem(TOKEN_KEY);if(older&&!tok())setTok(older);}catch(e){}
 
 /* ───────────────────────── theme (dashboard .themebtn) ───────────────────────── */
 var SUN='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></svg>';
@@ -681,6 +703,19 @@ function blankDraft(){
   });
   return d;
 }
+/* Every field the form has, on a draft that may hold only some: an agent made in
+   the profile pic generator starts with a name and a title. Present values win. */
+function fillDraft(d){
+  var out=blankDraft();
+  (function merge(into,from){
+    Object.keys(from||{}).forEach(function(k){
+      var v=from[k];
+      if(v&&typeof v==='object'&&!Array.isArray(v)&&into[k]&&typeof into[k]==='object'&&!Array.isArray(into[k]))merge(into[k],v);
+      else if(v!==undefined)into[k]=v;
+    });
+  })(out,d||{});
+  return out;
+}
 function initials(name){
   return String(name||'').trim().split(/\s+/).filter(function(w){return /[A-Za-z0-9]/.test(w[0]);})
     .slice(0,2).map(function(w){return w[0].toUpperCase();}).join('')||'—';
@@ -817,12 +852,18 @@ function renderRoster(){
 function rosterRow(r){
   var row=el('div','trow');
   var left=el('div','row-l');
-  left.appendChild(faceEl(r.heroPhoto,r.name));
+  var face=faceEl(r.heroPhoto,r.name); left.appendChild(face);
+  // No hero photo yet: the one saved from the profile pic generator, once the row is on screen.
+  if(!r.heroPhoto&&r.photo)lazyFace(face,r.slug,r.photo);
 
   var txt=el('div','row-txt');
   var tr=el('div','titlerow');
   var a=el('a','rowtitle',r.name); a.href='#/agent/'+r.slug; tr.appendChild(a);
   tr.appendChild(el('span','badge badge--'+r.status,r.status));
+  if(r.photos){
+    var ph=el('span','dirty'); ph.appendChild(el('i')); ph.appendChild(el('span',null,r.photos+' photos'));
+    ph.title='Saved from the profile pic generator'; tr.appendChild(ph);
+  }
   if(r.dirty){
     var d=el('span','dirty'); d.appendChild(el('i')); d.appendChild(el('span',null,'Unpublished edits'));
     tr.appendChild(d);
@@ -1007,7 +1048,7 @@ function renderAgent(){
   head.appendChild(el('div','count','/'+S.record.slug));
   c.appendChild(head);
 
-  SECTIONS.forEach(function(s){ c.appendChild(sectionEl(s)); });
+  SECTIONS.forEach(function(s){ c.appendChild(sectionEl(s)); if(s.hero)c.appendChild(photosEl()); });
   c.appendChild(el('div','footline','Draft saves automatically. Nothing reaches the public site until you publish.'));
   c.scrollTop=keepScroll;
   paintSave(S.dirty?'Unsaved changes':'');
@@ -1041,6 +1082,88 @@ function sectionEl(s){
 
   if(s.rows)bd.appendChild(rowsEditor(s.rows));
 
+  sec.appendChild(bd);
+  return sec;
+}
+
+/* ───────── the photos saved from the profile pic generator (Dispatch 12) ─────────
+   They live on the record's `pic`, beside the draft, never in it: nothing here
+   reaches the public site. The bytes come from agent-pics, which lets the CMS
+   token read a stored file and nothing else. */
+var VARIANT_LABEL={R1_Logo:'Round · logo',R2_Logo:'Round · logo 2',R3_Blank:'Round · blank',R4_Clean:'Round · clean',
+  SQ1_GrayLogo:'Square · grey logo',SQ2_Clean:'Square · clean',SQ3_Name:'Square · name',SQ4_ColorName:'Square · colour name',
+  SQ5_ColorClean:'Square · colour clean',SQ6_ColorLogo:'Square · colour logo'};
+var VARIANT_ORDER=Object.keys(VARIANT_LABEL);
+var PLACEMENT_LABEL={gmailSig:'Gmail signature',gmailAvatar:'Gmail profile pic',filemaker:'FileMaker',streeteasy:'StreetEasy',businessCard:'Business card'};
+var picURLs={};
+function picURL(slug,f){
+  if(picURLs[f.key])return picURLs[f.key];
+  var parts=[],n=Math.max(1,f.parts||1);
+  function part(i){
+    if(i>=n)return Promise.resolve();
+    return fetch(PICS+'?slug='+encodeURIComponent(slug)+'&file='+encodeURIComponent(f.key)+'&part='+i,
+      {cache:'no-store',headers:{Authorization:'Bearer '+tok()}})
+      .then(function(r){if(!r.ok)throw new Error('Photo unavailable ('+r.status+')');return r.arrayBuffer();})
+      .then(function(b){parts.push(b);return part(i+1);});
+  }
+  picURLs[f.key]=part(0).then(function(){return URL.createObjectURL(new Blob(parts,{type:f.type||'image/png'}));},
+    function(e){delete picURLs[f.key];throw e;});
+  return picURLs[f.key];
+}
+var faceIO=null;
+function lazyFace(face,slug,f){
+  face.title='Saved from the profile pic generator';
+  var show=function(){ picURL(slug,f).then(function(u){ face.textContent=''; var i=el('img'); i.src=u; i.alt=''; face.appendChild(i); },function(){}); };
+  if(!('IntersectionObserver' in window)){ show(); return; }
+  if(!faceIO)faceIO=new IntersectionObserver(function(es){ es.forEach(function(e){
+    if(e.isIntersecting){ faceIO.unobserve(e.target); e.target.__show(); } }); },{rootMargin:'200px'});
+  face.__show=show; faceIO.observe(face);
+}
+function photosEl(){
+  var slug=S.record.slug, pic=S.record.pic||{}, outs=(pic.outputs||[]).slice();
+  outs.sort(function(a,b){return VARIANT_ORDER.indexOf(a.variant)-VARIANT_ORDER.indexOf(b.variant);});
+  var raws=(pic.raws||[]).length;
+  var sec=el('section','sect'); sec.id='sect-photos';
+  var hd=el('div','sect-hd'), hl=el('div');
+  hl.appendChild(el('div','eyebrow','From the profile pic generator'));
+  hl.appendChild(el('h3',null,'Photos'));
+  hd.appendChild(hl);
+  hd.appendChild(el('div','sect-note','The set saved in the generator. It stays off the site: the page shows the hero photo URL above.'));
+  sec.appendChild(hd);
+  var bd=el('div','sect-bd');
+
+  var facts=[];
+  if(pic.generatedAt)facts.push('Generated '+ago(pic.generatedAt));
+  facts.push(outs.length?outs.length+' of 10 saved':'None saved yet');
+  if(raws)facts.push(raws+(raws===1?' original':' originals')+' stored');
+  var pl=S.record.placements||{}, keys=Object.keys(PLACEMENT_LABEL);
+  var done=keys.filter(function(k){return pl[k]&&(pl[k].state==='done'||pl[k].state==='na');}).length;
+  if(S.record.placements)facts.push(done+' of '+keys.length+' placements done');
+  var line=el('div','pic-facts');
+  facts.forEach(function(f,i){ if(i)line.appendChild(el('span','sep','/')); line.appendChild(el('span',null,f)); });
+  var go=el('a','btn','Open in the roster'); go.href='../profile-pic/#roster'; go.target='_blank'; go.rel='noopener';
+  var top=el('div','pic-top'); top.appendChild(line); top.appendChild(go);
+  bd.appendChild(top);
+
+  if(!outs.length){
+    bd.appendChild(el('div','sect-note','Generate the set in the profile pic generator, then “Save to the roster” under its downloads, picking this agent.'));
+  }else{
+    var grid=el('div','pics');
+    outs.forEach(function(f){
+      var tile=el('a','pic'); tile.href='#'; tile.title='Open '+f.filename;
+      var box=el('div','pic-img'); box.appendChild(el('span',null,'…'));
+      tile.appendChild(box);
+      tile.appendChild(el('div','pic-cap',VARIANT_LABEL[f.variant]||f.variant||f.filename));
+      tile.onclick=function(e){ e.preventDefault();
+        picURL(slug,f).then(function(u){ var a=document.createElement('a'); a.href=u; a.download=f.filename; a.click(); },
+          function(err){ toast(err.message,true); }); };
+      picURL(slug,f).then(function(u){ box.textContent=''; var i=el('img'); i.src=u; i.alt=VARIANT_LABEL[f.variant]||''; box.appendChild(i); },
+        function(){ box.textContent=''; box.appendChild(el('span',null,'Unavailable')); });
+      grid.appendChild(tile);
+    });
+    bd.appendChild(grid);
+    bd.appendChild(el('div','sect-note','Click a photo to download it.'));
+  }
   sec.appendChild(bd);
   return sec;
 }
@@ -1560,14 +1683,14 @@ $('tokenGo').onclick=tryToken;
 $('tokenInput').addEventListener('keydown',function(e){ if(e.key==='Enter')tryToken(); });
 
 $('acctBtn').onclick=function(){
-  if(tok()){ setTok(''); paintAcct(); toast('Locked. The token is gone from this tab.'); openToken(); }
+  if(tok()){ setTok(''); paintAcct(); toast('Locked. This browser has forgotten the token.'); openToken(); }
   else openToken();
 };
 function paintAcct(){
   var on=!!tok(), t=$('acctTile'), n=$('acctName');
   t.hidden=!on; t.textContent='CB';
   n.textContent=on?'Unlocked':'Locked';
-  $('acctBtn').title=on?'Locked to this tab — click to clear the token':'Enter the CMS token';
+  $('acctBtn').title=on?'Remembered in this browser — click to lock and forget the token':'Enter the CMS token';
 }
 
 function openNew(){
@@ -1706,7 +1829,7 @@ function route(){
     S.view='agent'; S.slug=slug; S.lastFlags={};
     api(STORE+'?slug='+encodeURIComponent(slug))
       .then(function(d){
-        S.record=d.record; S.draft=d.record.draft||blankDraft(); S.draft.ai=S.draft.ai||{};
+        S.record=d.record; S.draft=fillDraft(d.record.draft); S.draft.ai=S.draft.ai||{};
         S.dirty=false; render();
       })
       .catch(function(e){

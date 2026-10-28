@@ -47,8 +47,21 @@ and out of scope here, but they are the reason "the dashboard has sign-in" must 
 - Reads are gated too, not just writes. The records hold agents' direct phone numbers and email
   addresses; an unauthenticated roster read would be a contact-list scrape.
 
-The token is typed by the human into the CMS and held in **`sessionStorage`** — it dies with the
-tab, and it is never written into `localStorage`, never in the URL, never in the committed HTML.
+The token is typed by the human into the CMS and held in **`localStorage`**: the browser remembers
+it across tabs and visits until **Lock** in the CMS, a rejected request, or the studio's sign-out
+forgets it. It is never in the URL and never in the committed HTML. (Until 2026-10-28 it lived in
+`sessionStorage` and died with the tab. Kimani asked for it to stay — "this ain't Guantanamo Bay" —
+since he is the one user and was re-pasting it in every tab. The cost is that the token now sits on
+that machine's disk; a shared or borrowed computer should use Lock.) The roster token,
+`CB_PICS_TOKEN`, is held the same way in the profile pic generator.
+
+**The CMS token reads one thing from the photo side.** `agent-pics` takes `CB_CMS_TOKEN` for a
+stored file's bytes (`GET ?slug=&file=`) and nothing else, so the CMS can show the photos saved
+from the generator. The CMS token already reads the record listing those files and can delete the
+agent outright, so this gives it nothing it couldn't reach. The reverse grant is small too:
+`CB_PICS_TOKEN` can **create** an agent, as a draft with a name and a title, so a photo can be
+saved for someone the CMS hasn't met. It can't publish, edit the draft afterwards, or overwrite an
+agent that exists.
 
 ### Payload validation, because the output becomes public HTML
 
@@ -129,7 +142,7 @@ then give the tools a shared low-privilege token. Worth its own dispatch.
 | **No identity.** | The token says *someone authorised*, never *who*. The `updatedBy` field is whatever the browser's `cb_auth` says, is trivially forged, and is a convenience label — **not an audit trail.** Treat it as such in any conversation about who changed a bio. |
 | **No per-agent scoping of writes.** | Whoever holds the token can edit, publish, suspend or archive **every** agent. The CMS is single-tenant by design; per-agent auth is Slice 6 and is explicitly not built on spec. |
 | **Revocation is all-or-nothing.** | One person leaves, everyone re-learns a new token. At one user this is free. At five it is the thing that will go wrong. |
-| **XSS on the tool page would take the token.** | `sessionStorage` is readable by any script on the origin. The CMS loads no third-party scripts and builds its DOM through `textContent` and `createElement` rather than `innerHTML` for anything data-derived, which is the mitigation — but it is a mitigation, not a boundary. |
+| **XSS on the tool page would take the token.** | `localStorage` is readable by any script on the origin. The CMS loads no third-party scripts and builds its DOM through `textContent` and `createElement` rather than `innerHTML` for anything data-derived, which is the mitigation — but it is a mitigation, not a boundary. |
 | **The token will end up in a password manager, and possibly in a chat log.** | It is a human-typed shared password. Plan for it leaking, which mostly means: make rotating it cheap, and do not give it powers beyond writing agent records. This is also the single strongest argument against the git-commit storage option — see `storage-decision.md` §Option B. |
 | **No rate limiting.** | Netlify does not rate-limit this path. A leaked token is unlimited writes *and* unlimited Haiku spend until it is rotated. |
 | **No protection against a legitimate mistake.** | Publishing the wrong text to the right agent passes every check here. The preview step is the control for that, and it is a human one. |

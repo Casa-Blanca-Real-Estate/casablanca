@@ -301,6 +301,14 @@ async function triggerBuild(reason) {
 
 /* ───────────────────────────── shaping ───────────────────────────── */
 
+const outputs = (rec) => (rec.pic && Array.isArray(rec.pic.outputs) ? rec.pic.outputs : []);
+// The round clean variant if it's there, else the first stored.
+function rosterPhoto(rec) {
+  const all = outputs(rec);
+  const f = all.find((o) => o && o.variant === 'R4_Clean') || all[0];
+  return f && f.key ? { key: f.key, parts: f.parts || 1, type: f.type || '' } : null;
+}
+
 function summarise(rec) {
   const d = rec.draft || {};
   const l = rec.live || {};
@@ -312,6 +320,10 @@ function summarise(rec) {
     customDomain: (d.delivery && d.delivery.customDomain) || '',
     studioUrl: (d.delivery && d.delivery.studioUrl) || '',
     heroPhoto: (d.assets && d.assets.heroPhoto) || '',
+    // The photos the profile pic generator saved (the photo side, Dispatch 12): how
+    // many, and which one the roster shows, read through agent-pics.
+    photos: outputs(rec).length,
+    photo: rosterPhoto(rec),
     updatedAt: rec.updatedAt || '',
     updatedBy: rec.updatedBy || '',
     publishedAt: rec.publishedAt || '',

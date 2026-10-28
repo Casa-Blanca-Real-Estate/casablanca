@@ -149,9 +149,11 @@ describe('the photo side never reaches the public site', () => {
 
   test('and the pics function has no publish of its own', async () => {
     const before = await raw();
-    for (const action of ['publish', 'create', 'save', 'status', 'delete']) {
+    for (const action of ['publish', 'save', 'status', 'delete']) {
       assert.equal((await picsCall({ action, slug: 'sam-valk' })).status, 400, action);
     }
+    // Its create makes drafts only, and never over an agent who exists.
+    assert.equal((await picsCall({ action: 'create', slug: 'sam-valk', name: 'Sam Valk' })).status, 409);
     assert.deepEqual(await raw(), before);
   });
 });

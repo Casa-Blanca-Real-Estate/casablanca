@@ -1049,6 +1049,8 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   $('signOutBtn').onclick=function(){
     var hadNotebook=dnSignedIn();
     localStorage.removeItem('cb_auth');
+    // The CMS and roster tokens are remembered across tabs; signing out forgets them.
+    localStorage.removeItem('cb_cms_token'); localStorage.removeItem('cb_pics_token');
     endNotebook().then(function(){ if(hadNotebook)location.reload(); else applyAuth(); });
   };
   $('acctMenu').addEventListener('click',function(e){e.stopPropagation();});
