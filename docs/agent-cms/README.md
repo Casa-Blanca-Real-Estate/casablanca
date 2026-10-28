@@ -56,6 +56,13 @@ proves both). Every write in `agent-store` edits the record it read and keeps ke
 know, so a CMS save keeps the photo side. Keep it that way. Deleting an agent here deletes
 their photo side too.
 
+**The CMS shows the photos.** An agent's page has a **Photos** panel under Hero: the set saved
+from the generator, when it was generated, how many placements are done, and a download per photo.
+The roster shows the round clean photo where there's no hero photo URL. The bytes come through
+`agent-pics`, which lets the CMS token read a stored file and nothing else. Photos never go on the
+site by themselves: the page still shows the hero photo URL. And the generator's **Save to the
+roster** can add a new agent (a draft, name and title only) when the person isn't in the store
+yet; the CMS fills in the rest when it opens them.
 **Empty stays empty.** A blank stat is `null`, never `0` — "0 years in NYC" is a false claim about
 a real person, and both the store and the form are written to make it impossible.
 
@@ -69,7 +76,8 @@ NETLIFY_BUILD_HOOK=https://api.netlify.com/build_hooks/…   # optional
 ANTHROPIC_API_KEY=…                    # required for autofill
 ```
 
-The CMS prompts for the token on load and holds it in `sessionStorage` for that tab only.
+The CMS prompts for the token once and the browser remembers it (`localStorage`), in every tab,
+until Lock in the CMS or the studio's sign-out. `security-model.md` §2 has the trade.
 The functions only run on Netlify — opening the file locally gets an honest "backend
 unreachable", not a hang.
 

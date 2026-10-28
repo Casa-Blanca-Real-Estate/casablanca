@@ -117,7 +117,7 @@ export const MAX_PLACEMENT_NOTE = 300;
 export interface AgentRecord {
   slug: string;
   status?: string;
-  draft?: { identity?: { name?: string; title?: string } } | null;
+  draft?: { identity?: { name?: string; displayName?: string; title?: string; licenseNumber?: string } } | null;
   live?: { identity?: { name?: string; title?: string } } | null;
   pic?: unknown;
   placements?: unknown;

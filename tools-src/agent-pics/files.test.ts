@@ -156,16 +156,28 @@ describe('the profile-pic files (phase 2)', () => {
     assert.deepEqual((await send('GET', `?slug=rikki-t&upload=${up.id}`)).body.received, []);
   });
 
-  test('every file route needs the pics token', async () => {
+  test('every file route needs the pics token, except reading a stored file, which the CMS token may', async () => {
     const data = fileBytes(100);
     const key = (await upload('raw', 'a.jpg', data)).file.key;
     const up = (await post({ action: 'upload-start', role: 'raw', filename: 'b.jpg', bytes: 10 })).body.upload;
     for (const token of ['', 'nope', CMS]) {
-      assert.equal((await send('GET', `?slug=rikki-t&file=${key}&part=0`, undefined, token)).status, 401);
       assert.equal((await send('POST', `?slug=rikki-t&upload=${up.id}&part=0`, fileBytes(10), token)).status, 401);
       assert.equal((await send('GET', `?slug=rikki-t&upload=${up.id}`, undefined, token)).status, 401);
+      assert.equal((await send('GET', `?slug=rikki-t&file=${key}&part=0&upload=${up.id}`, undefined, token)).status, 401);
+      assert.equal((await send('POST', '?slug=rikki-t', { action: 'file-delete', slug: 'rikki-t', key }, token)).status, 401);
     }
+    for (const token of ['', 'nope']) {
+      assert.equal((await send('GET', `?slug=rikki-t&file=${key}&part=0`, undefined, token)).status, 401);
+    }
+    // The agent CMS shows the photos: the bytes, with its own token.
+    const viaCms = await send('GET', `?slug=rikki-t&file=${key}&part=0`, undefined, CMS);
+    assert.equal(viaCms.status, 200);
+    assert.deepEqual(viaCms.bytes, data);
+    deps.env = { CB_PICS_TOKEN: PICS };
+    assert.equal((await send('GET', `?slug=rikki-t&file=${key}&part=0`, undefined, CMS)).status, 401, 'no CMS token configured: nothing matches it');
+    deps.env = { CB_PICS_TOKEN: PICS, CB_CMS_TOKEN: CMS };
     assert.deepEqual((await send('GET', `?slug=rikki-t&upload=${up.id}`)).body.received, [], 'nothing was stored');
+    assert.equal((await stored()).pic.raws.length, 1, 'nothing was deleted');
   });
 
   test('what may be stored: camera files and JPEG/PNG originals, the ten variants, within size', async () => {

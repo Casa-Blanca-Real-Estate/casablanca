@@ -103,6 +103,41 @@ describe('the profile-pic roster API', () => {
     assert.equal((await stored('rikki-t')).pic, undefined, 'nothing was written');
   });
 
+  test('create makes a draft agent with a name and a title, in the index, and nothing else', async () => {
+    const res = await call('POST', { token: PICS, body: { action: 'create', slug: 'sam-v', name: '  Sam <b>Valk</b> ', title: 'Licensed Real Estate Salesperson', by: 'kimani@casa-blanca.com' } });
+    assert.equal(res.status, 200, res.text);
+    assert.equal(res.body.agent.slug, 'sam-v');
+    assert.equal(res.body.agent.name, 'Sam bValk/b');
+    assert.equal(res.body.agent.status, 'none');
+    const rec = await stored('sam-v');
+    assert.equal(rec.status, 'draft', 'a draft: not on the public site');
+    assert.equal(rec.live, null);
+    assert.equal(rec.publishedAt, '');
+    assert.deepEqual(rec.draft, { identity: { name: 'Sam bValk/b', displayName: '', title: 'Licensed Real Estate Salesperson', licenseNumber: '' } });
+    assert.match(rec.previewToken, /^[0-9a-f]{32}$/);
+    assert.equal(rec.updatedBy, 'kimani@casa-blanca.com');
+    assert.equal(rec.pic, undefined);
+    assert.deepEqual(JSON.parse((await store.get('_index', { type: 'text' }))!), ['rikki-t', 'james-c', 'sam-v']);
+    const roster = (await call('GET', { token: PICS })).body.roster.map((r: { slug: string }) => r.slug);
+    assert.ok(roster.includes('sam-v'), 'and the roster lists them');
+    await (store as unknown as { delete(k: string): Promise<void> }).delete('sam-v');
+  });
+
+  test("create refuses a taken slug, a blank name, a bad slug, extra fields, and the CMS token", async () => {
+    const before = await stored('rikki-t');
+    const taken = await call('POST', { token: PICS, body: { action: 'create', slug: 'rikki-t', name: 'Someone Else' } });
+    assert.equal(taken.status, 409);
+    assert.equal(taken.body.agent.slug, 'rikki-t', 'and says who has it, so the generator can pick them');
+    assert.deepEqual(await stored('rikki-t'), before, 'the record is untouched');
+    assert.equal((await call('POST', { token: PICS, body: { action: 'create', slug: 'no-name', name: '  ' } })).status, 400);
+    assert.equal((await call('POST', { token: PICS, body: { action: 'create', slug: '../x', name: 'X' } })).status, 400);
+    const extra = await call('POST', { token: PICS, body: { action: 'create', slug: 'pub-x', name: 'X', status: 'live' } });
+    assert.equal(extra.status, 400);
+    assert.match(extra.body.message, /status/);
+    assert.equal((await call('POST', { token: CMS, body: { action: 'create', slug: 'cms-x', name: 'X' } })).status, 401);
+    for (const slug of ['no-name', 'pub-x', 'cms-x']) assert.equal(await store.get(slug, { type: 'text' }), null);
+  });
+
   test('a preflight gets 204 with no body', async () => {
     const res = await call('OPTIONS');
     assert.equal(res.status, 204);

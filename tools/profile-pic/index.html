@@ -912,7 +912,7 @@ main.roster-mode > :not(.view-tabs):not(#rosterView):not(#lightbox){ display: no
         <tbody id="roRows"></tbody>
       </table>
       <p class="ro-note" id="roTotal"></p>
-      <p class="ro-note">The status is worked out, never typed: <b>none</b>, then <b>raw</b> once an original exists, <b>generated</b>, and <b>deployed</b> when all five placements are done or don't apply. A placement done before the latest photo was generated counts as not done, and a JPEG or PNG taken after it puts the agent back at raw. Add agents in the <a href="../agent-cms/">Agent CMS</a>; the rest of the roster arrives with the one-time import from the signatures doc.</p>
+      <p class="ro-note">The status is worked out, never typed: <b>none</b>, then <b>raw</b> once an original exists, <b>generated</b>, and <b>deployed</b> when all five placements are done or don't apply. A placement done before the latest photo was generated counts as not done, and a JPEG or PNG taken after it puts the agent back at raw. Add agents in the <a href="../agent-cms/">Agent CMS</a>, or as you save a set from the generator; the rest of the roster arrives with the one-time import from the signatures doc.</p>
     </div>
     <p class="ro-note" id="roStatus" role="status" aria-live="polite"></p>
   </section>
@@ -1939,7 +1939,9 @@ window.cbZip = downloadAllZip;
    Reads every agent in the agent store through agent-pics, and writes
    only the photo side of a record: whether an original is in Drive,
    when the set was generated, and notes. The status is derived on the
-   server. Agents are created in the Agent CMS, never here.
+   server. Agents are made in the Agent CMS; the generator's save can make
+   one too, as a draft holding a name and a title, when the person isn't in
+   the roster yet. The CMS fills in the rest and publishes.
 
    Phase 2 stores the files: originals (a NEF is kept, never decoded; a
    JPEG or PNG is a working file the cutout can re-run against) and the
@@ -1948,7 +1950,8 @@ window.cbZip = downloadAllZip;
    request, and resumes: picking the same file again sends only the parts
    that didn't arrive. Downloads come back the same way and are joined here.
 
-   The token (CB_PICS_TOKEN) lives in sessionStorage for this tab only.
+   The token (CB_PICS_TOKEN) lives in localStorage: this browser remembers
+   it across tabs until it's rejected or the studio's sign-out clears it.
    All data-derived DOM is built with textContent, never innerHTML.
    ═══════════════════════════════════════════════════════════════ */
 (function(){
@@ -1963,8 +1966,10 @@ window.cbZip = downloadAllZip;
 
   function $(id){return document.getElementById(id);}
   function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
-  function tok(){try{return sessionStorage.getItem(TOKEN_KEY)||'';}catch(e){return '';}}
-  function setTok(v){try{v?sessionStorage.setItem(TOKEN_KEY,v):sessionStorage.removeItem(TOKEN_KEY);}catch(e){}}
+  function tok(){try{return localStorage.getItem(TOKEN_KEY)||'';}catch(e){return '';}}
+  function setTok(v){try{v?localStorage.setItem(TOKEN_KEY,v):localStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TOKEN_KEY);}catch(e){}}
+  // A token typed before it was remembered lives in this tab's sessionStorage: keep it.
+  try{var older=sessionStorage.getItem(TOKEN_KEY);if(older&&!tok())setTok(older);}catch(e){}
   function whoami(){try{return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}catch(e){return '';}}
   function say(msg){$('roStatus').textContent=msg||'';}
   var toastT=null;
@@ -1989,7 +1994,7 @@ window.cbZip = downloadAllZip;
       .then(function(d){
         if(r.status===401){setTok('');connect('That token was rejected. Paste CB_PICS_TOKEN again.');throw new Error('unauthorized');}
         if(r.status===503){setTok('');connect((d&&d.message)||'The roster isn’t configured on the backend yet.');throw new Error('not-configured');}
-        if(!r.ok)throw new Error((d&&d.message)||(d&&d.error)||('Request failed ('+r.status+')'));
+        if(!r.ok){var e=new Error((d&&d.message)||(d&&d.error)||('Request failed ('+r.status+')'));e.status=r.status;e.data=d;throw e;}
         return d;
       });
     },function(){throw new Error('Backend unreachable. The roster only runs on Netlify, not from a local file.');});
@@ -2010,7 +2015,7 @@ window.cbZip = downloadAllZip;
 
   function connect(msg){
     $('roConnect').hidden=false;$('roBody').hidden=true;
-    $('roConnectMsg').textContent=msg||'The roster reads the agent store. Paste CB_PICS_TOKEN from Netlify; it’s held for this tab only.';
+    $('roConnectMsg').textContent=msg||'The roster reads the agent store. Paste CB_PICS_TOKEN from Netlify; this browser remembers it.';
     say('');
     setTimeout(function(){$('roToken').focus();},0);
   }
@@ -2466,18 +2471,54 @@ window.cbZip = downloadAllZip;
     var r=el('div','ro-row');r.style.marginTop='8px';
     var sel=el('select','ro-input');sel.setAttribute('aria-label','Agent');
     sel.appendChild(el('option',null,'Pick an agent…')).value='';
-    var guess=S.genSlug||slugFor(set.first,set.last);
+    var guess=S.genSlug||slugFor(set.first,set.last),known=false;
     S.roster.slice().sort(function(x,y){return x.name.localeCompare(y.name);}).forEach(function(a){
-      var o=el('option',null,a.name+(a.outputs?' · has '+a.outputs+' stored':''));o.value=a.slug;if(a.slug===guess)o.selected=true;sel.appendChild(o);
+      var o=el('option',null,a.name+(a.outputs?' · has '+a.outputs+' stored':''));o.value=a.slug;if(a.slug===guess){o.selected=true;known=true;}sel.appendChild(o);
     });
-    var go=el('button','ro-btn','Save '+set.blobs.length+' files');go.type='button';go.disabled=!sel.value;
-    sel.onchange=function(){go.disabled=!sel.value;};
+    // Someone the roster hasn't met: make them here, as a draft the Agent CMS fills in.
+    var NEW='__new';
+    var on=el('option',null,'+ New agent…');on.value=NEW;sel.appendChild(on);
+    var fullName=(String(set.first||'')+' '+String(set.last||'')).trim();
+    if(!known&&fullName)on.selected=true;
+    var nr=el('div','ro-row');nr.style.marginTop='8px';
+    var nName=el('input','ro-input');nName.type='text';nName.placeholder='Full name';nName.setAttribute('aria-label','New agent’s full name');nName.value=fullName;nName.style.flex='2';
+    var nSlug=el('input','ro-input');nSlug.type='text';nSlug.placeholder='slug';nSlug.setAttribute('aria-label','New agent’s slug');nSlug.value=guess;nSlug.style.flex='1';
+    var slugTouched=false;
+    nSlug.oninput=function(){slugTouched=true;ready();};
+    nName.oninput=function(){if(!slugTouched){var w=nName.value.trim().split(/\s+/);nSlug.value=slugFor(w[0]||'',w.length>1?w[w.length-1]:'');}ready();};
+    nr.appendChild(nName);nr.appendChild(nSlug);
+    var go=el('button','ro-btn','');go.type='button';
+    var newNote=el('p','ro-note','A new agent goes into the roster and the Agent CMS as a draft, with just a name and a title. Nothing goes on a site until the CMS publishes them.');
+    function isNew(){return sel.value===NEW;}
+    function ready(){
+      nr.style.display=isNew()?'':'none';newNote.hidden=!isNew();
+      go.textContent=(isNew()?'Add and save ':'Save ')+set.blobs.length+' files';
+      go.disabled=isNew()?!(nName.value.trim()&&/^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/.test(nSlug.value.trim())):!sel.value;
+    }
+    sel.onchange=ready;
     var prog=el('span','ro-progress');prog.setAttribute('role','status');
-    r.appendChild(sel);r.appendChild(go);box.appendChild(r);box.appendChild(prog);
+    r.appendChild(sel);r.appendChild(go);box.appendChild(r);box.appendChild(nr);box.appendChild(prog);
+    box.appendChild(newNote);
     box.appendChild(el('p','ro-note','Saving replaces the set stored for that agent, and stamps today as its generate date.'));
+    ready();
+    /* The agent to save to: the one picked, or the one just made (or found, if the slug was taken). */
+    function target(){
+      if(!isNew())return Promise.resolve(S.roster.filter(function(a){return a.slug===sel.value;})[0]);
+      var slug=nSlug.value.trim();prog.textContent='Adding '+nName.value.trim()+'…';
+      return api({body:{action:'create',slug:slug,name:nName.value.trim(),title:'Licensed Real Estate Salesperson',by:whoami()}})
+        .then(function(d){return d.agent;},function(e){
+          if(e.status===409&&e.data&&e.data.agent){toast(e.data.agent.name+' was already in the roster. Saving to them');return e.data.agent;}
+          throw e;
+        }).then(function(agent){
+          if(!S.roster.some(function(a){return a.slug===agent.slug;}))S.roster.push(agent);
+          S.detail[agent.slug]=agent;return agent;
+        });
+    }
     go.onclick=function(){
-      var slug=sel.value,agent=S.roster.filter(function(a){return a.slug===slug;})[0];if(!agent)return;
-      go.disabled=true;sel.disabled=true;var i=0;
+      go.disabled=true;sel.disabled=true;nName.disabled=true;nSlug.disabled=true;
+      target().then(function(agent){
+      if(!agent)throw new Error('Pick an agent first.');
+      var slug=agent.slug,i=0;
       function next(){
         if(i>=set.blobs.length)return Promise.resolve();
         var b=set.blobs[i++];prog.textContent='Saving '+i+' of '+set.blobs.length+'…';
@@ -2485,10 +2526,13 @@ window.cbZip = downloadAllZip;
           return uploadFile(slug,new File([blob],b.dlName,{type:b.mime||blob.type}),{role:'output',variant:b.id});
         }).then(next);
       }
-      next().then(function(){
-        prog.textContent='Saved '+set.blobs.length+' files to '+agent.name+'.';toast('Saved to '+agent.name);
-        go.disabled=false;sel.disabled=false;render();
-      },function(e){prog.textContent=e.message;go.disabled=false;sel.disabled=false;});
+      return next().then(function(){
+        // Drawn again, so a new agent is the one picked now.
+        S.genSlug=slug;render();window.cbPicsOffer(set);
+        var p2=document.querySelector('#roSave .ro-progress');if(p2)p2.textContent='Saved '+set.blobs.length+' files to '+agent.name+'.';
+        toast('Saved to '+agent.name);
+      });
+      }).catch(function(e){prog.textContent=e.message;go.disabled=false;sel.disabled=false;nName.disabled=false;nSlug.disabled=false;});
     };
   };
 

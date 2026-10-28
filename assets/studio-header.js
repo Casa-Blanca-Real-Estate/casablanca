@@ -52,6 +52,8 @@
       who.onclick = function () {
         if (!confirm('Sign out of Dev on this device?')) return;
         localStorage.removeItem('cb_auth');
+        // The CMS and roster tokens are remembered across tabs; signing out forgets them.
+        localStorage.removeItem('cb_cms_token'); localStorage.removeItem('cb_pics_token');
         var done = function () { location.reload(); };
         try {
           var d = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null');

@@ -130,16 +130,20 @@ await T('#tokenInput').fill('wrong');
 await T('#tokenGo').click();
 await page.waitForFunction(() => document.querySelector('#tokenErr').textContent.includes('rejected'), null, { timeout: 4000 });
 ok('bad token is rejected and says so', (await T('#tokenErr').innerText()).includes('rejected'));
-ok('bad token is not kept', await page.evaluate(() => sessionStorage.getItem('cb_cms_token')) === null
-  || await page.evaluate(() => sessionStorage.getItem('cb_cms_token')) === '');
+ok('bad token is not kept', await page.evaluate(() => localStorage.getItem('cb_cms_token')) === null
+  && await page.evaluate(() => sessionStorage.getItem('cb_cms_token')) === null);
 
 await T('#tokenInput').fill(TOKEN);
 await T('#tokenGo').click();
 await page.waitForFunction(() => !document.querySelector('#tokenModal').classList.contains('open'), null, { timeout: 8000 });
 ok('good token unlocks', !(await T('#tokenModal').evaluate((n) => n.classList.contains('open'))));
-ok('token is in sessionStorage not localStorage',
-  (await page.evaluate(() => sessionStorage.getItem('cb_cms_token'))) === TOKEN &&
-  (await page.evaluate(() => localStorage.getItem('cb_cms_token'))) === null);
+// Remembered across tabs and visits (Kimani's notebook, 2026-10-27): localStorage, not this tab's sessionStorage.
+ok('token is remembered in localStorage',
+  (await page.evaluate(() => localStorage.getItem('cb_cms_token'))) === TOKEN &&
+  (await page.evaluate(() => sessionStorage.getItem('cb_cms_token'))) === null);
+await page.reload();
+await page.waitForSelector('#center .head', { timeout: 6000 });
+ok('a reload does not ask for the token again', !(await T('#tokenModal').evaluate((n) => n.classList.contains('open'))));
 
 // The only console error so far is the 401 from the deliberate wrong-token
 // attempt above. Reset, so the final check covers the rest of the run.
@@ -159,12 +163,16 @@ await page.waitForSelector('#sect-hero');
 ok('lands in the agent view', (await page.evaluate(() => location.hash)) === '#/agent/sam-valk');
 
 /* ── 4. sections are the page's sections, in page order ── */
-const secs = await page.locator('.sect .sect-hd h3').allInnerTexts();
+// The photos panel sits under Hero but isn't one of the page's sections.
+const secs = await page.locator('.sect:not(#sect-photos) .sect-hd h3').allInnerTexts();
 ok('page-shaped sections in page order',
   JSON.stringify(secs) === JSON.stringify(['Hero', 'About', 'The team', 'Past deals', 'Client stories',
     'Drop me a note', 'Buyer’s guide', 'Search listing', 'Delivery']),
   JSON.stringify(secs));
-const eyebrows = await page.locator('.sect .eyebrow').allInnerTexts();
+ok('the photos from the generator sit under Hero, and say where they came from',
+  (await page.locator('.sect .sect-hd h3').allInnerTexts())[1] === 'Photos' &&
+  (await page.locator('#sect-photos').innerText()).includes('None saved yet'));
+const eyebrows = await page.locator('.sect:not(#sect-photos) .eyebrow').allInnerTexts();
 const eb = eyebrows.map((e) => e.toLowerCase());
 ok('each section says which page it is on', eb[0].includes('sales') && eb[5].includes('every page'),
   JSON.stringify(eyebrows));
@@ -253,7 +261,7 @@ await page2.route('**/.netlify/functions/agent-*', mock);
 await page2.goto(BASE + link);
 await page2.waitForSelector('#pvSurface:not([hidden])', { timeout: 6000 });
 ok('preview link works with no CMS token',
-  (await page2.evaluate(() => sessionStorage.getItem('cb_cms_token'))) === null &&
+  (await page2.evaluate(() => localStorage.getItem('cb_cms_token'))) === null &&
   (await page2.locator('#pvSurface').innerText()).includes('SAM VALK'));
 ok('read-only preview offers no way back into editing',
   (await page2.locator('#pvBarActs .btn').count()) === 0);
@@ -271,7 +279,7 @@ await page2.close();
 
 /* ── 12b. an imported Google testimonial displays as one (Slice 5 lands the ingestion) ── */
 await page.goto(BASE + '#/agent/sam-valk');
-await page.evaluate((t) => sessionStorage.setItem('cb_cms_token', t), TOKEN);
+await page.evaluate((t) => localStorage.setItem('cb_cms_token', t), TOKEN);
 await page.reload();
 await page.waitForSelector('#sect-stories');
 await page.locator('#sect-stories .btn', { hasText: 'Add testimonial' }).click();
@@ -294,7 +302,7 @@ ok('preview badges a Google-sourced testimonial',
 
 /* ── 13. roster shows state, and suspend takes the site down ── */
 await page.goto(BASE + '#/');
-await page.evaluate((t) => sessionStorage.setItem('cb_cms_token', t), TOKEN);
+await page.evaluate((t) => localStorage.setItem('cb_cms_token', t), TOKEN);
 await page.reload();
 await page.waitForSelector('.trow');
 const rosterTxt = await T('.list').innerText();
@@ -311,7 +319,7 @@ ok('suspend keeps the published copy', !!db.get('sam-valk').live);
 
 /* ── 13b. a failed save must not lose the edits on navigation ── */
 await page.goto(BASE + '#/agent/sam-valk');
-await page.evaluate((t) => sessionStorage.setItem('cb_cms_token', t), TOKEN);
+await page.evaluate((t) => localStorage.setItem('cb_cms_token', t), TOKEN);
 await page.reload();
 await page.waitForSelector('#f_content_bio');
 await page.locator('#f_content_bio').fill('Edits that must survive a failed save.');
