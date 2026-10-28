@@ -34,7 +34,7 @@ import { hasSF, isScreen, sortReadiness, type Level, type ScreenId } from './scr
 import { SortFirst } from './SortFirst.tsx';
 import { SortStep } from './SortStep.tsx';
 import { ReviewFlow } from '../review/ReviewFlow.tsx';
-import { Center, DevStrip, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
+import { Center, DevStrip, DRAWER_SLIDE_MS, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
 import { ReportBar } from '../shell/ReportBar.tsx';
 import { ProgressRow, WorkspaceHeader } from '../shell/WorkspaceHeader.tsx';
 
@@ -169,6 +169,16 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [screen, setScreen] = useState<ScreenId>(screenFromUrl);
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
   const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
+  // The drawer stays mounted for its slide out (shell.css), then goes (Kimani's notebook, 2026-10-27).
+  const [drawerShown, setDrawerShown] = useState(drawerOpen);
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerShown(true);
+      return;
+    }
+    const t = window.setTimeout(() => setDrawerShown(false), DRAWER_SLIDE_MS);
+    return () => window.clearTimeout(t);
+  }, [drawerOpen]);
   const [propertyType, setPropertyTypeState] = useState<'condo' | 'coop'>('condo');
   const [viewAsNewAgent, setViewAsNewAgentState] = useState(readViewAsNew);
   const [sortFilter, setSortFilter] = useState<{ incomplete: boolean; tags: string[] }>({ incomplete: false, tags: [] });
@@ -738,7 +748,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
           <ReviewFlow ws={ws} startAt={reviewing.at} onClose={() => setReviewing(null)} />
         </ErrorBoundary>
       )}
-      {drawerOpen && <HubertDrawer ws={ws} />}
+      {drawerShown && <HubertDrawer ws={ws} closing={!drawerOpen} />}
       {toastText && (
         <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">
           {toastText.text}

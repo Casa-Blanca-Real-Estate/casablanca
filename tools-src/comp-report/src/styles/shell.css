@@ -254,9 +254,23 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 .hubert-drawer.resizing { user-select: none; }
 body:has(.hubert-drawer.resizing) { cursor: col-resize; user-select: none; }
 
+/* Fixed, so it stays in view on a long page; it rides the drawer's left edge when the drawer is open. */
 .sh-hubert-tab {
-  position: absolute; right: 0; top: 132px; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  position: fixed; right: 0; top: calc(var(--sh-bar-h) + 82px); z-index: 46; display: flex; flex-direction: column; align-items: center; gap: 12px;
   background: var(--cb-black); color: #fff; border: 0; padding: 16px 11px; cursor: pointer;
+  transition: right .22s ease;
+}
+.sh-hubert-tab.open { right: var(--sh-drawer-w); }
+body:has(.hubert-drawer.resizing) .sh-hubert-tab { transition: none; }
+
+/* The drawer slides in from the right, and back out (DRAWER_SLIDE_MS in Pieces.tsx). */
+@keyframes hubert-slide-in { from { transform: translateX(100%); } to { transform: none; } }
+.hubert-drawer { animation: hubert-slide-in .22s ease; transition: transform .22s ease; }
+.hubert-drawer.closing { transform: translateX(100%); }
+.sh-page { transition: margin-right .22s ease; }
+body:has(.hubert-drawer.resizing) .sh-page { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .hubert-drawer, .sh-hubert-tab, .sh-page { animation: none; transition: none; }
 }
 .sh-hubert-tab .sh-spark { font-size: 15px; line-height: 1; }
 .sh-hubert-word { writing-mode: vertical-rl; font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }

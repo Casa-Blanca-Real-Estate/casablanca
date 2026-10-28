@@ -10,7 +10,8 @@ import { compStatus } from '../workspace/comps.tsx';
 import type { ScreenId } from '../workspace/screens.ts';
 import { shortName } from '../sort/rows.ts';
 
-export const GREETING = 'Hi, I’m Hubert, named after Casa Blanca’s office at 10 Hubert St.';
+// Kimani's notebook (2026-10-27): the greeting says what Hubert is for, not where his name comes from.
+export const GREETING = 'Hi, I’m Hubert! I’m here to help you build this comp report.';
 
 export function intro(side: 'buyer' | 'seller'): string {
   return side === 'buyer'

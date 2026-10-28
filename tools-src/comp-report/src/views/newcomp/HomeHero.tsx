@@ -15,11 +15,22 @@ function photoOf(read: LinkReadView | null): string | null {
   return cleanPhotoUrls([ex['heroImageUrl'], ...(Array.isArray(ex['photos']) ? ex['photos'] : [])])[0] ?? null;
 }
 
+/** The read's page, when it's a StreetEasy https link: nothing else becomes a link. */
+function streetEasyUrl(url: string | null | undefined): string | null {
+  try {
+    const u = new URL(url ?? '');
+    return u.protocol === 'https:' && /(^|\.)streeteasy\.com$/.test(u.hostname) ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function HomeHero({ name, read, sourceTitle }: { name: string; read: LinkReadView; sourceTitle: string }) {
   const reading = read.status === 'queued' || read.status === 'running';
   const elapsed = useElapsed(reading ? [read] : []);
   const photo = photoOf(read);
   const slow = elapsed > SLOW_MS;
+  const pageUrl = streetEasyUrl(read.url);
   return (
     <div
       className={`hh${photo ? ' photo' : ''}`}
@@ -29,7 +40,14 @@ export function HomeHero({ name, read, sourceTitle }: { name: string; read: Link
     >
       <div className="hh-top">
         <h2 className="hh-name">{name}</h2>
-        <span className="hh-source" title={sourceTitle}><span className="nr-dot" aria-hidden="true" />StreetEasy</span>
+        {/* The page the home was read from, one click away (Kimani's notebook, 2026-10-27). */}
+        {pageUrl ? (
+          <a className="hh-source" href={pageUrl} target="_blank" rel="noopener noreferrer" title={`${sourceTitle} Opens it in a new tab.`}>
+            <span className="nr-dot" aria-hidden="true" />StreetEasy <span aria-hidden="true">↗</span>
+          </a>
+        ) : (
+          <span className="hh-source" title={sourceTitle}><span className="nr-dot" aria-hidden="true" />StreetEasy</span>
+        )}
       </div>
       {reading && (
         <div className="hh-mid">

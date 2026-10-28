@@ -251,7 +251,7 @@ test('one box per comp: the anchor first and marked, the address large, the phot
   const boxes = html.match(/<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:/g) ?? [];
   assert.equal(boxes.length, lineRows.length, 'a box for every comp the email lists');
   assert.ok(html.indexOf('The closest match') < html.indexOf(shown.others[0]!.name), 'the anchor’s box first');
-  assert.match(html, /border:2px solid #0f0f0f;[^"]*"><tr><td[^>]*>\s*<div[^>]*><span[^>]*>★<\/span>&nbsp; The closest match/, 'the anchor marked');
+  assert.match(html, /border:2px solid #0f0f0f;[^"]*"><tr><td[^>]*><table[^>]*><tr><td[^>]*>The closest match<\/td><td align="right"[^>]*font-size:34px[^>]*>★<\/td>/, 'the anchor marked, its star large in the top right');
   assert.ok(html.includes(`<img src="${PHOTO}"`) && html.includes('width="494" height="330"'), 'the photo, one size for every box');
   const withPhoto = [shown.anchor, ...shown.others].filter((c) => c?.photo).length;
   const hatched = (html.match(/<div style="height:330px;background-color:#eeece7/g) ?? []).length;

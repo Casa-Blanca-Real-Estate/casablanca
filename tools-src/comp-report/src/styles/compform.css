@@ -18,6 +18,8 @@
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cb-mid);
 }
+.cf-photo.has { border: 0; background: var(--cb-line); overflow: hidden; cursor: default; }
+.cf-photo.has img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .cf-status { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .cf-status-chip { display: flex; align-items: center; gap: 6px; font-weight: 800; padding: 8px 12px; }
 .cf-status-chip .sq { width: 8px; height: 8px; border: 1px solid var(--cb-black); }

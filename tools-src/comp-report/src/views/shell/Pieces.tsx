@@ -114,7 +114,10 @@ function savedWidth(): number {
 }
 
 /** The drawer's box: fixed under the bar at the right, 380px wide until resized. Hubert fills it. */
-export function HubertDrawer({ ws }: { ws: Workspace }) {
+/** How long the drawer takes to slide in or out (shell.css's .hubert-drawer animation): it unmounts after. */
+export const DRAWER_SLIDE_MS = 220;
+
+export function HubertDrawer({ ws, closing = false }: { ws: Workspace; closing?: boolean }) {
   const [width, setWidth] = useState(savedWidth);
   const [dragging, setDragging] = useState(false);
 
@@ -159,7 +162,7 @@ export function HubertDrawer({ ws }: { ws: Workspace }) {
   }
 
   return (
-    <aside className={`hubert-drawer${dragging ? ' resizing' : ''}`}>
+    <aside className={`hubert-drawer${dragging ? ' resizing' : ''}${closing ? ' closing' : ''}`} inert={closing || undefined}>
       <div
         className="hubert-resize"
         role="separator"
@@ -183,12 +186,13 @@ export function HubertDrawer({ ws }: { ws: Workspace }) {
 }
 
 /**
- * The handoff's tab at the page's right edge, which opens and closes the drawer. The bar's Hubert
+ * The handoff's tab, which opens and closes the drawer. It's fixed, so it stays in view as the page
+ * scrolls, and rides the drawer's left edge when it's open (Kimani's notebook, 2026-10-27). The bar's Hubert
  * pill does the same for the keyboard and screen readers, so the tab stays out of both.
  */
 export function HubertTab({ ws }: { ws: Workspace }) {
   return (
-    <button type="button" className="sh-hubert-tab" aria-hidden="true" tabIndex={-1} onClick={() => ws.setDrawerOpen(!ws.drawerOpen)}>
+    <button type="button" className={`sh-hubert-tab${ws.drawerOpen ? ' open' : ''}`} aria-hidden="true" tabIndex={-1} onClick={() => ws.setDrawerOpen(!ws.drawerOpen)}>
       <span className="sh-spark">✦</span>
       <span className="sh-hubert-word">Hubert</span>
     </button>

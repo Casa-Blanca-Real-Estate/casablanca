@@ -11,6 +11,7 @@ import { psf } from '../../../workspace/format.ts';
 import { titleFromLink } from '../../../workspace/links.ts';
 import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
 import { CompForm, type CompPrefill } from '../comp/CompForm.tsx';
+import { RowThumb } from '../sort/RowThumb.tsx';
 import { compAddress, compPrice, compStatus, rowPsf, STATUS_LABEL, STATUS_ORDER } from './comps.tsx';
 import type { Workspace } from './model.ts';
 import { inFlight } from './reads.ts';
@@ -189,7 +190,7 @@ function CompLine({ ws, c, out, editing, onEdit, why }: {
   const address = compAddress(c);
   return (
     <div className={`nr-row${ws.sf ? '' : ' nosf'}`}>
-      <span className="nr-thumb" aria-hidden="true" />
+      <RowThumb photo={c.judgment?.photos?.[0]} className="nr-thumb" />
       <span className="nr-addr" title={address}>
         {address}
         {why && <span className="nr-why"> · {why}</span>}

@@ -254,6 +254,8 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
 .cw-ctx-text { margin: 0; font-size: 13px; line-height: 1.5; }
 .cw-para { min-height: 120px; }
 .cw-who { font-size: 12px; color: var(--cb-mid); }
+.cw-count { font-size: 12px; color: var(--cb-mid); font-variant-numeric: tabular-nums; margin-right: 8px; }
+.cw-count.over { color: var(--cb-red, #b3261e); font-weight: 800; }
 
 @media (max-width: 860px) {
   .se-fallback { padding: 0 16px; }
