@@ -188,6 +188,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [messageCount, setMessageCount] = useState(0);
   const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
   const [reviewing, setReviewing] = useState<{ at: string | null } | null>(null);
+  const [focus, setFocus] = useState<{ reportCompId: string; field: string; n: number; at: number } | null>(null);
   const today = useMemo(localToday, []);
   const save = useAutosave(reportId, (reveal) => {
     stateRef.current = { ...stateRef.current, reveal };
@@ -374,6 +375,15 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     });
     compChain.current = next.catch(() => undefined);
     return next;
+  }, [reportId]);
+
+  // Hubert changed a comp himself (edit_comp): the comps load again, after any edit of the agent's still saving.
+  const reloadComps = useCallback(() => {
+    const next = compChain.current.then(async () => {
+      const d = await workspaceApi.load(reportId);
+      setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads, geocodes: d.geocodes } : d));
+    });
+    compChain.current = next.catch(() => undefined);
   }, [reportId]);
 
   // Hubert on one comp (Dispatch 25): in the same chain, so feedback reads the note just saved.
@@ -589,6 +599,14 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     removed,
     drawerOpen,
     setDrawerOpen,
+    reloadComps,
+    focus,
+    showComp: (reportCompId, field) => {
+      // The row shows whatever Sort's filter was, and Sort opens if another screen was showing.
+      setSortFilter({ incomplete: false, tags: [] });
+      if (screen !== 'sort') go('sort');
+      setFocus((f) => ({ reportCompId, field, n: (f?.n ?? 0) + 1, at: Date.now() }));
+    },
     hubertEdits,
     queueHubertEdit: (edit) => setHubertEdits((list) => [...list, edit]),
     takeHubertEdits: (n) => setHubertEdits((list) => list.slice(n)),

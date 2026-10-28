@@ -36,6 +36,12 @@ const SUBJECT_17L: Record<string, unknown> = {
   description: 'A three-bedroom on the seventeenth floor with city and river views.',
 };
 
+/** Search results for local development: made up, on example.com, never a sale. */
+const SEARCH = (query: string) => [
+  { url: 'https://example.com/buildings/one-hundred-barclay', title: 'One Hundred Barclay: building facts (made up)', description: `Made-up result for “${query}”: full-time doorman, concierge, gym; built 1927; 158 units.` },
+  { url: 'https://example.com/transit/tribeca', title: 'Subway lines near Tribeca (made up)', description: 'Made-up result: the A, C, E, 1, 2 and 3 run within a few blocks.' },
+];
+
 const WALL = 'Pardon Our Interruption. As you were browsing something about your browser made us think you were a bot.';
 
 export const PAGES: Record<string, Record<string, unknown> | 'wall'> = {
@@ -66,8 +72,14 @@ export async function startFakeFirecrawl(port = 0, opts: { delayMs?: number } = 
         res.writeHead(status, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(body));
       };
-      if (req.method !== 'POST' || req.url !== '/v1/scrape') return reply(404, { success: false, error: 'not found' });
+      if (req.method !== 'POST' || (req.url !== '/v1/scrape' && req.url !== '/v2/search')) return reply(404, { success: false, error: 'not found' });
       if (!/^Bearer \S+/.test(req.headers.authorization ?? '')) return reply(401, { success: false, error: 'Unauthorized' });
+      // Hubert's web search (server/web-search.ts): made-up results for any query, in Firecrawl v2's shape.
+      if (req.url === '/v2/search') {
+        const query = String((JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as { query?: unknown }).query ?? '');
+        calls.push(`search:${query}`);
+        return reply(200, { success: true, data: { web: SEARCH(query) } });
+      }
       let url = '';
       try {
         url = String((JSON.parse(Buffer.concat(chunks).toString('utf8')) as { url?: unknown }).url ?? '');
@@ -75,6 +87,9 @@ export async function startFakeFirecrawl(port = 0, opts: { delayMs?: number } = 
         return reply(400, { success: false, error: 'bad json' });
       }
       calls.push(url);
+      if (url.startsWith('https://example.com/')) {
+        return reply(200, { success: true, data: { markdown: `# A made-up page\n\nThis page (${url}) is local development text: full-time doorman, pets allowed.`, metadata: { title: 'A made-up page', statusCode: 200 } } });
+      }
       const page = PAGES[url];
       setTimeout(() => {
         if (page === 'wall') return reply(200, { success: true, data: { extract: {}, markdown: WALL, metadata: { title: 'Pardon Our Interruption', statusCode: 200 } } });

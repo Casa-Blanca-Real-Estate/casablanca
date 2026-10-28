@@ -332,3 +332,8 @@
   font-size: 11px; font-weight: 800; line-height: 1; flex: none;
 }
 .so-station-name { margin-left: 2px; }
+
+/* A comp Hubert just changed, when "Show" lands on it. */
+.so-row-wrap.hb-focus { animation: hb-focus 2.4s ease-out; }
+@keyframes hb-focus { 0%, 40% { box-shadow: inset 4px 0 0 var(--cb-lavender); background: color-mix(in srgb, var(--cb-lavender) 18%, transparent); } 100% { box-shadow: none; background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .so-row-wrap.hb-focus { animation: none; box-shadow: inset 4px 0 0 var(--cb-lavender); } }

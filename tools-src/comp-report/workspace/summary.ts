@@ -30,7 +30,8 @@ const trunc = (v: number | null | undefined) => (v === null || v === undefined ?
 const whole = (v: number | null | undefined) => (v === null || v === undefined ? null : Math.round(v));
 const pct1 = (v: number | null | undefined) => (v === null || v === undefined ? null : Math.round(v * 10) / 10);
 
-function address(c: WorkspaceComp): string {
+/** A comp as Hubert names it: "200 Chambers Street #10A". */
+export function address(c: WorkspaceComp): string {
   const street = c.record.identity.address.street ?? 'no address';
   const unit = c.record.identity.unit.raw;
   return unit ? `${street} ${unit.startsWith('#') ? unit : `#${unit}`}` : street;

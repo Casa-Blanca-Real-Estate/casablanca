@@ -115,6 +115,9 @@ export interface ShownMessage {
   text: string;
   progress: string[];
   tools: string[];
+  /** Hubert's trail (server/hubert-trail.ts): what this reply's tools changed, and the web pages they read. */
+  changes?: TrailEntry[];
+  sources?: TrailSource[];
   toolResultsOnly: boolean;
   stopReason: string | null;
   inContext: boolean;
@@ -122,9 +125,14 @@ export interface ShownMessage {
 }
 
 export type { HubertEmailEdit } from '../server/hubert-email.ts';
+export type { TrailEntry, TrailSource } from '../server/hubert-trail.ts';
+type TrailEntry = import('../server/hubert-trail.ts').TrailEntry;
+type TrailSource = import('../server/hubert-trail.ts').TrailSource;
 
 export type TurnEvent =
   | { type: 'email_edit'; edit: import('../server/hubert-email.ts').HubertEmailEdit }
+  | { type: 'change'; entry: TrailEntry }
+  | { type: 'comps_changed' }
   | { type: 'start'; model: string }
   | { type: 'progress'; text: string }
   | { type: 'text'; text: string }

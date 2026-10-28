@@ -5,6 +5,7 @@
 import { withActor } from '../db.ts';
 import { allowMethods, HttpError, json, respond, UUID } from '../http.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
+import { trailOf, type TrailEntry, type TrailSource } from '../hubert-trail.ts';
 import { asUser, requirePool } from './reports.ts';
 import { reportFor } from './workspace.ts';
 
@@ -35,6 +36,26 @@ export function handleMessages(req: Request, deps: AuthDeps): Promise<Response> 
       )).rows;
     });
 
+    // Hubert's trail (2026-10-28): what each reply's tools changed or read, from the results that answered them.
+    const results = new Map<string, Record<string, unknown>>();
+    for (const m of rows) {
+      if (m.role !== 'user') continue;
+      for (const b of m.content) if (b.type === 'tool_result' && typeof b.tool_use_id === 'string') results.set(b.tool_use_id, b);
+    }
+    const trail = (m: Row) => {
+      const changes: TrailEntry[] = [];
+      const sources: TrailSource[] = [];
+      for (const b of m.content) {
+        if (b.type !== 'tool_use' || typeof b.id !== 'string') continue;
+        const result = results.get(b.id);
+        if (!result) continue;
+        const got = trailOf(String(b.name), result);
+        changes.push(...got.changes);
+        for (const s of got.sources) if (!sources.some((x) => x.url === s.url)) sources.push(s);
+      }
+      return { changes, sources };
+    };
+
     return json({
       messages: rows.map((m) => ({
         seq: m.seq,
@@ -42,6 +63,7 @@ export function handleMessages(req: Request, deps: AuthDeps): Promise<Response> 
         text: m.content.filter((b) => b.type === 'text').map((b) => String(b.text ?? '')).join(''),
         progress: m.content.filter((b) => b.type === 'thinking' && b.thinking).map((b) => String(b.thinking)),
         tools: m.content.filter((b) => b.type === 'tool_use').map((b) => String(b.name)),
+        ...(m.role === 'assistant' ? trail(m) : { changes: [], sources: [] }),
         toolResultsOnly: m.role === 'user' && m.content.every((b) => b.type === 'tool_result'),
         model: m.model,
         stopReason: m.stop_reason,

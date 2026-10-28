@@ -132,6 +132,11 @@ export interface Workspace {
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
+  /** Hubert changed a comp on the server (edit_comp): the comps load again, in order with the agent's own edits. */
+  reloadComps: () => void;
+  /** A trail entry's "Show" (Kimani, 2026-10-28): Sort opens on that comp's row, at the field he changed. `n` changes on each ask. */
+  focus: { reportCompId: string; field: string; n: number; at: number } | null;
+  showComp: (reportCompId: string, field: string) => void;
   /** Hubert's edits to the email, waiting for Send to apply them (server/hubert-email.ts). */
   hubertEdits: HubertEmailEdit[];
   queueHubertEdit: (edit: HubertEmailEdit) => void;

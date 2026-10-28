@@ -18,6 +18,11 @@
 // notes, with no figure of its own, or the agent's lines tidied — first
 // letters capitalised, a full stop, "i" made "I".
 //
+// The trail (2026-10-28): "make 200 Chambers Street #10A 1st tier" (or 2nd,
+// or out) gets an edit_comp call, "note on <comp>: …" sets its note, "<comp>
+// floor is 12" corrects its floor; "search …" or "look up …" gets a
+// web_search call.
+//
 // A review request (Dispatch 25: one comp, structured output) gets Hubert's
 // feedback on the agent's note or his take on the comp: see fakeCompReview.
 //
@@ -252,6 +257,25 @@ function echo(body: Block): Script {
   if (/^\s*refuse\b/i.test(said)) {
     return { content: [], stopReason: 'refusal', stopDetails: { type: 'refusal', category: null, explanation: null }, delayMs: 15 };
   }
+  const tool = (name: string, input: Block, note: string): Script => ({
+    content: [
+      { type: 'thinking', thinking: note, signature: 'fake-signature' },
+      { type: 'tool_use', id: `toolu_fake_${++toolCalls}_${Date.now()}`, name, input },
+    ],
+    stopReason: 'tool_use',
+    delayMs: 15,
+  });
+  const tier = /^\s*(?:make|put|tier) (.+?) (?:as )?(1st|2nd|first|second|out)(?: tier)?\.?$/i.exec(said);
+  if (tier) {
+    const t = /^(1st|first)$/i.test(tier[2]!) ? 'primary' : /^(2nd|second)$/i.test(tier[2]!) ? 'secondary' : 'excluded';
+    return tool('edit_comp', { comp: tier[1]!.trim(), changes: { tier: t } }, 'Tiering the comp as the agent said (fake API).');
+  }
+  const note = /^\s*note on (.+?):\s*([\s\S]+)$/i.exec(said);
+  if (note) return tool('edit_comp', { comp: note[1]!.trim(), changes: { note: note[2]!.trim() } }, 'Putting the agent’s note in (fake API).');
+  const floor = /^\s*(.+?) (?:is on|floor is) (?:floor )?(\d+)\.?$/i.exec(said);
+  if (floor) return tool('edit_comp', { comp: floor[1]!.trim(), changes: { floor: Number(floor[2]) } }, 'Correcting the floor (fake API).');
+  const search = /^\s*(?:search|look up)\b:?\s*([\s\S]+)$/i.exec(said);
+  if (search) return tool('web_search', { query: search[1]!.trim() }, 'Searching the web (fake API).');
   const change = /^\s*change (?:the |my )?(next step|headline|subject|how i chose the comps|things to consider|signed|sign-off) to:?\s*([\s\S]+)$/i.exec(said);
   if (change) {
     return {

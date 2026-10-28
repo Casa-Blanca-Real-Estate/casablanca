@@ -3,7 +3,7 @@
 // endpoint: one model call per request, the server owns the transcript (§8.3
 // rule 6). The conversation is the report's, the same on every screen.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { api, ApiError, streamTurn, type HubertEmailEdit, type ShownMessage } from '../api.ts';
+import { api, ApiError, streamTurn, type HubertEmailEdit, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
 import { HubertNote, HubertText } from './hubert/markdown.tsx';
 
@@ -11,18 +11,64 @@ interface Live {
   text: string;
   progress: string[];
   tools: string[];
+  /** What his last tools changed: they ran as this request started (server/api/turn.ts). */
+  changes: TrailEntry[];
   note: string | null;
 }
 
-const empty: Live = { text: '', progress: [], tools: [], note: null };
+const empty: Live = { text: '', progress: [], tools: [], changes: [], note: null };
 
-/** What Hubert looked at, in words: his tools read the report, its numbers and the email; one changes the email. */
-const TOOL_WORDS: Record<string, string> = { get_numbers: 'the numbers', get_report: 'the report', get_email: 'the email' };
-const looked = (tools: string[]) => [...new Set(tools.filter((t) => t !== 'edit_email').map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
+/** What Hubert looked at, in words: his tools read the report, its numbers, the email and the web; two change things. */
+const TOOL_WORDS: Record<string, string> = {
+  get_numbers: 'the numbers', get_report: 'the report', get_email: 'the email', web_search: 'the web', read_page: 'a web page',
+};
+const CHANGES = new Set(['edit_email', 'edit_comp']);
+const looked = (tools: string[]) => [...new Set(tools.filter((t) => !CHANGES.has(t)).map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
+
+/**
+ * Hubert's trail (Kimani, 2026-10-28): each change he made, where he made it,
+ * with "Show" to the field: a comp's row on Sort, or the email on Send.
+ */
+function Trail({ changes, sources, onJump }: { changes: TrailEntry[]; sources: TrailSource[]; onJump?: (entry: TrailEntry) => void }) {
+  if (!changes.length && !sources.length) return null;
+  return (
+    <>
+      {changes.length > 0 && (
+        <ul className="hb-trail" aria-label="What Hubert changed">
+          {changes.map((c, i) => (
+            <li key={i} className="hb-trail-item">
+              <span className="hb-trail-mark" aria-hidden="true">✎</span>
+              <span className="hb-trail-what">
+                <span className="hb-trail-target">{c.target}</span>
+                <span className="hb-trail-field">{c.label}</span>
+                <span className="hb-trail-change">
+                  {c.before !== null && <><s>{c.before}</s>{' → '}</>}
+                  {c.after ?? <em>cleared</em>}
+                </span>
+              </span>
+              {onJump && <button type="button" className="hb-trail-go" onClick={() => onJump(c)}>Show</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {sources.length > 0 && (
+        <p className="hb-sources">
+          From the web:{' '}
+          {sources.map((s, i) => (
+            <span key={s.url}>
+              {i > 0 && ' · '}
+              <a className="hb-md-link" href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.title}</a>
+            </span>
+          ))}
+        </p>
+      )}
+    </>
+  );
+}
 
 const MAX_INPUT_PX = 120;
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit }: {
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onCompsChanged, onJump }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -36,6 +82,10 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   beforeAsk?: () => Promise<void>;
   /** An edit Hubert made to the email: Send applies it. */
   onEmailEdit?: (edit: HubertEmailEdit) => void;
+  /** Hubert changed a comp on the server: the screen reloads the comps. */
+  onCompsChanged?: () => void;
+  /** A trail entry's "Show": to the field he changed. */
+  onJump?: (entry: TrailEntry) => void;
 }) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -99,6 +149,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         await beforeAsk?.().catch(() => undefined);
         for await (const ev of streamTurn(reportId, message)) {
           if (ev.type === 'email_edit') onEmailEdit?.(ev.edit);
+          else if (ev.type === 'change') current = { ...current, changes: [...current.changes, ev.entry] };
+          else if (ev.type === 'comps_changed') onCompsChanged?.();
           else if (ev.type === 'text') current = { ...current, text: current.text + ev.text };
           else if (ev.type === 'progress') current = { ...current, progress: [...current.progress, ev.text] };
           else if (ev.type === 'tool') current = { ...current, tools: [...current.tools, ev.name] };
@@ -139,7 +191,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
           <div key={`${m.seq}-${m.createdAt}`} className={`hb-msg ${m.role}${m.inContext ? '' : ' dim'}`}>
             {m.progress.map((p, i) => <HubertNote key={i} text={p} />)}
             {m.role === 'assistant' && looked(m.tools) && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
-            {m.role === 'assistant' && m.tools.includes('edit_email') && <p className="hb-progress">Changed the email on Send.</p>}
+            {m.role === 'assistant' && m.tools.includes('edit_email') && !m.changes?.length && <p className="hb-progress">Changed the email on Send.</p>}
+            {m.role === 'assistant' && <Trail changes={m.changes ?? []} sources={m.sources ?? []} onJump={onJump} />}
             {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
             {!m.inContext && m.role === 'assistant' && (
               <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
@@ -151,6 +204,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
             {live.progress.map((p, i) => <HubertNote key={i} text={p} />)}
             {looked(live.tools) && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
             {live.tools.includes('edit_email') && <p className="hb-progress">Changing the email…</p>}
+            {live.tools.includes('edit_comp') && <p className="hb-progress">Changing the comp…</p>}
+            <Trail changes={live.changes} sources={[]} onJump={onJump} />
             {live.text ? <HubertText text={live.text} /> : !live.note && <p className="hb-progress">Thinking…</p>}
             {live.note && <p className="hb-text">{live.note}</p>}
           </div>
