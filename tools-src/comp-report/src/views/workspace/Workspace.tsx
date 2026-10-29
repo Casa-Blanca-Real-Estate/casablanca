@@ -501,7 +501,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     }
   }, [homeRead?.id, homeRead?.status, readOnly]);
 
-  // The agent's card for the email's sign-off: name, phone, headshot, from Casa's roster.
+  // The agent's profile from Casa's roster: the email's sign-off (name, title, phone, headshot) and Hubert's greeting.
   const [agentCard, setAgentCard] = useState<AgentCard | null>(null);
   useEffect(() => {
     let live = true;
@@ -520,6 +520,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     readOnly,
     canSample,
     agentName: agentCard?.name || me.user.name || '',
+    agentFirstName: agentCard?.firstName || (me.user.guest ? '' : me.user.name?.trim().split(/\s+/)[0]) || '',
     agentCard,
     brief,
     setBrief: (next) => {

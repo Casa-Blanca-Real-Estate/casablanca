@@ -1,7 +1,8 @@
-// The agent's card on the email's sign-off: their name, their phone and their
-// headshot, from Casa's own roster (the `cb-agents` store the agent CMS and
+// The signed-in agent's profile: their name, the first name they go by, their
+// title, email, phone and headshot, from Casa's own roster (the `cb-agents` store the agent CMS and
 // the profile-pic roster write; Dispatch 12) rather than from Identity, which
-// has no name for anyone who signed up with a password and never a phone.
+// has no name for anyone who signed up with a password and never a phone. The
+// email's sign-off uses it, and Hubert greets the agent by their first name.
 //
 // The signed-in agent is matched by their verified email against each record's
 // contact email (draft first, then live): the store is keyed by slug, and a
@@ -28,6 +29,12 @@ export interface AgentRoster {
 export interface AgentCard {
   slug: string;
   name: string | null;
+  /** What the agent goes by: the CMS's display name, else the first word of their name. */
+  firstName: string | null;
+  /** e.g. Licensed Real Estate Agent. */
+  title: string | null;
+  /** The roster's contact email: the one they signed in with, as the roster spells it. */
+  email: string | null;
   phone: string | null;
   /** The headshot's public path, once copied; null without one. */
   photo: string | null;
@@ -45,6 +52,9 @@ const text = (v: unknown, max = 120): string | null => {
 interface Found {
   slug: string;
   name: string | null;
+  firstName: string | null;
+  title: string | null;
+  email: string | null;
   phone: string | null;
   headshot: StoredFile | null;
 }
@@ -63,9 +73,13 @@ export function cardOf(slug: string, rec: unknown, email: string): Found | null 
   const headshot = HEADSHOTS.map((v) => outputs.find((o) => o.variant === v && o.type === 'image/jpeg')).find(Boolean)
     ?? outputs.find((o) => o.type === 'image/jpeg')
     ?? null;
+  const name = pick((s) => identity(s).name);
   return {
     slug,
-    name: pick((s) => identity(s).name),
+    name,
+    firstName: pick((s) => identity(s).displayName) ?? name?.split(/\s+/)[0] ?? null,
+    title: pick((s) => identity(s).title),
+    email: pick((s) => contact(s).email),
     phone: pick((s) => contact(s).phone),
     headshot: headshot && headshot.bytes > 0 && headshot.bytes <= MAX_PHOTO_BYTES ? headshot : null,
   };
@@ -130,7 +144,9 @@ export async function agentCard(
         return data ? { ok: true as const, data, contentType: f.type } : { ok: false as const, reason: 'missing parts' };
       }).catch(() => null)
       : null;
-    card = { slug: found.slug, name: found.name, phone: found.phone, photo: copied ? photoPath(copied) : null };
+    card = {
+      slug: found.slug, name: found.name, firstName: found.firstName, title: found.title, email: found.email, phone: found.phone, photo: copied ? photoPath(copied) : null,
+    };
   }
   cache.set(key, { at: now(), card });
   return card;
