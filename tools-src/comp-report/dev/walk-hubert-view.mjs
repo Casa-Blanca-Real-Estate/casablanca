@@ -1,6 +1,6 @@
 // DEV ONLY — the walk for what Hubert sees (2026-10-29): the agent opens a comp on Sort and asks about
-// "this one" (get_view names it), dictates a note (the trail shows it with Undo), and undoes it; adds a sale
-// from its StreetEasy link (to check and confirm); then Hubert beside the New report window. Against the
+// "this one" (get_view names it), dictates a note (the trail shows it with Undo), and undoes it; approves a sale
+// he found, from his card in the chat; then Hubert beside the New report window. Against the
 // local dev server and the fakes. Needs 'npm i --no-save playwright-core' (the preinstalled Chromium).
 //   node tools-src/comp-report/dev/walk-hubert-view.mjs <base> <outDir> [condo|coop]
 import { chromium } from 'playwright-core';
@@ -60,14 +60,21 @@ await p.waitForTimeout(800);
 check(!(await row.textContent()).includes('Dictated'), 'the note is back as it was');
 await shot('03-undone');
 
-// A sale from the web (HB-8): Hubert adds it by its StreetEasy link; Sort asks the agent to check it before confirming.
+// A sale from the web (HB-8): Hubert shows it as a card in the chat; Approve wakes once the link is opened, then it's read onto Sort untiered.
 await ask('add https://streeteasy.com/building/20-pine-street-new_york/617');
-const find = p.locator('.so-find').first();
-await find.waitFor({ timeout: 60_000 });
-check((await find.getAttribute('href')).includes('20-pine'), 'the find links to its page');
-check(await p.locator('.hb-trail-item', { hasText: 'check the link' }).last().isVisible(), 'the trail says to check it');
-await find.scrollIntoViewIfNeeded();
-await shot('05-hubert-find');
+const card = p.locator('.hb-find').last();
+const ok = card.locator('.hb-find-ok');
+check(await ok.isDisabled(), 'Approve waits for the link to be opened');
+check(!(await p.locator('.so-row-wrap', { hasText: '20 Pine' }).count()), 'nothing added before approval');
+await shot('05-hubert-find-card');
+const [tab] = await Promise.all([ctx.waitForEvent('page'), card.locator('a').click()]);
+await tab.close();
+check(await ok.isEnabled(), 'Approve wakes once the link is opened');
+await ok.click();
+await card.locator('.hb-find-done').waitFor({ timeout: 60_000 });
+await p.locator('.so-find').first().waitFor({ timeout: 60_000 });
+await p.locator('.so-find').first().scrollIntoViewIfNeeded();
+await shot('06-hubert-find-added');
 
 // Beside the New report window (rough until the design pass): Hubert above its backdrop, the window moved left.
 await p.goto(`${base}/tools/comp-report/?report=${id}&start=details`);

@@ -316,24 +316,28 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
     }
     assert.ok(results.some((r) => !r.is_error), 'at least one applied');
   });
-  test('a sale from the web comes in only by its StreetEasy link: queued as Hubert’s find, to check and confirm', async () => {
+  test('a sale from the web is a card first: added only when the agent approves it, as his find', async () => {
     const url = 'https://streeteasy.com/building/the-greenwich-lane/1a';
-    const { events, result } = await call('add_comp_link', { url }, 'Yes, add that one.');
+    const { events, result } = await call('show_comp_link', { url }, 'Yes, that one.');
     assert.equal(result.is_error, undefined, String(result.content));
     const entry = events.find((e) => e.type === 'change')!.entry as TrailEntry;
-    assert.deepEqual([entry.kind, entry.url, entry.field], ['link', url, 'added']);
-    assert.match(entry.label, /check the link/);
-    assert.ok(events.some((e) => e.type === 'comps_changed'), 'the screen reloads, and starts the read');
-    const reads = (await (await handleWorkspace(request(`workspace?report=${reportId}`), deps)).json() as WorkspaceData).reads;
-    const read = reads.find((r) => r.url === url)!;
+    assert.deepEqual([entry.kind, entry.url, entry.field], ['find', url, 'found']);
+    assert.ok(!events.some((e) => e.type === 'comps_changed'), 'nothing on Sort changes');
+    const readsNow = async () => (await (await handleWorkspace(request(`workspace?report=${reportId}`), deps)).json() as WorkspaceData).reads;
+    assert.ok(!(await readsNow()).some((r) => r.url === url), 'not queued until the agent approves');
+
+    // The agent approves it on the card: queued as Hubert's find.
+    const approved = await (await handleLinks(request('links', 'POST', { reportId, urls: [url], purpose: 'comp', found: 'hubert' }), deps)).json();
+    assert.equal(approved.queued.length, 1);
+    const read = (await readsNow()).find((r) => r.url === url)!;
     assert.equal(read.status, 'queued');
     assert.equal(read.foundBy, 'hubert');
 
     // Not StreetEasy, or the same link again: refused, nothing queued.
-    const other = await call('add_comp_link', { url: 'https://www.zillow.com/homedetails/123' });
+    const other = await call('show_comp_link', { url: 'https://www.zillow.com/homedetails/123' });
     assert.equal(other.result.is_error, true);
     assert.match(String(other.result.content), /StreetEasy/);
-    const again = await call('add_comp_link', { url });
+    const again = await call('show_comp_link', { url });
     assert.equal(again.result.is_error, true);
     assert.match(String(again.result.content), /already in the report/);
     // The agent's own paste is no find of Hubert's.

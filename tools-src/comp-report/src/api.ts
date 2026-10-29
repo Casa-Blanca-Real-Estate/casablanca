@@ -278,8 +278,9 @@ export interface LinksAdded extends LinksState {
 
 export const linksApi = {
   load: (reportId: string) => api<LinksState>(`/api/comp-report/links?report=${reportId}`),
-  add: (reportId: string, urls: string[], purpose: 'comp' | 'subject' = 'comp') =>
-    api<LinksAdded>('/api/comp-report/links', { method: 'POST', body: { reportId, urls, purpose } }),
+  /** `found: 'hubert'` is the agent approving a sale Hubert found, from his card in the chat (HB-8). */
+  add: (reportId: string, urls: string[], purpose: 'comp' | 'subject' = 'comp', found?: 'hubert') =>
+    api<LinksAdded>('/api/comp-report/links', { method: 'POST', body: { reportId, urls, purpose, ...(found ? { found } : {}) } }),
   dismiss: (reportId: string, readId: string) =>
     api<LinksState>('/api/comp-report/links', { method: 'PATCH', body: { reportId, readId, dismissed: true } }),
   confirmHome: (reportId: string, readId: string) =>

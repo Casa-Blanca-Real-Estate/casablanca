@@ -3,7 +3,8 @@
 //   /api/comp-report/links
 //     GET   ?report=<uuid>                    the report's reads and comps, for polling
 //                                             while reads are in flight
-//     POST  {reportId, urls[], purpose}       queue reads: StreetEasy links only, at
+//     POST  {reportId, urls[], purpose, found?}
+//                                             queue reads: StreetEasy links only, at
 //                                             most 20 at once, within the person's
 //                                             daily limit. A link already read or
 //                                             being read here isn't read again
@@ -108,11 +109,13 @@ export function handleLinks(req: Request, deps: AuthDeps & { env?: Record<string
     }
     if (purpose === 'subject' && pasted.length > 1) throw new HttpError(400, 'one_home', 'The home is one link.');
 
+    // found: 'hubert' is the agent approving a sale Hubert found, from his card in the chat (HB-8).
+    const found = body.found === 'hubert' && purpose === 'comp' ? 'hubert' as const : undefined;
     const limit = readLimit(user.role, deps.env);
     return json(await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
       return {
-        ...await queueReads(tx, user, reportId, pasted, purpose, limit),
+        ...await queueReads(tx, user, reportId, pasted, purpose, limit, found),
         reads: await loadReads(tx, reportId),
         comps: await loadJudgments(tx, reportId),
       };
@@ -123,7 +126,7 @@ export function handleLinks(req: Request, deps: AuthDeps & { env?: Record<string
 /**
  * Queues reads of StreetEasy links, within the person's daily limit; a link
  * already read or being read here isn't read again. The agent's paste, and
- * Hubert's finds (HB-8, `foundBy`), which the agent checks before confirming.
+ * Hubert's finds the agent approved from his card in the chat (HB-8, `foundBy`).
  * The caller has checked the report is theirs.
  */
 export async function queueReads(
@@ -304,7 +307,11 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
       await tx.query(
         `update comp_report.link_reads
             set status = 'done', finished_at = now(), as_of = $2, extract = $3::jsonb, warnings = $4::jsonb,
-                parser_version = $5, observation_id = $6, report_comp_id = $7, error = null, error_message = null
+                parser_version = $5, observation_id = $6, report_comp_id = $7, error = null, error_message = null,
+                -- Hubert's find (HB-8): the agent approved it in the chat after opening its link, so it's confirmed as read.
+                -- Untiered, it still counts in nothing until they tier it.
+                confirmed_at = case when found_by = 'hubert' then coalesce(confirmed_at, now()) else confirmed_at end,
+                confirmed_by = case when found_by = 'hubert' then coalesce(confirmed_by, comp_report.actor()) else confirmed_by end
           where id = $1`,
         [readId, finished.asOf, JSON.stringify(finished.extract), JSON.stringify(finished.warnings),
           record.origin?.parser_version ?? PARSER_VERSION, observation.id, reportCompId],

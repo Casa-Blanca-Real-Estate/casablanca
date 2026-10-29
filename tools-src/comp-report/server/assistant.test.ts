@@ -15,7 +15,7 @@ const SHIPPED: Record<string, string> = {
   'hb-send-2026-10-21': '300dcae38c1ed9873fe7e1ab2587aac4824e9ac0e7569fd456d0bdb02bedd85d',
   'hb-listing-2026-10-28': '19c6a2619012d5d098719f2d1cf6564d5de61a797a7a6eecf98e1e5ec31b437e',
   'hb-trail-2026-10-28': '97e6142a581bc4de69e85f09dd1b05cce47df765c1c67dbd293dfee6f0e3d922',
-  'hb-view-2026-10-29': '333ae42e8d768732b0b7b245c0a8fbffe17b03de05dc9aabf3e3ff7314e0a427',
+  'hb-view-2026-10-29': 'bfd999e0d94998500314caf185d4de97795eb75cd4f84e61641fb91ca9acd9da',
 };
 
 test('shipped prompt versions are unchanged, byte for byte', () => {

@@ -99,7 +99,7 @@ describe('the streamed assistant turn', { skip: skipWithoutDatabase }, () => {
     assert.equal(sent.body.fallbacks, 'default');
     assert.deepEqual(sent.body.tool_choice, { type: 'auto' });
     // A new conversation starts on the current prompt and tools, and stays on them.
-    assert.deepEqual((sent.body.tools as Block[]).map((t) => t.name), ['get_report', 'get_numbers', 'get_view', 'get_email', 'edit_email', 'edit_comp', 'add_comp_link', 'web_search', 'read_page']);
+    assert.deepEqual((sent.body.tools as Block[]).map((t) => t.name), ['get_report', 'get_numbers', 'get_view', 'get_email', 'edit_email', 'edit_comp', 'show_comp_link', 'web_search', 'read_page']);
     assert.equal((sent.body.system as Block[])[0]!.text, CURRENT_PROMPT.system);
     assert.equal(sent.body.stream, true);
     const betas = String(sent.headers['anthropic-beta']);

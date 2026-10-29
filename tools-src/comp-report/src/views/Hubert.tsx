@@ -13,7 +13,7 @@ import type { CompJudgment } from '../../workspace/state.ts';
 import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
 import { undoStands } from '../../workspace/trail-undo.ts';
-import type { CompEdit } from '../api.ts';
+import { linksApi, type CompEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
 import { GREETING, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
 import { reachedGuides } from './hubert/guides.ts';
@@ -168,12 +168,19 @@ export function Hubert({ ws }: { ws: Workspace }) {
             ws.toast(`${entry.label} on ${entry.target} put back.`);
           },
         }}
+        finds={{
+          added: (url) => ws.reads.some((r) => r.url === url),
+          // The agent approved it on his card, having opened the link: read, it lands on Sort untiered.
+          approve: async (url) => {
+            const added = await linksApi.add(ws.reportId, [url], 'comp', 'hubert');
+            ws.applyLinks(added);
+            if (added.refused.length) throw new Error(added.refused[0]!.reason);
+            ws.toast('Added to Sort, untiered. It counts once you tier it.');
+          },
+        }}
         onJump={(entry) => {
           if (entry.kind === 'email') {
             if (ws.screen !== 'send') ws.go('send');
-          } else if (entry.kind === 'link') {
-            // A comp he added: it's on Sort, being read or waiting for the agent's confirm.
-            if (ws.screen !== 'sort') ws.go('sort');
           } else if (entry.compId) {
             // In the per-comp review, the review moves to that comp; otherwise Sort opens on its row.
             if (ws.reviewing) ws.openReview(entry.compId);

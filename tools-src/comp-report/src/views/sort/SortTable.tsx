@@ -75,7 +75,7 @@ export function SortGroup({ ws, id, rows, outById, sort, onSort }: {
 }
 
 /** What the agent checks before confirming a sale Hubert found (Kimani, 2026-10-29). */
-const FIND_CHECK = 'Hubert found this one on the web. Open the StreetEasy link and check it’s the right unit, that it sold (a sale price, not an asking price), and that it’s current. Then confirm: until then it counts in neither result.';
+const FIND_CHECK = 'Hubert found this one on the web, and you approved it from his card after opening the link. It counts once you tier it.';
 
 function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | undefined }) {
   const cardId = useId();
@@ -210,7 +210,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
 
   const weak = weakFlag(j?.review, ws.level);
   // A sale Hubert found on the web (HB-8): until it's confirmed, the agent is asked to check its link.
-  const hubertFind = row.c.unconfirmed && rcId ? ws.reads.find((r) => r.reportCompId === rcId && r.foundBy === 'hubert') : undefined;
+  const hubertFind = rcId ? ws.reads.find((r) => r.reportCompId === rcId && r.foundBy === 'hubert') : undefined;
   const needLinks = row.needs.filter((n): n is Exclude<RowNeed, 'confirm'> => n !== 'confirm');
 
   return (
@@ -236,7 +236,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
             {weak && <span className="so-weak" title={`Hubert: ${weak.reason}`}>Weak</span>}
             {hubertFind && (
               <a className="so-weak so-find" href={hubertFind.url} target="_blank" rel="noopener noreferrer" onClick={stop} title={FIND_CHECK}>
-                Hubert’s find: check the link ↗
+                Hubert’s find ↗
               </a>
             )}
             {incomplete && (row.needs.includes('confirm') || ws.readOnly ? (
