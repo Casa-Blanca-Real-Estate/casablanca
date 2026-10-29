@@ -49,6 +49,8 @@ and building sites without hard-blocking the rest; 3 **put him in the New report
 an anchor for the design pass; 4 everyone; 5 yes; 6 `get_view` and the wider read now. Hubert across the Studio:
 plan it after the build. Follow-up on the sheet as HB-8: may a listing he finds on the web come into the report
 (recommended: only through its StreetEasy link, so it gets the same read and checks).
+**HB-8, answered 2026-10-29:** yes, through its StreetEasy link, and Hubert asks the agent to check the link and
+what he pulled from it (the right unit, a sale and not an ask, not stale) before it counts as a comp.
 
 1. **Practice agents dictating tiers.** This PR lets any agent tell Hubert "make it 1st tier". For a practice
    agent, should Hubert refuse until they've written their own reasoning in the review (Dispatch 25's order),
@@ -60,7 +62,7 @@ plan it after the build. Follow-up on the sheet as HB-8: may a listing he finds 
 4. **Step guides for everyone,** or only practice agents? *Default: everyone.*
 5. **Undo on a comp edit,** on the trail entry itself? The email's edits have Undo on Send already.
    *Recommend yes, small.*
-6. **Dispatch 24 (Calliste).** Items 1 and 2 overlap this lane. Fold them in here before 11-13, or keep them
+6. **Dispatch 24 (Collister).** Items 1 and 2 overlap this lane. Fold them in here before 11-13, or keep them
    for after? *Recommend `get_view` and the wider read now, the target after.*
 
 ## Notes for other threads

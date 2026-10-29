@@ -221,7 +221,7 @@ No screenshot shows Hubert's drawer or the column chooser; neither exists in the
 ### Lands before you design
 - Order Designed, Full, Short, Text, Designed first by default (NW-079 a). The "Hubert drafts the headline" paragraph is gone (NW-078).
 - Designed email markup fixed: centred wrapper, explicit fonts and no italics, address links dark and plain (NW-080, 081, 082).
-- Subject shown above Headline on Full, Short and Designed (not the Text tab), with its own Copy button, stored apart from the draft (NW-083 a). Subject options from the writer (NW-083 c) come later, with Calliste. Do not design for them yet. Headline labelled as also the first line (NW-083 b).
+- Subject shown above Headline on Full, Short and Designed (not the Text tab), with its own Copy button, stored apart from the draft (NW-083 a). Subject options from the writer (NW-083 c) come later, with Collister. Do not design for them yet. Headline labelled as also the first line (NW-083 b).
 - One renderer produces the formatted HTML for Full and Short copies: bold headline, headings, StreetEasy as a labelled link, bullets (NW-084 a).
 - "Mark as sent" becomes the primary action after a copy, works without a copy, and says why when read-only (NW-086 a). It moves to the right of Copy in the same row (NW-101 a), the one button move in Phase A.
 

@@ -1,11 +1,11 @@
 # Dispatch 24 — Hubert sees what the agent sees (CR-H1)
 
-> **2026-10-29:** "Calliste" was the name Kimani gave the AI track (2026-10-15, after Casa's other address); it
+> **2026-10-29:** "Collister" was the name Kimani gave the AI track (2026-10-15, after Casa's other address, 60 Collister St; earlier docs misheard it as "Calliste"); it
 > isn't a topic. Hubert's work now runs in project threads, so this dispatch is named for what it does. Item 2
 > (`get_view` and the wider read) goes into the next Hubert round (HB-6); item 1 (the target after the reveal)
 > follows after Nov 13. #109 already covers the comp edits that D-27 item 6 ruled out (HB-1).
 
-**Dispatched by:** Casanova · 2026-10-15 · **To:** Calliste (a new track, started in Casa's Claude account)
+**Dispatched by:** Casanova · 2026-10-15 · **To:** Collister (a new track, started in Casa's Claude account)
 **Builds from:** `docs/comp-report/feedback/2026-10-15-noble/05-hubert-and-ai.md` (read all of it: the lane
 split, the read tools, the role gates, what conflicts with the design), `03-gate-findings-and-client.md`
 (NW-068), D-4 and D-27 items 5 and 6 in `docs/decisions.md`, and `01-design.md` §8 (§8.2 is superseded by D-27
@@ -17,14 +17,14 @@ except item 1, which reads Dispatch 21's reveal marker and so waits for 21; the 
 `Terms.tsx` last, rebased on Dispatches 20 and 21. NW-093 d (the agent's own number) is Kimani's call; build
 `get_call` only if he says yes.
 **Protocol:** `docs/dispatch/README.md`. Restating rules 3–5: **open a PR to `claude/main` when done; never
-merge; sign "— Calliste (CR-H1)"** in the PR, its comments and your commits. Ledger line: `casa-r13-10`.
+merge; sign "— Collister (CR-H1)"** in the PR, its comments and your commits. Ledger line: `casa-r13-10`.
 
-## Who Calliste is
+## Who Collister is
 
-Calliste (after Casa's other address) owns Hubert and all the comp report's AI work: prompts, tool
+Collister (after Casa's other address, 60 Collister St) owns Hubert and all the comp report's AI work: prompts, tool
 definitions, the context sent, role gates, the model-choice policy, AI cost, and the Hubert and writer evals.
 
-| Calliste | Arbiter keeps | Mason keeps |
+| Collister | Arbiter keeps | Mason keeps |
 |---|---|---|
 | `server/assistant.ts` and test, `api/turn.ts`, `api/messages.ts`, `dev/fake-anthropic.ts` | `server/decide/*`, `api/decide.ts`, `decide-drain.ts`, `dev/jev.ts`, Jev keys and `CR_JEV_*` switches | The Send screen, `qa.ts`, `grounding.ts`, `fair-housing.ts` (rules, no model) |
 | `src/views/Chat.tsx`, `Hubert.tsx`, `hubert/*`, `styles/hubert.css` | The labels sheet and calibration | Every other screen |

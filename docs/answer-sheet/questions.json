@@ -1,8 +1,7 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
-    "DP-11",
     "DP-12",
     "DP-13",
     "DP-14",
@@ -11,8 +10,6 @@
     "NB-31",
     "NB-32",
     "NB-33",
-    "HB-8",
-    "NB-29",
     "TD-23",
     "CR-3",
     "CR-7",
@@ -29,34 +26,7 @@
       "url": "{repo}/docs/comp-report/hubert-plan.md",
       "linkLabel": "Open the Hubert plan",
       "intro": "<p>From #109 (merged 2026-10-29). You answered HB-1 to HB-7 in chat on 2026-10-29; they're in the settled list below. One follow-up from your question about the web.</p>",
-      "questions": [
-        {
-          "id": "HB-8",
-          "q": "May Hubert bring a sale or listing he finds on the web into the report?",
-          "short": "Web listings into the report",
-          "quick": true,
-          "context": "<p><strong>Why the rule exists.</strong> You asked: isn't pulling sales and prices the point of web search? The rule today is that a price never goes into the report straight from a web page. Every number in the estimate and the email has to trace to a comp the agent picked and the tool read itself (StreetEasy's page or export), with its photos and facts. A page Hubert skims can be stale, a different unit, or an ask rather than a sale, and from there it would reach a client. StreetEasy also blocks plain fetches, so his search can't read it reliably anyway.</p><p><strong>What would work.</strong> Hubert finds a candidate on the web, then adds it as a comp <em>through its StreetEasy link</em>, so it goes through the same read and checks as a pasted link and shows on his trail. The agent still tiers it. This is item 5 in the Hubert plan.</p>",
-          "options": [
-            [
-              "A",
-              "Yes, through its StreetEasy link: same read and checks, on the trail",
-              "recommended",
-              true
-            ],
-            [
-              "B",
-              "Yes, and let him type a web price in as a fact",
-              "unverified numbers can reach the client"
-            ],
-            [
-              "C",
-              "No, the web stays for context only",
-              ""
-            ]
-          ],
-          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · your chat, 2026-10-29"
-        }
-      ],
+      "questions": [],
       "settled": [
         "<strong>HB-1 · Practice agents dictating tiers</strong>: A, fine. However the thinking comes in (clicks, typing, dictation, telling Hubert), it's theirs; test how well dictation like \"comps 1 and 2 to 2nd tier, 3 and 5 to 1st\" works, recorded 2026-10-29 (in chat).",
         "<strong>HB-2 · Web search limits</strong>: any public site and 60 a day at the Studio level; in the comp report, steer Hubert toward StreetEasy, NYC.gov, the MTA and building sites rather than hard-block the rest, recorded 2026-10-29 (in chat).",
@@ -64,7 +34,8 @@
         "<strong>HB-4 · Step guides</strong>: A, everyone. A separate first-run orientation and a hint/guide button for practice agents is a later item (09-plan, Phase C), recorded 2026-10-29 (in chat).",
         "<strong>HB-5 · Undo on comp edits</strong>: A, yes, recorded 2026-10-29 (in chat).",
         "<strong>HB-6 · Dispatch 24's items 1–2</strong>: A, <code>get_view</code> and the wider read now (\"Hubert needs to know where the user is\"); the target after the reveal later, recorded 2026-10-29 (in chat).",
-        "<strong>HB-7 · Hubert across the Studio</strong>: A, plan it after the build, recorded 2026-10-29 (in chat)."
+        "<strong>HB-7 · Hubert across the Studio</strong>: A, plan it after the build, recorded 2026-10-29 (in chat).",
+        "<strong>HB-8 · Web listings into the report</strong>: A, through its StreetEasy link, and Hubert asks the agent to check the link and what he pulled from it (right unit, a sale and not an ask, not stale) before it counts as a comp, recorded 2026-10-29 (in chat)."
       ]
     },
     {
@@ -229,7 +200,7 @@
           "short": "Who writes the Findings take",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble found it dense (NW-063). Today it is built in code from the engine's output, not by a model.</p><p><strong>Why it needs you.</strong> Every figure must come from the engine, the screen is opened constantly, and a model call adds cost and delay. An \"Ask Hubert about this\" chip can open the drawer instead.</p><p><strong>What it blocks.</strong> Dispatch 21 item 1 builds on A; B moves the item to Calliste.</p>",
+          "context": "<p><strong>What this is about.</strong> Noble found it dense (NW-063). Today it is built in code from the engine's output, not by a model.</p><p><strong>Why it needs you.</strong> Every figure must come from the engine, the screen is opened constantly, and a model call adds cost and delay. An \"Ask Hubert about this\" chip can open the drawer instead.</p><p><strong>What it blocks.</strong> Dispatch 21 item 1 builds on A; B moves the item to Collister.</p>",
           "options": [
             [
               "A",
@@ -246,15 +217,15 @@
         },
         {
           "id": "NB-20",
-          "q": "Does the writer move to Calliste, the new AI track?",
-          "short": "Writer's owner: Calliste or Mason",
+          "q": "Does the writer move to Collister, the new AI track?",
+          "short": "Writer's owner: Collister or Mason",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> You defined Calliste as owner of all AI prompts, tools and context (NW-093 a). It takes Hubert. The writer (Dispatch 13 phase 2) is also a Claude call with a prompt and an eval.</p><p><strong>Why it needs you.</strong> Splitting AI work across two tracks recreates the problem Calliste is for. Mason keeps Send UI, QA and fair-housing. Calliste starts after the account move.</p>",
+          "context": "<p><strong>What this is about.</strong> You defined Collister as owner of all AI prompts, tools and context (NW-093 a). It takes Hubert. The writer (Dispatch 13 phase 2) is also a Claude call with a prompt and an eval.</p><p><strong>Why it needs you.</strong> Splitting AI work across two tracks recreates the problem Collister is for. Mason keeps Send UI, QA and fair-housing. Collister starts after the account move.</p>",
           "options": [
             [
               "A",
-              "Yes, Calliste owns the writer's prompts and eval",
+              "Yes, Collister owns the writer's prompts and eval",
               "",
               true
             ],
@@ -345,7 +316,7 @@
           "short": "Dispatch before or after the move",
           "quick": false,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Sessions can't move between Claude accounts (NW-096). Mason, Abacus and Surveyor already run in this account; they can take Dispatches 15–22 now and restart in the Casa account later from kickoffs, as they did on 2026-10-13. A new track (Calliste, Dispatch 24) and anything that holds a production key (Dispatch 23) start in the Casa account.</p><p><strong>Why it needs you.</strong> Starting now gets the build moving while you design; holding everything costs about a week.</p>",
+          "context": "<p><strong>What this is about.</strong> Sessions can't move between Claude accounts (NW-096). Mason, Abacus and Surveyor already run in this account; they can take Dispatches 15–22 now and restart in the Casa account later from kickoffs, as they did on 2026-10-13. A new track (Collister, Dispatch 24) and anything that holds a production key (Dispatch 23) start in the Casa account.</p><p><strong>Why it needs you.</strong> Starting now gets the build moving while you design; holding everything costs about a week.</p>",
           "options": [
             [
               "A",
@@ -359,7 +330,7 @@
             ],
             [
               "C",
-              "Dispatch everything now, Calliste included"
+              "Dispatch everything now, Collister included"
             ]
           ],
           "source": "NW-096 · {repo}/docs/casa-accounts-transfer.md"
@@ -409,32 +380,6 @@
             ]
           ],
           "source": "NW-102 · NW-080 to NW-082"
-        },
-        {
-          "id": "NB-29",
-          "q": "How soon the buyer wants to move: add it to the client fields?",
-          "short": "Buyer urgency",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> You said (2026-10-29) that a buyer moving ASAP versus one who can wait may change what they should offer. The client fields have financing and pre-approval (NB-15).</p><p><strong>Why it needs you.</strong> As a field, it's context for the agent, Hubert and the writer straight away. Making it move the estimated range is engine work, which needs a rule for how much it shifts, so it fits after Nov 13.</p>",
-          "options": [
-            [
-              "A",
-              "Add the field now as context; decide on the math after Nov 13",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Add it and have it shift the range now",
-              "engine work before Nov 13"
-            ],
-            [
-              "C",
-              "Not yet",
-              ""
-            ]
-          ],
-          "source": "Your chat, 2026-10-29 · NW-074"
         },
         {
           "id": "NB-30",
@@ -545,7 +490,8 @@
         "<strong>NB-23 · What mentors can see</strong>: A, every report, read-only. Recorded 2026-10-27, built in #101.",
         "<strong>NB-26 · Recording the next walk-through</strong>: A, on your machine (\"I'll figure it out\"). Recorded 2026-10-29.",
         "<strong>NB-15 · Pre-approval</strong>: A, yes or no plus the amount, recorded 2026-10-29 (in chat).",
-        "<strong>NB-14 · Target owner default</strong>: A, client, recorded 2026-10-29 (on the sheet)."
+        "<strong>NB-14 · Target owner default</strong>: A, client, recorded 2026-10-29 (on the sheet).",
+        "<strong>NB-29 · Buyer urgency</strong>: A, a field for context; it never changes the calculation. Urgency, pre-approval and cash change the justification: where in the range the client can reasonably offer, and what the agent tells them, recorded 2026-10-29 (in chat)."
       ]
     },
     {
@@ -600,32 +546,6 @@
             ]
           ],
           "source": "#77"
-        },
-        {
-          "id": "DP-11",
-          "q": "Should the client fields give a separate \"what this buyer can offer\" range?",
-          "short": "A buyer's offer range",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Pre-approval, cash and how soon the buyer wants to move (NB-15, NB-29) never move the true estimate. They could produce their own range, shown beside it.</p><p><strong>Why it needs you.</strong> If it's coming, the design leaves room for it now. Building it is engine work.</p>",
-          "options": [
-            [
-              "A",
-              "Yes, as its own line on Findings, built after Nov 13; design leaves room now",
-              "recommended",
-              true
-            ],
-            [
-              "B",
-              "Yes, before Nov 13",
-              "engine work in the deadline window"
-            ],
-            [
-              "C",
-              "No",
-              "the client fields stay context only"
-            ]
-          ],
-          "source": "The design pass brief, section 10 · #117"
         },
         {
           "id": "DP-12",
@@ -735,7 +655,8 @@
         "<strong>DP-5 · Default side</strong>: recorded 2026-10-15.",
         "<strong>DP-6 · Comp tags</strong>: recorded 2026-10-15.",
         "<strong>DP-7 · \"True estimate\" label</strong>: recorded 2026-10-15.",
-        "<strong>DP-8 · The assistant's name</strong>: recorded 2026-10-15."
+        "<strong>DP-8 · The assistant's name</strong>: recorded 2026-10-15.",
+        "<strong>DP-11 · A buyer's offer range</strong>: the true estimate never moves. Show the client-adjusted view as its own layer beside the true estimate, the agent's number and the target (perhaps separate or stacked bars); designed in the Claude Design pass, a mockup from any track welcome, recorded 2026-10-29 (in chat)."
       ]
     },
     {
@@ -1300,13 +1221,15 @@
       "id": "RL-12",
       "date": "2026-10-29",
       "qids": [
-        "DP-11",
         "DP-12",
         "DP-13",
         "DP-14",
         "DP-15"
       ],
-      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md\" target=\"_blank\" rel=\"noopener\">The design pass brief</a> (#117): every surface and what's still open on it, for your Claude Design pass."
+      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md\" target=\"_blank\" rel=\"noopener\">The design pass brief</a> (#117): every surface and what's still open on it, for your Claude Design pass.",
+      "settledIds": [
+        "DP-11"
+      ]
     },
     {
       "id": "RL-11",

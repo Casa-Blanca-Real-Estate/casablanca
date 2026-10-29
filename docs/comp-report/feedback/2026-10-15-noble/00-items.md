@@ -283,7 +283,7 @@ StreetEasy link, and stopped at **Send** (he didn't mark it sent). He filled not
   from the invite email, the tool said "We couldn't check your access" until a sign-out and sign-in.
 - **NW-092 · Kimani.** On Noble's laptop the masthead took half the screen. Design for shorter and
   smaller displays, across the tool. *(Design.)*
-- **NW-093 · Kimani.** **A persistent AI track, named "Calliste"** (after Casa's other address), owning
+- **NW-093 · Kimani.** **A persistent AI track, named "Collister"** (after Casa's other address, 60 Collister St), owning
   Hubert and all the AI work:
   - give Hubert as much ability as possible to observe, read, write and act on the platform, then gate
     it by role (dev, admin, new agent, graduated agent);

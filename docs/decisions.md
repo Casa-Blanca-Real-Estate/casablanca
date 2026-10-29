@@ -197,7 +197,7 @@ as **NB-1 to NB-28**, each with its context and a recommended default. The bigge
 - **NB-13:** Hubert sees the target and the agent's own number after the reveal (revisits D-4's "never").
 - **NB-8 / NB-9:** whether full agents still need a note when they've tagged (revisits D-27 item 3), and
   whether tags the data settles are suggested or pre-filled.
-- **NB-18 / NB-20:** what Hubert may write (propose and confirm), and whether the writer moves to Calliste.
+- **NB-18 / NB-20:** what Hubert may write (propose and confirm), and whether the writer moves to Collister.
 - **NB-22 / NB-23:** sessions read production through a keyed, redacted inspection API; mentors see every
   report, read-only.
 - **NB-25:** the tracks already running start Phase A now; new tracks and production keys wait for the
@@ -207,7 +207,7 @@ as **NB-1 to NB-28**, each with its context and a recommended default. The bigge
 **What waits for your answer, not the default:** NB-1 (NW-002's relabel), NB-2 (the type model, NW-018 a) and
 NB-8 (NW-046, which changes D-27's Save rule) are built only on an A answer. Dispatch 22a doesn't merge until
 NB-23: deploying it lets every mentor read every report (answered A, 2026-10-27: 22a can merge). Samples stay admin-only on the server until NB-24.
-Dispatch 21 item 1 builds on NB-19 A (B moves it to Calliste). Dispatch 23 items 3–4 (the inspection and test
+Dispatch 21 item 1 builds on NB-19 A (B moves it to Collister). Dispatch 23 items 3–4 (the inspection and test
 keys) wait on NB-22 and TD-14, and run from Casa's account only.
 
 **Answer →** **Kimani, 2026-10-21 (answer sheet), NB-1 to NB-10.** Four differ from the defaults: NB-3, NB-4,
