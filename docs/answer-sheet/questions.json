@@ -1,12 +1,16 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> DP-11 to DP-15, from the design pass brief (on the reading list); HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
     "DP-11",
     "DP-12",
     "DP-13",
     "DP-14",
     "DP-15",
+    "NB-30",
+    "NB-31",
+    "NB-32",
+    "NB-33",
     "HB-8",
     "NB-29",
     "TD-23",
@@ -431,6 +435,100 @@
             ]
           ],
           "source": "Your chat, 2026-10-29 · NW-074"
+        },
+        {
+          "id": "NB-30",
+          "q": "\"Pre-approved for\": the price on the letter, or the loan amount?",
+          "short": "What the pre-approval amount means",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The new Your client section (on Details and in Findings) asks a buyer's pre-approval as yes or no plus the amount (NB-15). Findings then sets that amount against the true estimate and the ask: \"Reaches into the true estimate: up to $3.65M of $3.4M – $3.9M\", \"$345K short of the $4M ask\".</p><p><strong>Why it needs you.</strong> A lender's letter usually shows both a purchase price and a loan amount. Read as the price, the comparison is direct. Read as the loan, the tool would add the down payment to get the price, and needs the down payment filled in.</p>",
+          "options": [
+            [
+              "A",
+              "The purchase price on the letter: the most the buyer can pay",
+              "how it's built; the field's placeholder says so",
+              true
+            ],
+            [
+              "B",
+              "The loan amount: the tool adds the down payment",
+              "needs the down payment, or no comparison"
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
+        },
+        {
+          "id": "NB-31",
+          "q": "Should Hubert see the client's facts after the reveal?",
+          "short": "Client facts to Hubert",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Once the range is revealed, Hubert's numbers now carry what the agent gave about the client: cash or mortgage, pre-approved and for how much, how soon (as soon as possible or can wait), and what's moving them. Never the client's name. Before the reveal he sees none of it, so a budget can't steer the sorting.</p><p><strong>Why it needs you.</strong> NB-21 keeps the other deal terms (seller's target, price, rate) out for now. The pre-approval is a deal term too, but it's what you asked Hubert to know. B is a one-line change.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, after the reveal, never the client's name",
+              "how it's built",
+              true
+            ],
+            [
+              "B",
+              "Only how soon and what's moving them, no money",
+              ""
+            ],
+            [
+              "C",
+              "None of it",
+              ""
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
+        },
+        {
+          "id": "NB-32",
+          "q": "May the tool store a client's credit or income?",
+          "short": "Credit and income in the tool",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> You wondered whether agents learn a buyer's credit score, credit-worthiness or income, and whether the tool should hold it. It's noted as a future item, not built.</p><p><strong>Why it needs you.</strong> It's sensitive financial data about a client who never signed up to the tool, kept in Casa's database. That needs a privacy and legal call (consent, retention, who sees it) before any field exists. A pre-approval already says what a lender thinks the buyer can pay.</p>",
+          "options": [
+            [
+              "A",
+              "No: the pre-approval stands in for it; revisit with a privacy review",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Yes, as an optional field, after a privacy review",
+              ""
+            ],
+            [
+              "C",
+              "Never",
+              ""
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
+        },
+        {
+          "id": "NB-33",
+          "q": "Where do agents keep their clients today, and can the tool read it?",
+          "short": "Where client info lives",
+          "quick": false,
+          "context": "<p><strong>What this is about.</strong> The future plan is a client profile per agent: pick a client from a dropdown on a new report and the name, financing, pre-approval and pace fill in. If Casa's agent app or CRM already holds clients, the tool could read from it instead of agents typing them again.</p><p><strong>Why it needs you.</strong> Only you know what Casa's agents use. Name it in the note (and whether it has an export or an API); the profiles stay in the roadmap either way.</p>",
+          "options": [
+            [
+              "A",
+              "Nowhere the tool can read yet: agents type it into each report",
+              "",
+              true
+            ],
+            [
+              "B",
+              "There is one: I'll name it in the note",
+              ""
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
         }
       ],
       "settled": [
