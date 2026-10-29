@@ -13,7 +13,7 @@ import type { CompJudgment } from '../../workspace/state.ts';
 import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
 import { Chat } from './Chat.tsx';
-import { GREETING, intro, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
+import { greeting, intro, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
 import { reachedGuides } from './hubert/guides.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
@@ -127,7 +127,7 @@ export function Hubert({ ws }: { ws: Workspace }) {
 
   const opening = ws.screen === 'sort' ? (
     <>
-      <div className="hb-bubble">{GREETING}</div>
+      <div className="hb-bubble">{greeting(ws.agentFirstName)}</div>
       <div className="hb-bubble">{intro(ws.side)}</div>
       <Suggestions ws={ws} />
       <p className="hb-hint">{SUGGESTIONS_LATER}</p>

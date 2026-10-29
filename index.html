@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. -->
+<script src="/assets/studio-auth.js"></script>
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -462,8 +464,7 @@
     <!-- ============================== sidebar ============================== -->
     <aside class="side">
       <div class="sidescroll">
-        <!-- Team only: shown after the dashboard's dev sign-in (applyAuth). The comp report has its
-             own sign-in (Casa Google accounts), so this saves finding the URL and protects nothing. -->
+        <!-- Team only for now (applyAuth): the comp report goes to agents with Noble's training. -->
         <a class="crcard" id="crCard" href="tools/comp-report/" hidden>
           <span class="crcard-kicker">In development · team only</span>
           <span class="crcard-title">Comp report</span>
@@ -590,19 +591,6 @@
   </div>
 </div>
 
-<div class="modal" id="loginModal">
-  <div class="box">
-    <h2>Sign in</h2>
-    <p>Enter an approved email to unlock team tools on this device.</p>
-    <input id="emailInput" type="email" placeholder="you@casa-blanca.com" autocomplete="email" spellcheck="false">
-    <div class="err" id="loginErr"></div>
-    <div class="row">
-      <button class="cancel" id="cancelBtn" type="button">Cancel</button>
-      <button class="go" id="goBtn" type="button">Sign in</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal" id="wsModal">
   <div class="box wide">
     <h2>Edit next workshop</h2>
@@ -681,10 +669,11 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   /* ---------- shared ---------- */
   var BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
   var SITE=BACKEND+'/.netlify/functions/site';
-  var ALLOWED=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
-  function currentEmail(){return (localStorage.getItem('cb_auth')||'').trim().toLowerCase();}
+  /* Who's signed in: the Studio sign-in (assets/studio-auth.js), the comp report's Identity session. The team
+     (the old dev sign-in's four, or a comp report admin) gets the team-only tools. */
+  function currentEmail(){var u=CBStudio.user;return u?String(u.email).toLowerCase():'';}
   function dnSignedIn(){try{var d=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');return !!(d&&d.token&&Date.parse(d.expiresAt)>Date.now());}catch(e){return false;}}
-  function authed(){return ALLOWED.indexOf(currentEmail())!==-1;}
+  function authed(){return CBStudio.isTeam();}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function $(id){return document.getElementById(id);}
   function el(tag,cls){var n=document.createElement(tag);if(cls)n.className=cls;return n;}
@@ -967,26 +956,26 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
 
   /* ================= auth ================= */
   var booted=false;
-  var loginModal=$('loginModal'),input=$('emailInput'),err=$('loginErr');
   function applyAuth(){
-    var on=authed(), tile=$('acctTile'), name=$('acctName');
-    if(on){
+    var on=authed(), user=CBStudio.user, tile=$('acctTile'), name=$('acctName');
+    if(user){
       var local=currentEmail().split('@')[0].replace(/[^a-z0-9]/g,'');
-      tile.textContent=local.slice(0,2).toUpperCase(); tile.hidden=false;
-      name.textContent=local.charAt(0).toUpperCase()+local.slice(1);
+      var first=(user.name||'').trim().split(/\s+/)[0]||local.charAt(0).toUpperCase()+local.slice(1);
+      tile.textContent=(user.name||local).replace(/[^A-Za-z ]/g,'').split(/\s+/).map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase()||local.slice(0,2).toUpperCase(); tile.hidden=false;
+      name.textContent=first;
       $('devBtn').title='Signed in as '+currentEmail();
       $('acctEmail').textContent=currentEmail();
       $('acctDn').hidden=!dnSignedIn();
     }else{
       tile.hidden=true; name.textContent='Sign in';
-      $('devBtn').title='Sign in to unlock team tools';
+      $('devBtn').title='Sign in to the Studio';
       closeAcct();
     }
     $('wEdit').hidden=!on;
     $('clAdd').hidden=!on;
     $('crCard').hidden=!on;
     /* The dev notebook: for its developers (docs/dev-notebook/README.md). The page itself signs in with Google.
-       Signed out of the studio, nothing of it shows, notebook session or not (Kimani's notebook, 2026-10-22). */
+       Not on the team, nothing of it shows, notebook session or not (Kimani's notebook, 2026-10-22). */
     var dev=on && (dnSignedIn() || currentEmail()==='creative@email.casa-blanca.com');
     $('dnCard').hidden=!dev;
     showBuild(dev);
@@ -1022,43 +1011,20 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
       .then(function(b){buildInfo=b;paint(b);})
       .catch(function(){paint(null);});
   }
-  function openLogin(){err.textContent='';input.value='';loginModal.classList.add('open');setTimeout(function(){input.focus();},40);}
-  function closeLogin(){loginModal.classList.remove('open');}
-  function tryLogin(){
-    var e=(input.value||'').trim().toLowerCase();
-    if(ALLOWED.indexOf(e)!==-1){localStorage.setItem('cb_auth',e);closeLogin();applyAuth();}
-    else{err.textContent='That email isn’t on the list.';}
-  }
   /* Signed in, the name opens the account menu; Sign out is in it. Signing out of the studio ends this
      browser's dev notebook session too, so its capture box and the dev cards go with it. */
   function closeAcct(){$('acctMenu').hidden=true;$('devBtn').setAttribute('aria-expanded','false');}
   function openAcct(){$('acctMenu').hidden=false;$('devBtn').setAttribute('aria-expanded','true');$('signOutBtn').focus();}
-  function endNotebook(){
-    try{
-      var d=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');
-      localStorage.removeItem('cb.devNotebook');
-      if(d&&d.token)return fetch('/api/dev/notebook/session',{method:'DELETE',headers:{Authorization:'Bearer '+d.token},keepalive:true}).catch(function(){});
-    }catch(e){}
-    return Promise.resolve();
-  }
   $('devBtn').onclick=function(e){
     e.stopPropagation();
-    if(!authed()){openLogin();return;}
+    if(!CBStudio.user){location.assign(CBStudio.signInUrl());return;}
     if($('acctMenu').hidden)openAcct(); else closeAcct();
   };
-  $('signOutBtn').onclick=function(){
-    var hadNotebook=dnSignedIn();
-    localStorage.removeItem('cb_auth');
-    // The CMS and roster tokens are remembered across tabs; signing out forgets them.
-    localStorage.removeItem('cb_cms_token'); localStorage.removeItem('cb_pics_token');
-    endNotebook().then(function(){ if(hadNotebook)location.reload(); else applyAuth(); });
-  };
+  /* Signing out ends the Identity session, the notebook's and the CMS and roster tokens (CBStudio.signOut). */
+  $('signOutBtn').onclick=function(){ CBStudio.signOut(); };
   $('acctMenu').addEventListener('click',function(e){e.stopPropagation();});
   document.addEventListener('click',function(){ if(!$('acctMenu').hidden)closeAcct(); });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&!$('acctMenu').hidden){closeAcct();$('devBtn').focus();} });
-  $('goBtn').onclick=tryLogin; $('cancelBtn').onclick=closeLogin;
-  input.addEventListener('keydown',function(ev){if(ev.key==='Enter')tryLogin();});
-  loginModal.addEventListener('click',function(ev){if(ev.target===loginModal)closeLogin();});
 
   /* ================= workshop (live + dev-editable) ================= */
   var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1185,7 +1151,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   /* ================= modals: escape closes ================= */
   document.addEventListener('keydown',function(e){
     if(e.key!=='Escape')return;
-    [clModal,loginModal,wsModal].forEach(function(m){m.classList.remove('open');});
+    [clModal,wsModal].forEach(function(m){m.classList.remove('open');});
   });
 
   /* ================= hydrate from live backend (fall back to inline defaults) ================= */
@@ -1200,6 +1166,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   paintTheme();
   renderWorkshop();
   applyAuth();          /* sets the account chip + gating before the first render */
+  CBStudio.ready.then(applyAuth);   /* and again once the server has said who this is */
   renderChangelog();
   showTab(location.hash.slice(1));
   booted=true;

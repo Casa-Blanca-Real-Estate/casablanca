@@ -231,8 +231,8 @@ export interface DesignedInput {
   email: ParsedEmail;
   anchor: DesignedComp | null;
   others: DesignedComp[];
-  /** The sign-off: phone and headshot from Casa's roster, when it knows the agent (server/agent-card.ts). */
-  agent: { name: string; office: string; email: string | null; phone?: string | null; photo?: string | null };
+  /** The sign-off: title, phone and headshot from Casa's roster, when it knows the agent (server/agent-card.ts). */
+  agent: { name: string; title?: string | null; office: string; email: string | null; phone?: string | null; photo?: string | null };
   /** "Talk it through" (seller), "Plan the offer" (buyer). */
   cta: string;
   subject: string;
@@ -378,6 +378,7 @@ export function designedHtml(d: DesignedInput): string {
   if (after.length) out.push(row(`<div style="font-size:15px;line-height:1.6;">${after.join('')}</div>`));
   const signer = e.signOff?.split('\n').at(-1)?.trim() || d.agent.name || '[your name]';
   const phone = d.agent.phone?.trim() || null;
+  const title = d.agent.title?.trim() || null;
   // The headshot is Casa's copy, served from this site: the origin makes it absolute for the client's mail.
   const headshot = d.agent.photo ? safeUrl(d.agent.photo.startsWith('/') ? `${d.origin}${d.agent.photo}` : d.agent.photo) : null;
   const mail = d.agent.email ? `mailto:${encodeURIComponent(d.agent.email).replace('%40', '@')}?subject=${encodeURIComponent(d.subject)}` : null;
@@ -386,6 +387,7 @@ export function designedHtml(d: DesignedInput): string {
       ? `<img src="${esc(headshot)}" alt="${esc(signer)}" width="56" height="56" style="display:block;width:56px;height:56px;border-radius:50%;object-fit:cover;border:0;">`
       : `<div style="width:56px;height:56px;border-radius:50%;${HATCH}"></div>`}</td>`
     + `<td style="${CELL}padding:22px 0 28px;vertical-align:middle;"><div style="font-size:15px;font-weight:bold;">${esc(signer)}</div>`
+    + (title ? `<div style="font-size:13px;color:#888680;margin-top:2px;">${esc(title)}</div>` : '')
     + (phone ? `<div style="font-size:13px;color:#888680;margin-top:2px;">${phoneLink(phone, 'font-size:13px;')}</div>` : '')
     + `<div style="font-size:12px;color:#888680;margin-top:2px;">${quiet(d.agent.office, null, 'font-size:12px;color:#888680;')}</div></td>`
     + (mail ? `<td align="right" style="${CELL}text-align:right;padding:22px 0 28px 12px;vertical-align:middle;"><a href="${esc(mail)}" style="display:inline-block;background:#0f0f0f;color:#ffffff;text-decoration:none;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;padding:12px 18px;white-space:nowrap;">${esc(d.cta)}</a></td>` : '')

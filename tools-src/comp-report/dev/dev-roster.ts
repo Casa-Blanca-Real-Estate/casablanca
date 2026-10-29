@@ -1,8 +1,8 @@
-// DEV ONLY — a roster in memory for the email's sign-off (server/agent-card.ts),
+// DEV ONLY — a roster in memory for the agent's profile (server/agent-card.ts),
 // from a small JSON file named by CR_DEV_ROSTER_FILE:
 //
 //   [{ "slug": "kimani-c", "name": "Kimani C.", "email": "you@casa-blanca.com",
-//      "phone": "(212) 555-0101", "photo": "/path/to/headshot.jpg" }]
+//      "title": "Creative Associate", "phone": "(212) 555-0101", "photo": "/path/to/headshot.jpg" }]
 //
 // Each becomes a record shaped as the agent CMS and the profile-pic roster write
 // it, its photo stored as the SQ2_Clean output, in one part.
@@ -10,7 +10,7 @@ import { readFile } from 'node:fs/promises';
 import type { AgentRoster } from '../server/agent-card.ts';
 import type { FileBlobs } from '../../agent-pics/files.ts';
 
-interface Row { slug: string; name: string; email: string; phone?: string; photo?: string }
+interface Row { slug: string; name: string; email: string; title?: string; displayName?: string; phone?: string; photo?: string }
 
 export async function devRoster(file: string): Promise<AgentRoster> {
   const rows = JSON.parse(await readFile(file, 'utf8')) as Row[];
@@ -30,7 +30,7 @@ export async function devRoster(file: string): Promise<AgentRoster> {
     records.set(r.slug, {
       slug: r.slug,
       status: 'draft',
-      draft: { identity: { name: r.name }, contact: { email: r.email, phone: r.phone ?? '' } },
+      draft: { identity: { name: r.name, title: r.title ?? '', displayName: r.displayName ?? '' }, contact: { email: r.email, phone: r.phone ?? '' } },
       live: null,
       pic: { outputs },
     });

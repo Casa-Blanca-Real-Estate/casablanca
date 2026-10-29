@@ -1,6 +1,6 @@
-// GET /api/comp-report/agent-card — the signed-in agent's name, phone and
-// headshot from Casa's roster, for the email's sign-off (server/agent-card.ts).
-//   → {card: {name, phone, photo} | null}
+// GET /api/comp-report/agent-card — the signed-in agent's profile from Casa's
+// roster (server/agent-card.ts): the email's sign-off, and Hubert's greeting.
+//   → {card: {name, firstName, title, email, phone, photo} | null}
 // Null when the roster doesn't know the agent's email, for a guest, or where
 // there's no roster to read (local dev without one): the sign-off then falls
 // back to the name Identity has.
@@ -23,6 +23,6 @@ export function handleAgentCard(req: Request, deps: AgentCardDeps): Promise<Resp
       console.warn('comp report: the roster couldn’t be read for the sign-off', e);
       return null;
     });
-    return json({ card: card && { name: card.name, phone: card.phone, photo: card.photo } });
+    return json({ card: card && { name: card.name, firstName: card.firstName, title: card.title, email: card.email, phone: card.phone, photo: card.photo } });
   });
 }

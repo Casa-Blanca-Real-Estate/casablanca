@@ -367,9 +367,14 @@ export interface EmailPhotos {
   home: string | null;
 }
 
-/** The signed-in agent's card from Casa's roster, for the email's sign-off (server/agent-card.ts). */
+/** The signed-in agent's profile from Casa's roster: the email's sign-off, Hubert's greeting (server/agent-card.ts). */
 export interface AgentCard {
   name: string | null;
+  /** What they go by, for Hubert's greeting. */
+  firstName: string | null;
+  /** e.g. Licensed Real Estate Agent, under the name on the sign-off. */
+  title: string | null;
+  email: string | null;
   phone: string | null;
   /** The headshot's path on this site, served publicly for the client's mail; null without one. */
   photo: string | null;

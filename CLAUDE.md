@@ -46,7 +46,12 @@ file points you there by section when you need it.
 
 - **Single-file HTML per tool. No frameworks, no build pipeline.** Assets embedded as base64.
 - Object Sans (Regular 400 / Heavy 800) is the brand font — embedded, never linked externally.
-- Internal users are agents: zero-install, browser-based, no accounts.
+- Internal users are agents: zero-install, browser-based. **One sign-in for the whole Studio** (PR #116, Kimani
+  2026-10-29): every Studio page loads `assets/studio-auth.js` first, which reads the comp report's Netlify
+  Identity session (Casa Google, or email and password) and asks `/api/comp-report/me` who's allowed; signed
+  out, it goes to the comp report's sign-in and back. The team (`isTeam()`: the old four-email dev list, a
+  comp report admin, or a preview's guest) gets the team-only tools. It hides pages, it doesn't protect
+  them: anything secret still needs its function to check the token. The public agent sites never load it.
 - `netlify.toml` must explicitly declare the functions directory.
 - **Merging isn't deploying.** PRs merge to `claude/main`; Netlify publishes production from the
   `release` branch, which the `release to production` workflow fast-forwards to `claude/main`
@@ -69,7 +74,7 @@ file points you there by section when you need it.
 - **The comp report tool is a scoped exception to two rules:** it's React + Vite + TypeScript
   (source in `tools-src/comp-report/`, built to `tools/comp-report/`), and it has accounts
   (Netlify Identity) and retained data (Netlify Database). See `docs/comp-report/01-design.md`.
-  Single-file HTML and no accounts still hold for every other tool.
+  Single-file HTML still holds for every other tool; they share the comp report's sign-in (above).
 
 ## Layout
 
