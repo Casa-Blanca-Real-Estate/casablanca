@@ -10,7 +10,8 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-10-21 by Casanova (answer sheet: NB-1 to NB-10, CR-3, PP-1, AC-2/3/4/7, TD-9, TD-14).
+Last updated 2026-10-29 (answer sheet of 2026-10-28: AC-1/5/6, CR-2, FB-1 to FB-5, NB-26, PP-4 to PP-12, TD-18;
+new on the sheet: HB-1 to HB-7 from `docs/comp-report/hubert-plan.md`, CR-7, TD-19 to TD-22).
 
 **What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
 pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dispatch 10's phase 2.
@@ -59,7 +60,10 @@ each was applied.
   doesn't need the key: do it before any Jev output exists.
 - [x] ~~Set up the dev notebook (#54).~~ Done: `DEV_NOTEBOOK_KEY` is in the Casa cloud environment and
   works (2026-10-13).
-- [ ] **Now — sort the team Feedback list:** route each piece on the answer sheet (FB-1 to FB-6), and
+- [ ] **Now — sort the team Feedback list:** FB-1 to FB-5 routed 2026-10-28 (all A: FB-1 with the profile pics
+  work, split into project threads as needed; FB-2 the roster's Instagram field now, builder tag lines later; FB-3
+  and FB-4 the post builders' first dispatch; FB-5 queued for the post builders after the live run). FB-6 is open.
+  Then
   on the notebook page (*Team feedback*) **Make a note** on
   anything worth acting on. Sessions now read the list too (`--feedback`, without emails), so Casanova
   can propose the sort; the button is yours, because notes are.
@@ -100,7 +104,7 @@ each was applied.
   (2026-10-21): "Don't think so. Remind me to check." If not, it's turned off.
 - [ ] **Soon — a co-op and its StreetEasy export** for the co-op sample (TD-15); **test an invite end to end** (TD-16);
   **Noble on the size-scale bands** (TD-17); **record the next walk-through** (TD-13).
-- [ ] **Soon — swap the Anthropic key in Make** (TD-18). The connection "My Anthropic Claude connection" feeds
+- [x] ~~Swap the Anthropic key in Make (TD-18).~~ Done 2026-10-28. The connection "My Anthropic Claude connection" feeds
   the live **Mailchimp ISO Blast Automation** (its three Claude steps). Give it its own key from Casa's Anthropic
   workspace, update the connection, check one run, then revoke the old key.
 - [x] ~~`CB_PICS_TOKEN` and `CB_CMS_TOKEN`.~~ Done 2026-10-21. Production now answers 401, not 503, for the roster and the CMS.
@@ -151,7 +155,8 @@ Human Rights Law: `tools-src/comp-report/workspace/fair-housing.ts` (version `fh
    writes about waiving the appraisal contingency in the next step can't copy the email. Keep that,
    or allow the phrase as a deal term?
 
-**Answer →** _type here — who reviews the list; keep or allow "appraisal contingency"_
+**Answer →** **Q2 (CR-2), Kimani 2026-10-28: A, keep it blocked.** Keep a note for the day Casa does appraisal
+work, so the block can be loosened where it's needed: this line is that note. Q1 (who reviews the list) is open.
 
 ---
 
@@ -315,7 +320,14 @@ Blanca Project. Settled so far: `casacalliste@gmail.com` **stays** Casa's identi
   the clean-out.
 - **Q7 (AC-7):** "Don't think so. Remind me to check." On **Your actions**.
 
-Q1 is done (the keys moved, 2026-10-21); Q5 and Q6 are still open.
+- **Q1 (AC-1):** done already (the keys moved, 2026-10-21).
+- **Q5 (AC-5), 2026-10-28:** methods and patterns (the dispatch method, skill structure, tool design systems) are
+  how he works, not Casa IP; his contract's IP clause was scoped to the media he makes. The Answer Sheet and the
+  Dispatch Ledger were first made in his personal Claude, with dated proof; some pieces were adapted from MindBinder
+  work. "Don't worry so much about what stays mine."
+- **Q6 (AC-6), 2026-10-28:** the second owner is Kimani himself, on his personal Google address (kjocalliste@gmail.com).
+
+Q7 is still open (on **Your actions**).
 
 ---
 
@@ -355,6 +367,12 @@ where signed-in agents fill in their own details (possibly gating the tools behi
 exists), prefilled from the signatures doc. Alternatives: a FileMaker export (he'd need a walkthrough), or
 better, FileMaker's API if it has one. Already-filed photos import as **placed** (PP-2, 2026-10-15).
 **Applied:** Dispatch 12 phase 2 parses the doc; the poll and FileMaker are new work, not dispatched.
+**The import's review (PP-4 to PP-12), Kimani 2026-10-28:** Annika Yan as `a.yan@` (inactive); Vega-Gorsun;
+Franceiry; the agents sharing a phone (PP-7) and the two with none (PP-8) import with no phone; Cecilia Rubenstein
+not linked to `cecilia-c` (unsure); Emma Caldicott as **Emma Liuzzi**, same email, and the roster gains a field for
+former names and aliases so Caldicott stays searchable; everyone with photos but no signature is added (he toggles
+the inactive ones in the CMS); already-filed photos dated Sept 29 for now. PP-3 (Esther Wang) is open, defaulting
+to the doc. FB-2 adds an Instagram handle field to the roster now.
 
 ### D-15 · The esbuild / `@netlify/blobs` rule — resolved 2026-09-28
 The rule was wrong. Netlify bundles every v2 function with `nft` whatever `node_bundler` says, and that
