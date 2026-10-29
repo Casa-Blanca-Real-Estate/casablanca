@@ -20,7 +20,7 @@ existing accordions; the client section's own place is Claude Design's.
 
 1. **NW-063 a · "How Hubert got there", plainer.** Built on NB-19's recommendation, A: a plainer template, not
    a model call. If Kimani answers B (Hubert's live words), stop this item and say so in the PR; it goes to
-   Calliste. One short sentence per idea; comp names without the price,
+   Collister. One short sentence per idea; comp names without the price,
    size and date parentheticals (put them in a `title`); "your closest" for "1st-tier". Keep the sentence on
    which comp sets each end. Return segments (text or comp id) instead of one string, so Design can draw chips
    later. It stays deterministic, built from the engine (`src/views/findings/findings.ts`).
