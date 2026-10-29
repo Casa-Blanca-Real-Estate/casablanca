@@ -642,6 +642,17 @@ it in the CMS.
 
 ---
 
+### 7.5 A sale Hubert finds on the web: a card in his chat
+
+**Kimani, 2026-10-29:** when Hubert finds a sale on the web, he brings it into his chat as a card, not straight
+onto Sort. The card shows the listing link and an **Approve** button that only turns on after the agent has
+clicked the link to check it. Approved, Hubert adds it to the comps; it stays untiered and counts toward nothing
+until the agent says what tier it gets. A rough card ships first; the design pass gives it its look (address,
+photo if any, price, date, source, the link, Approve and Dismiss, the "check it first" state).
+
+This changes rule 6 (section 3) for this one path: the sale comes from the web, but only into the report through
+the agent's check and approval.
+
 ## 8. Problems that cut across screens
 
 1. **Two modals, one pattern.** Review comps (6.8) and the client's words (6.12) should look like one component:
