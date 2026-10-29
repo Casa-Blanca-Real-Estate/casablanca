@@ -10,7 +10,7 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, clientWordsApi, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { agentCardApi, ApiError, clientWordsApi, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type AgentCard, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { cleanAllClientRounds } from '../../../workspace/client-words.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
@@ -478,13 +478,26 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     }
   }, [homeRead?.id, homeRead?.status, readOnly]);
 
+  // The agent's card for the email's sign-off: name, phone, headshot, from Casa's roster.
+  const [agentCard, setAgentCard] = useState<AgentCard | null>(null);
+  useEffect(() => {
+    let live = true;
+    void agentCardApi.mine().then((card) => {
+      if (live) setAgentCard(card);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const ws: WorkspaceModel | null = data && {
     reportId,
     report: data.report,
     today,
     readOnly,
     canSample,
-    agentName: me.user.name ?? '',
+    agentName: agentCard?.name || me.user.name || '',
+    agentCard,
     brief,
     setBrief: (next) => {
       setBriefState(next);
