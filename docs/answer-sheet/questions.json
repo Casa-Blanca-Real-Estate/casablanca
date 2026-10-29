@@ -1,14 +1,11 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-29:</strong> Your 21 answers from 2026-10-28 are recorded and off the sheet (in each topic's settled list). <strong>New:</strong> Hubert's seven questions (HB), CR-7, and TD-19 to TD-22: the release and the live checks. On the reading list: this week's rundown and the Hubert plan. Still open from before: NB-11 to NB-28 (bar NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
-    "HB-1",
-    "HB-2",
-    "HB-3",
-    "HB-4",
-    "HB-5",
-    "HB-6",
-    "HB-7",
+    "HB-8",
+    "NB-29",
+    "TD-23",
+    "CR-3",
     "CR-7",
     "TD-19",
     "TD-20",
@@ -22,170 +19,43 @@
       "prefix": "HB",
       "url": "{repo}/docs/comp-report/hubert-plan.md",
       "linkLabel": "Open the Hubert plan",
-      "intro": "<p>From #109 (merged 2026-10-29): Hubert now edits comps on the agent's say-so, shows a trail of every change, searches the web, and posts a guide at each step. The plan says what he knows at each step and what he should know next. Each question has a default; the next Hubert work builds on it unless you object.</p>",
+      "intro": "<p>From #109 (merged 2026-10-29). You answered HB-1 to HB-7 in chat on 2026-10-29; they're in the settled list below. One follow-up from your question about the web.</p>",
       "questions": [
         {
-          "id": "HB-1",
-          "q": "Practice agents: may they dictate a tier to Hubert?",
-          "short": "Practice agents dictating tiers",
+          "id": "HB-8",
+          "q": "May Hubert bring a sale or listing he finds on the web into the report?",
+          "short": "Web listings into the report",
           "quick": true,
-          "context": "<p><strong>What this is about.</strong> #109 lets any agent say \"make it 1st tier\" and Hubert puts it in. For a practice agent, Dispatch 25's order is: write your own take first, then see Hubert's.</p><p><strong>Why it needs you.</strong> Dictating is still the agent's own call, so it fits your rule. Refusing would make practice agents type their reasoning in the review before Hubert will tier for them.</p>",
+          "context": "<p><strong>Why the rule exists.</strong> You asked: isn't pulling sales and prices the point of web search? The rule today is that a price never goes into the report straight from a web page. Every number in the estimate and the email has to trace to a comp the agent picked and the tool read itself (StreetEasy's page or export), with its photos and facts. A page Hubert skims can be stale, a different unit, or an ask rather than a sale, and from there it would reach a client. StreetEasy also blocks plain fetches, so his search can't read it reliably anyway.</p><p><strong>What would work.</strong> Hubert finds a candidate on the web, then adds it as a comp <em>through its StreetEasy link</em>, so it goes through the same read and checks as a pasted link and shows on his trail. The agent still tiers it. This is item 5 in the Hubert plan.</p>",
           "options": [
             [
               "A",
-              "Fine: it's their call either way",
-              "as built",
-              true
-            ],
-            [
-              "B",
-              "Refuse until they've written their own reasoning in the review",
-              ""
-            ]
-          ],
-          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · #109"
-        },
-        {
-          "id": "HB-2",
-          "q": "Hubert's web search: any site, 60 a day?",
-          "short": "Web search limits",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Hubert can search the web and read a page through Firecrawl. Each lookup costs Firecrawl credit. He never takes a sale, price or listing from the web, or anything about who lives in a neighborhood.</p>",
-          "options": [
-            [
-              "A",
-              "Any public site, 60 lookups a person a day",
-              "as built",
-              true
-            ],
-            [
-              "B",
-              "Only StreetEasy, NYC.gov, the MTA and building sites",
-              ""
-            ],
-            [
-              "C",
-              "A lower daily cap",
-              "put the number in the note"
-            ]
-          ],
-          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · #109"
-        },
-        {
-          "id": "HB-3",
-          "q": "Put Hubert in the New report window before Nov 13?",
-          "short": "Hubert in New report",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Hubert isn't in the New report window, so the first three step guides only show once he's opened on Sort, and he can't fill the home's details by dictation.</p>",
-          "options": [
-            [
-              "A",
-              "After the design pass",
+              "Yes, through its StreetEasy link: same read and checks, on the trail",
               "recommended",
               true
             ],
             [
               "B",
-              "Before Nov 13",
-              ""
-            ]
-          ],
-          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · #109"
-        },
-        {
-          "id": "HB-4",
-          "q": "Step guides: for every agent, or practice agents only?",
-          "short": "Who gets step guides",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> A short preset note from Hubert joins his chat the first time an agent reaches each step. No model call, no cost.</p>",
-          "options": [
-            [
-              "A",
-              "Everyone",
-              "as built",
-              true
-            ],
-            [
-              "B",
-              "Practice agents only",
-              ""
-            ]
-          ],
-          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · #109"
-        },
-        {
-          "id": "HB-5",
-          "q": "Undo on Hubert's comp edits, from the trail?",
-          "short": "Undo on comp edits",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Every comp change Hubert makes shows on his trail. His email edits already have Undo on Send; his comp edits don't.</p>",
-          "options": [
-            [
-              "A",
-              "Yes, on the trail entry",
-              "small; recommended",
-              true
-            ],
-            [
-              "B",
-              "No, the agent changes it back on Sort",
-              ""
-            ]
-          ],
-          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · #109"
-        },
-        {
-          "id": "HB-6",
-          "q": "Fold Dispatch 24's items 1–2 into Hubert's lane before Nov 13?",
-          "short": "Dispatch 24 timing",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Dispatch 24 (Calliste) item 2 is <code>get_view</code> (which screen and comp the agent is on) and a wider read of each comp; item 1 is the target after the reveal (D-4, NB-13). Both overlap #109.</p>",
-          "options": [
-            [
-              "A",
-              "get_view and the wider read now; the target after",
-              "recommended",
-              true
-            ],
-            [
-              "B",
-              "All of it now",
-              ""
+              "Yes, and let him type a web price in as a fact",
+              "unverified numbers can reach the client"
             ],
             [
               "C",
-              "All of it after Nov 13",
+              "No, the web stays for context only",
               ""
             ]
           ],
-          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · #109"
-        },
-        {
-          "id": "HB-7",
-          "q": "Hubert across the whole Studio: plan it after Nov 13?",
-          "short": "Hubert across the Studio",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Your 2026-10-21 note: Hubert could help across the Studio, navigation and help first, acting later. Nothing is planned yet.</p>",
-          "options": [
-            [
-              "A",
-              "Plan it after Nov 13, navigation and help first",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Plan it now, build after Nov 13",
-              ""
-            ],
-            [
-              "C",
-              "Not for now",
-              ""
-            ]
-          ],
-          "source": "Your dev notes, 2026-10-21"
+          "source": "The Hubert plan ({repo}/docs/comp-report/hubert-plan.md) · your chat, 2026-10-29"
         }
+      ],
+      "settled": [
+        "<strong>HB-1 · Practice agents dictating tiers</strong>: A, fine. However the thinking comes in (clicks, typing, dictation, telling Hubert), it's theirs; test how well dictation like \"comps 1 and 2 to 2nd tier, 3 and 5 to 1st\" works, recorded 2026-10-29 (in chat).",
+        "<strong>HB-2 · Web search limits</strong>: any public site and 60 a day at the Studio level; in the comp report, steer Hubert toward StreetEasy, NYC.gov, the MTA and building sites rather than hard-block the rest, recorded 2026-10-29 (in chat).",
+        "<strong>HB-3 · Hubert in New report</strong>: B, put him there now, rudimentary, as an anchor for the design pass, recorded 2026-10-29 (in chat).",
+        "<strong>HB-4 · Step guides</strong>: A, everyone. A separate first-run orientation and a hint/guide button for practice agents is a later item (09-plan, Phase C), recorded 2026-10-29 (in chat).",
+        "<strong>HB-5 · Undo on comp edits</strong>: A, yes, recorded 2026-10-29 (in chat).",
+        "<strong>HB-6 · Dispatch 24's items 1–2</strong>: A, <code>get_view</code> and the wider read now (\"Hubert needs to know where the user is\"); the target after the reveal later, recorded 2026-10-29 (in chat).",
+        "<strong>HB-7 · Hubert across the Studio</strong>: A, plan it after the build, recorded 2026-10-29 (in chat)."
       ]
     },
     {
@@ -272,52 +142,6 @@
             ]
           ],
           "source": "NW-068, NW-093 d"
-        },
-        {
-          "id": "NB-14",
-          "q": "Whose number is the target by default?",
-          "short": "Target owner default",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> A new toggle says whose the target is: client, agent or both (NW-070). The label follows it.</p><p><strong>Why it needs you.</strong> The field already reads as the client's hope, and Noble read it that way.</p>",
-          "options": [
-            [
-              "A",
-              "Client",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Agent"
-            ],
-            [
-              "C",
-              "Both"
-            ]
-          ],
-          "source": "NW-070"
-        },
-        {
-          "id": "NB-15",
-          "q": "Pre-approval: yes or no, or yes or no plus the amount?",
-          "short": "Pre-approval amount",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> The client fields (NW-074) add financing (cash or mortgage) and pre-approval.</p><p><strong>Why it needs you.</strong> The amount caps what a buyer can offer, which is what Noble used to argue his all-cash offer. It costs one optional field.</p>",
-          "options": [
-            [
-              "A",
-              "Yes or no, plus the amount",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Yes or no only"
-            ]
-          ],
-          "source": "NW-074"
         },
         {
           "id": "NB-16",
@@ -576,6 +400,32 @@
             ]
           ],
           "source": "NW-102 · NW-080 to NW-082"
+        },
+        {
+          "id": "NB-29",
+          "q": "How soon the buyer wants to move: add it to the client fields?",
+          "short": "Buyer urgency",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> You said (2026-10-29) that a buyer moving ASAP versus one who can wait may change what they should offer. The client fields have financing and pre-approval (NB-15).</p><p><strong>Why it needs you.</strong> As a field, it's context for the agent, Hubert and the writer straight away. Making it move the estimated range is engine work, which needs a rule for how much it shifts, so it fits after Nov 13.</p>",
+          "options": [
+            [
+              "A",
+              "Add the field now as context; decide on the math after Nov 13",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Add it and have it shift the range now",
+              "engine work before Nov 13"
+            ],
+            [
+              "C",
+              "Not yet",
+              ""
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074"
         }
       ],
       "settled": [
@@ -590,7 +440,9 @@
         "<strong>NB-9 · Derived tags: pre-fill or suggest</strong>: C, pre-filled for full agents, suggested for practice agents, recorded 2026-10-21.",
         "<strong>NB-10 · Size scale thresholds</strong>: A, ±10% / 10–25% / past 25%, recorded 2026-10-21.",
         "<strong>NB-23 · What mentors can see</strong>: A, every report, read-only. Recorded 2026-10-27, built in #101.",
-        "<strong>NB-26 · Recording the next walk-through</strong>: A, on your machine (\"I'll figure it out\"). Recorded 2026-10-29."
+        "<strong>NB-26 · Recording the next walk-through</strong>: A, on your machine (\"I'll figure it out\"). Recorded 2026-10-29.",
+        "<strong>NB-15 · Pre-approval</strong>: A, yes or no plus the amount, recorded 2026-10-29 (in chat).",
+        "<strong>NB-14 · Target owner default</strong>: A, client, recorded 2026-10-29 (on the sheet)."
       ]
     },
     {
@@ -690,24 +542,26 @@
           "q": "Does the writer's house voice read right?",
           "short": "The writer's house voice: right?",
           "quick": false,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> Claude now drafts the headlines and the email's sections in Casa's voice, in Frankie's order. The voice is a short style file: plain words, specific comparisons, numbers only from the comps, one to three lines a comp. It's quoted in full in #76's description ({repo}/tools-src/comp-report/server/house-voice.ts).</p><p><strong>Why it needs you.</strong> It's Casa's voice in front of clients. The real eval drafts (100 Barclay and Frankie's #517) come once <code>CR_EVAL_ANTHROPIC_API_KEY</code> is in the cloud environment (TD-3); read them together if you'd rather.</p>",
+          "context": "<p><strong>What this is about.</strong> Claude drafts the headlines and the email's sections in Casa's voice, in Frankie's order. You said to wait for the real eval drafts. They're in: 12 drafts (100 Barclay and Frankie's #517; full, short and text), about $0.20, in project files <code>writer-eval/2026-10-29-eval.md</code>, with the code in #112.</p><p><strong>The eval's read.</strong> Plain, specific, Frankie's order; 11 of 12 pass every number check. If you want a revision, four fixes: it adds its own points under Things to consider beyond the agent's; one headline gives a single price (\"about $4.23M\"); the carrying-cost line repeats on every comp; the text message still carries the whole email frame.</p>",
           "options": [
             [
               "A",
-              "Yes, as written"
+              "Fix those four, keep the rest of the voice",
+              "",
+              true
             ],
             [
               "B",
-              "Change it",
-              "say how in the note"
+              "Keep it exactly as is",
+              ""
             ],
             [
               "C",
-              "Wait for the eval drafts first"
+              "Change more",
+              "say how in the note"
             ]
           ],
-          "source": "#76"
+          "source": "#76 · #112"
         },
         {
           "id": "CR-4",
@@ -1141,6 +995,21 @@
           ],
           "source": "D-28",
           "needsYou": true
+        },
+        {
+          "id": "TD-23",
+          "q": "After the release: set the inspection API's four variables in Netlify",
+          "short": "The inspection API's keys",
+          "quick": true,
+          "context": "<p>Once #115 (sessions read production safely) is merged and released: in Netlify, <strong>Production context only</strong>, set <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> (each at least 32 characters, different from each other), <code>CR_TEST_USER_EMAIL</code> (an <code>@test.invalid</code> address) and <code>CR_EVAL_ANTHROPIC_API_KEY</code>. Then put the first two in the Casa cloud environment. Until then the endpoint refuses every request. Never paste a key into a chat.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
+          "source": "#115",
+          "needsYou": true
         }
       ],
       "settled": [
@@ -1200,6 +1069,14 @@
   ],
   "reading": [
     {
+      "id": "RL-11",
+      "date": "2026-10-29",
+      "qids": [
+        "CR-3"
+      ],
+      "html": "The writer's real eval: 12 drafts with a short read at the top (project files: <code>writer-eval/2026-10-29-eval.md</code>)."
+    },
+    {
       "id": "RL-10",
       "date": "2026-10-29",
       "qids": [
@@ -1212,15 +1089,16 @@
     {
       "id": "RL-9",
       "date": "2026-10-29",
-      "qids": [
+      "qids": [],
+      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/main/docs/comp-report/hubert-plan.md\" target=\"_blank\" rel=\"noopener\">The Hubert plan</a>: what he knows at each step, what he can do, and what's next.",
+      "settledIds": [
         "HB-1",
         "HB-2",
         "HB-3",
         "HB-4",
         "HB-5",
         "HB-6"
-      ],
-      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/main/docs/comp-report/hubert-plan.md\" target=\"_blank\" rel=\"noopener\">The Hubert plan</a>: what he knows at each step, what he can do, and what's next."
+      ]
     },
     {
       "id": "RL-8",
@@ -1229,8 +1107,6 @@
         "NB-11",
         "NB-12",
         "NB-13",
-        "NB-14",
-        "NB-15",
         "NB-16",
         "NB-17",
         "NB-18",
@@ -1246,7 +1122,9 @@
       "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/comp-report/feedback/2026-10-15-noble/09-plan.md\" target=\"_blank\" rel=\"noopener\">Noble's walk-through: the plan</a>, with the topic reports 01–08 beside it.",
       "settledIds": [
         "NB-23",
-        "NB-26"
+        "NB-26",
+        "NB-15",
+        "NB-14"
       ]
     },
     {

@@ -1,4 +1,9 @@
-# Dispatch 24 — Calliste: Hubert sees what the agent sees (CR-H1)
+# Dispatch 24 — Hubert sees what the agent sees (CR-H1)
+
+> **2026-10-29:** "Calliste" was the name Kimani gave the AI track (2026-10-15, after Casa's other address); it
+> isn't a topic. Hubert's work now runs in project threads, so this dispatch is named for what it does. Item 2
+> (`get_view` and the wider read) goes into the next Hubert round (HB-6); item 1 (the target after the reveal)
+> follows after Nov 13. #109 already covers the comp edits that D-27 item 6 ruled out (HB-1).
 
 **Dispatched by:** Casanova · 2026-10-15 · **To:** Calliste (a new track, started in Casa's Claude account)
 **Builds from:** `docs/comp-report/feedback/2026-10-15-noble/05-hubert-and-ai.md` (read all of it: the lane

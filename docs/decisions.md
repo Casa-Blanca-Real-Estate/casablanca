@@ -24,7 +24,7 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 | D-25 | The fair-housing list, and "appraisal contingency" | Soon — before agents copy writer drafts | Think (Hannah) | QA's compliance list (Dispatch 13) |
 | D-26 | Moving Casa's work onto Casa-owned accounts | Later — after the comp report settles; keys sooner | Think (with Erez) | `docs/casa-accounts-transfer.md` |
 | D-27 | The design port: what the handoff changes | Now — Mason builds on the defaults (Dispatch 14) | Quick (object only) | Noble's walk-through |
-| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21, NB-23 on 2026-10-27; the rest of NB-11 to NB-28 open) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
+| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21, NB-23 on 2026-10-27, NB-14 A and NB-15 A on 2026-10-29; the rest of NB-11 to NB-28 open, plus NB-29, buyer urgency) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
 | D-29 | The bosses' demo: what changes (answered 2026-10-22) | Now — Dispatches 25 and 26 build on it | — | Dispatches 25, 26 |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
