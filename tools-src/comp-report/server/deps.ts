@@ -13,6 +13,9 @@ import type { LinkReadDeps } from './api/links.ts';
 import type { SamplePhotoCaptureDeps, SamplePhotoDeps } from './api/sample-photos.ts';
 import type { SamplePhotoStore } from './sample/photos.ts';
 import type { EmailPhotoDeps } from './api/email-photos.ts';
+import type { AgentCardDeps } from './api/agent-card.ts';
+import type { AgentRoster } from './agent-card.ts';
+import type { FileBlobs } from '../../agent-pics/files.ts';
 import { fetchListingPhoto, type EmailPhotoStore } from './email-photos.ts';
 import type { WriteDeps } from './api/narratives.ts';
 import { productionAnthropic } from './api/turn.ts';
@@ -86,6 +89,34 @@ export function productionEmailPhotoStore(): EmailPhotoStore {
 
 export function productionEmailPhotoDeps(req: Request): EmailPhotoDeps {
   return { ...productionAuthDeps(req), emailPhotos: productionEmailPhotoStore(), fetchPhoto: fetchListingPhoto };
+}
+
+/**
+ * Casa's agent roster, read only: the agent CMS's records (`cb-agents`, which
+ * the profile-pic roster writes its photo side onto) and the photo files
+ * (`cb-agent-pics`). The same stores, and the same `_index`, agent-store.mjs keeps.
+ */
+export function productionAgentRoster(): AgentRoster {
+  const agents = getStore('cb-agents');
+  return {
+    slugs: async () => {
+      const raw = await agents.get('_index', { type: 'text' });
+      try {
+        const list = raw ? (JSON.parse(raw) as unknown) : null;
+        if (Array.isArray(list)) return list.filter((s): s is string => typeof s === 'string');
+      } catch {
+        // an unreadable index: list the store, as agent-store does
+      }
+      const { blobs } = await agents.list();
+      return blobs.map((b) => b.key).filter((k) => k !== '_index');
+    },
+    record: (slug) => agents.get(slug, { type: 'json' }),
+    files: getStore('cb-agent-pics') as unknown as FileBlobs,
+  };
+}
+
+export function productionAgentCardDeps(req: Request): AgentCardDeps {
+  return { ...productionAuthDeps(req), roster: productionAgentRoster(), emailPhotos: productionEmailPhotoStore() };
 }
 
 export function productionGateDeps(): GateDeps {

@@ -2,7 +2,7 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
+import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
 import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
@@ -24,7 +24,10 @@ export interface Workspace {
   readOnly: boolean;
   /** Admins see the sample buttons (Dispatch 07); never on someone else's report. */
   canSample: boolean;
+  /** Who signs the email: the roster's name, else Identity's, else ''. */
   agentName: string;
+  /** The agent's card from Casa's roster (name, phone, headshot); null until it's read, or when the roster doesn't know them. */
+  agentCard: AgentCard | null;
 
   brief: Brief;
   setBrief: (next: Brief) => void;
