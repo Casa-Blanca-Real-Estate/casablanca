@@ -1,11 +1,15 @@
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  const refused = await requireStudio(req, { headers: CORS });
+  if (refused) return refused;
 
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });

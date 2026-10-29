@@ -4,6 +4,7 @@
 //
 // Env: FIRECRAWL_API_KEY  (set in Netlify → Site settings → Environment variables)
 import { cors, json, preflight } from './_lib.mjs';
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 
 const LISTING_SCHEMA = {
   type: 'object',
@@ -30,6 +31,8 @@ const LISTING_SCHEMA = {
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return preflight();
+  const refused = await requireStudio(req, { headers: cors() });
+  if (refused) return refused;
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
   const key = process.env.FIRECRAWL_API_KEY;

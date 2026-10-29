@@ -1,8 +1,8 @@
 // AI autofill for the agent CMS (tools/agent-cms/) — Anthropic, Haiku.
 //
-// Deliberately NOT the claude.mjs shape. claude.mjs forwards any request body
-// to the Messages API with the site's key and no credential of its own (see
-// docs/agent-cms/security-model.md §3); this follows copy.mjs instead — a fixed
+// Deliberately NOT the claude.mts shape. claude.mts forwards any request body
+// to the Messages API with the site's key for anyone signed in to the Studio (see
+// docs/agent-cms/security-model.md §3); this follows copy.mts instead — a fixed
 // task set, server-side system prompts, a server-pinned model and token
 // ceiling. The caller supplies content, never instructions.
 //
