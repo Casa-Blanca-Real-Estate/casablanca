@@ -112,7 +112,7 @@ function useAutosave(reportId: string, onReveal: (reveal: RevealPin) => void) {
 /** What each screen's "Fill with sample" fills (a build note) — 100 Barclay #17L throughout. */
 const SAMPLE_FILLS: Record<StepId, string> = {
   sort: 'A first-pass sort of the sample export’s comps, with notes (imports the export first if it isn’t here).',
-  findings: 'Hannah’s own number from the briefing ($3.4M to $4.2M), a target and seller terms.',
+  findings: 'Hannah’s own number from the briefing ($3.4M to $4.2M), a target and the terms, for the report’s side (buyer or seller).',
   send: 'The email’s own lines (how the comps were chosen, things to consider, the next step), a made-up client and the result that has a range. The headline stays yours.',
 };
 
@@ -667,7 +667,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
       await ws.run(all ? 'Filling the whole report with sample data…' : 'Filling with sample…', async () => {
         const needsWalkthrough = all || which === 'findings' || which === 'send';
         // The report's own kind: a co-op gets the co-op sample, with no size (Dispatch 23).
-        const sample = needsWalkthrough ? await workspaceApi.sample(propertyType) : null;
+        // And the report's side: a buyer's report gets the buyer's lines, never a seller's (2026-10-29).
+        const sample = needsWalkthrough ? await workspaceApi.sample(propertyType, brief.audience?.value ?? 'buyer') : null;
         let nextState = stateRef.current;
         if (sample && all) {
           nextState = { ...nextState, intake: sample.intake };

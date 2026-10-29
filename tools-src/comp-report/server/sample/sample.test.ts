@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parseExport } from '../../engine/index.ts';
 import { SAMPLE_EXPORT } from './barclay-17l-export.ts';
-import { SAMPLE_BRIEF, SAMPLE_CALL, SAMPLE_DEAL_TERMS, SAMPLE_INTAKE, SAMPLE_SEND, SAMPLE_TARGET, SAMPLE_TIERS } from './barclay-17l.ts';
+import { SAMPLE_BRIEF, SAMPLE_BUYER_BRIEF, SAMPLE_BUYER_DEAL_TERMS, SAMPLE_BUYER_SEND, SAMPLE_BUYER_TARGET, SAMPLE_CALL, SAMPLE_DEAL_TERMS, SAMPLE_INTAKE, SAMPLE_SEND, SAMPLE_TARGET, SAMPLE_TIERS, sampleWalkthrough } from './barclay-17l.ts';
 
 const SOURCE = readFileSync(new URL('../../../../docs/comp-report/sources/streeteasy-comp-export-100-barclay-17l-2026-09-23.csv', import.meta.url), 'utf8');
 
@@ -31,6 +31,9 @@ test('every sample value is marked as a sample; the size is also marked as an es
     ...Object.values(SAMPLE_INTAKE), ...Object.values(SAMPLE_BRIEF), SAMPLE_TARGET.price, SAMPLE_TARGET.note,
     ...Object.values(SAMPLE_DEAL_TERMS).filter((v) => typeof v === 'object'),
     SAMPLE_SEND.clientName,
+    SAMPLE_BUYER_BRIEF.audience, SAMPLE_BUYER_BRIEF.clientNote, SAMPLE_BUYER_BRIEF.client!.urgency!.pace, SAMPLE_BUYER_BRIEF.client!.motivations,
+    SAMPLE_BUYER_TARGET.price, SAMPLE_BUYER_TARGET.note, SAMPLE_BUYER_SEND.nextStep,
+    ...Object.values(SAMPLE_BUYER_DEAL_TERMS).filter((v) => typeof v === 'object'),
   ];
   for (const e of entries) assert.equal((e as { sample?: boolean }).sample, true, JSON.stringify(e));
   assert.equal(SAMPLE_CALL.sample, true);
@@ -54,4 +57,13 @@ test('the co-op sample: the same comps, read as co-ops with no size; its home ha
     assert.ok(!t.tags.some((tag) => /size|smaller|bigger/i.test(tag)), t.tags.join(', '));
   }
   assert.deepEqual(sampleTiers('condo'), SAMPLE_TIERS);
+});
+
+test('a buyer’s sample has a buyer’s lines: nothing about listing or owners (the design brief thread, 2026-10-29)', () => {
+  const buyer = sampleWalkthrough('condo', 'buyer');
+  assert.equal(buyer.brief.audience!.value, 'buyer');
+  assert.equal(buyer.dealTerms.template, 'buyer_traditional');
+  const words = JSON.stringify([buyer.brief, buyer.target, buyer.dealTerms, buyer.send]);
+  assert.equal(/\blist(?:ing)?\b|owners/i.test(words), false, words);
+  assert.equal(sampleWalkthrough('condo').brief, SAMPLE_BRIEF, 'the seller’s stays the default');
 });

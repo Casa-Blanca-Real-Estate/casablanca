@@ -2,7 +2,7 @@
 // the tool isn't in agents' hands, and a guest (server/guest.ts), so a preview
 // can be walked through end to end. The export itself never leaves the server
 // this way: the sample import stores it.
-//   GET  ?kind=condo|coop                   the walkthrough's sample: 100 Barclay #17L's facts, brief,
+//   GET  ?kind=condo|coop[&side=buyer]      the walkthrough's sample: 100 Barclay #17L's facts, brief,
 //                                           target, deal terms and Hannah's call (a co-op's has no size)
 //   POST {action: 'fill', kind, title}      a new sample report, built in one transaction (sample/build.ts)
 //   POST {action: 'reset', reportId}        a fresh copy of the caller's own sample report; the old one archived
@@ -24,7 +24,9 @@ export function handleSample(req: Request, deps: SamplePhotoDeps): Promise<Respo
     if (req.method === 'GET') {
       const kind = new URL(req.url).searchParams.get('kind') ?? SAMPLE_PROPERTY_TYPE;
       if (!isSampleKind(kind)) throw new HttpError(400, 'bad_kind', 'The sample is condo or coop.');
-      return json(sampleWalkthrough(kind));
+      const side = new URL(req.url).searchParams.get('side') ?? 'seller';
+      if (side !== 'buyer' && side !== 'seller') throw new HttpError(400, 'bad_side', 'The sample is for a buyer or a seller.');
+      return json(sampleWalkthrough(kind, side));
     }
 
     const body = await readJsonObject(req);

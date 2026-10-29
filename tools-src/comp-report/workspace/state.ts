@@ -114,18 +114,27 @@ export interface Brief {
   client?: ClientFacts;
 }
 
+/** How quickly the client needs to move (Kimani, 2026-10-29): it never moves a number (NB-29 is open). */
+export const CLIENT_PACES = ['asap', 'can_wait'] as const;
+export type ClientPace = (typeof CLIENT_PACES)[number];
+
 /** What a client weighs most (D-7 B). */
 export const CLIENT_PRIORITIES = ['price', 'speed', 'certainty'] as const;
 export type ClientPriority = (typeof CLIENT_PRIORITIES)[number];
 
 /**
  * The client's facts (NW-074 a): data for Claude Design's client section
- * (NW-074 b) and for the writer's client profile (Dispatch 13 phase 2). No
- * screen asks them yet; the writer doesn't see them yet (writer-input.ts).
+ * (NW-074 b) and for the writer's client profile (Dispatch 13 phase 2). Your
+ * client (Kimani, 2026-10-29) asks the pace and the motivations, on Details
+ * and in Findings, with the pre-approval from the deal terms
+ * (workspace/client.ts). The engine never reads them; Hubert gets them after
+ * the reveal (server/numbers.ts); the writer doesn't see them yet (writer-input.ts).
  */
 export interface ClientFacts {
-  /** How soon, in words, and a date to close by. */
-  urgency?: { text?: Entry<string>; by?: Entry<IsoDate> };
+  /** How soon: as soon as possible or can wait (the pace), in words, and a date to close by. */
+  urgency?: { pace?: Entry<ClientPace>; text?: Entry<string>; by?: Entry<IsoDate> };
+  /** What's moving them: in the agent's words. */
+  motivations?: Entry<string>;
   /** What the client would pay more for. */
   paysMoreFor?: Entry<string>;
   nonNegotiables?: Entry<string>;

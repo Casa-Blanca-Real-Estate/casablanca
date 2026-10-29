@@ -21,7 +21,8 @@ import { compAddress, compPrice, compStatus, listingUrl, rowPsf, STATUS_LABEL, S
 import { Gate } from './Gate.tsx';
 import type { StepProps, Workspace } from './model.ts';
 import { homeName } from './screens.ts';
-import { againstEstimate, PricingDetails, TargetSection, targetLabel } from './Terms.tsx';
+import { againstEstimate, ClientSection, PricingDetails, TargetSection, targetLabel } from './Terms.tsx';
+import { clientSub } from '../../../workspace/client.ts';
 import { TypeMismatch } from '../comp/TypeMismatch.tsx';
 import '../../styles/findings.css';
 
@@ -264,6 +265,10 @@ function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kin
     {
       key: 'tp', title: targetLabel(ws), sub: target ? clientPrice(target) : '—', body: <TargetSection ws={ws} />,
       info: 'A number to hold against the range. It never goes into the calculation and isn’t in the email.',
+    },
+    {
+      key: 'yc', title: 'Your client', sub: clientSub(ws.side, ws.brief.client, ws.dealTerms), body: <ClientSection ws={ws} kind={kind} />,
+      info: 'What you know about your client: financing and the pre-approval, how soon they need to move, what’s moving them. Set against the range, never in it.',
     },
     {
       key: 'pd', title: 'Pricing details', sub: ws.side === 'buyer' ? (ask ? `Asking ${clientPrice(ask)}` : '') : timing, body: <PricingDetails ws={ws} kind={kind} />,

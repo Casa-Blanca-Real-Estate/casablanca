@@ -21,7 +21,7 @@ import { cleanClientLine } from '../../workspace/client-words.ts';
 import { fairHousingFindings } from '../../workspace/fair-housing.ts';
 import { answerResult } from '../../workspace/reading.ts';
 import { cleanReview } from '../../workspace/review.ts';
-import { CLIENT_PRIORITIES, TARGET_OWNERS, type CompJudgment, type CompSource, type RevealPin } from '../../workspace/state.ts';
+import { CLIENT_PACES, CLIENT_PRIORITIES, TARGET_OWNERS, type CompJudgment, type CompSource, type RevealPin } from '../../workspace/state.ts';
 import { neutralNumbers } from '../numbers.ts';
 import { withActor, type Queryable } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
@@ -361,9 +361,12 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 function checkClient(client: unknown) {
   if (client === undefined) return;
   if (!isObject(client)) throw new HttpError(400, 'bad_client', 'The client’s facts are an object.');
-  const { urgency, paysMoreFor, nonNegotiables, priorities } = client;
+  const { urgency, paysMoreFor, nonNegotiables, priorities, motivations } = client;
   if (urgency !== undefined) {
     if (!isObject(urgency)) throw new HttpError(400, 'bad_client', 'Urgency is an object.');
+    if (urgency.pace !== undefined && (!isObject(urgency.pace) || !(CLIENT_PACES as readonly unknown[]).includes(urgency.pace.value))) {
+      throw new HttpError(400, 'bad_client', 'How soon is as soon as possible or can wait.');
+    }
     checkText('How soon', urgency.text);
     if (urgency.by !== undefined && (!isObject(urgency.by) || typeof urgency.by.value !== 'string' || !ISO_DATE.test(urgency.by.value))) {
       throw new HttpError(400, 'bad_client', 'Give the close-by date as a date.');
@@ -371,6 +374,7 @@ function checkClient(client: unknown) {
   }
   checkText('What they’d pay more for', paysMoreFor);
   checkText('Non-negotiables', nonNegotiables);
+  checkText('What’s moving them', motivations);
   if (priorities !== undefined) {
     const ok = Array.isArray(priorities)
       && priorities.every((p) => (CLIENT_PRIORITIES as readonly unknown[]).includes(p))

@@ -211,9 +211,10 @@ Workspace accounts only; personal Gmail keeps Copy. It needs Kimani's Google Clo
 | NW-032, 068 c | A first-run walkthrough | Try the ⓘ hints first (15, 20, 21); decide after Design. Kimani (2026-10-29) wants it: an onboarding run for practice agents' first report, then a hint/guide button in a bottom corner that brings the pointers back. Separate from Hubert's step guides |
 | — | Hubert across the Studio | Kimani (HB-7, 2026-10-29): plan it after the build, navigation and help first |
 | — | Hubert builds the In Contract and Just Closed posts | Kimani (2026-10-29): today his personal Claude reads his Gmail for the deals; Hubert would need access to that mail. Plan with Hubert across the Studio |
-| — | Client profiles | Kimani (2026-10-29): the agent picks a client from their own list instead of typing a name, and the report gets what's relevant: pre-approval, financing, how soon they want to move, motivations, and income or creditworthiness only if Casa may keep it (never a credit score or SSN). Agents fill it in as they learn it, nothing required. Check first whether Casa's agent app already holds client info |
 | NW-067 b | Hubert's reason per comp | He's a guide only (D-27.6); Collister's later work |
 | NW-094 | Hubert reviews the tool | After round one, as a script on the seeded samples (about $1 a run) |
+| NW-074 c | Client profiles: each agent's clients saved once, picked from a dropdown on a new report, filling the name, financing, pre-approval and pace (Kimani, 2026-10-29) | Needs a client table, who-sees-what rules and a privacy call; first check whether Casa's agent app already holds clients (NB-33). The per-report Your client fields (2026-10-29) are the data it would fill. |
+| NW-074 d | Credit score, credit-worthiness and income (Kimani, 2026-10-29) | Sensitive financial data about someone who never signed up; needs a privacy and legal review first (NB-32). The pre-approval stands in for it. |
 | NW-083 c | Subject drafts from the writer | Needs the writer's real eval (Dispatch 13, keys) and NW-093 a's answer on who owns the writer; it goes with Collister's second dispatch. |
 
 ## No action, and process
