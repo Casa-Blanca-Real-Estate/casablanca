@@ -85,8 +85,31 @@ const iso = (d: Date | string) => new Date(d).toISOString();
 /** Admins and mentors read every report (NW-088 a, NB-23 A); only the owner changes one. */
 export const readsEveryReport = (user: SessionUser) => user.role === 'admin' || user.role === 'mentor';
 
+/**
+ * Who is reading: a signed-in user, or the inspection API (Dispatch 23), which
+ * is no user at all. No admin is made up for it, and it can't write: the
+ * write overload of reportFor doesn't take it.
+ */
+export type InspectReader = { mode: 'inspect' };
+export const INSPECT_READER: InspectReader = { mode: 'inspect' };
+export type Reader = SessionUser | InspectReader;
+
+const isInspect = (who: Reader): who is InspectReader => 'mode' in who && who.mode === 'inspect';
+
 /** The report, or 404. `write` insists on ownership: admins and mentors can read any report, but change only their own. */
-export async function reportFor(tx: Queryable, user: SessionUser, reportId: string, write: boolean) {
+export async function reportFor(tx: Queryable, who: Reader, reportId: string, write: false): Promise<{ id: string; owner_email: string }>;
+export async function reportFor(tx: Queryable, who: SessionUser, reportId: string, write: boolean): Promise<{ id: string; owner_email: string }>;
+export async function reportFor(tx: Queryable, who: Reader, reportId: string, write: boolean) {
+  if (isInspect(who)) {
+    if (write) throw new Error('reportFor: the inspect reader never writes');
+    const { rows } = await tx.query<{ id: string; owner_email: string }>(
+      `select id, owner_email from comp_report.reports where id = $1 and status <> 'deleted'`,
+      [reportId],
+    );
+    if (!rows[0]) throw new HttpError(404, 'not_found', 'No such report.');
+    return rows[0];
+  }
+  const user = who;
   const { rows } = await tx.query<{ id: string; owner_email: string }>(
     `select id, owner_email from comp_report.reports where id = $1 and (owner_email = $2 or $3) and status <> 'deleted'`,
     [reportId, user.email, !write && readsEveryReport(user)],
@@ -191,15 +214,18 @@ export function listingPhotos(raw: unknown): string[] {
   return cleanPhotoUrls([raw['heroImageUrl'], ...(Array.isArray(raw['photos']) ? raw['photos'] : [])]);
 }
 
-/** The report's link reads, oldest first, less the failed ones the agent cleared away. */
-export async function loadReads(tx: Queryable, reportId: string): Promise<LinkReadView[]> {
+/**
+ * The report's link reads, oldest first, less the failed ones the agent cleared away.
+ * withExtract false (the inspect reader) selects no page extract at all.
+ */
+export async function loadReads(tx: Queryable, reportId: string, withExtract = true): Promise<LinkReadView[]> {
   const rows = (await tx.query<{
     id: string; purpose: LinkReadView['purpose']; url: string; status: LinkReadView['status']; error: string | null; error_message: string | null;
     report_comp_id: string | null; as_of: string | null; extract: Record<string, unknown> | null; warnings: ParseWarning[] | null;
     confirmed_at: Date | null; created_at: Date; started_at: Date | null; finished_at: Date | null;
   }>(
     `select id, purpose, url, status, error, error_message, report_comp_id, as_of::text as as_of,
-            case when purpose = 'subject' or status = 'failed' then extract end as extract,
+            ${withExtract ? "case when purpose = 'subject' or status = 'failed' then extract end" : 'null::jsonb'} as extract,
             warnings, confirmed_at, created_at, started_at, finished_at
        from comp_report.link_reads
       where report_id = $1 and dismissed_at is null
@@ -214,8 +240,14 @@ export async function loadReads(tx: Queryable, reportId: string): Promise<LinkRe
   }));
 }
 
-export async function loadWorkspace(tx: Queryable, user: SessionUser, reportId: string): Promise<WorkspaceData> {
-  await reportFor(tx, user, reportId, false);
+/**
+ * The inspect reader gets the same shape with no file in it: imports.content
+ * is never selected (contentBase64 is empty) and neither is a link read's
+ * extract. The inspection API redacts the rest (inspect/views.ts).
+ */
+export async function loadWorkspace(tx: Queryable, who: Reader, reportId: string): Promise<WorkspaceData> {
+  const inspect = isInspect(who);
+  await reportFor(tx, who, reportId, false);
   const report = (await tx.query<{
     id: string; title: string; property_type: 'condo' | 'coop'; owner_email: string; sample_data: boolean; updated_at: Date;
     brief: Record<string, unknown>; agent_call: Record<string, unknown> | null; target: Record<string, unknown> | null; state: Record<string, unknown>;
@@ -227,10 +259,10 @@ export async function loadWorkspace(tx: Queryable, user: SessionUser, reportId: 
 
   const imports = (await tx.query<{
     id: string; filename: string | null; format: 'csv' | 'xlsx'; as_of: Date | string; parser_version: string; export_schema: string;
-    comp_count: number; warnings: unknown[]; sample: boolean; created_at: Date; created_by: string; content: Buffer;
+    comp_count: number; warnings: unknown[]; sample: boolean; created_at: Date; created_by: string; content?: Buffer;
   }>(
     `select id, filename, format, as_of::text as as_of, parser_version, export_schema, comp_count, warnings, sample,
-            created_at, created_by, content
+            created_at, created_by${inspect ? '' : ', content'}
        from comp_report.imports where report_id = $1 order by created_at, id`,
     [reportId],
   )).rows;
@@ -253,10 +285,10 @@ export async function loadWorkspace(tx: Queryable, user: SessionUser, reportId: 
     imports: imports.map((i) => ({
       id: i.id, filename: i.filename, format: i.format, asOf: String(i.as_of), parserVersion: i.parser_version,
       exportSchema: i.export_schema, compCount: i.comp_count, warnings: i.warnings, sample: i.sample,
-      createdAt: iso(i.created_at), createdBy: i.created_by, contentBase64: Buffer.from(i.content).toString('base64'),
+      createdAt: iso(i.created_at), createdBy: i.created_by, contentBase64: i.content ? Buffer.from(i.content).toString('base64') : '',
     })),
     comps: await loadJudgments(tx, reportId),
-    reads: await loadReads(tx, reportId),
+    reads: await loadReads(tx, reportId, !inspect),
     geocodes: await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)),
     messageCount,
   };

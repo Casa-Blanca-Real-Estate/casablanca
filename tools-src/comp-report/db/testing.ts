@@ -77,13 +77,16 @@ export async function createTestDatabase(opts: { ownerCanCreateRoles?: boolean; 
         create role ${owner} login ${canCreateRoles ? 'createrole' : 'nocreaterole'};
       end if;
     end $$`);
-  // comp_report_app is cluster-wide too. If an earlier owner created it, give
+  // comp_report_app (and Dispatch 23's comp_report_inspect) is cluster-wide too. If an earlier owner created it, give
   // this owner the ADMIN a creator would have had, so the migration can set it
   // up the way it does on a fresh Neon database.
   if (canCreateRoles) {
     await admin.query(`do $$ begin
         if exists (select 1 from pg_roles where rolname = 'comp_report_app') then
           grant comp_report_app to ${owner} with admin option;
+        end if;
+        if exists (select 1 from pg_roles where rolname = 'comp_report_inspect') then
+          grant comp_report_inspect to ${owner} with admin option;
         end if;
       end $$`);
   }

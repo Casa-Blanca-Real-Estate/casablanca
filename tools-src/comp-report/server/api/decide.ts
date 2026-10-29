@@ -22,8 +22,8 @@
 // holding CR_DECIDE_KEY, sent as the X-Decide-Key header. The key opens this
 // endpoint and nothing else, acts as the system (the tables' row-level
 // security admits admins and the system only), and every use is logged
-// without it. A wrong or unset key is a 401, never a fall-through to Identity.
-import { createHash, timingSafeEqual } from 'node:crypto';
+// without it. A wrong or unset key is a 401, never a fall-through to Identity;
+// a right one set equal to the inspect or test key is a 503 (server/keys.ts).
 import { withActor, type Actor } from '../db.ts';
 import { decideConfig, type DecideConfig } from '../decide/config.ts';
 import { realClock, type Clock } from '../decide/drain.ts';
@@ -35,6 +35,7 @@ import { ProbeInputError, runProbe } from '../decide/probe.ts';
 import { batchView, decideReadout, probesView } from '../decide/readout.ts';
 import type { DecideStore } from '../decide/store.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond } from '../http.ts';
+import { keyCollides, sameKey } from '../keys.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
 
@@ -43,17 +44,14 @@ export interface DecideApiDeps extends AuthDeps {
   store?: DecideStore;
   fetchImpl?: typeof fetch;
   clock?: Clock;
+  /** Where the keys are read for the collision rule; process.env in production. */
+  env?: Record<string, string | undefined>;
 }
 
 export const DECIDE_KEY_HEADER = 'x-decide-key';
 const KEY_ACTOR: Actor = { kind: 'system', does: 'decide-key' };
 
-/** Constant time, whatever the lengths: compare the digests. */
-export function sameKey(given: string, expected: string): boolean {
-  const a = createHash('sha256').update(given, 'utf8').digest();
-  const b = createHash('sha256').update(expected, 'utf8').digest();
-  return timingSafeEqual(a, b);
-}
+export { sameKey };
 
 /** Who's calling: the session key's system actor, or a signed-in admin. */
 async function caller(req: Request, deps: DecideApiDeps, config: DecideConfig): Promise<{ actor: Actor; via: 'key' | 'admin' }> {
@@ -61,6 +59,10 @@ async function caller(req: Request, deps: DecideApiDeps, config: DecideConfig): 
   if (given !== null) {
     if (!config.decideKey || !sameKey(given.trim(), config.decideKey)) {
       throw new HttpError(401, 'bad_key', 'That decide key isn\'t valid here.');
+    }
+    if (keyCollides(deps.env ?? process.env, 'CR_DECIDE_KEY')) {
+      console.error(JSON.stringify({ at: 'comp-report-decide', event: 'key_collision' }));
+      throw new HttpError(503, 'keys_collide', 'CR_DECIDE_KEY is set to the same value as another session key. Set each to its own.');
     }
     return { actor: KEY_ACTOR, via: 'key' };
   }

@@ -15,7 +15,9 @@ export const ROLES: readonly Role[] = ['agent', 'mentor', 'admin', 'external'];
 
 export type Actor =
   | { kind: 'user'; email: string; role: Role }
-  | { kind: 'system'; does: string };
+  | { kind: 'system'; does: string }
+  /** The inspection API's reader (Dispatch 23): select-only policies, and a read-only transaction. */
+  | { kind: 'inspect' };
 
 export interface QueryResult<R> {
   rows: R[];
@@ -67,7 +69,8 @@ const migrated = new WeakMap<PoolLike, boolean>();
 /**
  * Runs fn in one transaction as the given actor. Refuses to run if the schema
  * isn't there (wrong or unmigrated database) or if the database role the
- * functions connect as bypasses row-level security.
+ * functions connect as bypasses row-level security. The inspect actor's
+ * transaction is read only, whatever its policies say.
  */
 export async function withActor<T>(pool: PoolLike, actor: Actor, fn: (tx: Queryable) => Promise<T>): Promise<T> {
   const client = await pool.connect();
@@ -82,10 +85,12 @@ export async function withActor<T>(pool: PoolLike, actor: Actor, fn: (tx: Querya
       }
       migrated.set(pool, true);
     }
-    await client.query('begin');
+    await client.query(actor.kind === 'inspect' ? 'begin read only' : 'begin');
     const params = actor.kind === 'user'
       ? ['user', actor.email, actor.role, null]
-      : ['system', null, null, actor.does];
+      : actor.kind === 'system'
+        ? ['system', null, null, actor.does]
+        : ['inspect', null, null, null];
     const { rows } = await client.query<{ db_role: string; bypasses_rls: boolean }>(
       'select db_role, bypasses_rls from comp_report.enter($1, $2, $3, $4)',
       params,
