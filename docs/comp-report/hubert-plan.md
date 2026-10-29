@@ -4,6 +4,8 @@ Written 2026-10-29 with the PR that adds his trail, his comp edits, web search a
 The rule it builds on is Kimani's (2026-10-21): **Hubert carries out the agent's thinking; he never does
 it for them.** The tiers, notes and tags are the agent's call. Hubert puts in what they said.
 
+Everything Hubert can do today, tool by tool: `hubert-tools.md`.
+
 ## What this PR gives him
 
 | | What | Where |
