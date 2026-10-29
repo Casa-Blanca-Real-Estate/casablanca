@@ -3,7 +3,7 @@
 // endpoint: one model call per request, the server owns the transcript (§8.3
 // rule 6). The conversation is the report's, the same on every screen.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { api, ApiError, streamTurn, type HubertEmailEdit, type HubertView, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
+import { api, ApiError, streamTurn, type HubertEmailEdit, type HubertHomeEdit, type HubertView, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
 import type { Guide } from './hubert/guides.ts';
 import { HubertNote, HubertText } from './hubert/markdown.tsx';
@@ -19,14 +19,14 @@ interface Live {
 
 const empty: Live = { text: '', progress: [], tools: [], changes: [], note: null };
 
-/** What Hubert looked at, in words: his tools read the report, its numbers, the screen, the email and the web; two change things. */
+/** What Hubert looked at, in words: his tools read the report, its numbers, the screen, the email and the web; the rest change things. */
 const TOOL_WORDS: Record<string, string> = {
   get_numbers: 'the numbers', get_view: 'your screen', get_report: 'the report', get_email: 'the email', web_search: 'the web', read_page: 'a web page',
 };
-const CHANGES = new Set(['edit_email', 'edit_comp', 'show_comp_link']);
+const CHANGES = new Set(['edit_email', 'edit_comp', 'set_home_fact', 'show_comp_link']);
 const looked = (tools: string[]) => [...new Set(tools.filter((t) => !CHANGES.has(t)).map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
 
-/** Undo on a comp entry of the trail: whether it still applies, and doing it (the agent's own edit). */
+/** Undo on a comp or home entry of the trail: whether it still applies, and doing it (the agent's own edit). */
 export interface TrailUndo {
   can: (entry: TrailEntry) => boolean;
   run: (entry: TrailEntry) => Promise<void>;
@@ -78,7 +78,7 @@ function FindCard({ entry, finds }: { entry: TrailEntry; finds?: TrailFinds }) {
   );
 }
 
-/** One entry's Undo: offered while the comp reads as Hubert left it; "Undone" once the agent has used it here. */
+/** One entry's Undo: offered while the comp or the home reads as Hubert left it; "Undone" once the agent has used it here. */
 function UndoButton({ entry, undo }: { entry: TrailEntry; undo: TrailUndo }) {
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
   if (state === 'done') return <span className="hb-trail-undone">Undone</span>;
@@ -88,7 +88,7 @@ function UndoButton({ entry, undo }: { entry: TrailEntry; undo: TrailUndo }) {
       type="button"
       className="hb-trail-go"
       disabled={state === 'busy'}
-      title={state === 'failed' ? 'Not undone. Try again, or change it on Sort.' : `Put the ${entry.label.toLowerCase()} back`}
+      title={state === 'failed' ? `Not undone. Try again, or change it ${entry.kind === 'home' ? 'in the details' : 'on Sort'}.` : `Put the ${entry.label.toLowerCase()} back`}
       onClick={() => {
         setState('busy');
         undo.run(entry).then(() => setState('done'), () => setState('failed'));
@@ -101,8 +101,8 @@ function UndoButton({ entry, undo }: { entry: TrailEntry; undo: TrailUndo }) {
 
 /**
  * Hubert's trail (Kimani, 2026-10-28): each change he made, where he made it,
- * with "Show" to the field: a comp's row on Sort, or the email on Send; and,
- * on a comp's change, Undo while it still stands.
+ * with "Show" to the field: a comp's row on Sort, the email on Send, or the
+ * home's details; and, on a comp's or the home's change, Undo while it still stands.
  */
 function Trail({ changes, sources, onJump, undo, finds }: { changes: TrailEntry[]; sources: TrailSource[]; onJump?: (entry: TrailEntry) => void; undo?: TrailUndo; finds?: TrailFinds }) {
   if (!changes.length && !sources.length) return null;
@@ -165,7 +165,7 @@ function GuideNote({ guide }: { guide: Guide }) {
   );
 }
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onCompsChanged, onJump, undo, finds, view, guides = [] }: {
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onHomeEdit, onCompsChanged, onJump, undo, finds, view, guides = [] }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -179,11 +179,13 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   beforeAsk?: () => Promise<void>;
   /** An edit Hubert made to the email: Send applies it. */
   onEmailEdit?: (edit: HubertEmailEdit) => void;
+  /** An edit Hubert made to the home's details: the workspace writes it into the intake. */
+  onHomeEdit?: (edit: HubertHomeEdit) => void;
   /** Hubert changed a comp on the server: the screen reloads the comps. */
   onCompsChanged?: () => void;
   /** A trail entry's "Show": to the field he changed. */
   onJump?: (entry: TrailEntry) => void;
-  /** Undo on his comp changes. Left out (a reader who isn't the owner), there's none. */
+  /** Undo on his comp and home changes. Left out (a reader who isn't the owner), there's none. */
   undo?: TrailUndo;
   /** Approving his web finds. Left out (a reader who isn't the owner), the card has the link alone. */
   finds?: TrailFinds;
@@ -254,6 +256,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         await beforeAsk?.().catch(() => undefined);
         for await (const ev of streamTurn(reportId, message, view?.())) {
           if (ev.type === 'email_edit') onEmailEdit?.(ev.edit);
+          else if (ev.type === 'home_edit') onHomeEdit?.(ev.edit);
           else if (ev.type === 'change') current = { ...current, changes: [...current.changes, ev.entry] };
           else if (ev.type === 'comps_changed') onCompsChanged?.();
           else if (ev.type === 'text') current = { ...current, text: current.text + ev.text };

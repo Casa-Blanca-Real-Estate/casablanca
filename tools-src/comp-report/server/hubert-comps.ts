@@ -1,7 +1,7 @@
 // Hubert and the comps (Kimani, 2026-10-21 and 2026-10-28): he carries out the
 // agent's thinking, never does it for them. When the agent tells him what to
-// change on a comp (its tier, its note, its tags, or a corrected price, size,
-// date or floor), edit_comp saves it through the same PATCH the agent's own
+// change on a comp (its tier, its note, its tags, a corrected price, size,
+// date or floor, the ★, or taking it out and putting it back), edit_comp saves it through the same PATCH the agent's own
 // edits use (api/comps.ts patchComp): the same checks, the same reason
 // history, with the reason marked as the assistant's. The result carries the
 // trail (server/hubert-trail.ts) the chat shows under his reply.
@@ -71,20 +71,55 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
   }
   const n = await neutralNumbers(tx, reportId);
   if (!n) return { ok: false, error: 'No such report.' };
-  const comp = findComp(n.comps, input.comp);
+  // A comp taken out is found too, to put back (or to say it's out).
+  const comp = findComp([...n.comps, ...n.removedComps], input.comp);
   if (typeof comp === 'string') return { ok: false, error: comp };
   const j = comp.judgment;
   if (!j) return { ok: false, error: 'That comp can’t be changed here.' };
-  if (j.removedAt) return { ok: false, error: 'The agent took that comp out of the report. They put it back first.' };
-
   const ch = input.changes;
+  if (ch.removed !== undefined && typeof ch.removed !== 'boolean') return { ok: false, error: 'removed is true (take it out) or false (put it back).' };
+  if (ch.star !== undefined && typeof ch.star !== 'boolean') return { ok: false, error: 'star is true (make it the ★) or false (take the star off).' };
+  // Taken out, it comes back first: put back with the rest of the changes, or alone.
+  if (j.removedAt && ch.removed !== false) {
+    return { ok: false, error: 'That comp is taken out of the report. Put it back first (removed: false), if the agent asked.' };
+  }
+  if (ch.removed === true && Object.keys(ch).some((k) => k !== 'removed')) {
+    return { ok: false, error: 'Taking a comp out is a change of its own: send removed alone.' };
+  }
   const body: Record<string, unknown> = {};
   const trail: TrailEntry[] = [];
   const target = address(comp);
   const entry = (field: string, label: string, before: string | null, after: string | null, undo?: TrailEntry['undo']) =>
     trail.push({ kind: 'comp', compId: j.reportCompId, target, field, label, before, after, ...(undo ? { undo } : {}) });
 
-  if (ch.tier !== undefined) {
+  // Take out and put back (hubert-plan.md "Tools next" 4): the same PATCH as Sort's ✕ and Hubert's "+ Add".
+  if (ch.removed === true && !j.removedAt) {
+    body.removed = true;
+    entry('removed', 'Taken out of the report', 'In the report', 'Taken out', { edit: { removed: false }, left: true });
+    if (j.anchor) entry('anchor', 'Star (closest comp)', '★', null);
+  }
+  if (ch.removed === false && j.removedAt) {
+    body.removed = false;
+    entry('removed', 'Put back in the report', 'Taken out', 'In the report', { edit: { removed: true }, left: false });
+  }
+  // The ★, the closest comp: one a report, and 1st tier (patchComp moves it and tiers it).
+  if (ch.star !== undefined) {
+    if (ch.star && ch.tier !== undefined && ch.tier !== 'primary') return { ok: false, error: 'The ★ comp is 1st tier: star it, or tier it, not both.' };
+    if (ch.star && comp.unsortable) return { ok: false, error: `That comp can’t be sorted, so it can’t be the ★: ${comp.unsortable}` };
+    if (ch.star !== Boolean(j.anchor)) {
+      body.anchor = ch.star;
+      if (ch.star) {
+        // Undo takes the star off and puts a 2nd or Excluded tier back; a comp that wasn't sorted stays 1st.
+        const undo = { edit: { anchor: false, ...(j.tier && j.tier !== 'primary' ? { tier: j.tier } : {}) }, left: true };
+        entry('anchor', j.tier === 'primary' ? 'Star (closest comp)' : 'Star (closest comp), so 1st tier', null, '★', undo);
+        const had = n.comps.find((c) => c.judgment?.anchor && c.judgment.reportCompId !== j.reportCompId);
+        if (had) trail.push({ kind: 'comp', compId: had.judgment!.reportCompId, target: address(had), field: 'anchor', label: `Star moved to ${target}`, before: '★', after: null });
+      } else {
+        entry('anchor', 'Star (closest comp)', '★', null, { edit: { anchor: true }, left: false });
+      }
+    }
+  }
+  if (ch.tier !== undefined && body.anchor !== true) {
     if (typeof ch.tier !== 'string' || !TIERS.includes(ch.tier as Tier)) return { ok: false, error: 'The tier is primary, secondary or excluded.' };
     if (comp.unsortable) return { ok: false, error: `That comp can’t be sorted: ${comp.unsortable}` };
     const tier = ch.tier as Tier;
@@ -94,7 +129,7 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
       const undo = j.tier ? { edit: j.anchor ? { anchor: true } : { tier: j.tier }, left: tier } : undefined;
       entry('tier', 'Tier', j.tier ? TIER_WORD[j.tier] : 'Not sorted', TIER_WORD[tier], undo);
       // The ★ comp is 1st tier: 2nd or Excluded takes the star off (patchComp), and the trail says so.
-      if (j.anchor && tier !== 'primary') entry('anchor', 'Star (closest comp)', '★', null);
+      if (j.anchor && tier !== 'primary' && body.anchor === undefined) entry('anchor', 'Star (closest comp)', '★', null);
     }
   }
   if (ch.note !== undefined) {

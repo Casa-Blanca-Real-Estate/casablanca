@@ -23,7 +23,9 @@
 // floor is 12" corrects its floor; "search …" or "look up …" gets a
 // web_search call. A message about "this one" or "this comp" (2026-10-29)
 // gets a get_view call, and the reply names the comp on screen. "add <StreetEasy link>" gets an
-// show_comp_link call (HB-8).
+// show_comp_link call (HB-8). "star <comp>", "take <comp> out" and "put <comp> back" get edit_comp
+// calls, and "the home: 1,240 square feet, 2 beds, 1.5 baths, doorman and gym, about" (the last word
+// marks the size an estimate) gets a set_home_fact call.
 //
 // A review request (Dispatch 25: one comp, structured output) gets Hubert's
 // feedback on the agent's note or his take on the comp: see fakeCompReview.
@@ -252,6 +254,7 @@ function afterTool(name: string, result: Block): string {
   const fake = ' (fake Messages API)';
   if (name === 'edit_comp') return `Done: ${String(got.applied ?? 'the comp is changed')}.${fake}`;
   if (name === 'edit_email') return `Done: I changed the email.${fake}`;
+  if (name === 'set_home_fact') return `Done: ${String(got.applied ?? 'the details are in')}.${fake}`;
   if (name === 'show_comp_link') return `Here it is on StreetEasy. Open the link and check it’s the right unit, that it sold (not just an asking price), and that it’s current; then add it from the card. It lands on Sort untiered.${fake}`;
   if (name === 'get_view') {
     const open = got.open_comp as { comp?: string; tier?: string } | null | undefined;
@@ -297,6 +300,26 @@ function echo(body: Block): Script {
     stopReason: 'tool_use',
     delayMs: 15,
   });
+  const star = /^\s*star (.+?)\.?$/i.exec(said);
+  if (star) return tool('edit_comp', { comp: star[1]!.trim(), changes: { star: true } }, 'Starring the comp the agent named (fake API).');
+  const takeOut = /^\s*take (.+?) out\.?$/i.exec(said);
+  if (takeOut) return tool('edit_comp', { comp: takeOut[1]!.trim(), changes: { removed: true } }, 'Taking the comp out, as the agent said (fake API).');
+  const putBack = /^\s*put (.+?) back\.?$/i.exec(said);
+  if (putBack) return tool('edit_comp', { comp: putBack[1]!.trim(), changes: { removed: false } }, 'Putting the comp back (fake API).');
+  const home = /^\s*the home:\s*([\s\S]+)$/i.exec(said);
+  if (home) {
+    const text = home[1]!;
+    const changes: Block[] = [];
+    const size = /([\d,]+)\s*(?:sq(?:uare)? ?f(?:ee)?t)/i.exec(text);
+    if (size) changes.push({ field: 'areaSqft', value: size[1]!, ...(/\babout\b/i.test(text) ? { estimate: true } : {}) });
+    const beds = /(\d+)\s*beds?\b/i.exec(text);
+    if (beds) changes.push({ field: 'beds', value: beds[1]! });
+    const baths = /([\d.]+)\s*baths?\b/i.exec(text);
+    if (baths) changes.push({ field: 'baths', value: baths[1]! });
+    const building = ['Doorman', 'Concierge', 'Elevator', 'Gym', 'Pool', 'Roof deck'].filter((o) => new RegExp(`\\b${o}\\b`, 'i').test(text));
+    if (building.length) changes.push({ field: 'building', add: building });
+    return tool('set_home_fact', { changes }, 'Putting the home’s details in, as the agent said them (fake API).');
+  }
   const tier = /^\s*(?:make|put|tier) (.+?) (?:as )?(1st|2nd|first|second|out)(?: tier)?\.?$/i.exec(said);
   if (tier) {
     const t = /^(1st|first)$/i.test(tier[2]!) ? 'primary' : /^(2nd|second)$/i.test(tier[2]!) ? 'secondary' : 'excluded';

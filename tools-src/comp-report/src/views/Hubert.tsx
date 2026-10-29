@@ -12,8 +12,9 @@ import { useState } from 'react';
 import type { CompJudgment } from '../../workspace/state.ts';
 import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
+import { homeUndoStands } from '../../workspace/home-edit.ts';
 import { undoStands } from '../../workspace/trail-undo.ts';
-import { linksApi, type CompEdit } from '../api.ts';
+import { linksApi, type CompEdit, type HubertHomeEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
 import { greeting, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
 import { reachedGuides } from './hubert/guides.ts';
@@ -155,14 +156,22 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onAction={onAction}
         beforeAsk={ws.flush}
         onEmailEdit={ws.queueHubertEdit}
+        onHomeEdit={(edit) => ws.applyHomeSet(edit.set)}
         onCompsChanged={ws.reloadComps}
         guides={reachedGuides(ws.stepsAt, ws.side)}
         view={ws.view}
         undo={{
-          // The comps as the screen has them: Undo shows while the comp still reads as he left it.
-          can: (entry) => undoStands(entry, ws.comps.find((c) => c.judgment?.reportCompId === entry.compId)?.judgment),
-          // The agent's own edit, through the same queue as their other edits.
+          // The comps and the home as the screen has them: Undo shows while the field still reads as he left it.
+          can: (entry) => entry.kind === 'home'
+            ? homeUndoStands(entry, ws.intake)
+            : undoStands(entry, ws.comps.find((c) => c.judgment?.reportCompId === entry.compId)?.judgment),
+          // The agent's own edit: the intake's entries as they were, or through the same queue as their other comp edits.
           run: async (entry) => {
+            if (entry.kind === 'home' && entry.undo) {
+              ws.applyHomeSet(entry.undo.edit as HubertHomeEdit['set']);
+              ws.toast(`${entry.label} put back.`);
+              return;
+            }
             if (!entry.compId || !entry.undo) return;
             await ws.editComp(entry.compId, entry.undo.edit as CompEdit);
             ws.toast(`${entry.label} on ${entry.target} put back.`);
@@ -181,6 +190,9 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onJump={(entry) => {
           if (entry.kind === 'email') {
             if (ws.screen !== 'send') ws.go('send');
+          } else if (entry.kind === 'home') {
+            // The details step of the New report window, where the agent types them.
+            if (!ws.readOnly) ws.openStart('details');
           } else if (entry.compId) {
             // In the per-comp review, the review moves to that comp; otherwise Sort opens on its row.
             if (ws.reviewing) ws.openReview(entry.compId);
