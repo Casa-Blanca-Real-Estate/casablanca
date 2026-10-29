@@ -6,7 +6,7 @@
 refused sign-in), and NW-088 a's recommendation (mentors read every report, read-only). D-8's spirit, not its
 letter.
 **Depends on:** Dispatch 15 merged. Also edited by: 20 (`server/api/comps.ts`), 21
-(`server/api/workspace.ts`), 24 (`server/api/messages.ts`, Calliste's lane). Whichever of 20, 21 and 22 opens
+(`server/api/workspace.ts`), 24 (`server/api/messages.ts`, Collister's lane). Whichever of 20, 21 and 22 opens
 second rebases on the first. In Mason's queue it comes after 21, except items 1 and 2: if no second builder is
 named by the time 18 merges, Mason takes those two first, before 20. If Kimani names a second builder for this
 week, it can start as soon as 15 merges.

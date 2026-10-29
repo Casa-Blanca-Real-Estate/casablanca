@@ -3,27 +3,27 @@
 **In short**
 - Hubert's raw markdown (NW-023) is a plain bug: `Chat.tsx` prints his text in a `<p>` with `white-space: pre-wrap`, and nothing renders markdown anywhere. A small safe renderer fixes it for old and new conversations alike.
 - Hubert today sees much less than the agent does: two tools, no screen, and no comp features, neighborhood, policies, checks or email. Ships now: the renderer, the target after the result (NW-068, which D-4 already allows), a wider read of the report, and role checks. One new prompt version carries all of it.
-- The Calliste track (NW-093) takes Hubert and the writer; Arbiter keeps Jev and the typed-judgment queue. Hubert proposing edits the agent confirms needs a confirmation card from Claude Design first. Four calls for Kimani first, below.
+- The Collister track (NW-093) takes Hubert and the writer; Arbiter keeps Jev and the typed-judgment queue. Hubert proposing edits the agent confirms needs a confirmation card from Claude Design first. Four calls for Kimani first, below.
 
 | Id | Who | What | Class | Track | Phase |
 |---|---|---|---|---|---|
-| NW-017 b | Noble | Suggest similar or nearby neighborhoods in Add comps | LATER | Surveyor (list), Abacus (module), Calliste (Hubert reads it) | C-later |
-| NW-023 | Kimani | Hubert's replies show raw markdown: render it safely | FIX | Mason (Calliste after) | A-now |
+| NW-017 b | Noble | Suggest similar or nearby neighborhoods in Add comps | LATER | Surveyor (list), Abacus (module), Collister (Hubert reads it) | C-later |
+| NW-023 | Kimani | Hubert's replies show raw markdown: render it safely | FIX | Mason (Collister after) | A-now |
 | NW-024 a | Kimani | Hubert's look: mark, bubbles, motion, presence | DESIGN | Claude Design | B-after-design |
-| NW-024 b | Kimani | Hubert's persona and voice in the prompt, once the design says who he is | BUILD | Calliste | B-after-design |
+| NW-024 b | Kimani | Hubert's persona and voice in the prompt, once the design says who he is | BUILD | Collister | B-after-design |
 | NW-025 | Kimani | Drawer: softer open and close, drag to widen, maybe on the left | DESIGN | Claude Design | B-after-design |
-| NW-063 a | Both | "How Hubert got there": write it plainer, and return comps as references, not parentheticals | BUILD | Mason (copy), Calliste owns after | A-now |
+| NW-063 a | Both | "How Hubert got there": write it plainer, and return comps as references, not parentheticals | BUILD | Mason (copy), Collister owns after | A-now |
 | NW-063 b | Both | Show the comps as chips | DESIGN | Claude Design (the Findings report owns the layout) | B-after-design |
-| NW-068 a | Kimani | Hubert sees the target price once the result exists (D-4 as built means never) | BUILD | Calliste (Mason until it starts) | A-now |
+| NW-068 a | Kimani | Hubert sees the target price once the result exists (D-4 as built means never) | BUILD | Collister (Mason until it starts) | A-now |
 | NW-068 b | Kimani | Fix the "Hubert never sees it" wording in four places; the long hint goes behind an ⓘ | FIX | Mason | A-now, ships with 068 a |
 | NW-068 c | Kimani | Onboarding says Hubert sees some things only after Findings | LATER | Claude Design | C-later (with NW-032) |
-| NW-093 a | Kimani | Stand up Calliste: roster row, dispatch brief, what moves from where | BUILD | Casanova | A-now |
-| NW-093 b | Kimani | Hubert sees what the agent sees: wider reads of the report, plus where the agent is | BUILD | Calliste | A-now |
-| NW-093 c | Kimani | Gate Hubert by role, capability and report state, on the server | BUILD | Calliste | A-now |
+| NW-093 a | Kimani | Stand up Collister: roster row, dispatch brief, what moves from where | BUILD | Casanova | A-now |
+| NW-093 b | Kimani | Hubert sees what the agent sees: wider reads of the report, plus where the agent is | BUILD | Collister | A-now |
+| NW-093 c | Kimani | Gate Hubert by role, capability and report state, on the server | BUILD | Collister | A-now |
 | NW-093 d | Kimani | What Hubert may write, and whether he sees the agent's own number | DECIDE | Kimani | A-now |
 | NW-093 e | Kimani | The card where Hubert proposes a change and the agent confirms | DESIGN | Claude Design | B-after-design |
-| NW-093 f | Kimani | Propose-and-confirm tools, applied as the agent | BUILD | Calliste | B-after-design |
-| NW-094 | Kimani | Ask Hubert for feedback once round one lands | LATER | Calliste | C-later |
+| NW-093 f | Kimani | Propose-and-confirm tools, applied as the agent | BUILD | Collister | B-after-design |
+| NW-094 | Kimani | Ask Hubert for feedback once round one lands | LATER | Collister | C-later |
 
 ## What Hubert is today
 
@@ -92,13 +92,13 @@ All look and feel, so Claude Design first. What it should know:
 
 **068 b, copy.** Four places say "never": change them to "Hubert sees this once you've seen the result. It never changes the numbers and never goes in the email." Put the long version behind an ⓘ (the tip already is one on the home modal; the Findings line `fi-only` becomes one). Chips on Findings can then be about the target: "Does my target hold up?". The Home hint is NW-003's; this row only keeps the wording consistent.
 
-## NW-093: Calliste
+## NW-093: Collister
 
 ### The split from Arbiter
 
-Rule of thumb: **typed answers from a fixed question list are Arbiter's; free text, conversation, tools and context are Calliste's.**
+Rule of thumb: **typed answers from a fixed question list are Arbiter's; free text, conversation, tools and context are Collister's.**
 
-| Moves to Calliste | Stays with Arbiter | Stays elsewhere |
+| Moves to Collister | Stays with Arbiter | Stays elsewhere |
 |---|---|---|
 | `server/assistant.ts` and its test, `api/turn.ts`, `api/messages.ts` | `server/decide/*`: registry, queue, drain, Jev transport, Haiku fallback, drift, probe, readout | Mason: the Send screen, `qa.ts`, `grounding.ts`, `fair-housing.ts` (rules, no model) |
 | `src/views/Chat.tsx`, `Hubert.tsx`, `hubert/copy.ts`, `styles/hubert.css` | `api/decide.ts`, `decide-drain.ts`, `dev/jev.ts`, `jev-calibration.md`, `jev-labels.csv` | Abacus: the engine and parser |
@@ -106,11 +106,11 @@ Rule of thumb: **typed answers from a fixed question list are Arbiter's; free te
 | The writer's prompts and eval: `server/writer.ts`, `house-voice.ts`, `api/narratives.ts`, `dev/writer-eval.ts`, from Dispatch 13 phase 2 on (voice, client profile) | | |
 | The model-choice policy (Opus vs Sonnet, effort), AI cost per report, the Hubert eval | | |
 
-How they meet: Arbiter exposes one read-only function that returns a comp's typed judgments (class, confidence, source). Calliste surfaces them through an `assess` tool (it is in design §8.2, never built). Judgments stay suggestions until the agent confirms. Both log to `comp_report.usage`, each with its own `purpose`.
+How they meet: Arbiter exposes one read-only function that returns a comp's typed judgments (class, confidence, source). Collister surfaces them through an `assess` tool (it is in design §8.2, never built). Judgments stay suggestions until the agent confirms. Both log to `comp_report.usage`, each with its own `purpose`.
 
-Open edge: Mason owns Dispatch 13 phase 2 today, and NW-083 c (subject lines) and NW-085 (the example email) touch the writer. Suggest Casanova hands the writer's prompts to Calliste when it starts and Mason keeps Send's UI. Until then Mason carries them.
+Open edge: Mason owns Dispatch 13 phase 2 today, and NW-083 c (subject lines) and NW-085 (the example email) touch the writer. Suggest Casanova hands the writer's prompts to Collister when it starts and Mason keeps Send's UI. Until then Mason carries them.
 
-Starting it: Casanova writes Dispatch 15 and a roster row. NW-096 says move to the Casa Claude account before launching sessions, so Calliste starts after that. The small fixes (023, 063 a, 068 b) go to Mason now so they don't wait.
+Starting it: Casanova writes Dispatch 15 and a roster row. NW-096 says move to the Casa Claude account before launching sessions, so Collister starts after that. The small fixes (023, 063 a, 068 b) go to Mason now so they don't wait.
 
 ### What "as much ability as possible, gated by role" means
 
@@ -181,4 +181,4 @@ Later and separate: a "Hubert couldn't answer" log in the app, so real agents' m
 1. **What may Hubert write (NW-093 d)?** Options: (A) read only, forever; (B) propose-and-confirm for facts, features, add-back and email fixes, never tier, note or tag; (C) B plus proposing tags and notes. Recommend **B**. C breaks D-27 item 6 and weakens the notes that make the agent learn.
 2. **Should Hubert see the agent's own number after the Gate (NW-093 d)?** The agent sees it on Findings next to the estimate. Options: (A) no, keep it private (the Gate chip stays "that one is yours"); (B) yes, after the reveal, read-only, for the same reason as the target. Recommend **B** if you want "Hubert sees what the agent sees"; it also lets him explain the gap. It would not reach the writer or email.
 3. **Who writes "How Hubert got there"?** Recommend the template, plainer, with chips (above). Say if you want it to be Hubert's live words later.
-4. **Is the writer part of Calliste?** Recommend yes, from Dispatch 13 phase 2, with Mason keeping the Send screen and QA rules.
+4. **Is the writer part of Collister?** Recommend yes, from Dispatch 13 phase 2, with Mason keeping the Send screen and QA rules.

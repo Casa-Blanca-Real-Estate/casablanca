@@ -4,7 +4,8 @@
 // Moving to full records who unlocked them, when, and the admin's reason (up to 200 characters);
 // moving to practice clears all three. Only those four columns change, on that one row. Each
 // change is a capability_change row in the sign-in log, written after the update commits; if
-// that write fails it's a console.error and the change stands.
+// that write fails it's a console.error and the change stands. The test user (Dispatch 23 item 4)
+// is in neither list nor reach: its level is a constant, and a change aimed at it is a 404.
 import { normalizeEmail } from '../access.ts';
 import { withActor } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond } from '../http.ts';
@@ -25,7 +26,7 @@ export function handleCapability(req: Request, deps: AuthDeps): Promise<Response
         email: string; name: string | null; role: string; status: string; capability: 'practice' | 'full'; last_seen_at: Date | null;
       }>(
         `select email, nullif(btrim(name), '') as name, role, status, capability, last_seen_at from comp_report.users
-          where status = 'active' order by last_seen_at desc nulls last limit 500`,
+          where status = 'active' and not is_test order by last_seen_at desc nulls last limit 500`,
       )).rows);
       return json({
         people: people.map((p) => ({
@@ -46,9 +47,9 @@ export function handleCapability(req: Request, deps: AuthDeps): Promise<Response
       const { rows } = await tx.query<{ email: string; capability: 'practice' | 'full'; unlocked_by: string | null; unlocked_at: Date | null; unlocked_reason: string | null }>(
         capability === 'full'
           ? `update comp_report.users set capability = 'full', unlocked_by = $2, unlocked_at = now(), unlocked_reason = $3
-              where email = $1 returning email, capability, unlocked_by, unlocked_at, unlocked_reason`
+              where email = $1 and not is_test returning email, capability, unlocked_by, unlocked_at, unlocked_reason`
           : `update comp_report.users set capability = 'practice', unlocked_by = null, unlocked_at = null, unlocked_reason = null
-              where email = $1 returning email, capability, unlocked_by, unlocked_at, unlocked_reason`,
+              where email = $1 and not is_test returning email, capability, unlocked_by, unlocked_at, unlocked_reason`,
         capability === 'full' ? [email, user.email, reason || null] : [email],
       );
       return rows[0];

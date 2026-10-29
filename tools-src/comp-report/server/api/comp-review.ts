@@ -23,12 +23,14 @@ import { withActor } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { neutralNumbers } from '../numbers.ts';
 import { appendReview, reviewLimit } from '../reviews.ts';
-import { requireUser, type AuthDeps } from '../session.ts';
+import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
+import { guardTestAi } from '../test-user.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
 
 export interface CompReviewDeps extends AuthDeps {
-  anthropic: () => Anthropic;
+  /** The client for this user's calls: the test user's uses the eval key (server/test-user.ts). */
+  anthropic: (user: SessionUser) => Anthropic;
   env?: Record<string, string | undefined>;
 }
 
@@ -78,7 +80,8 @@ export function handleCompReview(req: Request, deps: CompReviewDeps): Promise<Re
       return { input, note: note || null, tags: j.tags ?? [] };
     });
 
-    const outcome = await callReview(deps.anthropic(), job, prepared.input);
+    await guardTestAi(pool, user, deps.env);
+    const outcome = await callReview(deps.anthropic(user), job, prepared.input);
 
     if (outcome.usage && outcome.model) {
       const totals = usageTotals(outcome.model, outcome.usage as Parameters<typeof usageTotals>[1]);

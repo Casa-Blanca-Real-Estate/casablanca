@@ -148,7 +148,7 @@ attention, as they hold the security work. The ledger has `casa-r13-1` to `-10`:
   - Mason: 15, then 18, 22a, 23 items 1–2, 20, 21, 22b, 23 items 3–4.
   - Abacus: 16, then 19.
   - Surveyor: 17.
-  - Calliste: 24, after the move.
+  - Collister: 24, after the move.
 - NB-23 answered A (2026-10-27): 22a can merge once reviewed.
 - Before 23 items 3–4 go out, run one more blockers-only check of 23. The last check found two blockers, fixed in
   602f408; 22's last check found none.
@@ -156,7 +156,7 @@ attention, as they hold the security work. The ledger has `casa-r13-1` to `-10`:
 - Re-review #41 (Dispatch 01) whenever Kimani wants the profile-pic track back. #45 has a conflict.
 
 **Kimani's open items:** the Casa Answer Sheet (version 5) has NB-1 to NB-28 and TD-12 to TD-17. D-28 in
-`docs/decisions.md` lists which answers hold a build. The Casa account move (TD-12, D-26) comes before Calliste,
+`docs/decisions.md` lists which answers hold a build. The Casa account move (TD-12, D-26) comes before Collister,
 before 23 items 3–4, and before any production key.
 
 **Agent budget for this round (Kimani's):** 5 Opus and 30–40 Sonnet or Haiku in total. The triage used the 5

@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. -->
+<script src="/assets/studio-auth.js"></script>
 <script src="../../assets/studio-header.js" defer></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <!-- Async StreetEasy import (background fn + polling; sync fallback). Defines window.CBImportStreetEasy -->
@@ -2695,8 +2697,8 @@ document.getElementById('bulk-modal').addEventListener('click', (e) => { if (e.t
 
 // ── Auto-save (local, dev-only): persist unsaved work across reloads on this device ──
 const AUTOSAVE_KEY = 'cb_autosave_forsale';
-const _AUTH = ['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
-function devAuthed(){ return _AUTH.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase()) !== -1; }
+function devAuthed(){ return CBStudio.isTeam(); }
+document.addEventListener('cb-studio-ready', function(){ refreshSaveStatus(); });
 function autosaveHasContent(s){ return !!(s && ((s.deals && s.deals.some(d=>d.address||d.price||d.description||d.agentName||d.propSrc||d.agentSrc)) || s.coverSrc)); }
 function autosave(){
   if(!devAuthed()) return;
@@ -2728,7 +2730,7 @@ renderHistoryPanel();
 function sessionSig(){ try{ var s=serializeSession(); return JSON.stringify([S.accent, S.postTitle||'', (S.coverSrc||'').length, s.deals.map(function(d){return [d.address,d.price,d.neighborhood,d.bedsBaths||'',d.description,d.agentName,(d.propSrc||'').length,(d.agentSrc||'').length];})]); }catch(e){ return 'sig-'+Date.now(); } }
 var _savedSig = sessionSig();
 function markSaved(){ _savedSig = sessionSig(); refreshSaveStatus(); }
-function refreshSaveStatus(){ var el=document.getElementById('save-status'); if(!el) return; if(!devAuthed()){ el.textContent='Not signed in'; el.style.color='#b4452f'; return; } var dirty = sessionSig()!==_savedSig; el.textContent = dirty ? '• Unsaved' : '✓ Saved'; el.style.color = dirty ? '#b4452f' : '#888680'; }
+function refreshSaveStatus(){ var el=document.getElementById('save-status'); if(!el) return; if(!devAuthed()){ el.textContent='Saving is team only'; el.style.color='#b4452f'; return; } var dirty = sessionSig()!==_savedSig; el.textContent = dirty ? '• Unsaved' : '✓ Saved'; el.style.color = dirty ? '#b4452f' : '#888680'; }
 setInterval(refreshSaveStatus, 1500); refreshSaveStatus();
 
 var _btnClear=document.getElementById('btn-clear');

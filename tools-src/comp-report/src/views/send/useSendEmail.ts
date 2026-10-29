@@ -210,7 +210,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
       email: parsed,
       anchor,
       others,
-      agent: { name: signedAs, office: OFFICE, email: ws.report.ownerEmail || null, phone: ws.agentCard?.phone ?? null, photo: ws.agentCard?.photo ?? null },
+      agent: { name: signedAs, title: ws.agentCard?.title ?? null, office: OFFICE, email: ws.report.ownerEmail || null, phone: ws.agentCard?.phone ?? null, photo: ws.agentCard?.photo ?? null },
       cta: designedCta(ws.side),
       subject: full.subject,
       homePhoto: copies ? (copies.home ? `${location.origin}${copies.home}` : homePhoto) : homePhoto,

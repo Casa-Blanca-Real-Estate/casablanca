@@ -10,7 +10,8 @@ it to **Resolved** at the bottom.
 **Urgency:** `Now` · `Soon` (before the named dispatch reaches it) · `Later` · `Parked` (a paused
 track). **Size:** `Quick` — pick one · `Think` — needs a real look.
 
-Last updated 2026-10-21 by Casanova (answer sheet: NB-1 to NB-10, CR-3, PP-1, AC-2/3/4/7, TD-9, TD-14).
+Last updated 2026-10-29 (answer sheet of 2026-10-28: AC-1/5/6, CR-2, FB-1 to FB-5, NB-26, PP-4 to PP-12, TD-18;
+new on the sheet: HB-1 to HB-7 from `docs/comp-report/hubert-plan.md`, CR-7, TD-19 to TD-22).
 
 **What blocks the next builds:** nothing. Dispatch 13 (the writer, CR-5) and Dispatch 12 (the profile
 pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dispatch 10's phase 2.
@@ -23,7 +24,7 @@ pic roster) can run now. One setting of yours unlocks more: the Jev key, for Dis
 | D-25 | The fair-housing list, and "appraisal contingency" | Soon — before agents copy writer drafts | Think (Hannah) | QA's compliance list (Dispatch 13) |
 | D-26 | Moving Casa's work onto Casa-owned accounts | Later — after the comp report settles; keys sooner | Think (with Erez) | `docs/casa-accounts-transfer.md` |
 | D-27 | The design port: what the handoff changes | Now — Mason builds on the defaults (Dispatch 14) | Quick (object only) | Noble's walk-through |
-| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21, NB-23 on 2026-10-27; the rest of NB-11 to NB-28 open) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
+| D-28 | Noble's walk-through: 28 calls (NB-1 to NB-10 answered 2026-10-21, NB-23 on 2026-10-27, NB-14 A and NB-15 A on 2026-10-29; the rest of NB-11 to NB-28 open, plus NB-29, buyer urgency) | Soon — Phase A builds on the defaults | Quick each | Dispatches 15–24 |
 | D-29 | The bosses' demo: what changes (answered 2026-10-22) | Now — Dispatches 25 and 26 build on it | — | Dispatches 25, 26 |
 
 Answered on 2026-09-29: D-1 to D-11, D-13, D-14, D-16, D-18 to D-23. They're in **Resolved**, with where
@@ -59,7 +60,10 @@ each was applied.
   doesn't need the key: do it before any Jev output exists.
 - [x] ~~Set up the dev notebook (#54).~~ Done: `DEV_NOTEBOOK_KEY` is in the Casa cloud environment and
   works (2026-10-13).
-- [ ] **Now — sort the team Feedback list:** route each piece on the answer sheet (FB-1 to FB-6), and
+- [ ] **Now — sort the team Feedback list:** FB-1 to FB-5 routed 2026-10-28 (all A: FB-1 with the profile pics
+  work, split into project threads as needed; FB-2 the roster's Instagram field now, builder tag lines later; FB-3
+  and FB-4 the post builders' first dispatch; FB-5 queued for the post builders after the live run). FB-6 is open.
+  Then
   on the notebook page (*Team feedback*) **Make a note** on
   anything worth acting on. Sessions now read the list too (`--feedback`, without emails), so Casanova
   can propose the sort; the button is yours, because notes are.
@@ -100,7 +104,7 @@ each was applied.
   (2026-10-21): "Don't think so. Remind me to check." If not, it's turned off.
 - [ ] **Soon — a co-op and its StreetEasy export** for the co-op sample (TD-15); **test an invite end to end** (TD-16);
   **Noble on the size-scale bands** (TD-17); **record the next walk-through** (TD-13).
-- [ ] **Soon — swap the Anthropic key in Make** (TD-18). The connection "My Anthropic Claude connection" feeds
+- [x] ~~Swap the Anthropic key in Make (TD-18).~~ Done 2026-10-28. The connection "My Anthropic Claude connection" feeds
   the live **Mailchimp ISO Blast Automation** (its three Claude steps). Give it its own key from Casa's Anthropic
   workspace, update the connection, check one run, then revoke the old key.
 - [x] ~~`CB_PICS_TOKEN` and `CB_CMS_TOKEN`.~~ Done 2026-10-21. Production now answers 401, not 503, for the roster and the CMS.
@@ -110,7 +114,10 @@ each was applied.
   style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. `CR_EVAL_ANTHROPIC_API_KEY` is in the
   cloud environment (2026-10-21), so Mason can run the real eval in a new session (well under a dollar).
   Your first read (CR-3, 2026-10-21): "It seems fine, but there's not enough writing yet to tell. That may be all it needs."
-  So the question waits for the eval drafts.
+  **The eval drafts are in (2026-10-29):** `docs/comp-report/writer-eval-2026-10-29.md`, twelve real drafts (two
+  reports, three lengths), with a short read at the top. 11 of 12 pass QA. Four things you might want changed in a new
+  voice version: it adds its own points to Things to consider; one headline names a single price; carrying-cost lines
+  repeat on every comp; the text message carries the email frame. Answer: keep the voice as is, or revise it.
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---
@@ -151,7 +158,8 @@ Human Rights Law: `tools-src/comp-report/workspace/fair-housing.ts` (version `fh
    writes about waiving the appraisal contingency in the next step can't copy the email. Keep that,
    or allow the phrase as a deal term?
 
-**Answer →** _type here — who reviews the list; keep or allow "appraisal contingency"_
+**Answer →** **Q2 (CR-2), Kimani 2026-10-28: A, keep it blocked.** Keep a note for the day Casa does appraisal
+work, so the block can be loosened where it's needed: this line is that note. Q1 (who reviews the list) is open.
 
 ---
 
@@ -192,7 +200,7 @@ as **NB-1 to NB-28**, each with its context and a recommended default. The bigge
 - **NB-13:** Hubert sees the target and the agent's own number after the reveal (revisits D-4's "never").
 - **NB-8 / NB-9:** whether full agents still need a note when they've tagged (revisits D-27 item 3), and
   whether tags the data settles are suggested or pre-filled.
-- **NB-18 / NB-20:** what Hubert may write (propose and confirm), and whether the writer moves to Calliste.
+- **NB-18 / NB-20:** what Hubert may write (propose and confirm), and whether the writer moves to Collister.
 - **NB-22 / NB-23:** sessions read production through a keyed, redacted inspection API; mentors see every
   report, read-only.
 - **NB-25:** the tracks already running start Phase A now; new tracks and production keys wait for the
@@ -202,7 +210,7 @@ as **NB-1 to NB-28**, each with its context and a recommended default. The bigge
 **What waits for your answer, not the default:** NB-1 (NW-002's relabel), NB-2 (the type model, NW-018 a) and
 NB-8 (NW-046, which changes D-27's Save rule) are built only on an A answer. Dispatch 22a doesn't merge until
 NB-23: deploying it lets every mentor read every report (answered A, 2026-10-27: 22a can merge). Samples stay admin-only on the server until NB-24.
-Dispatch 21 item 1 builds on NB-19 A (B moves it to Calliste). Dispatch 23 items 3–4 (the inspection and test
+Dispatch 21 item 1 builds on NB-19 A (B moves it to Collister). Dispatch 23 items 3–4 (the inspection and test
 keys) wait on NB-22 and TD-14, and run from Casa's account only.
 
 **Answer →** **Kimani, 2026-10-21 (answer sheet), NB-1 to NB-10.** Four differ from the defaults: NB-3, NB-4,
@@ -315,7 +323,14 @@ Blanca Project. Settled so far: `casacalliste@gmail.com` **stays** Casa's identi
   the clean-out.
 - **Q7 (AC-7):** "Don't think so. Remind me to check." On **Your actions**.
 
-Q1 is done (the keys moved, 2026-10-21); Q5 and Q6 are still open.
+- **Q1 (AC-1):** done already (the keys moved, 2026-10-21).
+- **Q5 (AC-5), 2026-10-28:** methods and patterns (the dispatch method, skill structure, tool design systems) are
+  how he works, not Casa IP; his contract's IP clause was scoped to the media he makes. The Answer Sheet and the
+  Dispatch Ledger were first made in his personal Claude, with dated proof; some pieces were adapted from MindBinder
+  work. "Don't worry so much about what stays mine."
+- **Q6 (AC-6), 2026-10-28:** the second owner is Kimani himself, on his personal Google address (kjocalliste@gmail.com).
+
+Q7 is still open (on **Your actions**).
 
 ---
 
@@ -355,6 +370,12 @@ where signed-in agents fill in their own details (possibly gating the tools behi
 exists), prefilled from the signatures doc. Alternatives: a FileMaker export (he'd need a walkthrough), or
 better, FileMaker's API if it has one. Already-filed photos import as **placed** (PP-2, 2026-10-15).
 **Applied:** Dispatch 12 phase 2 parses the doc; the poll and FileMaker are new work, not dispatched.
+**The import's review (PP-4 to PP-12), Kimani 2026-10-28:** Annika Yan as `a.yan@` (inactive); Vega-Gorsun;
+Franceiry; the agents sharing a phone (PP-7) and the two with none (PP-8) import with no phone; Cecilia Rubenstein
+not linked to `cecilia-c` (unsure); Emma Caldicott as **Emma Liuzzi**, same email, and the roster gains a field for
+former names and aliases so Caldicott stays searchable; everyone with photos but no signature is added (he toggles
+the inactive ones in the CMS); already-filed photos dated Sept 29 for now. PP-3 (Esther Wang) is open, defaulting
+to the doc. FB-2 adds an Instagram handle field to the roster now.
 
 ### D-15 · The esbuild / `@netlify/blobs` rule — resolved 2026-09-28
 The rule was wrong. Netlify bundles every v2 function with `nft` whatever `node_bundler` says, and that

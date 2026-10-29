@@ -63,6 +63,7 @@ async function signIns(tx: Queryable, user: string | null) {
   const { rows } = await tx.query<AccessRow>(
     `select ${ACCESS_COLUMNS} from comp_report.access_events
       where kind in ('gate', 'session_start', 'refused', 'signin_error') and ($1::text is null or email = $1)
+        and (email is null or email not in (select email from comp_report.users where is_test))
       order by at desc, id desc limit ${LOG_LIMIT}`,
     [user],
   );
@@ -73,6 +74,7 @@ async function audit(tx: Queryable, user: string | null) {
   const { rows } = await tx.query<AccessRow>(
     `select ${ACCESS_COLUMNS} from comp_report.access_events
       where kind in ('viewed_list', 'capability_change') and ($1::text is null or email = $1 or by_email = $1)
+        and (email is null or email not in (select email from comp_report.users where is_test))
       order by at desc, id desc limit ${LOG_LIMIT}`,
     [user],
   );

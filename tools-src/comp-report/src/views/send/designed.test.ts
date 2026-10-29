@@ -298,13 +298,14 @@ test('the client’s paragraph wins over the writer’s lines and the Sort note,
 
 test('the sign-off: the roster’s headshot (absolute, on this site) and phone, linked to call; the hatched circle without them', () => {
   const html = designedHtml(designedInput({ agent: {
-    name: 'Kimani', office: 'Casa Blanca · 10 Hubert St, Tribeca', email: 'kimani@casa-blanca.com',
+    name: 'Kimani', title: 'Creative Associate', office: 'Casa Blanca · 10 Hubert St, Tribeca', email: 'kimani@casa-blanca.com',
     phone: '(212) 555-0101', photo: '/api/comp-report/email-photo?k=abc',
   } }));
+  assert.ok(html.includes('>Creative Associate</div>'), 'the roster’s title under the name');
   assert.ok(html.includes('<img src="https://casa.example/api/comp-report/email-photo?k=abc" alt="Kimani" width="56" height="56"'));
   assert.ok(html.includes('href="tel:+12125550101"') && html.includes('(212) 555-0101'));
   const bare = designedHtml(designedInput());
-  assert.ok(!bare.includes('tel:') && !bare.includes('email-photo?k='));
+  assert.ok(!bare.includes('tel:') && !bare.includes('email-photo?k=') && !bare.includes('Creative Associate'));
   assert.match(bare, /width:56px;height:56px;border-radius:50%;background-color:#eeece7/);
   // A phone that isn't a US number shows as typed, linked nowhere; a photo that isn't https or this site isn't loaded.
   const odd = designedHtml(designedInput({ agent: { name: 'K', office: 'o', email: null, phone: 'ext. 12', photo: 'javascript:alert(1)' } }));

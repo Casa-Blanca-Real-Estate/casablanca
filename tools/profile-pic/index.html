@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. -->
+<script src="/assets/studio-auth.js"></script>
 <script src="../../assets/studio-header.js" defer></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 
 <script>
-/* Members gate (casual, client-side): bounce to the studio home unless an approved
-   email was saved there. Same-origin localStorage is shared across the platform. */
-(function(){
-  var A=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
-  if(A.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase())===-1) location.replace('../../');
-})();
+/* Team only: anyone signed in who isn't on the Studio's team goes back to the studio home (assets/studio-auth.js). */
+CBStudio.ready.then(function(){ if(!CBStudio.isTeam()) location.replace('../../'); });
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2088,7 +2086,7 @@ window.cbZip = downloadAllZip;
 
     var q=($('roSearch').value||'').trim().toLowerCase();
     var list=sorted(S.roster.filter(function(a){
-      return inFilter(a,S.filter)&&(!q||a.name.toLowerCase().indexOf(q)!==-1||a.slug.indexOf(q)!==-1);
+      return inFilter(a,S.filter)&&(!q||[a.name].concat(a.formerNames||[]).join(' ').toLowerCase().indexOf(q)!==-1||a.slug.indexOf(q)!==-1);
     }));
     var total=S.roster.reduce(function(n,a){return n+(a.bytes||0);},0);
     $('roTotal').textContent=total?'Stored across the roster: '+fmtBytes(total)+', for '+(function(n){return n===1?'1 agent':n+' agents';})(S.roster.filter(function(a){return a.bytes;}).length)+'.':'';

@@ -29,7 +29,7 @@ export async function menteeEmails(tx: Queryable, mentorEmail: string): Promise<
 async function agents(tx: Queryable): Promise<MenteeAgent[]> {
   const { rows } = await tx.query<{ email: string; name: string | null }>(
     `select email, nullif(btrim(name), '') as name from comp_report.users
-      where role = 'agent' and status = 'active' order by lower(coalesce(nullif(btrim(name), ''), email))`,
+      where role = 'agent' and status = 'active' and not is_test order by lower(coalesce(nullif(btrim(name), ''), email))`,
   );
   return rows.map((r) => ({ email: r.email, name: r.name }));
 }

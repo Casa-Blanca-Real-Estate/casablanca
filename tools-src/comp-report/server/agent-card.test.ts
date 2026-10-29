@@ -27,7 +27,7 @@ function roster(records: Record<string, unknown>, blobs = new Map<string, ArrayB
 
 const sam = {
   slug: 'sam-v', status: 'published',
-  draft: { identity: { name: 'Sam Valk' }, contact: { email: 'Sam@Casa-Blanca.com', phone: '(212) 555-0101' } },
+  draft: { identity: { name: 'Sam Valk', title: 'Licensed Real Estate Agent' }, contact: { email: 'Sam@Casa-Blanca.com', phone: '(212) 555-0101' } },
   live: { identity: { name: 'Sam Valk (old)' }, contact: { email: 'sam@casa-blanca.com', phone: '' } },
   pic: { outputs: [out('R1_Logo', 'c'.repeat(24), 'image/png'), out('R4_Clean', 'd'.repeat(24)), out('SQ2_Clean', KEY)] },
 };
@@ -46,6 +46,19 @@ test('matched by contact email, whatever its case; the draft first; a clean squa
   const noPic = cardOf('sam-v', { ...sam, pic: undefined }, 'sam@casa-blanca.com');
   assert.equal(noPic?.headshot, null);
   assert.equal(cardOf('x', null, 'sam@casa-blanca.com'), null);
+});
+
+test('the profile: the first name they go by (the CMS’s display name, else the first word), their title and the roster’s email', () => {
+  const hit = cardOf('sam-v', sam, 'sam@casa-blanca.com');
+  assert.equal(hit?.firstName, 'Sam');
+  assert.equal(hit?.title, 'Licensed Real Estate Agent');
+  assert.equal(hit?.email, 'Sam@Casa-Blanca.com');
+  const sammy = { ...sam, draft: { ...sam.draft, identity: { name: 'Samuel Valk', displayName: 'Sammy' } } };
+  assert.equal(cardOf('sam-v', sammy, 'sam@casa-blanca.com')?.firstName, 'Sammy');
+  const nameless = { ...sam, draft: { contact: sam.draft.contact }, live: { contact: sam.live.contact } };
+  const bare = cardOf('sam-v', nameless, 'sam@casa-blanca.com');
+  assert.equal(bare?.firstName, null);
+  assert.equal(bare?.title, null);
 });
 
 test('the scan finds the one record among many, and none when the roster doesn’t know the address', async () => {

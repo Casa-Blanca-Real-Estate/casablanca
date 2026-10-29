@@ -181,8 +181,11 @@ describe('mentors read every report, read-only (Dispatch 22a)', { skip: skipWith
         qual: p.qual?.replaceAll('can_see_report', 'can_edit_report') ?? null,
         with_check: p.with_check?.replaceAll('can_see_report', 'can_edit_report') ?? null,
       }));
+      // Dispatch 23 changes one write policy on purpose: users_insert admits is_test only from the
+      // system actor test-key (db/test-user.test.ts). Every other is as 22a left it.
       const now = await writePolicies(c2);
-      assert.deepEqual(now, was);
+      const others = (ps: typeof now) => ps.filter((p) => p.policyname !== 'users_insert');
+      assert.deepEqual(others(now), others(was));
       for (const p of now) {
         assert.doesNotMatch(`${p.qual} ${p.with_check}`, /can_read_report|can_see_report|mentor/, `${p.policyname} admits a reader`);
       }
