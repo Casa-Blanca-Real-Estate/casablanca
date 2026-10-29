@@ -37,6 +37,23 @@ describe('the file check', () => {
     assert.ok(warnings.some((w) => /James Campanella.*no email/.test(w)));
   });
 
+  test('an Instagram handle or link, and former names, are taken; anything else is refused', () => {
+    const ok = parseRows([
+      { name: 'Emma Liuzzi', slug: 'emma-l', instagram: '@emma.liuzzi', formerNames: ['Emma Caldicott', ' '] },
+      { name: 'Rikki Tauber', instagram: 'https://www.instagram.com/rikki_t/' },
+    ]);
+    assert.deepEqual(ok.errors, []);
+    assert.equal(ok.rows[0]!.instagram, '@emma.liuzzi');
+    assert.deepEqual(ok.rows[0]!.formerNames, ['Emma Caldicott']);
+    assert.deepEqual(ok.rows[1]!.formerNames, []);
+    const bad = parseRows([
+      { name: 'A Person', instagram: 'https://example.com/a' },
+      { name: 'B Person', formerNames: 'Bee' },
+    ]).errors.join('\n');
+    assert.match(bad, /not an Instagram handle/);
+    assert.match(bad, /formerNames must be a list of names/);
+  });
+
   test('every problem is reported, and any one stops the import', () => {
     const { errors } = parseRows([
       { name: 'Hannah Bomze' },
@@ -113,7 +130,7 @@ describe('an import run, against both functions', () => {
     { name: 'Sam Valk', slug: 'sam-v', title: 'Licensed Real Estate Agent', email: 'sam@doc.example', generatedAt: '2025-01-01' },
     { name: 'Rikki Tauber', title: 'Licensed Real Estate Agent', email: 'r@example.test', phone: '212-555-0101', rawInDrive: true },
     { name: 'James Campanella', email: 'j@example.test', generatedAt: '2025-03-01', placements: { gmailSig: 'done', gmailAvatar: 'done', filemaker: 'done', streeteasy: 'done', businessCard: 'na' } },
-    { name: 'Nuri Daynish' },
+    { name: 'Nuri Daynish', instagram: '@nuri.d', formerNames: ['Nuri Smith'] },
   ];
   const record = async (slug: string) => JSON.parse((await pics.store.get(slug, { type: 'text' }))!);
 
@@ -142,10 +159,15 @@ describe('an import run, against both functions', () => {
     assert.equal(rikki.draft.contact.phone, '212-555-0101');
     assert.equal(rikki.pic.rawInDrive, true);
 
+    const nuri = await record('nuri-d');
+    assert.equal(nuri.draft.contact.instagram, 'https://instagram.com/nuri.d', 'the handle is saved as the profile link');
+    assert.deepEqual(nuri.draft.identity.formerNames, ['Nuri Smith']);
+
     const roster = (await readExisting(o));
     assert.equal(roster.size, 4);
     const res = await handlePics(new Request('https://studio.test/x', { headers: { authorization: `Bearer ${PICS}` } }), pics);
-    const rows2 = (await res.json()).roster as { slug: string; status: string }[];
+    const rows2 = (await res.json()).roster as { slug: string; status: string; formerNames: string[] }[];
+    assert.deepEqual(rows2.find((r) => r.slug === 'nuri-d')!.formerNames, ['Nuri Smith'], "the roster's search can find her by it");
     assert.deepEqual(Object.fromEntries(rows2.map((r) => [r.slug, r.status])), {
       'james-c': 'deployed', 'nuri-d': 'none', 'rikki-t': 'raw', 'sam-v': 'raw',
     });

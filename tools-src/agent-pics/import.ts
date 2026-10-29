@@ -22,8 +22,10 @@
 // A row:
 //   { "name": "Rikki Tauber", "slug": "rikki-t", "title": "Licensed Real Estate Agent",
 //     "email": "…", "phone": "…", "rawInDrive": true, "generatedAt": "2025-03-01",
-//     "placements": { "gmailSig": "done", "businessCard": "na" } }
-// Only name is required. slug defaults to firstname-lastinitial.
+//     "placements": { "gmailSig": "done", "businessCard": "na" },
+//     "instagram": "@rikki.t", "formerNames": ["Rikki Smith"] }
+// Only name is required. slug defaults to firstname-lastinitial. instagram is a
+// handle or a profile link (FB-2); formerNames keeps an old name searchable (PP-10).
 import { readFileSync } from 'node:fs';
 import { PLACEMENT_STATES, PLACEMENTS, type PlacementKey, type PlacementState, type RosterRow } from './record.ts';
 
@@ -36,12 +38,15 @@ export interface ImportRow {
   rawInDrive: boolean;
   generatedAt: string;
   placements: Partial<Record<PlacementKey, PlacementState>>;
+  instagram: string;
+  formerNames: string[];
 }
 
-const KEYS = ['slug', 'name', 'title', 'email', 'phone', 'rawInDrive', 'generatedAt', 'placements'];
+const KEYS = ['slug', 'name', 'title', 'email', 'phone', 'rawInDrive', 'generatedAt', 'placements', 'instagram', 'formerNames'];
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const IG_RE = /^(?:@?[A-Za-z0-9._]{1,30}|(?:https?:\/\/)?(?:www\.)?instagram\.com\/[A-Za-z0-9._]{1,30}\/?)$/;
 
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
@@ -90,6 +95,15 @@ export function parseRows(data: unknown): { rows: ImportRow[]; errors: string[];
       errors.push(`${label}: generatedAt must be YYYY-MM-DD`);
     }
 
+    const instagram = str(r.instagram);
+    if (r.instagram !== undefined && typeof r.instagram !== 'string') errors.push(`${label}: instagram must be a handle or a link`);
+    else if (instagram && !IG_RE.test(instagram)) errors.push(`${label}: "${instagram}" is not an Instagram handle or profile link`);
+    let formerNames: string[] = [];
+    if (r.formerNames !== undefined) {
+      if (!Array.isArray(r.formerNames) || r.formerNames.some((n) => typeof n !== 'string')) errors.push(`${label}: formerNames must be a list of names`);
+      else formerNames = r.formerNames.map(str).filter(Boolean);
+    }
+
     const placements: Partial<Record<PlacementKey, PlacementState>> = {};
     if (r.placements !== undefined) {
       if (!r.placements || typeof r.placements !== 'object' || Array.isArray(r.placements)) {
@@ -108,7 +122,7 @@ export function parseRows(data: unknown): { rows: ImportRow[]; errors: string[];
 
     rows.push({
       slug, name, title: str(r.title), email, phone,
-      rawInDrive: r.rawInDrive === true, generatedAt, placements,
+      rawInDrive: r.rawInDrive === true, generatedAt, placements, instagram, formerNames,
     });
   });
   return { rows, errors, warnings };
@@ -180,7 +194,10 @@ export async function execute(rows: ImportRow[], steps: Step[], o: RunOptions): 
       if (s.create) {
         await call(o, 'agent-store', o.cmsToken, {
           action: 'create', slug: r.slug, by: 'roster import',
-          draft: { identity: { name: r.name, title: r.title }, contact: { email: r.email, phone: r.phone } },
+          draft: {
+            identity: { name: r.name, title: r.title, formerNames: r.formerNames },
+            contact: { email: r.email, phone: r.phone, instagram: r.instagram },
+          },
         });
         created++;
       }

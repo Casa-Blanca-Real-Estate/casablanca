@@ -117,7 +117,7 @@ export const MAX_PLACEMENT_NOTE = 300;
 export interface AgentRecord {
   slug: string;
   status?: string;
-  draft?: { identity?: { name?: string; displayName?: string; title?: string; licenseNumber?: string } } | null;
+  draft?: { identity?: { name?: string; displayName?: string; title?: string; licenseNumber?: string; formerNames?: unknown } } | null;
   live?: { identity?: { name?: string; title?: string } } | null;
   pic?: unknown;
   placements?: unknown;
@@ -328,6 +328,10 @@ export function applyPatch(record: AgentRecord, patch: Patch, now: number, by: s
 
 /* ───────────────────────────── shaping ───────────────────────────── */
 
+const formerNamesOf = (r: AgentRecord): string[] => {
+  const v = r.draft?.identity?.formerNames;
+  return Array.isArray(v) ? v.map((n) => clean(n, 80)).filter(Boolean).slice(0, 10) : [];
+};
 const nameOf = (r: AgentRecord) => clean(r.draft?.identity?.name || r.live?.identity?.name || r.slug, 80);
 const titleOf = (r: AgentRecord) => clean(r.draft?.identity?.title || r.live?.identity?.title || '', 80);
 
@@ -335,6 +339,8 @@ export interface RosterRow {
   slug: string;
   name: string;
   title: string;
+  /** Names the agent went by before, from the CMS: the roster's search finds them by these too. */
+  formerNames: string[];
   /** The agent site's status in the CMS: draft / live / suspended / archived. */
   site: string;
   status: PicStatus;
@@ -364,6 +370,7 @@ export function rosterRow(record: AgentRecord): RosterRow {
     slug: record.slug,
     name: nameOf(record),
     title: titleOf(record),
+    formerNames: formerNamesOf(record),
     site: clean(record.status || 'draft', 20),
     status: picStatus(pic, placements),
     rawInDrive: pic.rawInDrive,

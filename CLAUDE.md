@@ -121,7 +121,7 @@ roster are in `docs/dispatch/README.md`** — read it before taking on a dispatc
 | 09 | [Comp report — the first-class start, and the screens (CR-3b)](docs/dispatch/09-comp-report-first-class-start.md) | Mason | Done — merged #57 (phases 1–2), #60 (phase 3) |
 | 10 | [Comp report — the decision provider, Jev first (CR-D)](docs/dispatch/10-comp-report-decision-provider.md) | Arbiter | Phase 1, follow-ups and the zero-retention switch merged #56, #59, #61; phase 2's pre-live build merged #75. The live run waits on Kimani's keys and the labels sheet |
 | 11 | [Comp report — distance, from coordinates (CR-3c)](docs/dispatch/11-comp-report-distance.md) | Mason | Done — merged #62 |
-| 12 | [Profile pics — the roster, the store and the email signature](docs/dispatch/12-profile-pic-tracker.md) | Painter | Phase 1 merged #71. Phase 2 (storage) in review; the roster import reads the signatures doc (D-24) |
+| 12 | [Profile pics — the roster, the store and the email signature](docs/dispatch/12-profile-pic-tracker.md) | Painter | Phase 1 merged #71. Phase 2 merged #82. The roster import (signatures doc, D-24) has PP-4..PP-12 applied; it runs on Kimani's go |
 | 13 | [Comp report — the writer and QA (CR-5)](docs/dispatch/13-comp-report-writer-and-qa.md) | Mason | Phase 1 merged #76. Its production check and the real eval wait on Kimani; phase 2 next |
 | 14 | [Comp report — the design port, for Noble (CR-6)](docs/dispatch/14-comp-report-design-port.md) | Mason | Done — merged #77. Follow-ups listed at the end of the dispatch |
 | 15 | [Comp report — Sort, as it stands (CR-7a)](docs/dispatch/15-comp-report-sort-as-it-stands.md) | Mason | Ready — runs with 16 and 17 |

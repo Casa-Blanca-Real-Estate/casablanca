@@ -2088,7 +2088,7 @@ window.cbZip = downloadAllZip;
 
     var q=($('roSearch').value||'').trim().toLowerCase();
     var list=sorted(S.roster.filter(function(a){
-      return inFilter(a,S.filter)&&(!q||a.name.toLowerCase().indexOf(q)!==-1||a.slug.indexOf(q)!==-1);
+      return inFilter(a,S.filter)&&(!q||[a.name].concat(a.formerNames||[]).join(' ').toLowerCase().indexOf(q)!==-1||a.slug.indexOf(q)!==-1);
     }));
     var total=S.roster.reduce(function(n,a){return n+(a.bytes||0);},0);
     $('roTotal').textContent=total?'Stored across the roster: '+fmtBytes(total)+', for '+(function(n){return n===1?'1 agent':n+' agents';})(S.roster.filter(function(a){return a.bytes;}).length)+'.':'';
