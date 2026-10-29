@@ -4,6 +4,7 @@
 // the local dev server and the fakes. Needs 'npm i --no-save playwright-core' (the preinstalled Chromium).
 //   node tools-src/comp-report/dev/walk-review.mjs <base> <outDir> [condo|coop]
 import { chromium } from 'playwright-core';
+import { chromePath } from './chrome-path.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -17,7 +18,7 @@ const seed = (stage) => execFileSync('node', [join(here, 'seed-report.mjs'), bas
 const errors = [];
 const check = (ok, what) => { if (!ok) errors.push(`expected: ${what}`); };
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const browser = await chromium.launch({ executablePath: chromePath() });
 
 async function page(practice, width = 1440) {
   const ctx = await browser.newContext({ viewport: { width, height: 1000 } });
@@ -63,7 +64,7 @@ const tierOnSort = (p, address) => p.locator('.so-row-wrap', { hasText: address 
   await seg(p, '1st tier').click();
   await p.waitForFunction(() => document.querySelector('.rv-seg button.primary')?.getAttribute('aria-pressed') === 'true');
   await shot(p, '04-full-tiered');
-  await p.getByRole('button', { name: /Next/ }).click();
+  await p.getByRole('button', { name: /^Next →$/ }).click();
   await p.waitForSelector('.rv-round.take');
   check(/2 \/ \d+/.test(await p.locator('.rv-count').textContent()), 'Next goes to 2 / N');
   await p.keyboard.press('Escape');

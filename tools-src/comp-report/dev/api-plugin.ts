@@ -15,6 +15,7 @@
 //                               instead of NYC Planning's own, which needs no key
 //   CR_DEV_PHOTO_FILE           a local JPEG the email's photo copy serves for every photo,
 //                               instead of fetching StreetEasy's image (no network needed)
+//   CR_DEV_ROSTER_FILE          a small roster for the email's sign-off (dev/dev-roster.ts)
 //
 // Nothing under dev/ is imported by a deployed function.
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -43,6 +44,7 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/access-log': { module: '/server/api/access-log.ts', handler: 'handleAccessLog' },
   '/api/comp-report/capability': { module: '/server/api/capability.ts', handler: 'handleCapability' },
   '/api/comp-report/signin-error': { module: '/server/api/signin-error.ts', handler: 'handleSignInError' },
+  '/api/comp-report/agent-card': { module: '/server/api/agent-card.ts', handler: 'handleAgentCard' },
 };
 
 /** Background functions: Netlify answers 202 at once and runs them on; so does this. */
@@ -101,6 +103,7 @@ async function deps(server: ViteDevServer) {
     guest: guestConfig(process.env, 'dev'), // CR_GUEST_KEY, to try guest mode locally
     samplePhotos: devSamplePhotos, // in memory: kept until the dev server restarts
     emailPhotos: devEmailPhotos, // the email's copied photos, in memory too
+    roster: process.env.CR_DEV_ROSTER_FILE ? await (await load('/dev/dev-roster.ts')).devRoster(process.env.CR_DEV_ROSTER_FILE) : null,
     // CR_DEV_PHOTO_FILE: serve this local image for every photo, for a walk with no network (StreetEasy's images).
     fetchPhoto: process.env.CR_DEV_PHOTO_FILE
       ? async () => ({ ok: true, data: new Uint8Array(await (await import('node:fs/promises')).readFile(process.env.CR_DEV_PHOTO_FILE!)).buffer, contentType: 'image/jpeg' })

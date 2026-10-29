@@ -4,6 +4,7 @@
 // Chromium at /opt/pw-browsers (never 'playwright install').
 //   node tools-src/comp-report/dev/walk-send.mjs <base> <outDir> <buyer|seller> <coop|condo>
 import { chromium } from 'playwright-core';
+import { chromePath } from './chrome-path.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -18,7 +19,7 @@ const tag = `${side}-${type}`;
 const errors = [];
 const log = [];
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const browser = await chromium.launch({ executablePath: chromePath() });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
 await ctx.addInitScript((e) => sessionStorage.setItem('cr-dev-session', e), OWNER);
 await ctx.addInitScript(() => { try { localStorage.removeItem('cr-build-notes'); localStorage.setItem('cr-view-as-new-agent', '0'); } catch {} });
@@ -37,7 +38,7 @@ async function shot(p, name, full = true) {
   log.push(file);
 }
 const url = (id, q) => `${base}/tools/comp-report/?report=${id}&${q}`;
-const tab = (p, label) => p.locator('.se-tabs button', { hasText: new RegExp(`^${label === 'Text' ? 'Then text them' : label}$`) });
+const tab = (p, label) => p.locator('.se-tabs button', { hasText: new RegExp(`^${label === 'Text' ? 'Then text them' : label === 'Designed' ? 'Designed email' : label}$`) });
 /** Full and Short sit under "Plain-text fallback" (Dispatch 26). */
 const openFallback = (p) => p.locator('.se-fallback').evaluate((d) => { d.open = true; });
 const expect = (ok, what) => { if (!ok) errors.push(what); };
@@ -71,8 +72,10 @@ const id = seed('send');
 const p = await page('send');
 await p.goto(url(id, 'step=send'));
 await settle(p);
+// Send opens the client step by itself the first time (Dispatch 26): close it to reach the email.
+if (await p.locator('.cw-modal').count()) { await p.keyboard.press('Escape'); await settle(p); }
 expect(await tab(p, 'Designed').getAttribute('aria-pressed') === 'true', 'Designed is not the default tab');
-expect((await p.locator('.se-tabs button').allTextContents()).join(',') === 'Designed,Then text them,Full,Short', 'tab order');
+expect((await p.locator('.se-tabs button').allTextContents()).join(',') === 'Designed email,Then text them,Full,Short', 'tab order');
 expect(!(await p.getByText('Hubert drafts the headline').count()), 'the line above Write it is still there');
 await shot(p, '01-designed-default');
 
@@ -149,6 +152,7 @@ await p.close();
   const q = await page('hand');
   await q.goto(url(id2, 'step=send'));
   await settle(q);
+  if (await q.locator('.cw-modal').count()) { await q.keyboard.press('Escape'); await settle(q); }
   const mark = q.getByRole('button', { name: 'Mark as sent' });
   expect(await mark.isEnabled(), 'Mark as sent is disabled before a copy');
   await shot(q, '10-before-copy-mark-as-sent-enabled');
@@ -161,14 +165,20 @@ await p.close();
 
 // A report that isn't mine: the reason instead of the button.
 {
-  const id3 = seed('send', 'agent.two@casa-blanca.com');
-  const r = await page('readonly');
+  // The sample is admins' only (NB-24), so the admin's report is opened by a mentor, who reads every report (NB-23).
+  const id3 = seed('send');
+  const MENTOR = 'mentor.walk@casa-blanca.com';
+  await fetch(`${base}/api/comp-report/allowlist`, { method: 'POST', headers: { authorization: `Bearer dev.${Buffer.from(OWNER).toString('base64url')}`, 'content-type': 'application/json' }, body: JSON.stringify({ email: MENTOR, role: 'mentor' }) });
+  const mctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await mctx.addInitScript((e) => sessionStorage.setItem('cr-dev-session', e), MENTOR);
+  const r = await mctx.newPage();
+  r.on('pageerror', (e) => errors.push(`readonly: pageerror ${e}`));
   await r.goto(url(id3, 'step=send'));
   await settle(r);
   expect(!(await r.getByRole('button', { name: 'Mark as sent' }).count()), 'Mark as sent shows on a read-only report');
   expect(await r.getByText('This report is read-only, so it can’t be marked as sent.').count() === 1, 'no read-only reason');
   await shot(r, '12-read-only-reason');
-  await r.close();
+  await mctx.close();
 }
 
 await ctx.close();

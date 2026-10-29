@@ -5,6 +5,7 @@
 // playwright-core isn't a dependency: 'npm i --no-save playwright-core' first; it uses /opt/pw-browsers.
 //   node tools-src/comp-report/dev/walk-new-report.mjs <base> <outDir> <condo|coop>
 import { chromium } from 'playwright-core';
+import { chromePath } from './chrome-path.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -24,7 +25,7 @@ const COMPS = [
 // A drawn "photo", served for StreetEasy's image host so the walk needs no network.
 const svg = (n) => `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9c3e6"/><stop offset="1" stop-color="#8f8a76"/></linearGradient></defs><rect width="800" height="400" fill="url(#g)"/><rect x="90" y="120" width="230" height="200" fill="#f4f3f0" opacity=".85"/><rect x="380" y="80" width="300" height="240" fill="#f4f3f0" opacity=".6"/><text x="40" y="370" font-family="sans-serif" font-size="28" fill="#0f0f0f">listing photo ${n}</text></svg>`;
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const browser = await chromium.launch({ executablePath: chromePath() });
 async function context(asNewAgent) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(() => sessionStorage.setItem('cr-dev-session', 'kimani@casa-blanca.com'));
@@ -80,7 +81,7 @@ await p.mouse.move(0, 0);
 // 2 of 3: the details fill from the read.
 await p.getByRole('button', { name: /^next/i }).click();
 await p.waitForSelector('[data-testid="new-report-2"]');
-await p.waitForFunction(() => !/Reading the home’s StreetEasy page/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => errors.push('2: the read never landed'));
+await p.waitForFunction(() => !document.querySelector('.rd-bar'), null, { timeout: 30000 }).catch(() => errors.push('2: the read never landed'));
 await settle(p);
 await tall(p, 2200);
 const cond = p.getByRole('button', { name: /about unit condition/i });
