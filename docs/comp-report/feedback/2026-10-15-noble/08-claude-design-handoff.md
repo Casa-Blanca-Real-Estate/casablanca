@@ -1,5 +1,9 @@
 # Claude Design handoff: Noble's walk-through, 2026-10-15
 
+> **Superseded for the design pass (2026-10-29):** design from `docs/comp-report/design-pass/README.md`, which
+> covers every surface as built after Dispatches 20–26, with fresh screenshots. This file stays for the history
+> behind each `NW-` item.
+
 For Claude Design and Kimani. Picks up from `docs/comp-report/design-port/` (README, "Handoff Notes.md") and the build as merged in #77 (Dispatch 14). Source of every point: `00-items.md` (NW-001 to NW-102). Per-topic grounding: `01` to `06` in this folder.
 
 ## How to read this

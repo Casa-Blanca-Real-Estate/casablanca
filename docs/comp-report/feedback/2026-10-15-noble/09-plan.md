@@ -26,7 +26,7 @@ four working weeks: four of planning and setup before the first commit, then eig
 |---|---|---|
 | Oct 27–28 | 26 (Designed email, with photos), 21 (Findings), 22a (mentors and the invite fix), 23 items 1–2 (sample reset, co-op sample) | the build threads |
 | Oct 29 on | One batched release (credits reset Oct 29), then a live run with real fetches and photos (Erez's "see it live first") | Kimani |
-| Week of Nov 2, 1–2 days | Claude Design pass on `08-claude-design-handoff.md` | Kimani |
+| Week of Nov 2, 1–2 days | Claude Design pass on `docs/comp-report/design-pass/README.md` | Kimani |
 | Week of Nov 2 | The builds from that pass, released, plus the fixes from the live run | the build threads |
 | Week of Nov 9 | Kimani runs the whole workflow with Noble and an agent; fixes ship as they come up | Kimani, the build threads |
 | Nov 13 | Handed to Noble | Kimani |
