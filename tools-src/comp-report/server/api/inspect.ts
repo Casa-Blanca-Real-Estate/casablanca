@@ -10,6 +10,8 @@
 //   GET ?view=access[&days=7][&report=]     the access log
 //   GET ?view=activity[&days=7][&report=]   the activity log
 //   GET ?view=health                        exactly what /health says
+//   POST ?view=copy-to-test&report=<uuid>   copy the report, redacted, into the test user's
+//                                           account (needs X-Test-Key too; server/test-user.ts)
 //   …&text=1                                the client text as stored, on the three
 //                                           single-report views only: logged first,
 //                                           20 an hour and 100 a day, fails closed
@@ -27,7 +29,10 @@ import { handleHealth } from './health.ts';
 import { withActor, type PoolLike } from '../db.ts';
 import { HttpError, json, respond, UUID } from '../http.ts';
 import { keyCollides, sameKey, usableKey } from '../keys.ts';
+import { randomUUID } from 'node:crypto';
 import { TEXT_CAPS, writeAudit } from '../inspect/audit.ts';
+import { copyToTest } from '../inspect/copy.ts';
+import { testUser, verifyTestKey } from '../test-user.ts';
 import { emailHasher, readView, redact, REPORT_VIEWS, VIEW_SPECS, VIEWS, type ViewName } from '../inspect/views.ts';
 
 export const INSPECT_KEY_HEADER = 'x-inspect-key';
@@ -120,7 +125,7 @@ export function handleInspect(req: Request, deps: InspectDeps): Promise<Response
     // Views are GET only, copy-to-test POST only: after the key, so a wrong key is still a 401.
     const method = p.view === 'copy-to-test' ? 'POST' : 'GET';
     if (req.method !== method) throw new HttpError(405, 'method_not_allowed', `Use ${method} for ${p.view}.`);
-    if (p.view === 'copy-to-test') throw new HttpError(501, 'not_built', 'copy-to-test comes with the test user.');
+    if (p.view === 'copy-to-test') return copy(req, deps, env, key, p.reportId!);
 
     if (p.view === 'health') {
       return handleHealth(new Request(new URL('/api/comp-report/health', url), { method: 'GET' }), {
@@ -154,4 +159,32 @@ export function handleInspect(req: Request, deps: InspectDeps): Promise<Response
     const data = redact(VIEW_SPECS[view], rows, { text: p.text, hash: emailHasher(key) }) as Record<string, unknown>;
     return json({ view, report: p.reportId, text: p.text, note: DATA_NOTE, ...data });
   });
+}
+
+/**
+ * copy-to-test (item 4): a test-key action, not an inspect one. Both keys are
+ * checked before any query; the audit row (with the new report's id, made
+ * here) is written before anything is read; then the source is read as the
+ * inspect actor and the copy written as the test user (inspect/copy.ts).
+ */
+async function copy(req: Request, deps: InspectDeps, env: Record<string, string | undefined>, key: string, sourceId: string): Promise<Response> {
+  verifyTestKey(req, env);
+  const pool = deps.pool;
+  if (!pool) throw new HttpError(503, 'database_not_configured', 'There\'s no database here.');
+  const newId = randomUUID();
+  try {
+    await writeAudit(pool, { view: 'copy-to-test', reportId: sourceId, text: false, targetReportId: newId });
+  } catch (error) {
+    console.error(JSON.stringify({
+      at: 'comp-report-inspect', time: new Date().toISOString(), event: 'audit_failed', view: 'copy-to-test',
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    if ((error as { code?: unknown }).code === '23503') throw new HttpError(404, 'not_found', 'No such report.');
+    throw new HttpError(503, 'audit_failed', 'The audit row couldn\'t be written, so nothing was copied.');
+  }
+  const user = await testUser(req, env, pool);
+  if (!user) throw new HttpError(401, 'bad_key', 'Send the test key as X-Test-Key.');
+  const result = await copyToTest(pool, sourceId, newId, user, key);
+  console.log(JSON.stringify({ at: 'comp-report-inspect', time: new Date().toISOString(), event: 'copied', comps: result.comps }));
+  return json({ view: 'copy-to-test', report: sourceId, copy: result }, 201);
 }

@@ -42,6 +42,7 @@ import { neutralNumbers } from '../numbers.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { callWriter, CURRENT_WRITER_PROMPT, WRITER_PROMPTS, type WriterDraft } from '../writer.ts';
 import { asUser, requirePool } from './reports.ts';
+import { guardTestAi } from '../test-user.ts';
 import { reportFor } from './workspace.ts';
 import { logActivity, logViewed } from '../logs.ts';
 
@@ -263,7 +264,8 @@ export function handleNarratives(req: Request, deps: AuthDeps & { env?: Record<s
 // ─── The background write ───────────────────────────────────────────────────
 
 export interface WriteDeps extends AuthDeps {
-  anthropic: () => Anthropic;
+  /** The client for this user's calls: the test user's uses the eval key (server/test-user.ts). */
+  anthropic: (user: SessionUser) => Anthropic;
   /** How often the draft's progress is saved while it streams. */
   progressEveryMs?: number;
 }
@@ -289,6 +291,8 @@ export function runWrite(req: Request, deps: WriteDeps): Promise<Response> {
     const reportId = typeof body.reportId === 'string' && UUID.test(body.reportId) ? body.reportId : null;
     const narrativeId = typeof body.narrativeId === 'string' && UUID.test(body.narrativeId) ? body.narrativeId : null;
     if (!reportId || !narrativeId) throw new HttpError(400, 'bad_narrative', 'Which draft?');
+    // The test user's write: the eval key and the day's budget, before the draft is claimed.
+    await guardTestAi(pool, user, deps.env);
 
     // Claim it: queued, or running so long it must have died. Exactly one caller wins.
     const claimed = await withActor(pool, asUser(user), async (tx) => {
@@ -320,7 +324,7 @@ export function runWrite(req: Request, deps: WriteDeps): Promise<Response> {
 
     let client: Anthropic;
     try {
-      client = deps.anthropic();
+      client = deps.anthropic(user);
     } catch {
       await withActor(pool, asUser(user), finish({ status: 'failed', error: 'not_configured', errorMessage: 'The writer isn’t set up here.' }));
       return json({ narrative: narrativeId, started: true, status: 'failed' });

@@ -8,6 +8,9 @@
 //   3. an email on one of Casa's domains      → agent
 //   4. anything else                          → refused
 //
+// The test user's domain, @test.invalid (Dispatch 23 item 4), is refused
+// before all four: it signs in with CR_TEST_KEY alone, never through Identity.
+//
 // An allowlist row that says admin (none can be written since CR-1.1; the
 // database refuses them) grants nothing: the rule reads on as if it weren't
 // there.
@@ -64,7 +67,12 @@ export function isCasaEmail(email: string, config: AccessConfig): boolean {
   return config.domains.includes(emailDomain(email));
 }
 
+/** The test user's domain: never a real sign-in, whatever the lists say. */
+export const TEST_DOMAIN = 'test.invalid';
+export const isTestAddress = (email: string) => emailDomain(email) === TEST_DOMAIN;
+
 export function decide(email: string, config: AccessConfig, allowlistRole: Role | null): AccessDecision {
+  if (isTestAddress(email)) return { allowed: false, role: null, via: null };
   if (config.adminEmails.includes(email)) return { allowed: true, role: 'admin', via: 'admin' };
   if (allowlistRole && GRANTABLE_ROLES.includes(allowlistRole)) return { allowed: true, role: allowlistRole, via: 'allowlist' };
   if (isCasaEmail(email, config)) return { allowed: true, role: 'agent', via: 'domain' };

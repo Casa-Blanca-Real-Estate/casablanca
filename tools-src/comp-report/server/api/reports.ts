@@ -134,6 +134,8 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
             where ($3 or r.owner_email = $1) and ($4::text is null or r.owner_email = $4) and r.status = $2
               and (not $5 or r.owner_email in (select m.agent_email from comp_report.mentees m
                                                  where m.mentor_email = $1 and m.removed_at is null))
+              -- The test user's reports are its own (Dispatch 23 item 4): never in everyone's.
+              and (not $3 or r.owner_email not in (select tu.email from comp_report.users tu where tu.is_test))
             order by r.updated_at desc limit 200`,
           [user.email, status, everyone, owner, mentees],
         );

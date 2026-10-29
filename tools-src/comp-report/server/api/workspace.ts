@@ -315,7 +315,7 @@ export const PRACTICE_WHY_MIN = 100;
  * when. The Gate (Dispatch 14): an agent still in practice can't skip, and
  * gives a why of at least 100 characters; a graduated (full) agent may skip.
  */
-function checkCall(call: unknown, capability: 'practice' | 'full') {
+export function checkCall(call: unknown, capability: 'practice' | 'full') {
   if (call === null) return;
   if (!isObject(call)) throw new HttpError(400, 'bad_call', 'The call is an object or null.');
   const { low, high, skipped } = call;
@@ -335,7 +335,7 @@ function checkCall(call: unknown, capability: 'practice' | 'full') {
   }
 }
 
-function checkTarget(target: unknown) {
+export function checkTarget(target: unknown) {
   if (target === null) return;
   if (!isObject(target) || !isObject(target.price) || !money(target.price.value)) {
     throw new HttpError(400, 'bad_target', 'Give the target as a price in whole dollars.');
