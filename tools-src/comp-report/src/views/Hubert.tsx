@@ -1,7 +1,8 @@
 // Hubert, the comp report's assistant (Dispatch 14), named after Casa Blanca's
 // office at 10 Hubert St, Tribeca: the drawer beside every workspace screen.
-// A guide only: he answers and suggests; the tiers, notes and tags are the
-// agent's. On Sort he greets the agent and points back to sales from their
+// He answers and suggests, and changes a comp or the email when the agent
+// tells him what to change (the tiers, notes and tags are still the agent's
+// call); each change shows in his chat with "Show" to it. On Sort he greets the agent and points back to sales from their
 // export they took out (the only sales he may name: never one that isn't in
 // the report's data); elsewhere he answers questions about that screen. He
 // never sees the agent's number or the target (D-4): nothing here shows them.
@@ -13,6 +14,7 @@ import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
 import { Chat } from './Chat.tsx';
 import { GREETING, intro, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
+import { reachedGuides } from './hubert/guides.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
 import type { Workspace } from './workspace/model.ts';
@@ -148,6 +150,17 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onAction={onAction}
         beforeAsk={ws.flush}
         onEmailEdit={ws.queueHubertEdit}
+        onCompsChanged={ws.reloadComps}
+        guides={reachedGuides(ws.stepsAt, ws.side)}
+        onJump={(entry) => {
+          if (entry.kind === 'email') {
+            if (ws.screen !== 'send') ws.go('send');
+          } else if (entry.compId) {
+            // In the per-comp review, the review moves to that comp; otherwise Sort opens on its row.
+            if (ws.reviewing) ws.openReview(entry.compId);
+            else ws.showComp(entry.compId, entry.field);
+          }
+        }}
       />
     </aside>
   );

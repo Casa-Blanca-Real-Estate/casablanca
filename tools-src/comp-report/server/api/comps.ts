@@ -36,7 +36,7 @@ import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '..
 import { SAMPLE_CLIENT_LINES, SAMPLE_REVIEWS, sampleTiers } from '../sample/barclay-17l.ts';
 import { appendReview } from '../reviews.ts';
 import { samplePhotos } from '../sample/photos.ts';
-import { mayUseSample, requireUser } from '../session.ts';
+import { mayUseSample, requireUser, type SessionUser } from '../session.ts';
 import { cleanFeatures, isTag } from '../../workspace/features.ts';
 import { freeTagHardTerm, isFreeTag, MAX_FREE_TAG, MAX_TAGS, normalizeFreeTag } from '../../workspace/free-tags.ts';
 import { MAX_CLIENT_LINE, type ClientLine } from '../../workspace/client-words.ts';
@@ -170,11 +170,12 @@ async function saveEdits(tx: Queryable, reportId: string, reportCompId: string, 
 
 async function recordReason(
   tx: Queryable, reportId: string, reportCompId: string, tier: string, reason: string, reasonType: string, sample: boolean,
+  actor: 'agent' | 'assistant' = 'agent',
 ) {
   await tx.query(
     `insert into comp_report.reasons (report_comp_id, report_id, tier, reason, reason_type, actor, sample)
-     values ($1, $2, $3, $4, $5, 'agent', $6)`,
-    [reportCompId, reportId, tier, reason, reasonType, sample],
+     values ($1, $2, $3, $4, $5, $7, $6)`,
+    [reportCompId, reportId, tier, reason, reasonType, sample, actor],
   );
 }
 
@@ -446,75 +447,92 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
       return json(workspace);
     }
 
-    const reviewed = body.reviewed;
-    const anchor = body.anchor;
-    const confirmed = body.confirmed;
-    const removed = body.removed;
-    if (reviewed !== undefined && typeof reviewed !== 'boolean') throw new HttpError(400, 'bad_reviewed', 'reviewed is true or false.');
-    if (anchor !== undefined && typeof anchor !== 'boolean') throw new HttpError(400, 'bad_anchor', 'anchor is true or false.');
-    if (confirmed !== undefined && confirmed !== true) throw new HttpError(400, 'bad_confirmed', 'A confirmation can only be given.');
-    if (removed !== undefined && typeof removed !== 'boolean') throw new HttpError(400, 'bad_removed', 'removed is true or false.');
-    if (body.tier !== undefined && (typeof body.tier !== 'string' || !TIERS.includes(body.tier))) throw new HttpError(400, 'bad_tier', 'The tier is primary, secondary or excluded.');
-    if (anchor === true && body.tier !== undefined && body.tier !== 'primary') throw new HttpError(400, 'bad_anchor', 'The ★ comp is 1st tier.');
-    if (anchor === true && removed === true) throw new HttpError(400, 'bad_anchor', 'A removed comp can’t be the ★.');
-    let tier = body.tier as string | undefined;
-    const edits = compEdits(body, user.email, new Date());
-    if (reviewed === undefined && anchor === undefined && confirmed === undefined && removed === undefined && tier === undefined
-      && edits.note === undefined && edits.tags === undefined && edits.features === undefined && edits.overrides === undefined
-      && edits.clientLine === undefined) {
-      throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
-    }
-    const actions: Action[] = [];
+    let actions: Action[] = [];
     const workspace = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
-      const current = (await tx.query<{ tier: string | null; note: string | null; removed_at: Date | null }>(
-        'select tier, note, removed_at from comp_report.report_comps where report_id = $1 and id = $2', [reportId, reportCompId],
-      )).rows[0];
-      if (!current) throw new HttpError(404, 'not_found', 'No such comp in this report.');
-      // Starring a comp makes it 1st tier (NB-6): a tier change, so it appends a reason like any other.
-      if (anchor === true) tier = 'primary';
-      if (removed === true) {
-        await tx.query(
-          `update comp_report.report_comps set removed_at = now(), removed_by = comp_report.actor(), is_anchor = false
-            where report_id = $1 and id = $2 and removed_at is null`,
-          [reportId, reportCompId],
-        );
-      } else if (removed === false) {
-        await tx.query('update comp_report.report_comps set removed_at = null, removed_by = null where report_id = $1 and id = $2', [reportId, reportCompId]);
-      } else if (current.removed_at) {
-        throw new HttpError(409, 'removed', 'That comp was taken out of the report. Add it back first.');
-      }
-      if (confirmed) {
-        // The read behind the comp's current observation: what the agent is looking at.
-        const done = await tx.query(
-          `update comp_report.link_reads lr
-              set confirmed_at = now(), confirmed_by = comp_report.actor()
-             from comp_report.report_comps rc
-            where rc.id = $2 and rc.report_id = $1
-              and lr.report_id = rc.report_id and lr.observation_id = rc.observation_id
-              and lr.status = 'done' and lr.confirmed_at is null`,
-          [reportId, reportCompId],
-        );
-        if (!done.rowCount) throw new HttpError(409, 'nothing_to_confirm', 'That comp isn’t waiting for a confirmation.');
-      }
-      await saveEdits(tx, reportId, reportCompId, edits);
-      // A tier, or a changed note on a tiered comp, appends a reason (§12): the history keeps every version.
-      const note = edits.note !== undefined ? edits.note : current.note;
-      const nextTier = tier ?? current.tier;
-      const noteChanged = edits.note !== undefined && (edits.note ?? null) !== (current.note ?? null);
-      if (nextTier && (nextTier !== current.tier || noteChanged)) {
-        await recordReason(tx, reportId, reportCompId, nextTier, (note ?? '').slice(0, MAX_REASON) || NO_NOTE_YET, 'property', false);
-      }
-      if (removed === true && !current.removed_at) actions.push({ name: 'comp.removed', reportId, detail: { by: 'agent' } });
-      if (removed === false && current.removed_at) actions.push({ name: 'comp.restored', reportId, detail: { by: 'agent' } });
-      if (nextTier && nextTier !== current.tier) actions.push({ name: 'comp.tiered', reportId, detail: { tier: nextTier, by: 'agent', starred: anchor === true } });
-      if (reviewed !== undefined) await setReviewed(tx, reportId, reportCompId, reviewed);
-      if (anchor !== undefined) await setAnchor(tx, reportId, reportCompId, anchor);
-      // 2nd or ✕ takes the star off: the ★ comp is 1st tier.
-      else if (tier !== undefined && tier !== 'primary') await setAnchor(tx, reportId, reportCompId, false);
+      actions = await patchComp(tx, user, reportId, reportCompId, body);
       return loadWorkspace(tx, user, reportId);
     });
     await logActivity(pool, user.email, actions);
     return json(workspace);
   });
+}
+
+/**
+ * One comp's PATCH (the agent's, from Sort and the review), checked and saved
+ * in the caller's transaction. Hubert's edit_comp (server/hubert-comps.ts)
+ * saves through it too, with `actor` 'assistant': the same rules and the same
+ * reason history, marked as his. Throws an HttpError for an edit it refuses.
+ */
+export async function patchComp(
+  tx: Queryable, user: SessionUser, reportId: string, reportCompId: string, body: Record<string, unknown>,
+  actor: 'agent' | 'assistant' = 'agent',
+): Promise<Action[]> {
+  const reviewed = body.reviewed;
+  const anchor = body.anchor;
+  const confirmed = body.confirmed;
+  const removed = body.removed;
+  if (reviewed !== undefined && typeof reviewed !== 'boolean') throw new HttpError(400, 'bad_reviewed', 'reviewed is true or false.');
+  if (anchor !== undefined && typeof anchor !== 'boolean') throw new HttpError(400, 'bad_anchor', 'anchor is true or false.');
+  if (confirmed !== undefined && confirmed !== true) throw new HttpError(400, 'bad_confirmed', 'A confirmation can only be given.');
+  if (removed !== undefined && typeof removed !== 'boolean') throw new HttpError(400, 'bad_removed', 'removed is true or false.');
+  if (body.tier !== undefined && (typeof body.tier !== 'string' || !TIERS.includes(body.tier))) throw new HttpError(400, 'bad_tier', 'The tier is primary, secondary or excluded.');
+  if (anchor === true && body.tier !== undefined && body.tier !== 'primary') throw new HttpError(400, 'bad_anchor', 'The ★ comp is 1st tier.');
+  if (anchor === true && removed === true) throw new HttpError(400, 'bad_anchor', 'A removed comp can’t be the ★.');
+  let tier = body.tier as string | undefined;
+  const edits = compEdits(body, user.email, new Date());
+  if (reviewed === undefined && anchor === undefined && confirmed === undefined && removed === undefined && tier === undefined
+    && edits.note === undefined && edits.tags === undefined && edits.features === undefined && edits.overrides === undefined
+    && edits.clientLine === undefined) {
+    throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
+  }
+  const current = (await tx.query<{ tier: string | null; note: string | null; removed_at: Date | null }>(
+    'select tier, note, removed_at from comp_report.report_comps where report_id = $1 and id = $2', [reportId, reportCompId],
+  )).rows[0];
+  if (!current) throw new HttpError(404, 'not_found', 'No such comp in this report.');
+  // Starring a comp makes it 1st tier (NB-6): a tier change, so it appends a reason like any other.
+  if (anchor === true) tier = 'primary';
+  if (removed === true) {
+    await tx.query(
+      `update comp_report.report_comps set removed_at = now(), removed_by = comp_report.actor(), is_anchor = false
+        where report_id = $1 and id = $2 and removed_at is null`,
+      [reportId, reportCompId],
+    );
+  } else if (removed === false) {
+    await tx.query('update comp_report.report_comps set removed_at = null, removed_by = null where report_id = $1 and id = $2', [reportId, reportCompId]);
+  } else if (current.removed_at) {
+    throw new HttpError(409, 'removed', 'That comp was taken out of the report. Add it back first.');
+  }
+  if (confirmed) {
+    // The read behind the comp's current observation: what the agent is looking at.
+    const done = await tx.query(
+      `update comp_report.link_reads lr
+          set confirmed_at = now(), confirmed_by = comp_report.actor()
+         from comp_report.report_comps rc
+        where rc.id = $2 and rc.report_id = $1
+          and lr.report_id = rc.report_id and lr.observation_id = rc.observation_id
+          and lr.status = 'done' and lr.confirmed_at is null`,
+      [reportId, reportCompId],
+    );
+    if (!done.rowCount) throw new HttpError(409, 'nothing_to_confirm', 'That comp isn’t waiting for a confirmation.');
+  }
+  await saveEdits(tx, reportId, reportCompId, edits);
+  // A tier, or a changed note on a tiered comp, appends a reason (§12): the history keeps every version.
+  const note = edits.note !== undefined ? edits.note : current.note;
+  const nextTier = tier ?? current.tier;
+  const noteChanged = edits.note !== undefined && (edits.note ?? null) !== (current.note ?? null);
+  if (nextTier && (nextTier !== current.tier || noteChanged)) {
+    await recordReason(tx, reportId, reportCompId, nextTier, (note ?? '').slice(0, MAX_REASON) || NO_NOTE_YET, 'property', false, actor);
+  }
+  // For the activity log (Dispatch 22b), written by the caller once its transaction commits.
+  const by = actor === 'assistant' ? 'hubert' : 'agent';
+  const actions: Action[] = [];
+  if (removed === true && !current.removed_at) actions.push({ name: 'comp.removed', reportId, detail: { by } });
+  if (removed === false && current.removed_at) actions.push({ name: 'comp.restored', reportId, detail: { by } });
+  if (nextTier && nextTier !== current.tier) actions.push({ name: 'comp.tiered', reportId, detail: { tier: nextTier, by, starred: anchor === true } });
+  if (reviewed !== undefined) await setReviewed(tx, reportId, reportCompId, reviewed);
+  if (anchor !== undefined) await setAnchor(tx, reportId, reportCompId, anchor);
+  // 2nd or ✕ takes the star off: the ★ comp is 1st tier.
+  else if (tier !== undefined && tier !== 'primary') await setAnchor(tx, reportId, reportCompId, false);
+  return actions;
 }

@@ -5,7 +5,7 @@
 // takes the star off. A comp read from its page is confirmed or removed first.
 // Opening a row shows the comp's card, and counts as reviewing it. What a row
 // still needs is a link to the spot that gives it (NW-038).
-import { useCallback, useId, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type MouseEvent } from 'react';
 import type { CompOut, Tier } from '../../../engine/index.ts';
 import { Info } from '../newcomp/Frame.tsx';
 import type { Workspace } from '../workspace/model.ts';
@@ -112,6 +112,26 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
     else reveal();
   }
 
+  // A trail entry's "Show" (Hubert changed this comp): the row opens, scrolls into view and marks itself,
+  // at the field he changed. Only a fresh ask: Sort mounting again later doesn't replay an old one.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    const f = ws.focus;
+    if (!f || !rcId || f.reportCompId !== rcId || Date.now() - f.at > 3_000) return;
+    if (f.field === 'tier' || f.field === 'anchor') {
+      requestAnimationFrame(() => tierRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    } else {
+      if (!open) reveal();
+      if (f.field === 'note' || f.field === 'tags') setStart((s) => ({ what: f.field === 'note' ? 'note' : 'tag', n: (s?.n ?? 0) + 1 }));
+      else requestAnimationFrame(() => wrapRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    }
+    setFlash(false);
+    requestAnimationFrame(() => setFlash(true));
+    const t = window.setTimeout(() => setFlash(false), 2_500);
+    return () => window.clearTimeout(t);
+  }, [ws.focus?.n]);
+
   /** "Needs tier, note, tags": each word goes to its spot. */
   function goTo(need: RowNeed) {
     if (need === 'tier') {
@@ -179,7 +199,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
   const needLinks = row.needs.filter((n): n is Exclude<RowNeed, 'confirm'> => n !== 'confirm');
 
   return (
-    <div className={`so-row-wrap${incomplete ? ' incomplete' : ''}`}>
+    <div ref={wrapRef} className={`so-row-wrap${incomplete ? ' incomplete' : ''}${flash ? ' hb-focus' : ''}`}>
       <div className={`so-row so-cols${ws.sf ? ' sf' : ''}`} onClick={toggle}>
         <span className="so-caret" aria-hidden="true">{open ? '–' : '+'}</span>
         <div className="so-addr-cell">

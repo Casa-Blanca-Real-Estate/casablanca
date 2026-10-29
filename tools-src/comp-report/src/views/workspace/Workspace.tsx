@@ -17,7 +17,7 @@ import { homeFeatures } from '../../../workspace/features.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
-  isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type Outcomes, type Reached, type RevealPin, type SendState, type TargetState, type WorkspaceState,
+  isRevealed, type Brief, type CallState, type DealTermsState, type GuideStep, type Intake, type Outcomes, type Reached, type RevealPin, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
@@ -193,6 +193,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [messageCount, setMessageCount] = useState(0);
   const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
   const [reviewing, setReviewing] = useState<{ at: string | null } | null>(null);
+  const [focus, setFocus] = useState<{ reportCompId: string; field: string; n: number; at: number } | null>(null);
   const today = useMemo(localToday, []);
   const save = useAutosave(reportId, (reveal) => {
     stateRef.current = { ...stateRef.current, reveal };
@@ -381,6 +382,15 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     return next;
   }, [reportId]);
 
+  // Hubert changed a comp himself (edit_comp): the comps load again, after any edit of the agent's still saving.
+  const reloadComps = useCallback(() => {
+    const next = compChain.current.then(async () => {
+      const d = await workspaceApi.load(reportId);
+      setData((prev) => (prev ? { ...prev, report: d.report, imports: d.imports, comps: d.comps, reads: d.reads, geocodes: d.geocodes } : d));
+    });
+    compChain.current = next.catch(() => undefined);
+  }, [reportId]);
+
   // Hubert on one comp (Dispatch 25): in the same chain, so feedback reads the note just saved.
   const askReview = useCallback((reportCompId: string, job: 'feedback' | 'take', asks?: string) => {
     const practice = level === 'practice' && me.user.capability !== 'practice';
@@ -445,6 +455,14 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     }
     go(next);
   }, [go, setState]);
+
+  // Hubert's step guides (2026-10-28): the first time the agent reaches each step, it's noted, and his chat
+  // shows that step's guide from then on. The owner's only: a mentor reading the report changes nothing.
+  const guideStep: GuideStep = start ?? (reviewing && screen === 'sort' ? 'review' : screen);
+  useEffect(() => {
+    if (!data || readOnlyRef.current || stateRef.current.stepsAt?.[guideStep]) return;
+    setState({ ...stateRef.current, stepsAt: { ...stateRef.current.stepsAt, [guideStep]: new Date().toISOString() } });
+  }, [data, guideStep, setState]);
 
   // Hubert opens by default on the first Sort visit, once (the handoff).
   const loadedState = Boolean(data);
@@ -607,6 +625,15 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     removed,
     drawerOpen,
     setDrawerOpen,
+    reloadComps,
+    stepsAt: state.stepsAt ?? {},
+    focus,
+    showComp: (reportCompId, field) => {
+      // The row shows whatever Sort's filter was, and Sort opens if another screen was showing.
+      setSortFilter({ incomplete: false, tags: [] });
+      if (screen !== 'sort') go('sort');
+      setFocus((f) => ({ reportCompId, field, n: (f?.n ?? 0) + 1, at: Date.now() }));
+    },
     hubertEdits,
     queueHubertEdit: (edit) => setHubertEdits((list) => [...list, edit]),
     takeHubertEdits: (n) => setHubertEdits((list) => list.slice(n)),

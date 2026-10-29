@@ -93,6 +93,7 @@ async function deps(server: ViteDevServer) {
   const { memoryEmailPhotoStore, fetchListingPhoto } = await load('/server/email-photos.ts');
   devEmailPhotos ??= memoryEmailPhotoStore();
   const { firecrawlReader } = await load('/server/links.ts');
+  const { firecrawlSearcher } = await load('/server/web-search.ts');
   const { nycGeoSearch } = await load('/server/geocode.ts');
   const { default: Anthropic } = await import('@comp-report/anthropic-sdk');
   const fake = process.env.CR_DEV_FIRECRAWL_BASE_URL;
@@ -110,6 +111,8 @@ async function deps(server: ViteDevServer) {
       : fetchListingPhoto,
     env: process.env,
     reader: firecrawlReader(fake ? { apiKey: 'dev-fake', baseUrl: fake, backoffMs: [500] } : { apiKey: process.env.FIRECRAWL_API_KEY }),
+    // Hubert's web search: the fake Firecrawl's when it's running, as the link reads are.
+    web: () => firecrawlSearcher(fake ? { apiKey: 'dev-fake', baseUrl: fake } : { apiKey: process.env.FIRECRAWL_API_KEY }),
     geocoder: nycGeoSearch({ baseUrl: process.env.CR_DEV_GEOSEARCH_BASE_URL || undefined }),
     anthropic: () =>
       new Anthropic({
