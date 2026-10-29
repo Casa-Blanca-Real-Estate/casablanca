@@ -146,6 +146,42 @@ export function renderInline(text: string): ReactNode[] {
   return out;
 }
 
+// ─── Data, kept out ─────────────────────────────────────────────────────────
+
+/** A paragraph that is data, not words: JSON, or a run of "key": value pairs. */
+function isData(chunk: string): boolean {
+  const t = chunk.trim();
+  if (/^[[{]/.test(t)) {
+    try {
+      JSON.parse(t);
+      return true;
+    } catch {
+      /* not whole JSON: the pattern below decides */
+    }
+  }
+  // Pasted tool output: three or more "key": pairs, or one long JSON object inside a sentence.
+  return (t.match(/"[\w ]{1,40}"\s*:/g)?.length ?? 0) >= 3 || /\{"[^"]{1,40}":[\s\S]{60,}\}/.test(t);
+}
+
+/**
+ * Hubert's text with any raw data taken out (Kimani, 2026-10-29): code blocks
+ * and paragraphs of JSON or pasted tool output never reach the chat. What he
+ * changed shows on the trail, in words; this is the guard behind the prompt.
+ */
+export function withoutData(text: string): { text: string; hidden: boolean } {
+  let hidden = false;
+  const noFences = text.replace(/\r\n?/g, '\n').replace(/```[\s\S]*?(?:```|$)/g, () => {
+    hidden = true;
+    return '\n\n';
+  });
+  const kept = noFences.split(/\n{2,}/).filter((chunk) => {
+    if (!isData(chunk)) return true;
+    hidden = true;
+    return false;
+  });
+  return { text: kept.join('\n\n').trim(), hidden };
+}
+
 // ─── Blocks ─────────────────────────────────────────────────────────────────
 
 const HEADING = /^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$/;

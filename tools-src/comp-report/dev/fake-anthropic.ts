@@ -234,6 +234,34 @@ const FIELD_WORDS: Record<string, string> = {
   'things to consider': 'consider', signed: 'signed', 'sign-off': 'signed',
 };
 
+/**
+ * What the fake says after a tool, in words, as Hubert would: never the tool's
+ * raw output (Kimani, 2026-10-29: no JSON in the chat). Tests that need the
+ * result itself read the request the fake was sent.
+ */
+function afterTool(name: string, result: Block): string {
+  if (result.is_error) return `That didn’t work: ${String(result.content)} (fake Messages API)`;
+  let got: Record<string, unknown> = {};
+  try {
+    got = JSON.parse(String(result.content)) as Record<string, unknown>;
+  } catch {
+    /* plain text */
+  }
+  const fake = ' (fake Messages API)';
+  if (name === 'edit_comp') return `Done: ${String(got.applied ?? 'the comp is changed')}.${fake}`;
+  if (name === 'edit_email') return `Done: I changed the email.${fake}`;
+  if (name === 'web_search' || name === 'read_page') {
+    const first = (got.results as Array<{ title?: string; text?: string }> | undefined)?.[0];
+    return first ? `From the web: ${first.text ?? first.title}. Check it on the listing before a client reads it.${fake}` : `The web had nothing on that.${fake}`;
+  }
+  if (name === 'get_numbers') {
+    const comps = (got.comps as unknown[] | undefined)?.length ?? 0;
+    return `I read the numbers: ${comps} comp${comps === 1 ? '' : 's'} in the report.${fake}`;
+  }
+  if (name === 'get_email') return got.on_send ? `I read the email: “${String(got.subject ?? '')}”.${fake}` : `The email isn’t there yet.${fake}`;
+  return `I looked at the report: ${String(got.title ?? 'this one')}.${fake}`;
+}
+
 function echo(body: Block): Script {
   const format = (body.output_config as Block | undefined)?.format as { schema?: { properties?: Block } } | undefined;
   if (format?.schema?.properties && 'weak' in format.schema.properties) return fakeCompReview(body);
@@ -246,12 +274,7 @@ function echo(body: Block): Script {
   if (result) {
     const asked = [...messages].reverse().find((m) => m.role === 'assistant')?.content.find((b) => b.id === result.tool_use_id);
     const name = String(asked?.name ?? 'get_report');
-    const got = String(result.content);
-    return {
-      content: [{ type: 'text', text: `${name} returned ${got.length > 600 ? `${got.slice(0, 600)}…` : got} (fake Messages API).` }],
-      stopReason: 'end_turn',
-      delayMs: 15,
-    };
+    return { content: [{ type: 'text', text: afterTool(name, result) }], stopReason: 'end_turn', delayMs: 15 };
   }
   const said = last?.content.filter((b) => b.type === 'text').map((b) => String(b.text)).join(' ') ?? '';
   if (/^\s*refuse\b/i.test(said)) {

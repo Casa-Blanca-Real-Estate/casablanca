@@ -55,7 +55,7 @@ check((await field('The next step').inputValue()) === 'i would open at $3.8M  an
 await p.locator('.sh-pill', { hasText: 'Hubert' }).click();
 await p.waitForSelector('.hb');
 await p.locator('.hb-chip', { hasText: 'How do my lines read?' }).click();
-await p.waitForFunction(() => /get_email returned/.test(document.querySelector('.hb-body')?.textContent ?? ''), null, { timeout: 15_000 });
+await p.waitForFunction(() => /I read the email|The email isn’t there yet/.test(document.querySelector('.hb-body')?.textContent ?? ''), null, { timeout: 15_000 });
 check(await p.waitForFunction(() => /Checked the email/.test(document.querySelector('.hb-body')?.textContent ?? ''), null, { timeout: 5_000 }).then(() => true, () => false), 'Hubert says he read the email');
 await shot('04-hubert-feedback');
 

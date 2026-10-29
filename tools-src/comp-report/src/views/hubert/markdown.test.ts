@@ -64,3 +64,15 @@ test('a progress note gets the inline part: bold, italic and code, its lines kep
   assert.equal(note('one\n- two'), 'one<br/>- two');
   assert.ok(!note('<b>x</b>').includes('<b>'));
 });
+
+test('raw data never reaches the chat: code blocks, JSON and pasted tool output are left out (2026-10-29)', async () => {
+  const { withoutData } = await import('./markdown.ts');
+  assert.deepEqual(withoutData('Done.\n\n```json\n{"a":1}\n```\n\nAnything else?'), { text: 'Done.\n\nAnything else?', hidden: true });
+  assert.deepEqual(withoutData('{"applied":"Tier: 1st","trail":[]}'), { text: '', hidden: true });
+  assert.equal(withoutData('edit_comp returned {"applied":"Tier: 1st tier","trail":[{"kind":"comp","field":"tier"}]} (fake)').text, '');
+  assert.equal(withoutData('Here they are.\n\n```\nhalf a block, still streaming').text, 'Here they are.');
+  // Words stay, braces and quotes in them included.
+  const words = 'It sold at $2,112 a foot {roughly}. The listing says "doorman": yes.';
+  assert.deepEqual(withoutData(words), { text: words, hidden: false });
+  assert.equal(withoutData('Use `get_numbers` for that.').text, 'Use `get_numbers` for that.');
+});
