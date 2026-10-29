@@ -9,8 +9,8 @@
 import type { HubertEmailEdit } from './hubert-email.ts';
 
 export interface TrailEntry {
-  /** What he changed: a comp on Sort, or the email on Send. */
-  kind: 'comp' | 'email';
+  /** What he changed: a comp on Sort, the email on Send, or a comp he added from its StreetEasy link (HB-8). */
+  kind: 'comp' | 'email' | 'link';
   /** The comp's report comp id, for the jump to its row. */
   compId?: string;
   /** "200 Chambers Street #10A", or "The email". */
@@ -29,6 +29,8 @@ export interface TrailEntry {
    * (workspace/trail-undo.ts): once it's undone, or changed since, it's gone.
    */
   undo?: { edit: Record<string, unknown>; left: unknown };
+  /** A comp he added: its StreetEasy link, for the agent to check. */
+  url?: string;
 }
 
 /** A source Hubert read on the web (web_search, read_page): shown under his reply, with its link. */
@@ -73,7 +75,7 @@ export function trailOf(name: string, result: Record<string, unknown>): { change
   }
   if (!parsed || typeof parsed !== 'object') return none;
   if (name === 'edit_email' && parsed.edit) return { changes: emailTrail(parsed.edit as HubertEmailEdit), sources: [] };
-  if (name === 'edit_comp' && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
+  if ((name === 'edit_comp' || name === 'add_comp_link') && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
   if ((name === 'web_search' || name === 'read_page') && Array.isArray(parsed.results)) {
     const sources = (parsed.results as Array<Record<string, unknown>>)
       .filter((r) => typeof r.url === 'string' && /^https:\/\//.test(r.url as string))

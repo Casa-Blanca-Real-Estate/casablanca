@@ -62,6 +62,8 @@ export interface LinkReadView {
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
+  /** Hubert found it on the web and asked for the read (HB-8): the agent checks the link before confirming. */
+  foundBy?: 'hubert';
 }
 
 export interface WorkspaceData {
@@ -196,11 +198,11 @@ export async function loadReads(tx: Queryable, reportId: string): Promise<LinkRe
   const rows = (await tx.query<{
     id: string; purpose: LinkReadView['purpose']; url: string; status: LinkReadView['status']; error: string | null; error_message: string | null;
     report_comp_id: string | null; as_of: string | null; extract: Record<string, unknown> | null; warnings: ParseWarning[] | null;
-    confirmed_at: Date | null; created_at: Date; started_at: Date | null; finished_at: Date | null;
+    confirmed_at: Date | null; created_at: Date; started_at: Date | null; finished_at: Date | null; found_by: 'hubert' | null;
   }>(
     `select id, purpose, url, status, error, error_message, report_comp_id, as_of::text as as_of,
             case when purpose = 'subject' or status = 'failed' then extract end as extract,
-            warnings, confirmed_at, created_at, started_at, finished_at
+            warnings, confirmed_at, created_at, started_at, finished_at, found_by
        from comp_report.link_reads
       where report_id = $1 and dismissed_at is null
       order by seq`,
@@ -211,6 +213,7 @@ export async function loadReads(tx: Queryable, reportId: string): Promise<LinkRe
     id: r.id, purpose: r.purpose, url: r.url, status: r.status, error: r.error, errorMessage: r.error_message,
     reportCompId: r.report_comp_id, asOf: r.as_of, extract: r.extract ? cleanListingExtract(r.extract) : null, warnings: r.warnings ?? [],
     confirmedAt: at(r.confirmed_at), createdAt: iso(r.created_at), startedAt: at(r.started_at), finishedAt: at(r.finished_at),
+    ...(r.found_by ? { foundBy: r.found_by } : {}),
   }));
 }
 

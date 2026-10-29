@@ -33,6 +33,10 @@ Kimani's answers (Answer Sheet HB-1 to HB-7 and the project chat, 2026-10-29), a
 - **Hubert in the New report window now** (HB-3 B): rough, for the design pass to design against. He sits above its
   backdrop and the window moves left; get_view says which of its steps is open. He answers; filling a detail on
   dictation waits for `set_home_fact`.
+- **Sales from the web come in by their StreetEasy link** (HB-8, 2026-10-29): `add_comp_link`, when the agent says
+  to add one. It's read like their own paste (their daily reads), lands on Sort unconfirmed and counts in nothing; the
+  row says "Hubert's find: check the link", and Hubert asks them to check it's the right unit, a sale and not an ask,
+  and current before they confirm. `link_reads.found_by` marks his finds (migration `20261029130000`).
 - Step guides for everyone (HB-4 A), Undo (HB-5 A), Hubert across the Studio after 11-13 (HB-7 A): as built or planned.
 
 ## What he should know at each step
@@ -74,7 +78,7 @@ Kimani's answers (Answer Sheet HB-1 to HB-7 and the project chat, 2026-10-29), a
 4. **Step guides for everyone,** or only practice agents? *Default: everyone.*
 5. **Undo on a comp edit,** on the trail entry itself? The email's edits have Undo on Send already.
    *Recommend yes, small.*
-6. **Dispatch 24 (Calliste).** Items 1 and 2 overlap this lane. Fold them in here before 11-13, or keep them
+6. **Dispatch 24 (Collister, after 60 Collister St).** Items 1 and 2 overlap this lane. Fold them in here before 11-13, or keep them
    for after? *Recommend `get_view` and the wider read now, the target after.*
 
 ## Notes for other threads

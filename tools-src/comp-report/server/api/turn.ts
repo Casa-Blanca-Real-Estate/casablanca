@@ -181,7 +181,8 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
         // First, before the model's reply: the edits Hubert just made, for Send to apply.
         for (const edit of prepared.edits) emit({ type: 'email_edit', edit });
         for (const entry of prepared.changes) emit({ type: 'change', entry });
-        if (prepared.changes.some((c) => c.kind === 'comp')) emit({ type: 'comps_changed' });
+        // A comp edit, or a read Hubert queued: the screen reloads the comps and the reads, and starts the read.
+        if (prepared.changes.some((c) => c.kind === 'comp' || c.kind === 'link')) emit({ type: 'comps_changed' });
         const aborter = new AbortController();
         let timedOut = false;
         const timer = setTimeout(() => {

@@ -1,6 +1,6 @@
 // DEV ONLY — the walk for what Hubert sees (2026-10-29): the agent opens a comp on Sort and asks about
-// "this one" (get_view names it), dictates a note (the trail shows it with Undo), and undoes it; then Hubert
-// beside the New report window. Against the
+// "this one" (get_view names it), dictates a note (the trail shows it with Undo), and undoes it; adds a sale
+// from its StreetEasy link (to check and confirm); then Hubert beside the New report window. Against the
 // local dev server and the fakes. Needs 'npm i --no-save playwright-core' (the preinstalled Chromium).
 //   node tools-src/comp-report/dev/walk-hubert-view.mjs <base> <outDir> [condo|coop]
 import { chromium } from 'playwright-core';
@@ -59,6 +59,15 @@ await p.waitForSelector('.hb-trail-undone');
 await p.waitForTimeout(800);
 check(!(await row.textContent()).includes('Dictated'), 'the note is back as it was');
 await shot('03-undone');
+
+// A sale from the web (HB-8): Hubert adds it by its StreetEasy link; Sort asks the agent to check it before confirming.
+await ask('add https://streeteasy.com/building/20-pine-street-new_york/617');
+const find = p.locator('.so-find').first();
+await find.waitFor({ timeout: 60_000 });
+check((await find.getAttribute('href')).includes('20-pine'), 'the find links to its page');
+check(await p.locator('.hb-trail-item', { hasText: 'check the link' }).last().isVisible(), 'the trail says to check it');
+await find.scrollIntoViewIfNeeded();
+await shot('05-hubert-find');
 
 // Beside the New report window (rough until the design pass): Hubert above its backdrop, the window moved left.
 await p.goto(`${base}/tools/comp-report/?report=${id}&start=details`);

@@ -171,6 +171,9 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onJump={(entry) => {
           if (entry.kind === 'email') {
             if (ws.screen !== 'send') ws.go('send');
+          } else if (entry.kind === 'link') {
+            // A comp he added: it's on Sort, being read or waiting for the agent's confirm.
+            if (ws.screen !== 'sort') ws.go('sort');
           } else if (entry.compId) {
             // In the per-comp review, the review moves to that comp; otherwise Sort opens on its row.
             if (ws.reviewing) ws.openReview(entry.compId);

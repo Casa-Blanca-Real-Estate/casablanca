@@ -23,7 +23,7 @@ const empty: Live = { text: '', progress: [], tools: [], changes: [], note: null
 const TOOL_WORDS: Record<string, string> = {
   get_numbers: 'the numbers', get_view: 'your screen', get_report: 'the report', get_email: 'the email', web_search: 'the web', read_page: 'a web page',
 };
-const CHANGES = new Set(['edit_email', 'edit_comp']);
+const CHANGES = new Set(['edit_email', 'edit_comp', 'add_comp_link']);
 const looked = (tools: string[]) => [...new Set(tools.filter((t) => !CHANGES.has(t)).map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
 
 /** Undo on a comp entry of the trail: whether it still applies, and doing it (the agent's own edit). */
@@ -72,7 +72,9 @@ function Trail({ changes, sources, onJump, undo }: { changes: TrailEntry[]; sour
                 <span className="hb-trail-field">{c.label}</span>
                 <span className="hb-trail-change">
                   {c.before !== null && <><s>{c.before}</s>{' → '}</>}
-                  {c.after ?? <em>cleared</em>}
+                  {c.kind === 'link' && c.url
+                    ? <a className="hb-md-link" href={c.url} target="_blank" rel="noopener noreferrer nofollow">{c.url.replace(/^https:\/\//, '')}</a>
+                    : c.after ?? <em>cleared</em>}
                 </span>
               </span>
               <span className="hb-trail-acts">
@@ -271,6 +273,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
             {looked(live.tools) && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
             {live.tools.includes('edit_email') && <p className="hb-progress">Changing the email…</p>}
             {live.tools.includes('edit_comp') && <p className="hb-progress">Changing the comp…</p>}
+            {live.tools.includes('add_comp_link') && <p className="hb-progress">Adding the comp from StreetEasy…</p>}
             <Trail changes={live.changes} sources={[]} onJump={onJump} undo={readOnly ? undefined : undo} />
             {live.text ? <HubertText text={live.text} /> : !live.note && <p className="hb-progress">Thinking…</p>}
             {live.note && <p className="hb-text">{live.note}</p>}

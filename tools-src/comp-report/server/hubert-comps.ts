@@ -14,6 +14,8 @@ import type { WorkspaceComp } from '../workspace/engine-input.ts';
 import { noteOf, OVERRIDE_KEYS, type OverrideKey } from '../workspace/state.ts';
 import { address } from '../workspace/summary.ts';
 import { patchComp } from './api/comps.ts';
+import { queueReads } from './api/links.ts';
+import { checkListingLink, readLimit, titleFromLink } from './links.ts';
 import type { Queryable } from './db.ts';
 import type { Action } from './logs.ts';
 import { HttpError } from './http.ts';
@@ -157,4 +159,31 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
     throw error;
   }
   return { ok: true, summary: trail.map((t) => `${t.label}: ${t.after ?? 'cleared'}`).join('; '), trail, actions };
+}
+
+export type LinkAddOutcome = { ok: true; summary: string; trail: TrailEntry[] } | { ok: false; error: string };
+
+/**
+ * add_comp_link (Kimani, 2026-10-29, HB-8): a sale Hubert found on the web,
+ * added the only way a sale comes in: its StreetEasy link, read like the
+ * agent's own paste and within their daily reads. It lands on Sort
+ * unconfirmed, counting in nothing, with a note asking the agent to check the
+ * link first: the right unit, a sale and not an asking price, current.
+ */
+export async function addCompLinkForAgent(tx: Queryable, user: SessionUser, reportId: string, input: unknown): Promise<LinkAddOutcome> {
+  if (!isObject(input) || typeof input.url !== 'string') return { ok: false, error: 'Send the StreetEasy listing link.' };
+  const check = checkListingLink(input.url);
+  if (!check.ok) return { ok: false, error: `${check.reason} Only a StreetEasy listing link can add a comp.` };
+  const done = await queueReads(tx, user, reportId, [check.url], 'comp', readLimit(user.role), 'hubert');
+  if (done.refused.length) return { ok: false, error: done.refused[0]!.reason };
+  if (!done.queued.length) return { ok: false, error: 'That link is already in the report, or being read. Point the agent to it on Sort.' };
+  const target = titleFromLink(check.url) ?? check.url.replace(/^https:\/\//, '');
+  return {
+    ok: true,
+    summary: `Reading ${target} from StreetEasy. It will show on Sort as a comp to confirm, counting in nothing until the agent confirms it.`,
+    trail: [{
+      kind: 'link', target, field: 'added', label: 'Added from StreetEasy: check the link, then confirm',
+      before: null, after: check.url, url: check.url,
+    }],
+  };
 }

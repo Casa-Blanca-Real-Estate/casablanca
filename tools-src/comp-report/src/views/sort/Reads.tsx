@@ -43,6 +43,7 @@ export function Reads({ ws }: { ws: Workspace }) {
         <div key={r.id} className="so-read" aria-busy="true">
           <span className="so-thumb" aria-hidden="true" />
           <strong>{readTitle(r)}</strong>
+          {r.foundBy === 'hubert' && <span className="so-flag">Hubert’s find</span>}
           <span className="so-read-state">{r.status === 'queued' ? 'Waiting to read the page…' : 'Reading…'}</span>
         </div>
       ))}

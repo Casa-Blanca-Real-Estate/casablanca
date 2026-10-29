@@ -74,6 +74,9 @@ export function SortGroup({ ws, id, rows, outById, sort, onSort }: {
   );
 }
 
+/** What the agent checks before confirming a sale Hubert found (Kimani, 2026-10-29). */
+const FIND_CHECK = 'Hubert found this one on the web. Open the StreetEasy link and check it’s the right unit, that it sold (a sale price, not an asking price), and that it’s current. Then confirm: until then it counts in neither result.';
+
 function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | undefined }) {
   const cardId = useId();
   // The ★ comp's card starts open, as the handoff draws it.
@@ -206,6 +209,8 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
   }
 
   const weak = weakFlag(j?.review, ws.level);
+  // A sale Hubert found on the web (HB-8): until it's confirmed, the agent is asked to check its link.
+  const hubertFind = row.c.unconfirmed && rcId ? ws.reads.find((r) => r.reportCompId === rcId && r.foundBy === 'hubert') : undefined;
   const needLinks = row.needs.filter((n): n is Exclude<RowNeed, 'confirm'> => n !== 'confirm');
 
   return (
@@ -229,6 +234,11 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
             </button>
             {row.tags.map((t) => <span key={t} className="so-flag">{t}</span>)}
             {weak && <span className="so-weak" title={`Hubert: ${weak.reason}`}>Weak</span>}
+            {hubertFind && (
+              <a className="so-weak so-find" href={hubertFind.url} target="_blank" rel="noopener noreferrer" onClick={stop} title={FIND_CHECK}>
+                Hubert’s find: check the link ↗
+              </a>
+            )}
             {incomplete && (row.needs.includes('confirm') || ws.readOnly ? (
               <span className="so-need"><span className="so-need-sq" aria-hidden="true" />{needText(row.needs)}</span>
             ) : (
@@ -268,7 +278,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
           <span className="so-confirm" onClick={stop}>
             {ws.readOnly ? <span className="so-tier-ro">To confirm</span> : (
               <>
-                <button type="button" className="so-confirm-btn" disabled={acting} title="Check it against the listing, then confirm: until then it counts in neither result" onClick={confirm}>Confirm</button>
+                <button type="button" className="so-confirm-btn" disabled={acting} title={hubertFind ? FIND_CHECK : 'Check it against the listing, then confirm: until then it counts in neither result'} onClick={confirm}>Confirm</button>
                 <button type="button" className="link so-remove-link" disabled={acting} onClick={remove}>Remove</button>
               </>
             )}

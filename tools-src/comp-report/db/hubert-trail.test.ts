@@ -14,6 +14,8 @@ import pg from 'pg';
 import { accessConfig } from '../server/access.ts';
 import { handleComps } from '../server/api/comps.ts';
 import { handleImports } from '../server/api/imports.ts';
+import { handleLinks } from '../server/api/links.ts';
+import { handleWorkspace } from '../server/api/workspace.ts';
 import { handleMessages } from '../server/api/messages.ts';
 import { handleReports } from '../server/api/reports.ts';
 import { handleTurn, type TurnDeps } from '../server/api/turn.ts';
@@ -313,5 +315,29 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
       else assert.equal((await row(order[k - 1]!)).tier, tier, `comp ${k}`);
     }
     assert.ok(results.some((r) => !r.is_error), 'at least one applied');
+  });
+  test('a sale from the web comes in only by its StreetEasy link: queued as Hubert’s find, to check and confirm', async () => {
+    const url = 'https://streeteasy.com/building/the-greenwich-lane/1a';
+    const { events, result } = await call('add_comp_link', { url }, 'Yes, add that one.');
+    assert.equal(result.is_error, undefined, String(result.content));
+    const entry = events.find((e) => e.type === 'change')!.entry as TrailEntry;
+    assert.deepEqual([entry.kind, entry.url, entry.field], ['link', url, 'added']);
+    assert.match(entry.label, /check the link/);
+    assert.ok(events.some((e) => e.type === 'comps_changed'), 'the screen reloads, and starts the read');
+    const reads = (await (await handleWorkspace(request(`workspace?report=${reportId}`), deps)).json() as WorkspaceData).reads;
+    const read = reads.find((r) => r.url === url)!;
+    assert.equal(read.status, 'queued');
+    assert.equal(read.foundBy, 'hubert');
+
+    // Not StreetEasy, or the same link again: refused, nothing queued.
+    const other = await call('add_comp_link', { url: 'https://www.zillow.com/homedetails/123' });
+    assert.equal(other.result.is_error, true);
+    assert.match(String(other.result.content), /StreetEasy/);
+    const again = await call('add_comp_link', { url });
+    assert.equal(again.result.is_error, true);
+    assert.match(String(again.result.content), /already in the report/);
+    // The agent's own paste is no find of Hubert's.
+    const pasted = (await (await handleLinks(request('links', 'POST', { reportId, urls: ['https://streeteasy.com/building/5-franklin-place/14a'] }), deps)).json());
+    assert.equal(pasted.reads.find((r: { url: string }) => /5-franklin/.test(r.url)).foundBy, undefined);
   });
 });
