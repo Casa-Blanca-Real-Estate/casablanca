@@ -15,7 +15,7 @@ import { noteOf } from '../../workspace/state.ts';
 import { undoStands } from '../../workspace/trail-undo.ts';
 import type { CompEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
-import { GREETING, intro, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
+import { GREETING, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
 import { reachedGuides } from './hubert/guides.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
@@ -114,7 +114,7 @@ function Suggestions({ ws }: { ws: Workspace }) {
 export function Hubert({ ws }: { ws: Workspace }) {
   const home = homeName(ws.intake, ws.report.title);
   const sent = Boolean(ws.send.sentAt);
-  const s = said(ws.screen, ws.side, ws.comps, home, sent);
+  const s = ws.starting ? { hint: NEW_REPORT_HINT, chips: NEW_REPORT_CHIPS } : said(ws.screen, ws.side, ws.comps, home, sent);
 
   // Done's "Reopen to edit": the sent mark comes off and Send opens, as Done's own Reopen does.
   function onAction(chip: Chip) {
@@ -134,6 +134,9 @@ export function Hubert({ ws }: { ws: Workspace }) {
       <Suggestions ws={ws} />
       <p className="hb-hint">{SUGGESTIONS_LATER}</p>
     </>
+  ) : ws.starting ? (
+    // A rough start (Kimani, 2026-10-29): Hubert beside the New report window, so the design pass has him to design against.
+    <p className="hb-hint">{NEW_REPORT_HINT}</p>
   ) : <p className="hb-hint">{s.hint}</p>;
 
   return (

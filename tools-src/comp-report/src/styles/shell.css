@@ -290,6 +290,11 @@ body:has(.hubert-drawer.resizing) { cursor: col-resize; user-select: none; }
 .sh-hubert-tab.open { right: var(--sh-drawer-w); }
 body:has(.hubert-drawer.resizing) .sh-hubert-tab { transition: none; }
 
+/* Beside the New report window (2026-10-29, rough until the design pass): Hubert and his tab sit above its
+   backdrop (58), under the toast (60), and the window moves left to make room for him. */
+body:has(.nr-scrim) .hubert-drawer, body:has(.nr-scrim) .sh-hubert-tab { z-index: 59; }
+body:has(.hubert-drawer:not(.closing)) .nr-scrim { padding-right: var(--sh-drawer-w); }
+
 /* The drawer slides in from the right, and back out (DRAWER_SLIDE_MS in Pieces.tsx). */
 @keyframes hubert-slide-in { from { transform: translateX(100%); } to { transform: none; } }
 .hubert-drawer { animation: hubert-slide-in .22s ease; transition: transform .22s ease; }

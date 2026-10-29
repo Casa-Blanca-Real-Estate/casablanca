@@ -32,3 +32,13 @@ test('no key, a refusal or a dead page: a plain error for Hubert to pass on', as
   const dead = await firecrawlSearcher({ apiKey: 'k', fetch: answering({ success: true, data: { markdown: '', metadata: { statusCode: 404 } } }) }).read('https://example.com/x');
   assert.equal(dead.ok, false);
 });
+
+test('the comp tool leans toward StreetEasy, the city and the MTA, keeping five', async () => {
+  const { leanToPreferred } = await import('./web-search.ts');
+  const r = (url: string) => ({ url, title: url, text: '' });
+  const got = leanToPreferred([
+    r('https://a.com/1'), r('https://b.com/2'), r('https://www.nyc.gov/x'), r('https://c.com/3'),
+    r('https://streeteasy.com/building/100-barclay'), r('https://d.com/4'), r('https://new.mta.info/y'), r('https://notnyc.gov.evil.com/z'),
+  ]);
+  assert.deepEqual(got.map((x) => new URL(x.url).hostname), ['www.nyc.gov', 'streeteasy.com', 'new.mta.info', 'a.com', 'b.com']);
+});

@@ -195,7 +195,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [reviewing, setReviewing] = useState<{ at: string | null } | null>(null);
   const [focus, setFocus] = useState<{ reportCompId: string; field: string; n: number; at: number } | null>(null);
   // What the agent has open, for Hubert's get_view: refs, so a turn already under way reads it as it is now.
-  const lookingRef = useRef<{ sort: string | null; review: string | null }>({ sort: null, review: null });
+  const lookingRef = useRef<{ sort: string | null; review: string | null; order: string[] }>({ sort: null, review: null, order: [] });
   const today = useMemo(localToday, []);
   const save = useAutosave(reportId, (reveal) => {
     stateRef.current = { ...stateRef.current, reveal };
@@ -461,9 +461,11 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   // The screen as get_view reads it: the per-comp review is its own view of Sort.
   const viewRef = useRef<() => HubertView>(() => ({ screen: 'sort', compId: null }));
   viewRef.current = () => {
+    // The New report window sits over whatever screen is behind it: it's what the agent sees.
+    if (start) return { screen: 'new_report', compId: null, step: start };
     const inReview = Boolean(reviewing) && screen === 'sort';
     const at = inReview ? lookingRef.current.review : screen === 'sort' ? lookingRef.current.sort : null;
-    return { screen: inReview ? 'review' : screen, compId: at };
+    return { screen: inReview ? 'review' : screen, compId: at, ...(screen === 'sort' ? { order: lookingRef.current.order } : {}) };
   };
   // Hubert's step guides (2026-10-28): the first time the agent reaches each step, it's noted, and his chat
   // shows that step's guide from then on. The owner's only: a mentor reading the report changes nothing.
@@ -632,6 +634,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     },
     suggestions,
     removed,
+    starting: Boolean(start),
     drawerOpen,
     setDrawerOpen,
     reloadComps,
@@ -647,6 +650,9 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
       const l = lookingRef.current;
       if (open) l[where] = reportCompId;
       else if (l[where] === reportCompId) l[where] = null;
+    },
+    sortOrder: (ids) => {
+      lookingRef.current.order = ids;
     },
     view: () => viewRef.current(),
     hubertEdits,

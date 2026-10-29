@@ -11,14 +11,19 @@ import { address } from '../workspace/summary.ts';
 import type { Queryable } from './db.ts';
 import { neutralNumbers, newYorkToday, summaryOf } from './numbers.ts';
 
-export const VIEW_SCREENS = ['sort', 'review', 'gate', 'findings', 'send', 'done'] as const;
+export const VIEW_SCREENS = ['new_report', 'sort', 'review', 'gate', 'findings', 'send', 'done'] as const;
 export type ViewScreen = (typeof VIEW_SCREENS)[number];
+const NEW_REPORT_STEPS = ['home', 'details', 'comps'] as const;
 
 export interface HubertView {
-  /** The screen; `review` is Sort's per-comp review (Dispatch 25), one comp at a time. */
+  /** The screen; `review` is Sort's per-comp review (Dispatch 25), one comp at a time; `new_report` the New report window. */
   screen: ViewScreen;
   /** The report comp open on Sort, or under review. */
   compId: string | null;
+  /** In the New report window: which of its three steps. */
+  step?: (typeof NEW_REPORT_STEPS)[number];
+  /** On Sort: the rows top to bottom as they show, so "comps 1 and 2" can be counted. */
+  order?: string[];
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -29,10 +34,16 @@ export function readView(raw: unknown): HubertView | null {
   const v = raw as Record<string, unknown>;
   if (typeof v.screen !== 'string' || !(VIEW_SCREENS as readonly string[]).includes(v.screen)) return null;
   const compId = typeof v.compId === 'string' && UUID.test(v.compId) ? v.compId : null;
-  return { screen: v.screen as ViewScreen, compId };
+  const view: HubertView = { screen: v.screen as ViewScreen, compId };
+  if (view.screen === 'new_report' && (NEW_REPORT_STEPS as readonly unknown[]).includes(v.step)) view.step = v.step as HubertView['step'];
+  if (view.screen === 'sort' && Array.isArray(v.order)) {
+    view.order = v.order.filter((x): x is string => typeof x === 'string' && UUID.test(x)).slice(0, 200);
+  }
+  return view;
 }
 
 const SCREEN_WORDS: Record<ViewScreen, string> = {
+  new_report: 'The New report window: the home, its details, and adding comps. You can answer questions here; the agent types the details.',
   sort: 'Sort: the comps table, where the agent tiers each comp, writes why it’s a comp and tags it.',
   review: 'The per-comp review on Sort: one comp at a time, the agent’s note and tags first, then the tier.',
   gate: 'Your number: the agent gives their own number before the range shows. The number is theirs alone.',
@@ -44,13 +55,24 @@ const SCREEN_WORDS: Record<ViewScreen, string> = {
 export async function viewFor(tx: Queryable, reportId: string, view: HubertView | null) {
   if (!view) return { screen: null, about: 'The screen didn’t come with this message. Ask the agent which comp they mean.' };
   const out: Record<string, unknown> = { screen: view.screen, about: SCREEN_WORDS[view.screen] };
-  if (!view.compId || (view.screen !== 'sort' && view.screen !== 'review')) {
+  if (view.step) out.new_report_step = { home: 'the home: its StreetEasy link or address', details: 'the home’s details', comps: 'adding comps: the export and links' }[view.step];
+  const asOf = newYorkToday();
+  const wantsComps = (view.screen === 'sort' && (view.compId || view.order?.length)) || (view.screen === 'review' && view.compId);
+  if (!wantsComps) {
+    out.open_comp = null;
+    return out;
+  }
+  const n = await neutralNumbers(tx, reportId, asOf);
+  // Sort's rows as numbered on screen, top to bottom: the agent's "comp 3" is the third.
+  if (n && view.order?.length) {
+    const byId = new Map(n.comps.map((c) => [c.judgment?.reportCompId, address(c)]));
+    out.sort_rows_top_to_bottom = view.order.map((id) => byId.get(id)).filter(Boolean).map((name, k) => `${k + 1}. ${name}`);
+  }
+  if (!view.compId) {
     out.open_comp = null;
     if (view.screen === 'sort') out.note = 'No comp is open. If the agent says “this one”, ask which comp they mean.';
     return out;
   }
-  const asOf = newYorkToday();
-  const n = await neutralNumbers(tx, reportId, asOf);
   const i = n ? n.comps.findIndex((c) => c.judgment?.reportCompId === view.compId) : -1;
   if (!n || i < 0) return { ...out, open_comp: null, note: 'The comp on screen isn’t in the report’s data any more. Ask the agent which comp they mean.' };
   const summary = await summaryOf(tx, reportId, n, { asOf, wide: true });

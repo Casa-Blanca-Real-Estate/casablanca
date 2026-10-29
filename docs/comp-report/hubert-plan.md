@@ -25,6 +25,16 @@ it for them.** The tiers, notes and tags are the agent's call. Hubert puts in wh
 
 Question 5 below is built as recommended; question 6's first half (get_view and the wider read) is this PR.
 
+Kimani's answers (Answer Sheet HB-1 to HB-7 and the project chat, 2026-10-29), also in this PR:
+- **Dictation, practice agents too** (HB-1 A): however the agent gives their call, it's theirs. get_view numbers Sort's
+  rows top to bottom, so "comps 1 and 2 second tier, 3 and 5 first" works: one edit_comp per comp in one turn.
+- **The web leans** (HB-2 A, with his note): any public site, 60 a day, but StreetEasy, NYC.gov and the MTA come first
+  in the results (`leanToPreferred`), and the prompt asks for the building's own site.
+- **Hubert in the New report window now** (HB-3 B): rough, for the design pass to design against. He sits above its
+  backdrop and the window moves left; get_view says which of its steps is open. He answers; filling a detail on
+  dictation waits for `set_home_fact`.
+- Step guides for everyone (HB-4 A), Undo (HB-5 A), Hubert across the Studio after 11-13 (HB-7 A): as built or planned.
+
 ## What he should know at each step
 
 "Knows now" is what his tools return today. "Should know" is the gap, in the order it would help most.

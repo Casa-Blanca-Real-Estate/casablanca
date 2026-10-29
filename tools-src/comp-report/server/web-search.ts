@@ -32,6 +32,27 @@ export function webLimit(env: Record<string, string | undefined> = process.env):
 }
 
 const RESULTS = 5;
+
+/**
+ * The comp tool leans toward these (Kimani, 2026-10-29, HB-2): StreetEasy, the
+ * city, the MTA. Any public site is still allowed; these come first. A
+ * building's own site can't be listed ahead of time, so the prompt asks for it.
+ */
+export const PREFERRED_SITES = ['streeteasy.com', 'nyc.gov', 'mta.info', 'ny.gov'];
+
+const preferred = (url: string) => {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return PREFERRED_SITES.some((s) => host === s || host.endsWith(`.${s}`));
+  } catch {
+    return false;
+  }
+};
+
+/** The preferred sites' results first, each side in the search's own order; then cut to five. */
+export function leanToPreferred<T extends { url: string }>(results: T[]): T[] {
+  return [...results.filter((r) => preferred(r.url)), ...results.filter((r) => !preferred(r.url))].slice(0, RESULTS);
+}
 const SNIPPET = 400;
 /** A page's text, cut to what a turn can carry. */
 const PAGE_TEXT = 8_000;
@@ -74,7 +95,8 @@ export function firecrawlSearcher(opts: { apiKey: string | undefined; baseUrl?: 
     async search(query) {
       if (!opts.apiKey) return notSetUp;
       try {
-        const { status, body } = await post('/v2/search', { query, limit: RESULTS, sources: ['web'] }, SEARCH_MS);
+        // Twice what's kept, so a preferred site a little further down still makes the five.
+        const { status, body } = await post('/v2/search', { query, limit: RESULTS * 2, sources: ['web'] }, SEARCH_MS);
         if (status >= 400 || !body || body.success === false) {
           console.error('comp-report: Firecrawl search refused', { status, error: String(body?.error ?? '').slice(0, 300) });
           return { ok: false, error: 'The search didn’t work just now. Say so; the agent can try again in a minute.' };
@@ -82,10 +104,9 @@ export function firecrawlSearcher(opts: { apiKey: string | undefined; baseUrl?: 
         // v2 answers { data: { web: [...] } }; v1 answered { data: [...] }.
         const data = body.data as unknown;
         const rows = (Array.isArray(data) ? data : (data as { web?: unknown } | null)?.web) as Array<Record<string, unknown>> | undefined;
-        const results = (rows ?? [])
+        const results = leanToPreferred((rows ?? [])
           .filter((r) => typeof r.url === 'string' && readableUrl(r.url))
-          .slice(0, RESULTS)
-          .map((r) => ({ title: String(r.title ?? r.url), url: String(r.url), text: cut(String(r.description ?? r.snippet ?? ''), SNIPPET) }));
+          .map((r) => ({ title: String(r.title ?? r.url), url: String(r.url), text: cut(String(r.description ?? r.snippet ?? ''), SNIPPET) })));
         return { ok: true, results };
       } catch (error) {
         console.error('comp-report: Firecrawl search unreachable', String(error).slice(0, 300));

@@ -132,6 +132,8 @@ export interface Workspace {
   suggestions: { judgment: CompJudgment; record: CompRecord }[];
   /** Every comp the agent took out, for Sort's "Removed" fold (Dispatch 15): each can be put back. */
   removed: WorkspaceComp[];
+  /** The New report window is open (the home, its details, add comps): Hubert sits beside it. */
+  starting: boolean;
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
@@ -147,6 +149,8 @@ export interface Workspace {
    * last, or the comp under review. `looking` marks a comp open or closed there; `view` reads it as it is now.
    */
   looking: (where: 'sort' | 'review', reportCompId: string, open: boolean) => void;
+  /** Sort's rows top to bottom, as they show now (its filter and order): "comp 2" is the second. */
+  sortOrder: (reportCompIds: string[]) => void;
   view: () => HubertView;
   /** Hubert's edits to the email, waiting for Send to apply them (server/hubert-email.ts). */
   hubertEdits: HubertEmailEdit[];

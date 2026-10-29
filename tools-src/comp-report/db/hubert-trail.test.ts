@@ -286,4 +286,32 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
     assert.ok(n.comps.every((c: Block) => 'listing' in c));
     assert.ok(n.comps.some((c: Block) => Object.keys(c.listing as Block).length > 0), 'the export gives some of it');
   });
+  test('dictating several at once: "comps 1 and 2 second tier, 3 and 5 first", counted as Sort shows them', async () => {
+    const order = comps.filter((c) => c.reportCompId).slice(0, 5).map((c) => c.reportCompId!);
+    const view = { screen: 'sort', compId: null, order };
+    const { result } = await call('get_view', {}, 'What’s on my screen?', view);
+    const rows = JSON.parse(String(result.content)).sort_rows_top_to_bottom as string[];
+    assert.equal(rows.length, 5);
+    assert.match(rows[0]!, /^1\. /);
+    // As the model would: one edit_comp per comp, all in one turn, each named as get_view numbered it.
+    const name = (k: number) => rows[k - 1]!.replace(/^\d+\. /, '');
+    const asked: Array<[number, string]> = [[1, 'secondary'], [2, 'secondary'], [3, 'primary'], [5, 'primary']];
+    scripts.push({
+      content: asked.map(([k, tier], i) => ({ type: 'tool_use', id: `toolu_many_${i}_${Date.now()}`, name: 'edit_comp', input: { comp: name(k), changes: { tier } } })),
+      stopReason: 'tool_use',
+    });
+    await turn('Comps 1 and 2 second tier, 3 and 5 first tier.', view);
+    scripts.push({ content: [{ type: 'text', text: 'Done.' }], stopReason: 'end_turn' });
+    await turn(undefined, view);
+    const sent = fake.requests.at(-1)!.body.messages as Array<{ content: Block[] }>;
+    const results = sent.at(-1)!.content.filter((b) => b.type === 'tool_result');
+    assert.equal(results.length, 4, 'one result per comp');
+    for (const [i, [k, tier]] of asked.entries()) {
+      const r = results[i]!;
+      // A comp the engine can't sort refuses; every other ends up as the agent said.
+      if (r.is_error) assert.match(String(r.content), /can’t be sorted/, `comp ${k}: ${String(r.content)}`);
+      else assert.equal((await row(order[k - 1]!)).tier, tier, `comp ${k}`);
+    }
+    assert.ok(results.some((r) => !r.is_error), 'at least one applied');
+  });
 });
