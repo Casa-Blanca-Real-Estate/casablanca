@@ -116,6 +116,7 @@
 
 /* On Sort: the row's weak flag and the card's Review link. */
 .so-weak { font-size: 11px; color: var(--cb-black); background: var(--cb-highlight); padding: 1px 6px; }
+a.so-find { text-decoration: none; border-bottom: 1px solid var(--cb-yellow); }
 .so-review { font: inherit; font-size: 12px; background: none; border: 1px solid var(--cb-border); padding: 4px 10px; cursor: pointer; color: var(--cb-black); }
 .so-review:hover { border-color: var(--cb-black); }
 .so-weak-line { margin: 0; font-size: 12px; padding: 8px 10px; background: var(--cb-highlight); border-left: 3px solid var(--cb-yellow); }

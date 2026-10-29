@@ -21,7 +21,9 @@
 // The trail (2026-10-28): "make 200 Chambers Street #10A 1st tier" (or 2nd,
 // or out) gets an edit_comp call, "note on <comp>: …" sets its note, "<comp>
 // floor is 12" corrects its floor; "search …" or "look up …" gets a
-// web_search call.
+// web_search call. A message about "this one" or "this comp" (2026-10-29)
+// gets a get_view call, and the reply names the comp on screen. "add <StreetEasy link>" gets an
+// show_comp_link call (HB-8).
 //
 // A review request (Dispatch 25: one comp, structured output) gets Hubert's
 // feedback on the agent's note or his take on the comp: see fakeCompReview.
@@ -250,6 +252,13 @@ function afterTool(name: string, result: Block): string {
   const fake = ' (fake Messages API)';
   if (name === 'edit_comp') return `Done: ${String(got.applied ?? 'the comp is changed')}.${fake}`;
   if (name === 'edit_email') return `Done: I changed the email.${fake}`;
+  if (name === 'show_comp_link') return `Here it is on StreetEasy. Open the link and check it’s the right unit, that it sold (not just an asking price), and that it’s current; then add it from the card. It lands on Sort untiered.${fake}`;
+  if (name === 'get_view') {
+    const open = got.open_comp as { comp?: string; tier?: string } | null | undefined;
+    return open?.comp
+      ? `You're looking at ${open.comp}, ${String(open.tier ?? 'not sorted yet')}.${fake}`
+      : `I can't tell which comp you mean: which one?${fake}`;
+  }
   if (name === 'web_search' || name === 'read_page') {
     const first = (got.results as Array<{ title?: string; text?: string }> | undefined)?.[0];
     return first ? `From the web: ${first.text ?? first.title}. Check it on the listing before a client reads it.${fake}` : `The web had nothing on that.${fake}`;
@@ -297,6 +306,9 @@ function echo(body: Block): Script {
   if (note) return tool('edit_comp', { comp: note[1]!.trim(), changes: { note: note[2]!.trim() } }, 'Putting the agent’s note in (fake API).');
   const floor = /^\s*(.+?) (?:is on|floor is) (?:floor )?(\d+)\.?$/i.exec(said);
   if (floor) return tool('edit_comp', { comp: floor[1]!.trim(), changes: { floor: Number(floor[2]) } }, 'Correcting the floor (fake API).');
+  const link = /^\s*add (https:\/\/(?:www\.)?streeteasy\.com\/\S+)/i.exec(said);
+  if (link) return tool('show_comp_link', { url: link[1]! }, 'Showing the sale by its StreetEasy link, for the agent to check (fake API).');
+  if (/\bthis (?:one|comp)\b/i.test(said)) return tool('get_view', {}, 'Checking which comp is on screen (fake API).');
   const search = /^\s*(?:search|look up)\b:?\s*([\s\S]+)$/i.exec(said);
   if (search) return tool('web_search', { query: search[1]!.trim() }, 'Searching the web (fake API).');
   const change = /^\s*change (?:the |my )?(next step|headline|subject|how i chose the comps|things to consider|signed|sign-off) to:?\s*([\s\S]+)$/i.exec(said);

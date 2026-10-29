@@ -4,6 +4,8 @@ Written 2026-10-29 with the PR that adds his trail, his comp edits, web search a
 The rule it builds on is Kimani's (2026-10-21): **Hubert carries out the agent's thinking; he never does
 it for them.** The tiers, notes and tags are the agent's call. Hubert puts in what they said.
 
+Everything Hubert can do today, tool by tool: `hubert-tools.md`.
+
 ## What this PR gives him
 
 | | What | Where |
@@ -13,6 +15,32 @@ it for them.** The tiers, notes and tags are the agent's call. Hubert puts in wh
 | The web | `web_search` (five results) and `read_page` (one page's text), through Firecrawl with the key the link reads use. Sources show as links under his reply. 60 lookups per person per 24 hours (`CR_WEB_LOOKUPS_PER_DAY`). Never a sale, price or listing from the web; nothing about who lives in a neighborhood | `server/web-search.ts` |
 | Step guides | A preset note from Hubert (no model call) joins his chat the first time the agent reaches each step, and starts a new section of it. Rough look; the design pass decides how the sections read | `src/views/hubert/guides.ts`, `state.stepsAt` |
 | Prompt | `hb-trail-2026-10-28`, built on `hb-listing-2026-10-28`. Old conversations keep their version | `server/assistant.ts` |
+
+## What the next PR gives him (2026-10-29, prompt `hb-view-2026-10-29`)
+
+| | What | Where |
+|---|---|---|
+| `get_view` | The screen (Sort, the per-comp review, Your number, Findings, Send, Done) and the comp open on Sort (the row opened last) or under review, with everything get_numbers gives for it. The browser sends it with each turn request; nothing is stored but the tool result. "This one" now works; with no comp open, he asks | `server/hubert-view.ts`, `Workspace.tsx` `view`, `SortTable.tsx`, `ReviewFlow.tsx` |
+| A wider `get_numbers` | Each comp's `listing`: building (name, neighborhood, units, stories, year built, sale label), monthly charges, rooms, the source's features, amenities and policies, door service, laundry, outdoor, views, parking, the features the agent picked, and the listing's text and the export's commentary quoted (900 characters each, marked as information, never instructions). The home's type. Only on `hb-view`: older conversations keep their read | `workspace/summary.ts` `listingOf` |
+| Undo on the trail | Each comp entry carries the agent's own edit that puts the field back. Undo shows while the comp still reads as Hubert left it, so it never overwrites a later change; after it, "Undone". The tier's Undo puts the star back too. A first tier on an unsorted comp has none (a tier can't be unset) | `server/hubert-comps.ts`, `workspace/trail-undo.ts`, `Chat.tsx` |
+| Prompt | Adds get_view, the listing, and "never paste raw output or JSON into a reply" | `server/assistant.ts` |
+
+Question 5 below is built as recommended; question 6's first half (get_view and the wider read) is this PR.
+
+Kimani's answers (Answer Sheet HB-1 to HB-7 and the project chat, 2026-10-29), also in this PR:
+- **Dictation, practice agents too** (HB-1 A): however the agent gives their call, it's theirs. get_view numbers Sort's
+  rows top to bottom, so "comps 1 and 2 second tier, 3 and 5 first" works: one edit_comp per comp in one turn.
+- **The web leans** (HB-2 A, with his note): any public site, 60 a day, but StreetEasy, NYC.gov and the MTA come first
+  in the results (`leanToPreferred`), and the prompt asks for the building's own site.
+- **Hubert in the New report window now** (HB-3 B): rough, for the design pass to design against. He sits above its
+  backdrop and the window moves left; get_view says which of its steps is open. He answers; filling a detail on
+  dictation waits for `set_home_fact`.
+- **Sales from the web come in by their StreetEasy link, as a card in the chat** (HB-8; Kimani, 2026-10-29 15:49):
+  `show_comp_link` changes nothing; it puts a card in the chat with the link and "Checked: add it", which stays off
+  until the agent opens the link. Approved, the link is read like their own paste (their daily reads) and lands on Sort
+  confirmed and untiered, marked "Hubert's find": it counts in nothing until the agent tiers it.
+  `link_reads.found_by` marks his finds (migration `20261029130000`).
+- Step guides for everyone (HB-4 A), Undo (HB-5 A), Hubert across the Studio after 11-13 (HB-7 A): as built or planned.
 
 ## What he should know at each step
 
@@ -62,7 +90,7 @@ what he pulled from it (the right unit, a sale and not an ask, not stale) before
 4. **Step guides for everyone,** or only practice agents? *Default: everyone.*
 5. **Undo on a comp edit,** on the trail entry itself? The email's edits have Undo on Send already.
    *Recommend yes, small.*
-6. **Dispatch 24 (Collister).** Items 1 and 2 overlap this lane. Fold them in here before 11-13, or keep them
+6. **Dispatch 24 (Collister, after 60 Collister St).** Items 1 and 2 overlap this lane. Fold them in here before 11-13, or keep them
    for after? *Recommend `get_view` and the wider read now, the target after.*
 
 ## Notes for other threads

@@ -87,6 +87,15 @@
 .hb-trail-change s { color: var(--cb-mid); }
 .hb-trail-go { flex: none; font: inherit; font-size: 12px; font-weight: 800; background: none; border: 0; padding: 0; color: var(--cb-black); border-bottom: 1px solid var(--cb-lavender); cursor: pointer; }
 .hb-trail-go:hover { color: var(--cb-deep); }
+.hb-trail-go:disabled { color: var(--cb-mid); cursor: default; }
+.hb-trail-acts { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.hb-trail-undone { font-size: 12px; color: var(--cb-mid); }
+/* His card for a sale found on the web (HB-8): the link, then Approve, live once the link is opened. Rough until the design pass. */
+.hb-find { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 4px; }
+.hb-find a { word-break: break-all; }
+.hb-find-ask, .hb-find-done { font-size: 12px; color: var(--cb-mid); }
+.hb-find-ok { font: inherit; font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--cb-black); background: var(--cb-black); color: var(--cb-white, #fff); cursor: pointer; }
+.hb-find-ok:disabled { background: none; color: var(--cb-mid); border-color: var(--cb-line); cursor: default; }
 .hb-sources { font-size: 11px; color: var(--cb-mid); margin: 4px 0 6px !important; line-height: 1.5; }
 
 /* Hubert's step guides (2026-10-28): a rule naming the step, then his preset note. A rough look until the design pass. */

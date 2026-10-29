@@ -74,6 +74,9 @@ export function SortGroup({ ws, id, rows, outById, sort, onSort }: {
   );
 }
 
+/** What the agent checks before confirming a sale Hubert found (Kimani, 2026-10-29). */
+const FIND_CHECK = 'Hubert found this one on the web, and you approved it from his card after opening the link. It counts once you tier it.';
+
 function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | undefined }) {
   const cardId = useId();
   // The ★ comp's card starts open, as the handoff draws it.
@@ -93,14 +96,24 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
   const sortable = row.group !== 'unsortable' && rcId !== null;
   const onEditing = useCallback((on: boolean) => setEditing(on), []);
   const onCollapse = useCallback(() => {
+    if (rcId) ws.looking('sort', rcId, false);
     setOpen(false);
     setStart(null);
     // The card unmounts with the row closing, so it can't report leaving edit mode itself.
     setEditing(false);
   }, []);
 
+  // Leaving Sort closes the row as far as get_view goes: it shows closed when Sort mounts again.
+  useEffect(() => {
+    return () => {
+      if (rcId) ws.looking('sort', rcId, false);
+    };
+  }, []);
+
   function reveal() {
     setOpen(true);
+    // The row the agent opened last is the comp Hubert's get_view gives.
+    if (rcId) ws.looking('sort', rcId, true);
     // Opening a row is reviewing it. Nothing waits on the mark; a failed one is made again next time.
     if (j && rcId && !j.reviewedAt && !ws.readOnly) ws.editComp(rcId, { reviewed: true }).catch(() => undefined);
   }
@@ -196,6 +209,8 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
   }
 
   const weak = weakFlag(j?.review, ws.level);
+  // A sale Hubert found on the web (HB-8): until it's confirmed, the agent is asked to check its link.
+  const hubertFind = rcId ? ws.reads.find((r) => r.reportCompId === rcId && r.foundBy === 'hubert') : undefined;
   const needLinks = row.needs.filter((n): n is Exclude<RowNeed, 'confirm'> => n !== 'confirm');
 
   return (
@@ -219,6 +234,11 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
             </button>
             {row.tags.map((t) => <span key={t} className="so-flag">{t}</span>)}
             {weak && <span className="so-weak" title={`Hubert: ${weak.reason}`}>Weak</span>}
+            {hubertFind && (
+              <a className="so-weak so-find" href={hubertFind.url} target="_blank" rel="noopener noreferrer" onClick={stop} title={FIND_CHECK}>
+                Hubert’s find ↗
+              </a>
+            )}
             {incomplete && (row.needs.includes('confirm') || ws.readOnly ? (
               <span className="so-need"><span className="so-need-sq" aria-hidden="true" />{needText(row.needs)}</span>
             ) : (
@@ -258,7 +278,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
           <span className="so-confirm" onClick={stop}>
             {ws.readOnly ? <span className="so-tier-ro">To confirm</span> : (
               <>
-                <button type="button" className="so-confirm-btn" disabled={acting} title="Check it against the listing, then confirm: until then it counts in neither result" onClick={confirm}>Confirm</button>
+                <button type="button" className="so-confirm-btn" disabled={acting} title={hubertFind ? FIND_CHECK : 'Check it against the listing, then confirm: until then it counts in neither result'} onClick={confirm}>Confirm</button>
                 <button type="button" className="link so-remove-link" disabled={acting} onClick={remove}>Remove</button>
               </>
             )}

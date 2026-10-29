@@ -12,8 +12,10 @@ import { useState } from 'react';
 import type { CompJudgment } from '../../workspace/state.ts';
 import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
+import { undoStands } from '../../workspace/trail-undo.ts';
+import { linksApi, type CompEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
-import { greeting, intro, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
+import { greeting, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
 import { reachedGuides } from './hubert/guides.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
@@ -112,7 +114,7 @@ function Suggestions({ ws }: { ws: Workspace }) {
 export function Hubert({ ws }: { ws: Workspace }) {
   const home = homeName(ws.intake, ws.report.title);
   const sent = Boolean(ws.send.sentAt);
-  const s = said(ws.screen, ws.side, ws.comps, home, sent);
+  const s = ws.starting ? { hint: NEW_REPORT_HINT, chips: NEW_REPORT_CHIPS } : said(ws.screen, ws.side, ws.comps, home, sent);
 
   // Done's "Reopen to edit": the sent mark comes off and Send opens, as Done's own Reopen does.
   function onAction(chip: Chip) {
@@ -132,6 +134,9 @@ export function Hubert({ ws }: { ws: Workspace }) {
       <Suggestions ws={ws} />
       <p className="hb-hint">{SUGGESTIONS_LATER}</p>
     </>
+  ) : ws.starting ? (
+    // A rough start (Kimani, 2026-10-29): Hubert beside the New report window, so the design pass has him to design against.
+    <p className="hb-hint">{NEW_REPORT_HINT}</p>
   ) : <p className="hb-hint">{s.hint}</p>;
 
   return (
@@ -152,6 +157,27 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onEmailEdit={ws.queueHubertEdit}
         onCompsChanged={ws.reloadComps}
         guides={reachedGuides(ws.stepsAt, ws.side)}
+        view={ws.view}
+        undo={{
+          // The comps as the screen has them: Undo shows while the comp still reads as he left it.
+          can: (entry) => undoStands(entry, ws.comps.find((c) => c.judgment?.reportCompId === entry.compId)?.judgment),
+          // The agent's own edit, through the same queue as their other edits.
+          run: async (entry) => {
+            if (!entry.compId || !entry.undo) return;
+            await ws.editComp(entry.compId, entry.undo.edit as CompEdit);
+            ws.toast(`${entry.label} on ${entry.target} put back.`);
+          },
+        }}
+        finds={{
+          added: (url) => ws.reads.some((r) => r.url === url),
+          // The agent approved it on his card, having opened the link: read, it lands on Sort untiered.
+          approve: async (url) => {
+            const added = await linksApi.add(ws.reportId, [url], 'comp', 'hubert');
+            ws.applyLinks(added);
+            if (added.refused.length) throw new Error(added.refused[0]!.reason);
+            ws.toast('Added to Sort, untiered. It counts once you tier it.');
+          },
+        }}
         onJump={(entry) => {
           if (entry.kind === 'email') {
             if (ws.screen !== 'send') ws.go('send');

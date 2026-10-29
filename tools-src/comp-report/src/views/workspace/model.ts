@@ -2,7 +2,7 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
+import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, HubertView, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
 import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
@@ -134,6 +134,8 @@ export interface Workspace {
   suggestions: { judgment: CompJudgment; record: CompRecord }[];
   /** Every comp the agent took out, for Sort's "Removed" fold (Dispatch 15): each can be put back. */
   removed: WorkspaceComp[];
+  /** The New report window is open (the home, its details, add comps): Hubert sits beside it. */
+  starting: boolean;
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
@@ -144,6 +146,14 @@ export interface Workspace {
   /** A trail entry's "Show" (Kimani, 2026-10-28): Sort opens on that comp's row, at the field he changed. `n` changes on each ask. */
   focus: { reportCompId: string; field: string; n: number; at: number } | null;
   showComp: (reportCompId: string, field: string) => void;
+  /**
+   * What the agent has on screen, for Hubert's get_view (server/hubert-view.ts): Sort's row they opened
+   * last, or the comp under review. `looking` marks a comp open or closed there; `view` reads it as it is now.
+   */
+  looking: (where: 'sort' | 'review', reportCompId: string, open: boolean) => void;
+  /** Sort's rows top to bottom, as they show now (its filter and order): "comp 2" is the second. */
+  sortOrder: (reportCompIds: string[]) => void;
+  view: () => HubertView;
   /** Hubert's edits to the email, waiting for Send to apply them (server/hubert-email.ts). */
   hubertEdits: HubertEmailEdit[];
   queueHubertEdit: (edit: HubertEmailEdit) => void;

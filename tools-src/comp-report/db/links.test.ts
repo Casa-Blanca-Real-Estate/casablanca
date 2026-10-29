@@ -400,4 +400,19 @@ describe('StreetEasy links and typed-in comps', { skip: skipWithoutDatabase }, (
     assert.deepEqual(kicks, [`https://site${DRAIN_PATH}`]);
   });
 
+  test('Hubert’s find, approved by the agent from his card: read as his, confirmed, and untiered', async () => {
+    const found = await createReport('tok-ben-000000000', 'Hubert’s find');
+    const { body } = await links('tok-ben-000000000', 'POST', { reportId: found, urls: [LINK.chambers], purpose: 'comp', found: 'hubert' });
+    assert.equal(body.queued.length, 1);
+    assert.equal((await run('tok-ben-000000000', found, body.queued[0]!)).body.status, 'done');
+    const ws = await workspace('tok-ben-000000000', found);
+    const read = ws.reads.find((r) => r.id === body.queued[0])!;
+    assert.deepEqual([read.foundBy, Boolean(read.confirmedAt)], ['hubert', true], 'the agent checked it before approving');
+    const comp = ws.comps.find((c) => c.reportCompId === read.reportCompId)!;
+    assert.equal(comp.tier, null, 'it counts toward nothing until the agent tiers it');
+    assert.ok(comp.source.kind === 'listing' && comp.source.confirmedAt);
+    // A subject link can't be marked as his.
+    const home = await links('tok-ben-000000000', 'POST', { reportId: found, urls: [LINK.home], purpose: 'subject', found: 'hubert' });
+    assert.equal(home.body.reads.find((r) => r.purpose === 'subject')!.foundBy, undefined);
+  });
 });

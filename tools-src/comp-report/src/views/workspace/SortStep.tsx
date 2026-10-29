@@ -46,6 +46,11 @@ export function SortStep({ ws }: StepProps) {
   const tags = useMemo(() => tagCounts(rows), [rows]);
   const shown = rows.filter((r) => passes(r, filter));
   const groups = groupRows(shown).map((g) => ({ ...g, rows: sortRows(g.rows, sort) }));
+  // The rows top to bottom, for Hubert's get_view: "comps 1 and 2" counts as Sort shows them.
+  const order = groups.flatMap((g) => g.rows.map((r) => r.rcId)).filter((x): x is string => Boolean(x)).join(',');
+  useEffect(() => {
+    ws.sortOrder(order ? order.split(',') : []);
+  }, [order]);
 
   const addToggle = !ws.readOnly && (
     <button type="button" className={`so-addtoggle${adding ? ' on' : ''}`} aria-expanded={adding} onClick={() => setAdding(!adding)}>

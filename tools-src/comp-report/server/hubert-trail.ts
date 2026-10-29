@@ -9,8 +9,8 @@
 import type { HubertEmailEdit } from './hubert-email.ts';
 
 export interface TrailEntry {
-  /** What he changed: a comp on Sort, or the email on Send. */
-  kind: 'comp' | 'email';
+  /** What he changed: a comp on Sort or the email on Send; or a sale he found, shown as a card to approve (HB-8). */
+  kind: 'comp' | 'email' | 'find';
   /** The comp's report comp id, for the jump to its row. */
   compId?: string;
   /** "200 Chambers Street #10A", or "The email". */
@@ -22,6 +22,15 @@ export interface TrailEntry {
   /** As it was, and as he left it: short, for the chat. Null for none. */
   before: string | null;
   after: string | null;
+  /**
+   * Undo on a comp's entry (hubert-plan.md question 5): the agent's own edit
+   * that puts the field back as it was, and the field's value as Hubert left
+   * it. Undo shows only while the comp still reads that way
+   * (workspace/trail-undo.ts): once it's undone, or changed since, it's gone.
+   */
+  undo?: { edit: Record<string, unknown>; left: unknown };
+  /** A sale he found: its StreetEasy link, for the agent to open and check before approving. */
+  url?: string;
 }
 
 /** A source Hubert read on the web (web_search, read_page): shown under his reply, with its link. */
@@ -66,7 +75,7 @@ export function trailOf(name: string, result: Record<string, unknown>): { change
   }
   if (!parsed || typeof parsed !== 'object') return none;
   if (name === 'edit_email' && parsed.edit) return { changes: emailTrail(parsed.edit as HubertEmailEdit), sources: [] };
-  if (name === 'edit_comp' && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
+  if ((name === 'edit_comp' || name === 'show_comp_link') && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
   if ((name === 'web_search' || name === 'read_page') && Array.isArray(parsed.results)) {
     const sources = (parsed.results as Array<Record<string, unknown>>)
       .filter((r) => typeof r.url === 'string' && /^https:\/\//.test(r.url as string))

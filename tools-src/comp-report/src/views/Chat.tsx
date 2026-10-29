@@ -3,7 +3,7 @@
 // endpoint: one model call per request, the server owns the transcript (§8.3
 // rule 6). The conversation is the report's, the same on every screen.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { api, ApiError, streamTurn, type HubertEmailEdit, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
+import { api, ApiError, streamTurn, type HubertEmailEdit, type HubertView, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
 import type { Guide } from './hubert/guides.ts';
 import { HubertNote, HubertText } from './hubert/markdown.tsx';
@@ -19,24 +19,107 @@ interface Live {
 
 const empty: Live = { text: '', progress: [], tools: [], changes: [], note: null };
 
-/** What Hubert looked at, in words: his tools read the report, its numbers, the email and the web; two change things. */
+/** What Hubert looked at, in words: his tools read the report, its numbers, the screen, the email and the web; two change things. */
 const TOOL_WORDS: Record<string, string> = {
-  get_numbers: 'the numbers', get_report: 'the report', get_email: 'the email', web_search: 'the web', read_page: 'a web page',
+  get_numbers: 'the numbers', get_view: 'your screen', get_report: 'the report', get_email: 'the email', web_search: 'the web', read_page: 'a web page',
 };
-const CHANGES = new Set(['edit_email', 'edit_comp']);
+const CHANGES = new Set(['edit_email', 'edit_comp', 'show_comp_link']);
 const looked = (tools: string[]) => [...new Set(tools.filter((t) => !CHANGES.has(t)).map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
+
+/** Undo on a comp entry of the trail: whether it still applies, and doing it (the agent's own edit). */
+export interface TrailUndo {
+  can: (entry: TrailEntry) => boolean;
+  run: (entry: TrailEntry) => Promise<void>;
+}
+
+/** A sale Hubert found on the web (HB-8): the agent approves it from his card, and only then is it added. */
+export interface TrailFinds {
+  /** Already in the report's reads: added, or being read. */
+  added: (url: string) => boolean;
+  approve: (url: string) => Promise<void>;
+}
+
+/**
+ * His card for a find (Kimani, 2026-10-29): the StreetEasy link, and Approve,
+ * which only wakes once the agent has opened the link to check it. Approved,
+ * it's read and lands on Sort untiered: it counts toward nothing until the
+ * agent tiers it.
+ */
+function FindCard({ entry, finds }: { entry: TrailEntry; finds?: TrailFinds }) {
+  const [opened, setOpened] = useState(false);
+  const [state, setState] = useState<'idle' | 'busy' | 'failed'>('idle');
+  const url = entry.url ?? entry.after ?? '';
+  const added = finds?.added(url) ?? false;
+  return (
+    <div className="hb-find">
+      <a className="hb-md-link" href={url} target="_blank" rel="noopener noreferrer nofollow" onClick={() => setOpened(true)}>
+        {url.replace(/^https:\/\/(www\.)?/, '')} ↗
+      </a>
+      {added ? (
+        <span className="hb-find-done">Added to Sort, untiered</span>
+      ) : finds ? (
+        <>
+          <span className="hb-find-ask">{opened ? 'Right unit, a sale (not an asking price), and current?' : 'Open the link and check it first.'}</span>
+          <button
+            type="button"
+            className="hb-find-ok"
+            disabled={!opened || state === 'busy'}
+            title={opened ? 'Add it to Sort, untiered' : 'Open the link first'}
+            onClick={() => {
+              setState('busy');
+              finds.approve(url).then(() => setState('idle'), () => setState('failed'));
+            }}
+          >
+            {state === 'busy' ? 'Adding…' : state === 'failed' ? 'Not added. Retry' : 'Checked: add it'}
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/** One entry's Undo: offered while the comp reads as Hubert left it; "Undone" once the agent has used it here. */
+function UndoButton({ entry, undo }: { entry: TrailEntry; undo: TrailUndo }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
+  if (state === 'done') return <span className="hb-trail-undone">Undone</span>;
+  if (state === 'idle' && !undo.can(entry)) return null;
+  return (
+    <button
+      type="button"
+      className="hb-trail-go"
+      disabled={state === 'busy'}
+      title={state === 'failed' ? 'Not undone. Try again, or change it on Sort.' : `Put the ${entry.label.toLowerCase()} back`}
+      onClick={() => {
+        setState('busy');
+        undo.run(entry).then(() => setState('done'), () => setState('failed'));
+      }}
+    >
+      {state === 'busy' ? 'Undoing…' : state === 'failed' ? 'Retry undo' : 'Undo'}
+    </button>
+  );
+}
 
 /**
  * Hubert's trail (Kimani, 2026-10-28): each change he made, where he made it,
- * with "Show" to the field: a comp's row on Sort, or the email on Send.
+ * with "Show" to the field: a comp's row on Sort, or the email on Send; and,
+ * on a comp's change, Undo while it still stands.
  */
-function Trail({ changes, sources, onJump }: { changes: TrailEntry[]; sources: TrailSource[]; onJump?: (entry: TrailEntry) => void }) {
+function Trail({ changes, sources, onJump, undo, finds }: { changes: TrailEntry[]; sources: TrailSource[]; onJump?: (entry: TrailEntry) => void; undo?: TrailUndo; finds?: TrailFinds }) {
   if (!changes.length && !sources.length) return null;
   return (
     <>
       {changes.length > 0 && (
         <ul className="hb-trail" aria-label="What Hubert changed">
-          {changes.map((c, i) => (
+          {changes.map((c, i) => c.kind === 'find' ? (
+            <li key={i} className="hb-trail-item hb-trail-find">
+              <span className="hb-trail-mark" aria-hidden="true">⌕</span>
+              <span className="hb-trail-what">
+                <span className="hb-trail-target">{c.target}</span>
+                <span className="hb-trail-field">{c.label}</span>
+                <FindCard entry={c} finds={finds} />
+              </span>
+            </li>
+          ) : (
             <li key={i} className="hb-trail-item">
               <span className="hb-trail-mark" aria-hidden="true">✎</span>
               <span className="hb-trail-what">
@@ -47,7 +130,10 @@ function Trail({ changes, sources, onJump }: { changes: TrailEntry[]; sources: T
                   {c.after ?? <em>cleared</em>}
                 </span>
               </span>
-              {onJump && <button type="button" className="hb-trail-go" onClick={() => onJump(c)}>Show</button>}
+              <span className="hb-trail-acts">
+                {onJump && <button type="button" className="hb-trail-go" onClick={() => onJump(c)}>Show</button>}
+                {undo && c.undo && <UndoButton entry={c} undo={undo} />}
+              </span>
             </li>
           ))}
         </ul>
@@ -79,7 +165,7 @@ function GuideNote({ guide }: { guide: Guide }) {
   );
 }
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onCompsChanged, onJump, guides = [] }: {
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onCompsChanged, onJump, undo, finds, view, guides = [] }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -97,6 +183,12 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   onCompsChanged?: () => void;
   /** A trail entry's "Show": to the field he changed. */
   onJump?: (entry: TrailEntry) => void;
+  /** Undo on his comp changes. Left out (a reader who isn't the owner), there's none. */
+  undo?: TrailUndo;
+  /** Approving his web finds. Left out (a reader who isn't the owner), the card has the link alone. */
+  finds?: TrailFinds;
+  /** What the agent has on screen, sent with each request for get_view. */
+  view?: () => HubertView;
   /** The step guides reached, oldest first: each sits among the messages at the time the agent reached its step. */
   guides?: (Guide & { at: string })[];
 }) {
@@ -160,7 +252,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         setLive(current);
         let again = false;
         await beforeAsk?.().catch(() => undefined);
-        for await (const ev of streamTurn(reportId, message)) {
+        for await (const ev of streamTurn(reportId, message, view?.())) {
           if (ev.type === 'email_edit') onEmailEdit?.(ev.edit);
           else if (ev.type === 'change') current = { ...current, changes: [...current.changes, ev.entry] };
           else if (ev.type === 'comps_changed') onCompsChanged?.();
@@ -199,7 +291,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
       {m.progress.map((p, i) => <HubertNote key={i} text={p} />)}
       {m.role === 'assistant' && looked(m.tools) && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
       {m.role === 'assistant' && m.tools.includes('edit_email') && !m.changes?.length && <p className="hb-progress">Changed the email on Send.</p>}
-      {m.role === 'assistant' && <Trail changes={m.changes ?? []} sources={m.sources ?? []} onJump={onJump} />}
+      {m.role === 'assistant' && <Trail changes={m.changes ?? []} sources={m.sources ?? []} onJump={onJump} undo={readOnly ? undefined : undo} finds={readOnly ? undefined : finds} />}
       {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
       {!m.inContext && m.role === 'assistant' && (
         <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
@@ -236,7 +328,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
             {looked(live.tools) && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
             {live.tools.includes('edit_email') && <p className="hb-progress">Changing the email…</p>}
             {live.tools.includes('edit_comp') && <p className="hb-progress">Changing the comp…</p>}
-            <Trail changes={live.changes} sources={[]} onJump={onJump} />
+            {live.tools.includes('show_comp_link') && <p className="hb-progress">Adding the comp from StreetEasy…</p>}
+            <Trail changes={live.changes} sources={[]} onJump={onJump} undo={readOnly ? undefined : undo} finds={readOnly ? undefined : finds} />
             {live.text ? <HubertText text={live.text} /> : !live.note && <p className="hb-progress">Thinking…</p>}
             {live.note && <p className="hb-text">{live.note}</p>}
           </div>

@@ -3,7 +3,8 @@
 //   /api/comp-report/links
 //     GET   ?report=<uuid>                    the report's reads and comps, for polling
 //                                             while reads are in flight
-//     POST  {reportId, urls[], purpose}       queue reads: StreetEasy links only, at
+//     POST  {reportId, urls[], purpose, found?}
+//                                             queue reads: StreetEasy links only, at
 //                                             most 20 at once, within the person's
 //                                             daily limit. A link already read or
 //                                             being read here isn't read again
@@ -108,56 +109,68 @@ export function handleLinks(req: Request, deps: AuthDeps & { env?: Record<string
     }
     if (purpose === 'subject' && pasted.length > 1) throw new HttpError(400, 'one_home', 'The home is one link.');
 
-    const refused: { url: string; reason: string }[] = [];
-    const wanted: string[] = [];
-    for (const raw of pasted) {
-      const check = checkListingLink(raw);
-      if (!check.ok) refused.push({ url: raw, reason: check.reason });
-      else if (!wanted.includes(check.url)) wanted.push(check.url);
-    }
-
+    // found: 'hubert' is the agent approving a sale Hubert found, from his card in the chat (HB-8).
+    const found = body.found === 'hubert' && purpose === 'comp' ? 'hubert' as const : undefined;
     const limit = readLimit(user.role, deps.env);
     return json(await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
-      // One person's reads are counted one request at a time, so two pastes at once can't both slip under the limit.
-      await tx.query(`select pg_advisory_xact_lock(hashtext('comp_report.link_reads:' || $1))`, [user.email]);
-      const used = Number((await tx.query<{ n: string }>(
-        `select count(*) as n from comp_report.link_reads where created_by = $1 and created_at > now() - interval '24 hours'`,
-        [user.email],
-      )).rows[0]?.n ?? 0);
-      const existing = (await tx.query<{ id: string; url: string }>(
-        `select id, url from comp_report.link_reads
-          where report_id = $1 and purpose = $2 and status <> 'failed' and url = any($3::text[])`,
-        [reportId, purpose, wanted],
-      )).rows;
-      const queued: string[] = [];
-      const already: string[] = [];
-      let left = limit - used;
-      for (const url of wanted) {
-        const seen = existing.find((e) => e.url === url);
-        if (seen) {
-          already.push(seen.id);
-          continue;
-        }
-        if (left <= 0) {
-          refused.push({ url, reason: `You’ve reached today’s limit of ${limit} links read (each read costs credit). Type this one in, or try again tomorrow.` });
-          continue;
-        }
-        const { rows } = await tx.query<{ id: string }>(
-          `insert into comp_report.link_reads (report_id, purpose, url) values ($1, $2, $3) returning id`,
-          [reportId, purpose, url],
-        );
-        queued.push(rows[0]!.id);
-        left--;
-      }
       return {
-        queued, already, refused,
-        limit: { perDay: limit, left: Math.max(left, 0) },
+        ...await queueReads(tx, user, reportId, pasted, purpose, limit, found),
         reads: await loadReads(tx, reportId),
         comps: await loadJudgments(tx, reportId),
       };
     }), 201);
   });
+}
+
+/**
+ * Queues reads of StreetEasy links, within the person's daily limit; a link
+ * already read or being read here isn't read again. The agent's paste, and
+ * Hubert's finds the agent approved from his card in the chat (HB-8, `foundBy`).
+ * The caller has checked the report is theirs.
+ */
+export async function queueReads(
+  tx: Queryable, user: SessionUser, reportId: string, pasted: string[], purpose: LinkPurpose, limit: number, foundBy?: 'hubert',
+): Promise<{ queued: string[]; already: string[]; refused: { url: string; reason: string }[]; limit: { perDay: number; left: number } }> {
+  const refused: { url: string; reason: string }[] = [];
+  const wanted: string[] = [];
+  for (const raw of pasted) {
+    const check = checkListingLink(raw);
+    if (!check.ok) refused.push({ url: raw, reason: check.reason });
+    else if (!wanted.includes(check.url)) wanted.push(check.url);
+  }
+  // One person's reads are counted one request at a time, so two pastes at once can't both slip under the limit.
+  await tx.query(`select pg_advisory_xact_lock(hashtext('comp_report.link_reads:' || $1))`, [user.email]);
+  const used = Number((await tx.query<{ n: string }>(
+    `select count(*) as n from comp_report.link_reads where created_by = $1 and created_at > now() - interval '24 hours'`,
+    [user.email],
+  )).rows[0]?.n ?? 0);
+  const existing = (await tx.query<{ id: string; url: string }>(
+    `select id, url from comp_report.link_reads
+      where report_id = $1 and purpose = $2 and status <> 'failed' and url = any($3::text[])`,
+    [reportId, purpose, wanted],
+  )).rows;
+  const queued: string[] = [];
+  const already: string[] = [];
+  let left = limit - used;
+  for (const url of wanted) {
+    const seen = existing.find((e) => e.url === url);
+    if (seen) {
+      already.push(seen.id);
+      continue;
+    }
+    if (left <= 0) {
+      refused.push({ url, reason: `You’ve reached today’s limit of ${limit} links read (each read costs credit). Type this one in, or try again tomorrow.` });
+      continue;
+    }
+    const { rows } = await tx.query<{ id: string }>(
+      `insert into comp_report.link_reads (report_id, purpose, url, found_by) values ($1, $2, $3, $4) returning id`,
+      [reportId, purpose, url, foundBy ?? null],
+    );
+    queued.push(rows[0]!.id);
+    left--;
+  }
+  return { queued, already, refused, limit: { perDay: limit, left: Math.max(left, 0) } };
 }
 
 // ─── The background read ────────────────────────────────────────────────────
@@ -294,7 +307,11 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
       await tx.query(
         `update comp_report.link_reads
             set status = 'done', finished_at = now(), as_of = $2, extract = $3::jsonb, warnings = $4::jsonb,
-                parser_version = $5, observation_id = $6, report_comp_id = $7, error = null, error_message = null
+                parser_version = $5, observation_id = $6, report_comp_id = $7, error = null, error_message = null,
+                -- Hubert's find (HB-8): the agent approved it in the chat after opening its link, so it's confirmed as read.
+                -- Untiered, it still counts in nothing until they tier it.
+                confirmed_at = case when found_by = 'hubert' then coalesce(confirmed_at, now()) else confirmed_at end,
+                confirmed_by = case when found_by = 'hubert' then coalesce(confirmed_by, comp_report.actor()) else confirmed_by end
           where id = $1`,
         [readId, finished.asOf, JSON.stringify(finished.extract), JSON.stringify(finished.warnings),
           record.origin?.parser_version ?? PARSER_VERSION, observation.id, reportCompId],
