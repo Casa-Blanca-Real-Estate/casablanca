@@ -200,7 +200,7 @@ export const COLUMNS: Record<string, Record<string, Spec>> = {
     status: { enum: ['queued', 'running', 'done', 'failed'] }, attempts: 'pass', started_at: 'pass', finished_at: 'pass',
     as_of: 'pass', extract: 'never', parser_version: { match: VERSION }, warnings: 'text', error: { match: CODE },
     error_message: 'text', observation_id: 'pass', report_comp_id: 'pass', confirmed_at: 'pass', confirmed_by: 'email',
-    dismissed_at: 'pass', ...stamps, ...updates,
+    dismissed_at: 'pass', found_by: 'never', ...stamps, ...updates,
   },
   // Coordinates are addresses: the home's own building is geocoded here.
   geocodes: {
@@ -316,7 +316,7 @@ export const WORKSPACE: Spec = {
         obj: {
           id: 'pass', purpose: { enum: ['comp', 'subject'] }, url: 'text', status: { enum: ['queued', 'running', 'done', 'failed'] },
           error: { match: CODE }, errorMessage: 'text', reportCompId: 'pass', asOf: 'pass', extract: 'never',
-          warnings: 'text', confirmedAt: 'pass', createdAt: 'pass', startedAt: 'pass', finishedAt: 'pass',
+          warnings: 'text', confirmedAt: 'pass', foundBy: 'never', createdAt: 'pass', startedAt: 'pass', finishedAt: 'pass',
         },
       },
     },

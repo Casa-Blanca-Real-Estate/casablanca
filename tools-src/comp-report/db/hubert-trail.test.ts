@@ -310,8 +310,9 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
     assert.equal(results.length, 4, 'one result per comp');
     for (const [i, [k, tier]] of asked.entries()) {
       const r = results[i]!;
-      // A comp the engine can't sort refuses; every other ends up as the agent said.
-      if (r.is_error) assert.match(String(r.content), /can’t be sorted/, `comp ${k}: ${String(r.content)}`);
+      // A comp the engine can't sort refuses; one an earlier test already set says so; every other ends up as the agent said.
+      if (r.is_error && /already reads that way/.test(String(r.content))) assert.equal((await row(order[k - 1]!)).tier, tier, `comp ${k}`);
+      else if (r.is_error) assert.match(String(r.content), /can’t be sorted/, `comp ${k}: ${String(r.content)}`);
       else assert.equal((await row(order[k - 1]!)).tier, tier, `comp ${k}`);
     }
     assert.ok(results.some((r) => !r.is_error), 'at least one applied');
