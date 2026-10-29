@@ -114,7 +114,10 @@ each was applied.
   style file is `tools-src/comp-report/server/house-voice.ts`, quoted in the PR. `CR_EVAL_ANTHROPIC_API_KEY` is in the
   cloud environment (2026-10-21), so Mason can run the real eval in a new session (well under a dollar).
   Your first read (CR-3, 2026-10-21): "It seems fine, but there's not enough writing yet to tell. That may be all it needs."
-  So the question waits for the eval drafts.
+  **The eval drafts are in (2026-10-29):** `docs/comp-report/writer-eval-2026-10-29.md`, twelve real drafts (two
+  reports, three lengths), with a short read at the top. 11 of 12 pass QA. Four things you might want changed in a new
+  voice version: it adds its own points to Things to consider; one headline names a single price; carrying-cost lines
+  repeat on every comp; the text message carries the email frame. Answer: keep the voice as is, or revise it.
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---
