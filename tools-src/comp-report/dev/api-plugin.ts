@@ -40,6 +40,10 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/client-words': { module: '/server/api/client-words.ts', handler: 'handleClientWords' },
   '/api/comp-report/email-photos': { module: '/server/api/email-photos.ts', handler: 'handleEmailPhotos' },
   '/api/comp-report/email-photo': { module: '/server/api/email-photos.ts', handler: 'handleEmailPhoto' },
+  '/api/comp-report/activity': { module: '/server/api/activity.ts', handler: 'handleActivity' },
+  '/api/comp-report/access-log': { module: '/server/api/access-log.ts', handler: 'handleAccessLog' },
+  '/api/comp-report/capability': { module: '/server/api/capability.ts', handler: 'handleCapability' },
+  '/api/comp-report/signin-error': { module: '/server/api/signin-error.ts', handler: 'handleSignInError' },
   '/api/comp-report/agent-card': { module: '/server/api/agent-card.ts', handler: 'handleAgentCard' },
 };
 

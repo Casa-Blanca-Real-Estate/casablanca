@@ -7,6 +7,17 @@ import { noteOf, type Intake } from '../../../workspace/state.ts';
 
 export type ScreenId = 'sort' | 'gate' | 'findings' | 'send' | 'done';
 
+/**
+ * Every screen the app can show, for the activity log (Dispatch 22b): the workspace's, the new
+ * report's three steps, the reports list and the Access panel. The server takes `screen.<id>`
+ * only for these (server/api/activity.ts); add a screen here when the router gains one.
+ */
+export const SCREEN_IDS = [
+  'reports', 'access', 'new-report', 'new-report-details', 'new-report-comps',
+  'sort', 'gate', 'findings', 'send', 'done',
+] as const satisfies readonly string[];
+export type LoggedScreen = (typeof SCREEN_IDS)[number];
+
 /** The progress row: Sort → Findings → Send. The Gate sits under Findings; Done under Send. */
 export const PROGRESS: { id: 'sort' | 'findings' | 'send'; n: number; label: string }[] = [
   { id: 'sort', n: 1, label: 'Sort' },

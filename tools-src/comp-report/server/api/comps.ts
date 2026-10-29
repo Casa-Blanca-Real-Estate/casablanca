@@ -42,6 +42,7 @@ import { freeTagHardTerm, isFreeTag, MAX_FREE_TAG, MAX_TAGS, normalizeFreeTag } 
 import { MAX_CLIENT_LINE, type ClientLine } from '../../workspace/client-words.ts';
 import { NO_NOTE_YET, OVERRIDE_KEYS, type FactOverride, type OverrideKey } from '../../workspace/state.ts';
 import { asUser, requirePool } from './reports.ts';
+import { logActivity, type Action } from '../logs.ts';
 import type { SamplePhotoDeps } from './sample-photos.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
 
@@ -384,7 +385,7 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
 
     if (req.method === 'POST' && body.manual !== undefined) {
       const edits = compEdits(body, user.email, new Date());
-      return json(await withActor(pool, asUser(user), async (tx) => {
+      const added = await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
         const before = await noteAndTier(tx, reportId, body.manual);
         const id = await addManualComp(tx, reportId, body.manual, newYorkToday());
@@ -393,8 +394,10 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
         if (before?.tier && edits.note !== undefined && (edits.note ?? null) !== (before.note ?? null)) {
           await recordReason(tx, reportId, id, before.tier, (edits.note ?? '').slice(0, MAX_REASON) || NO_NOTE_YET, 'property', false);
         }
-        return loadWorkspace(tx, user, reportId);
-      }), 201);
+        return { workspace: await loadWorkspace(tx, user, reportId), isNew: !before };
+      });
+      if (added.isNew) await logActivity(pool, user.email, { name: 'comp.added', reportId, detail: { via: 'manual', by: 'agent' } });
+      return json(added.workspace, 201);
     }
 
     // The tags the data settles, set on several comps at once (NB-9 C, Dispatch 20): a full agent's are pre-filled,
@@ -433,12 +436,14 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
       if (reason.length > MAX_REASON) throw new HttpError(400, 'bad_reason', `Keep the reason under ${MAX_REASON} characters.`);
       const reasonType = typeof body.reasonType === 'string' && REASON_TYPES.includes(body.reasonType) ? body.reasonType : null;
       if (!reasonType) throw new HttpError(400, 'bad_reason_type', 'The reason is about the property, the client or the method.');
-      return json(await withActor(pool, asUser(user), async (tx) => {
+      const workspace = await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
         await recordReason(tx, reportId, reportCompId, tier, reason, reasonType, false);
         if (tier !== 'primary') await setAnchor(tx, reportId, reportCompId, false); // the ★ comp is 1st tier
         return loadWorkspace(tx, user, reportId);
-      }));
+      });
+      await logActivity(pool, user.email, { name: 'comp.tiered', reportId, detail: { tier, by: 'agent' } });
+      return json(workspace);
     }
 
     const reviewed = body.reviewed;
@@ -459,7 +464,8 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
       && edits.clientLine === undefined) {
       throw new HttpError(400, 'nothing_to_save', 'Nothing to save.');
     }
-    return json(await withActor(pool, asUser(user), async (tx) => {
+    const actions: Action[] = [];
+    const workspace = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
       const current = (await tx.query<{ tier: string | null; note: string | null; removed_at: Date | null }>(
         'select tier, note, removed_at from comp_report.report_comps where report_id = $1 and id = $2', [reportId, reportCompId],
@@ -499,11 +505,16 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
       if (nextTier && (nextTier !== current.tier || noteChanged)) {
         await recordReason(tx, reportId, reportCompId, nextTier, (note ?? '').slice(0, MAX_REASON) || NO_NOTE_YET, 'property', false);
       }
+      if (removed === true && !current.removed_at) actions.push({ name: 'comp.removed', reportId, detail: { by: 'agent' } });
+      if (removed === false && current.removed_at) actions.push({ name: 'comp.restored', reportId, detail: { by: 'agent' } });
+      if (nextTier && nextTier !== current.tier) actions.push({ name: 'comp.tiered', reportId, detail: { tier: nextTier, by: 'agent', starred: anchor === true } });
       if (reviewed !== undefined) await setReviewed(tx, reportId, reportCompId, reviewed);
       if (anchor !== undefined) await setAnchor(tx, reportId, reportCompId, anchor);
       // 2nd or ✕ takes the star off: the ★ comp is 1st tier.
       else if (tier !== undefined && tier !== 'primary') await setAnchor(tx, reportId, reportCompId, false);
       return loadWorkspace(tx, user, reportId);
-    }));
+    });
+    await logActivity(pool, user.email, actions);
+    return json(workspace);
   });
 }

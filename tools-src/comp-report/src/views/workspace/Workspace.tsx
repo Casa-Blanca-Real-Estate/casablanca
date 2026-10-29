@@ -36,6 +36,7 @@ import { SortStep } from './SortStep.tsx';
 import { ReviewFlow } from '../review/ReviewFlow.tsx';
 import { Center, DevStrip, DRAWER_SLIDE_MS, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
 import { ReportBar } from '../shell/ReportBar.tsx';
+import { trackScreen } from '../../activity.ts';
 import { ProgressRow, WorkspaceHeader } from '../shell/WorkspaceHeader.tsx';
 
 type Field = 'title' | 'brief' | 'call' | 'target' | 'state' | 'sampleData' | 'propertyType';
@@ -168,6 +169,10 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [state, setStateState] = useState<WorkspaceState>({});
   const [screen, setScreen] = useState<ScreenId>(screenFromUrl);
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
+  // The activity log's screen line (Dispatch 22b): the new report's steps while its modal is open, else the screen.
+  useEffect(() => {
+    trackScreen(start === 'home' ? 'new-report' : start ? (`new-report-${start}` as const) : screen, reportId);
+  }, [start, screen, reportId]);
   const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
   // The drawer stays mounted for its slide out (shell.css), then goes (Kimani's notebook, 2026-10-27).
   const [drawerShown, setDrawerShown] = useState(drawerOpen);

@@ -6,6 +6,22 @@
 
   var BACKEND = (localStorage.getItem('cb_backend') || '').replace(/\/+$/, '');
 
+  // The unsent draft (NW-098): kept in this browser on every keystroke, put back when the tray
+  // opens (into .value only, so a draft is always text), and cleared once it's sent.
+  var DRAFT_KEY = 'cb_feedback_draft';
+  function readDraft() {
+    try {
+      var d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+      return d && typeof d === 'object' ? d : null;
+    } catch (e) { return null; }
+  }
+  function saveDraft(d) {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch (e) { /* storage off: the draft lives only while the tray is open */ }
+  }
+  function clearDraft() {
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing to clear */ }
+  }
+
   function mount() {
     if (document.querySelector('.cb-fb-btn')) return;
 
@@ -60,6 +76,9 @@
     function onOutside(e) {
       if (!tray) return;
       if (tray.contains(e.target) || btn.contains(e.target)) return;
+      // A message being written isn't thrown away by a stray click: Escape, × or the button close it.
+      var msg = tray.querySelector('.cb-fb-msg');
+      if (msg && msg.value.trim()) return;
       // A host page can render its own trigger (the Studio sidebar does) and dock
       // it anywhere; clicking that must toggle the tray, not count as "outside".
       if (e.target.closest && e.target.closest('[data-cb-feedback-trigger]')) return;
@@ -89,6 +108,15 @@
 
       var auth = (localStorage.getItem('cb_auth') || '').trim();
       if (auth) emailEl.value = auth;
+      var draft = readDraft();
+      if (draft) {
+        if (typeof draft.name === 'string') nameEl.value = draft.name;
+        if (typeof draft.email === 'string' && draft.email) emailEl.value = draft.email;
+        if (typeof draft.message === 'string') msgEl.value = draft.message;
+      }
+      tray.oninput = function () {
+        saveDraft({ name: nameEl.value || '', email: emailEl.value || '', message: msgEl.value || '' });
+      };
 
       tray.querySelector('.cb-fb-close').onclick = close;
 
@@ -110,6 +138,7 @@
         }).then(function (r) {
           if (!r.ok) throw new Error('bad status');
           msgEl.value = '';
+          clearDraft();
           statusEl.textContent = 'Thanks! ✓';
           setTimeout(close, 1200);
         }).catch(function () {

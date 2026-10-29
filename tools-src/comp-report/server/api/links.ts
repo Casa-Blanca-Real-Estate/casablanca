@@ -37,6 +37,7 @@ import { checkListingLink, MAX_LINKS_PER_REQUEST, newYorkToday, readLimit, TOO_L
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
 import { loadJudgments, loadReads, reportFor } from './workspace.ts';
+import { logViewed } from '../logs.ts';
 
 /**
  * A read claimed while running this long is taken to have died, and can be
@@ -56,10 +57,13 @@ export function handleLinks(req: Request, deps: AuthDeps & { env?: Record<string
     if (req.method === 'GET') {
       const reportId = new URL(req.url).searchParams.get('report') ?? '';
       if (!UUID.test(reportId)) throw new HttpError(400, 'bad_report', 'Which report?');
-      return json(await withActor(pool, asUser(user), async (tx) => {
-        await reportFor(tx, user, reportId, false);
-        return { reads: await loadReads(tx, reportId), comps: await loadJudgments(tx, reportId) };
+      const { report, ...data } = await withActor(pool, asUser(user), async (tx) => ({
+        report: await reportFor(tx, user, reportId, false),
+        reads: await loadReads(tx, reportId),
+        comps: await loadJudgments(tx, reportId),
       }));
+      await logViewed(pool, user, report);
+      return json(data);
     }
 
     const body = await readJsonObject(req);

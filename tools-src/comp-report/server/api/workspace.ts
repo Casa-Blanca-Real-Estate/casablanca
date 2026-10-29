@@ -25,6 +25,7 @@ import { CLIENT_PRIORITIES, TARGET_OWNERS, type CompJudgment, type CompSource, t
 import { neutralNumbers } from '../numbers.ts';
 import { withActor, type Queryable } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
+import { logActivity, logViewed, type Action } from '../logs.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
 
@@ -423,12 +424,14 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
     if (req.method === 'GET') {
       const reportId = new URL(req.url).searchParams.get('report') ?? '';
       if (!UUID.test(reportId)) throw new HttpError(400, 'bad_report', 'Which report?');
-      return json(await withActor(pool, asUser(user), async (tx) => {
+      const data = await withActor(pool, asUser(user), async (tx) => {
         // Only the owner's load pins a late reveal: an admin reading another agent's report writes nothing.
         const report = await reportFor(tx, user, reportId, false);
         if (report.owner_email === user.email) await backfillReveal(tx, reportId);
         return loadWorkspace(tx, user, reportId);
-      }));
+      });
+      await logViewed(pool, user, { id: reportId, owner_email: data.report.ownerEmail });
+      return json(data);
     }
 
     const body = await readJsonObject(req, 256 * 1024);
@@ -486,17 +489,26 @@ export function handleWorkspace(req: Request, deps: AuthDeps): Promise<Response>
 
     // A call given or skipped pins the reveal, after the other fields are saved.
     const pins = 'call' in body && body.call !== null;
+    const sends = 'state' in body && isObject(body.state) && isObject(body.state.send) && typeof body.state.send.sentAt === 'string';
     const saved = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
+      // Marked sent by this save, not already: the activity log's report.sent.
+      const wasSent = sends
+        ? (await tx.query<{ sent: boolean }>(`select state -> 'send' ->> 'sentAt' is not null as sent from comp_report.reports where id = $1`, [reportId])).rows[0]?.sent ?? false
+        : true;
       const { rows } = await tx.query<{ updated_at: Date }>(
         `update comp_report.reports set ${sets.join(', ')} where id = $1 and owner_email = $2 returning updated_at`,
         values,
       );
       if (!rows[0]) return null;
       const reveal = pins ? await pinReveal(tx, reportId, new Date().toISOString()) : null;
-      return { updatedAt: rows[0].updated_at, reveal };
+      return { updatedAt: rows[0].updated_at, reveal, sent: !wasSent };
     });
     if (!saved) throw new HttpError(404, 'not_found', 'No such report.');
+    const actions: Action[] = [];
+    if (pins && isObject(body.call)) actions.push({ name: 'call.given', reportId, detail: { skipped: body.call.skipped === true, by: 'agent' } });
+    if (saved.sent) actions.push({ name: 'report.sent', reportId, detail: { by: 'agent' } });
+    await logActivity(pool, user.email, actions);
     return json({ saved: true, updatedAt: iso(saved.updatedAt), ...(saved.reveal ? { reveal: saved.reveal } : {}) });
   });
 }
