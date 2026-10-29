@@ -66,8 +66,8 @@ export function SignIn({ notice, onSignedIn }: { notice?: string; onSignedIn: (s
       {mode === 'choose' && (
         <button type="button" className="link sh-toggle" onClick={() => setMode('password')}>Sign in with email instead</button>
       )}
-      {/* Inheriting the Studio's session is a follow-up (the Studio has no sign-in the server can verify). */}
-      <p className="sh-help center sh-fine">Signing in to the Studio doesn’t sign you in here yet.</p>
+      {/* One sign-in for the whole Studio (assets/studio-auth.js): a Studio page sends a signed-out visit here and gets it back. */}
+      <p className="sh-help center sh-fine">One sign-in for the whole Studio.</p>
 
       {mode === 'password' && (
         <form onSubmit={passwordSignIn} className="sh-form">

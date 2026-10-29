@@ -17,6 +17,34 @@ function currentReportId(): string | null {
   return new URLSearchParams(location.search).get('report');
 }
 
+// A Studio page sent a signed-out visit here to sign in (assets/studio-auth.js): ?next=<that page>. It's kept
+// for this tab, since Google's sign-in comes back through the site root without it, and taken once the server
+// says yes. Only a path on this site, never the comp report itself.
+const NEXT_KEY = 'cb.studio.next';
+function keepNext(): void {
+  const params = new URLSearchParams(location.search);
+  const next = params.get('next');
+  if (next === null) return;
+  params.delete('next');
+  const rest = params.toString();
+  history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : '') + location.hash);
+  try {
+    if (/^\/(?![/\\])/.test(next) && !next.startsWith('/tools/comp-report')) sessionStorage.setItem(NEXT_KEY, next);
+  } catch {
+    /* storage blocked: the visit stays here */
+  }
+}
+function takeNext(): string | null {
+  try {
+    const next = sessionStorage.getItem(NEXT_KEY);
+    sessionStorage.removeItem(NEXT_KEY);
+    return next;
+  } catch {
+    return null;
+  }
+}
+keepNext();
+
 export function App() {
   const [state, setState] = useState<SessionState>({ status: 'loading' });
   const [me, setMe] = useState<Me | null>(null);
@@ -38,7 +66,11 @@ export function App() {
     // The first screen's data, asked for alongside /me rather than after it (api.ts, prefetch).
     const id = currentReportId();
     prefetch(id ? `/api/comp-report/workspace?report=${id}` : '/api/comp-report/reports');
-    api<Me>('/api/comp-report/me').then(setMe, (e) => {
+    api<Me>('/api/comp-report/me').then((m) => {
+      const next = takeNext();
+      if (next) location.replace(next);
+      else setMe(m);
+    }, (e) => {
       // A guest key the server won't take (production, or out of date): back to signing in.
       if (session.guest && e instanceof ApiError && e.status === 401) {
         leaveGuestMode();
@@ -56,6 +88,13 @@ export function App() {
       await session.signOut();
     } catch {
       /* fall through to the sign-in screen */
+    }
+    // The Studio's own marks (assets/studio-auth.js): who it was last told is signed in, and the team's tokens.
+    try {
+      for (const k of ['cb_auth', 'cb_cms_token', 'cb_pics_token']) localStorage.removeItem(k);
+      sessionStorage.removeItem('cb.studio.me');
+    } catch {
+      /* storage blocked */
     }
     history.pushState(null, '', location.pathname);
     setReportId(null);

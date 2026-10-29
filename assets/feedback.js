@@ -106,8 +106,11 @@
       var sendEl = tray.querySelector('.cb-fb-send');
       var statusEl = tray.querySelector('.cb-fb-status');
 
-      var auth = (localStorage.getItem('cb_auth') || '').trim();
+      // Whoever's signed in to the Studio (assets/studio-auth.js); the old dev sign-in's email before it answers.
+      var S = window.CBStudio;
+      var auth = (S && S.user && S.user.email) || (localStorage.getItem('cb_auth') || '').trim();
       if (auth) emailEl.value = auth;
+      if (S && S.user && S.user.name && !nameEl.value) nameEl.value = S.user.name;
       var draft = readDraft();
       if (draft) {
         if (typeof draft.name === 'string') nameEl.value = draft.name;
