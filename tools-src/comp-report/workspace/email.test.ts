@@ -64,8 +64,10 @@ test('empty sections are left out; short and text lengths keep only what they ne
   assert.ok(short.includes('SOLD') && !short.includes('ACTIVE') && !short.includes('I focused') && !short.includes('the closest match'));
   assert.equal(short.includes('PRICE PER SQ FT'), false, 'the price table is the full email’s');
   const sms = buildEmail({ ...base, length: 'text' }).text;
-  assert.ok(sms.startsWith('Hi Leeann,') && sms.includes(HEADLINE) && sms.includes('If you offer') && sms.includes(DISCLAIMER));
+  assert.ok(sms.startsWith(HEADLINE) && sms.includes('If you offer') && sms.includes(DISCLAIMER));
   assert.equal(sms.includes('SOLD'), false);
+  assert.equal(sms.includes('Hi Leeann'), false, 'a text, not an email: no greeting (CR-3)');
+  assert.equal(sms.split('\n\n')[0]!.includes('\n– '), true, 'one message, signed under it');
 });
 
 test('no headline: a placeholder, and the email can’t be copied until there is one (D-21)', () => {
