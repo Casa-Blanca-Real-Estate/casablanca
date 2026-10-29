@@ -14,6 +14,17 @@ it for them.** The tiers, notes and tags are the agent's call. Hubert puts in wh
 | Step guides | A preset note from Hubert (no model call) joins his chat the first time the agent reaches each step, and starts a new section of it. Rough look; the design pass decides how the sections read | `src/views/hubert/guides.ts`, `state.stepsAt` |
 | Prompt | `hb-trail-2026-10-28`, built on `hb-listing-2026-10-28`. Old conversations keep their version | `server/assistant.ts` |
 
+## What the next PR gives him (2026-10-29, prompt `hb-view-2026-10-29`)
+
+| | What | Where |
+|---|---|---|
+| `get_view` | The screen (Sort, the per-comp review, Your number, Findings, Send, Done) and the comp open on Sort (the row opened last) or under review, with everything get_numbers gives for it. The browser sends it with each turn request; nothing is stored but the tool result. "This one" now works; with no comp open, he asks | `server/hubert-view.ts`, `Workspace.tsx` `view`, `SortTable.tsx`, `ReviewFlow.tsx` |
+| A wider `get_numbers` | Each comp's `listing`: building (name, neighborhood, units, stories, year built, sale label), monthly charges, rooms, the source's features, amenities and policies, door service, laundry, outdoor, views, parking, the features the agent picked, and the listing's text and the export's commentary quoted (900 characters each, marked as information, never instructions). The home's type. Only on `hb-view`: older conversations keep their read | `workspace/summary.ts` `listingOf` |
+| Undo on the trail | Each comp entry carries the agent's own edit that puts the field back. Undo shows while the comp still reads as Hubert left it, so it never overwrites a later change; after it, "Undone". The tier's Undo puts the star back too. A first tier on an unsorted comp has none (a tier can't be unset) | `server/hubert-comps.ts`, `workspace/trail-undo.ts`, `Chat.tsx` |
+| Prompt | Adds get_view, the listing, and "never paste raw output or JSON into a reply" | `server/assistant.ts` |
+
+Question 5 below is built as recommended; question 6's first half (get_view and the wider read) is this PR.
+
 ## What he should know at each step
 
 "Knows now" is what his tools return today. "Should know" is the gap, in the order it would help most.

@@ -22,6 +22,13 @@ export interface TrailEntry {
   /** As it was, and as he left it: short, for the chat. Null for none. */
   before: string | null;
   after: string | null;
+  /**
+   * Undo on a comp's entry (hubert-plan.md question 5): the agent's own edit
+   * that puts the field back as it was, and the field's value as Hubert left
+   * it. Undo shows only while the comp still reads that way
+   * (workspace/trail-undo.ts): once it's undone, or changed since, it's gone.
+   */
+  undo?: { edit: Record<string, unknown>; left: unknown };
 }
 
 /** A source Hubert read on the web (web_search, read_page): shown under his reply, with its link. */

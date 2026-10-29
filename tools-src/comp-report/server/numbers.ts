@@ -70,12 +70,20 @@ export async function neutralNumbers(tx: Queryable, reportId: string, asOf = new
   return { output, comps, state, brief: report.brief ?? {}, revealed: report.revealed, removed, propertyType: report.property_type };
 }
 
-export async function numbersFor(tx: Queryable, reportId: string, asOf = newYorkToday()) {
+/** get_numbers. `wide` is the wider read (each comp's features, amenities, building, listing text) from hb-view on. */
+export async function numbersFor(tx: Queryable, reportId: string, opts: { asOf?: string; wide?: boolean } = {}) {
+  const asOf = opts.asOf ?? newYorkToday();
   const n = await neutralNumbers(tx, reportId, asOf);
-  if (!n) return null;
+  return n ? summaryOf(tx, reportId, n, { asOf, wide: Boolean(opts.wide) }) : null;
+}
+
+/** get_numbers' summary of numbers already run (get_view reads one comp of it). */
+export async function summaryOf(tx: Queryable, reportId: string, n: NeutralNumbers, opts: { asOf: string; wide: boolean }) {
+  const asOf = opts.asOf;
   return numbersSummary({
     output: n.output, comps: n.comps, intake: n.state.intake, revealed: n.revealed, removed: n.removed,
     homeOnMarket: await homeOnMarket(tx, reportId, asOf),
+    ...(opts.wide ? { wide: { propertyType: n.propertyType } } : {}),
   });
 }
 

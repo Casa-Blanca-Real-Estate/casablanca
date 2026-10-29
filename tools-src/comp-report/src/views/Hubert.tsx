@@ -12,6 +12,8 @@ import { useState } from 'react';
 import type { CompJudgment } from '../../workspace/state.ts';
 import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
+import { undoStands } from '../../workspace/trail-undo.ts';
+import type { CompEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
 import { GREETING, intro, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
 import { reachedGuides } from './hubert/guides.ts';
@@ -152,6 +154,17 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onEmailEdit={ws.queueHubertEdit}
         onCompsChanged={ws.reloadComps}
         guides={reachedGuides(ws.stepsAt, ws.side)}
+        view={ws.view}
+        undo={{
+          // The comps as the screen has them: Undo shows while the comp still reads as he left it.
+          can: (entry) => undoStands(entry, ws.comps.find((c) => c.judgment?.reportCompId === entry.compId)?.judgment),
+          // The agent's own edit, through the same queue as their other edits.
+          run: async (entry) => {
+            if (!entry.compId || !entry.undo) return;
+            await ws.editComp(entry.compId, entry.undo.edit as CompEdit);
+            ws.toast(`${entry.label} on ${entry.target} put back.`);
+          },
+        }}
         onJump={(entry) => {
           if (entry.kind === 'email') {
             if (ws.screen !== 'send') ws.go('send');

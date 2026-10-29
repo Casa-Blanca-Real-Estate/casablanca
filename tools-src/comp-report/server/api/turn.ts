@@ -1,7 +1,8 @@
 // POST /api/comp-report/turn — one assistant turn, streamed (design §8.3 rule 6).
 //
-//   body: { reportId, message? }   message is the agent's new text; omit it to
-//                                  continue after a tool call
+//   body: { reportId, message?, view? }   message is the agent's new text; omit it to
+//                                  continue after a tool call. view is what the agent
+//                                  has on screen as the request goes (server/hubert-view.ts)
 //   reply: text/event-stream of JSON events —
 //     email_edit (Hubert's checked edit, for Send) · change (one entry of Hubert's trail, server/hubert-trail.ts)
 //     · comps_changed (he changed a comp: the screen reloads them) · start · progress · text · tool · done
@@ -27,6 +28,7 @@ import {
 import { withActor, type PoolLike, type Queryable } from '../db.ts';
 import { editFromResult, type HubertEmailEdit } from '../hubert-email.ts';
 import { trailOf, type TrailEntry } from '../hubert-trail.ts';
+import { readView, type HubertView } from '../hubert-view.ts';
 import { logActivity, type Action } from '../logs.ts';
 import type { WebSearcher } from '../web-search.ts';
 import { allowMethods, HttpError, readJsonObject, respond, UUID } from '../http.ts';
@@ -62,7 +64,9 @@ const IN_FLIGHT_SECONDS = 90;
 type Event = Record<string, unknown> & { type: string };
 
 /** Loads the transcript, records the agent's message and any tool results. */
-async function prepare(pool: PoolLike, user: SessionUser, reportId: string, message: string | null, inFlightSeconds: number, web?: WebSearcher) {
+async function prepare(
+  pool: PoolLike, user: SessionUser, reportId: string, message: string | null, inFlightSeconds: number, web?: WebSearcher, view: HubertView | null = null,
+) {
   return withActor(pool, asUser(user), async (tx) => {
     // The conversation is the owner's; admins can read reports, not talk in them.
     const report = await tx.query('select 1 from comp_report.reports where id = $1 and owner_email = $2 and status <> \'deleted\'', [reportId, user.email]);
@@ -92,7 +96,7 @@ async function prepare(pool: PoolLike, user: SessionUser, reportId: string, mess
       // §8.3 rule 6: run the pending tool calls server-side first.
       const results = [];
       for (const call of pending) {
-        const result = await runTool(tx, reportId, call, prompt, { user, actions, ...(web ? { web } : {}) });
+        const result = await runTool(tx, reportId, call, prompt, { user, actions, view, ...(web ? { web } : {}) });
         results.push(result);
         const edit = call.name === 'edit_email' ? editFromResult(result) : null;
         if (edit) edits.push(edit);
@@ -140,7 +144,7 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
     const client = deps.anthropic();
     let prepared;
     try {
-      prepared = await prepare(pool, user, reportId, message, deps.inFlightSeconds ?? IN_FLIGHT_SECONDS, deps.web?.());
+      prepared = await prepare(pool, user, reportId, message, deps.inFlightSeconds ?? IN_FLIGHT_SECONDS, deps.web?.(), readView(body.view));
     } catch (error) {
       if ((error as { code?: string }).code === '23505') {
         throw new HttpError(409, 'turn_in_progress', 'This report is already answering. Wait for it to finish.');

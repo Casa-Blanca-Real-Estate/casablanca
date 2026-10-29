@@ -63,6 +63,13 @@ export function ReviewFlow({ ws, startAt, onClose }: { ws: Workspace; startAt: s
   });
   const i = Math.min(at, Math.max(0, steps.length - 1));
   const row = steps[i];
+  // The comp under review is the one Hubert's get_view gives.
+  const lookingAt = row?.rcId ?? null;
+  useEffect(() => {
+    if (!lookingAt) return;
+    ws.looking('review', lookingAt, true);
+    return () => ws.looking('review', lookingAt, false);
+  }, [lookingAt]);
   // The agent's unsaved words, by comp: kept while they move between steps, saved as they leave each.
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [saving, setSaving] = useState(false);

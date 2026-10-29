@@ -126,6 +126,8 @@ export interface ShownMessage {
 
 export type { HubertEmailEdit } from '../server/hubert-email.ts';
 export type { TrailEntry, TrailSource } from '../server/hubert-trail.ts';
+export type { HubertView } from '../server/hubert-view.ts';
+type HubertView = import('../server/hubert-view.ts').HubertView;
 type TrailEntry = import('../server/hubert-trail.ts').TrailEntry;
 type TrailSource = import('../server/hubert-trail.ts').TrailSource;
 
@@ -144,11 +146,11 @@ export type TurnEvent =
   | { type: 'error'; code: string; status: number | null };
 
 /** One assistant turn, as a stream of events (server/api/turn.ts). */
-export async function* streamTurn(reportId: string, message?: string): AsyncGenerator<TurnEvent> {
+export async function* streamTurn(reportId: string, message?: string, view?: HubertView | null): AsyncGenerator<TurnEvent> {
   const res = await fetch('/api/comp-report/turn', {
     method: 'POST',
     headers: await headers(),
-    body: JSON.stringify({ reportId, message }),
+    body: JSON.stringify({ reportId, message, ...(view ? { view } : {}) }),
   });
   if (!res.ok || !res.body) await fail(res);
   const reader = res.body!.getReader();

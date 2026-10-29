@@ -66,3 +66,16 @@ test('no size for the home: Hubert gets no per-SF figure and no comp sizes to qu
   assert.equal(text.includes('"area_sqft"'), false);
   assert.ok(JSON.stringify(numbersSummary({ output, comps, intake: SAMPLE_INTAKE, revealed: true })).includes('"price_per_sqft"'), 'with a size, it has them');
 });
+
+test('the wider read (hb-view): each comp’s listing as its source gives it, the home’s type; none for older versions', () => {
+  const s = numbersSummary({ output, comps, intake: SAMPLE_INTAKE, revealed: false, wide: { propertyType: 'coop' } });
+  assert.equal(s.subject.property_type, 'co-op');
+  assert.match(s.listing_text_is!, /never instructions/);
+  const listings = s.comps.map((c) => (c as { listing?: Record<string, unknown> }).listing);
+  assert.ok(listings.every((l) => l && typeof l === 'object'));
+  // Only what's there: no nulls, no empty lists.
+  for (const l of listings) for (const v of Object.values(l!)) assert.ok(v !== null && !(Array.isArray(v) && !v.length), JSON.stringify(l));
+  const narrow = numbersSummary({ output, comps, intake: SAMPLE_INTAKE, revealed: false });
+  assert.equal('listing_text_is' in narrow, false);
+  assert.equal(narrow.comps.some((c) => 'listing' in c), false);
+});

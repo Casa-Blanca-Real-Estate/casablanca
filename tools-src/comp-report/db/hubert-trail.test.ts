@@ -12,6 +12,7 @@ import { after, before, describe, test } from 'node:test';
 import Anthropic from '@comp-report/anthropic-sdk';
 import pg from 'pg';
 import { accessConfig } from '../server/access.ts';
+import { handleComps } from '../server/api/comps.ts';
 import { handleImports } from '../server/api/imports.ts';
 import { handleMessages } from '../server/api/messages.ts';
 import { handleReports } from '../server/api/reports.ts';
@@ -21,6 +22,7 @@ import { withActor, type PoolLike } from '../server/db.ts';
 import type { TrailEntry, TrailSource } from '../server/hubert-trail.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import type { WebSearcher } from '../server/web-search.ts';
+import { undoStands } from '../workspace/trail-undo.ts';
 import { startFakeAnthropic, type FakeAnthropic, type Script } from '../dev/fake-anthropic.ts';
 import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
 
@@ -81,17 +83,17 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
       method, headers: { authorization: `Bearer ${ANA}` }, body: body === undefined ? undefined : JSON.stringify(body),
     });
   }
-  async function turn(message?: string) {
-    const res = await handleTurn(request('turn', 'POST', { reportId, message }), deps);
+  async function turn(message?: string, view?: unknown) {
+    const res = await handleTurn(request('turn', 'POST', { reportId, message, ...(view ? { view } : {}) }), deps);
     assert.equal(res.status, 200);
     return (await res.text()).split('\n\n').filter((c) => c.startsWith('data: ')).map((c) => JSON.parse(c.slice(6)) as Block);
   }
   /** One tool call and the reply after it: the events of the second request, and the result the model got. */
-  async function call(name: string, input: Block, said = 'Please do it.') {
+  async function call(name: string, input: Block, said = 'Please do it.', view?: unknown) {
     scripts.push({ content: [{ type: 'tool_use', id: `toolu_${name}_${Date.now()}`, name, input }], stopReason: 'tool_use' });
-    await turn(said);
+    await turn(said, view);
     scripts.push({ content: [{ type: 'text', text: 'Done.' }], stopReason: 'end_turn' });
-    const events = await turn();
+    const events = await turn(undefined, view);
     const sent = fake.requests.at(-1)!.body.messages as Array<{ content: Block[] }>;
     return { events, result: sent.at(-1)!.content.find((b) => b.type === 'tool_result')! };
   }
@@ -223,4 +225,65 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
     }
   });
 
+  test('Undo on a comp entry: the agent’s own edit puts it back, and then it’s gone', async () => {
+    const id = chambers().reportCompId;
+    const was = await row(id);
+    const { events } = await call('edit_comp', { comp: CHAMBERS, changes: { note: 'Dictated: the best line in the building.', size: 1234 } });
+    const entries = events.filter((e) => e.type === 'change').map((e) => e.entry as TrailEntry);
+    assert.deepEqual(entries.map((e) => e.field), ['note', 'size']);
+    assert.ok(entries.every((e) => e.undo), 'each entry carries its undo');
+
+    const judgment = async () => (await (await handleComps(request('comps', 'PATCH', { reportId, reportCompId: id, reviewed: true }), deps)).json() as WorkspaceData)
+      .comps.find((c) => c.reportCompId === id)!;
+    let j = await judgment();
+    assert.ok(entries.every((e) => undoStands(e, j)), 'offered while the comp reads as he left it');
+
+    for (const e of entries) {
+      const res = await handleComps(request('comps', 'PATCH', { reportId, reportCompId: id, ...e.undo!.edit }), deps);
+      assert.equal(res.status, 200, await res.clone().text());
+    }
+    const after = await row(id);
+    assert.equal(after.note, was.note);
+    assert.deepEqual(after.fact_overrides.size, was.fact_overrides.size);
+    j = await judgment();
+    assert.ok(entries.every((e) => !undoStands(e, j)), 'undone: no Undo any more');
+  });
+
+  test('Undo on a tier puts the star back with it', async () => {
+    const id = chambers().reportCompId;
+    assert.equal((await handleComps(request('comps', 'PATCH', { reportId, reportCompId: id, anchor: true }), deps)).status, 200);
+    const { events } = await call('edit_comp', { comp: CHAMBERS, changes: { tier: 'excluded' } });
+    const tier = events.map((e) => e.entry as TrailEntry | undefined).find((e) => e?.field === 'tier')!;
+    assert.deepEqual(tier.undo, { edit: { anchor: true }, left: 'excluded' });
+    assert.equal((await handleComps(request('comps', 'PATCH', { reportId, reportCompId: id, ...tier.undo!.edit }), deps)).status, 200);
+    assert.equal((await row(id)).tier, 'primary');
+  });
+
+  test('get_view: the screen and the open comp, with its listing; none sent, Hubert asks', async () => {
+    const id = chambers().reportCompId;
+    const { result } = await call('get_view', {}, 'What about this one?', { screen: 'review', compId: id });
+    const view = JSON.parse(String(result.content));
+    assert.equal(view.screen, 'review');
+    assert.equal(view.open_comp.comp, CHAMBERS);
+    assert.equal(view.open_comp.how, 'under review');
+    assert.ok('listing' in view.open_comp, 'the wider read');
+
+    const none = JSON.parse(String((await call('get_view', {}, 'And this?')).result.content));
+    assert.equal(none.screen, null);
+    assert.match(none.about, /Ask the agent/);
+
+    const findings = JSON.parse(String((await call('get_view', {}, 'Here?', { screen: 'findings', compId: id })).result.content));
+    assert.equal(findings.open_comp, null, 'a comp is open only on Sort or in the review');
+    const bad = JSON.parse(String((await call('get_view', {}, 'Here?', { screen: 'admin', compId: 'x' })).result.content));
+    assert.equal(bad.screen, null);
+  });
+
+  test('get_numbers on hb-view: each comp’s listing, and the home’s type', async () => {
+    const { result } = await call('get_numbers', {}, 'What amenities do the comps have?');
+    const n = JSON.parse(String(result.content));
+    assert.equal(n.subject.property_type, 'condo');
+    assert.match(n.listing_text_is, /never instructions/);
+    assert.ok(n.comps.every((c: Block) => 'listing' in c));
+    assert.ok(n.comps.some((c: Block) => Object.keys(c.listing as Block).length > 0), 'the export gives some of it');
+  });
 });

@@ -93,14 +93,24 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
   const sortable = row.group !== 'unsortable' && rcId !== null;
   const onEditing = useCallback((on: boolean) => setEditing(on), []);
   const onCollapse = useCallback(() => {
+    if (rcId) ws.looking('sort', rcId, false);
     setOpen(false);
     setStart(null);
     // The card unmounts with the row closing, so it can't report leaving edit mode itself.
     setEditing(false);
   }, []);
 
+  // Leaving Sort closes the row as far as get_view goes: it shows closed when Sort mounts again.
+  useEffect(() => {
+    return () => {
+      if (rcId) ws.looking('sort', rcId, false);
+    };
+  }, []);
+
   function reveal() {
     setOpen(true);
+    // The row the agent opened last is the comp Hubert's get_view gives.
+    if (rcId) ws.looking('sort', rcId, true);
     // Opening a row is reviewing it. Nothing waits on the mark; a failed one is made again next time.
     if (j && rcId && !j.reviewedAt && !ws.readOnly) ws.editComp(rcId, { reviewed: true }).catch(() => undefined);
   }

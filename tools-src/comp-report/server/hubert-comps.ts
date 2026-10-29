@@ -80,8 +80,8 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
   const body: Record<string, unknown> = {};
   const trail: TrailEntry[] = [];
   const target = address(comp);
-  const entry = (field: string, label: string, before: string | null, after: string | null) =>
-    trail.push({ kind: 'comp', compId: j.reportCompId, target, field, label, before, after });
+  const entry = (field: string, label: string, before: string | null, after: string | null, undo?: TrailEntry['undo']) =>
+    trail.push({ kind: 'comp', compId: j.reportCompId, target, field, label, before, after, ...(undo ? { undo } : {}) });
 
   if (ch.tier !== undefined) {
     if (typeof ch.tier !== 'string' || !TIERS.includes(ch.tier as Tier)) return { ok: false, error: 'The tier is primary, secondary or excluded.' };
@@ -89,7 +89,9 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
     const tier = ch.tier as Tier;
     if (tier !== j.tier) {
       body.tier = tier;
-      entry('tier', 'Tier', j.tier ? TIER_WORD[j.tier] : 'Not sorted', TIER_WORD[tier]);
+      // Undo puts the tier back, and the star with it; a comp that wasn't sorted can't be unsorted, so it has none.
+      const undo = j.tier ? { edit: j.anchor ? { anchor: true } : { tier: j.tier }, left: tier } : undefined;
+      entry('tier', 'Tier', j.tier ? TIER_WORD[j.tier] : 'Not sorted', TIER_WORD[tier], undo);
       // The ★ comp is 1st tier: 2nd or Excluded takes the star off (patchComp), and the trail says so.
       if (j.anchor && tier !== 'primary') entry('anchor', 'Star (closest comp)', '★', null);
     }
@@ -100,7 +102,7 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
     const before = noteOf(j);
     if (note !== (before ?? '')) {
       body.note = note || null;
-      entry('note', 'Why it’s a comp', before ? short(before) : null, note ? short(note) : null);
+      entry('note', 'Why it’s a comp', before ? short(before) : null, note ? short(note) : null, { edit: { note: before }, left: note || null });
     }
   }
   const add = ch.add_tags, remove = ch.remove_tags;
@@ -114,7 +116,7 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
     for (const t of add ?? []) if (typeof t === 'string' && !next.some((x) => x.toLowerCase() === t.toLowerCase())) next.push(t);
     if (next.join('\n') !== current.join('\n')) {
       body.tags = next;
-      entry('tags', 'Tags', current.length ? current.join(', ') : null, next.length ? next.join(', ') : null);
+      entry('tags', 'Tags', current.length ? current.join(', ') : null, next.length ? next.join(', ') : null, { edit: { tags: current }, left: next });
     }
   }
   const overrides: Record<string, unknown> = {};
@@ -125,7 +127,8 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
       return { ok: false, error: key === 'date' ? 'The date is YYYY-MM-DD.' : `The ${key} is a whole number.` };
     }
     overrides[key] = v;
-    entry(key, FACT_LABEL[key], factText(key, comp.record), shown(key, v as number | string));
+    const was = j.factOverrides?.[key]?.value ?? null;
+    entry(key, FACT_LABEL[key], factText(key, comp.record), shown(key, v as number | string), { edit: { factOverrides: { [key]: was } }, left: v });
   }
   if (Array.isArray(ch.restore_facts)) {
     for (const key of ch.restore_facts) {
@@ -134,7 +137,9 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
       if (!j.factOverrides?.[key as OverrideKey]) continue;
       overrides[key as string] = null;
       const source = comp.original ? factText(key as OverrideKey, comp.original) : null;
-      entry(key as string, `${FACT_LABEL[key as OverrideKey]} (StreetEasy's back)`, factText(key as OverrideKey, comp.record), source);
+      const was = j.factOverrides[key as OverrideKey]!.value;
+      entry(key as string, `${FACT_LABEL[key as OverrideKey]} (StreetEasy's back)`, factText(key as OverrideKey, comp.record), source,
+        { edit: { factOverrides: { [key]: was } }, left: null });
     }
   }
   if (Object.keys(overrides).length) body.factOverrides = overrides;
