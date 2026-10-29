@@ -367,6 +367,27 @@ export interface EmailPhotos {
   home: string | null;
 }
 
+/** The signed-in agent's card from Casa's roster, for the email's sign-off (server/agent-card.ts). */
+export interface AgentCard {
+  name: string | null;
+  phone: string | null;
+  /** The headshot's path on this site, served publicly for the client's mail; null without one. */
+  photo: string | null;
+}
+
+let cardOnce: Promise<AgentCard | null> | null = null;
+
+export const agentCardApi = {
+  /** Asked once a page load; a failure is no card, asked again next time. */
+  mine: (): Promise<AgentCard | null> => {
+    cardOnce ??= api<{ card: AgentCard | null }>('/api/comp-report/agent-card').then((r) => r.card, () => {
+      cardOnce = null;
+      return null;
+    });
+    return cardOnce;
+  },
+};
+
 // ─── The per-comp review on Sort (Dispatch 25) ───────────────────────────────
 
 /** One round with Hubert on one comp, as the server stored it, and the workspace with it. */
@@ -385,3 +406,15 @@ export const reviewApi = {
   ask: (reportId: string, reportCompId: string, job: 'feedback' | 'take', opts: { asks?: string; practice?: boolean } = {}) =>
     api<ReviewReply>('/api/comp-report/comp-review', { method: 'POST', body: { reportId, reportCompId, job, ...opts } }),
 };
+
+// ── The sign-in and activity logs, and agents' levels (Dispatch 22b): admins only ──
+
+export type { AccessLine, ActivityLine } from '../server/api/access-log.ts';
+
+export interface Person {
+  email: string;
+  name: string | null;
+  role: Role;
+  capability: 'practice' | 'full';
+  lastSeenAt: string | null;
+}

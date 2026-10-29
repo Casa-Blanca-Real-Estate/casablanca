@@ -11,6 +11,7 @@ import type { Queryable } from './db.ts';
 import { editCompForAgent } from './hubert-comps.ts';
 import { emailFor, editEmail, EMAIL_FIELDS } from './hubert-email.ts';
 import { numbersFor } from './numbers.ts';
+import type { Action } from './logs.ts';
 import type { SessionUser } from './session.ts';
 import { readableUrl, webLimit, webLookupsToday, type WebSearcher } from './web-search.ts';
 
@@ -374,6 +375,8 @@ export function pendingToolUses(last: StoredMessage | undefined): Array<{ id: st
 export interface ToolContext {
   user?: SessionUser;
   web?: WebSearcher;
+  /** Hubert's comp edits for the activity log, by: 'hubert': the turn writes them once its transaction commits. */
+  actions?: Action[];
 }
 
 export async function runTool(
@@ -391,6 +394,7 @@ export async function runTool(
   if (call.name === 'edit_comp') {
     if (!ctx.user) return error('Changing comps isn’t available here.');
     const done = await editCompForAgent(tx, ctx.user, reportId, call.input);
+    if (done.ok) ctx.actions?.push(...done.actions);
     return done.ok
       ? { type: 'tool_result', tool_use_id: call.id, content: JSON.stringify({ applied: done.summary, trail: done.trail }) }
       : error(done.error);

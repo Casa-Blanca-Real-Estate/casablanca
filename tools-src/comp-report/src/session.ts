@@ -13,7 +13,7 @@ import {
   refreshSession, requestPasswordRecovery, updateUser,
 } from '@netlify/identity';
 import { takeGuestKeyFromUrl, withGuestMode } from './guest-session.ts';
-import { signInErrorNotice } from './sign-in-errors.ts';
+import { reportSignInError, signInErrorNotice } from './sign-in-errors.ts';
 
 export type SessionState =
   | { status: 'loading' }
@@ -66,6 +66,7 @@ const identity: SessionProvider = {
     }
     const refused = signInErrorNotice(location.hash);
     if (refused) {
+      reportSignInError(location.hash);
       history.replaceState(null, '', location.pathname + location.search);
       return { status: 'signed-out', notice: refused };
     }

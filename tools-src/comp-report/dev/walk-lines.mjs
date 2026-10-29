@@ -1,8 +1,10 @@
+// RETIRED (2026-10-28): Send's lines became the client's words in Dispatch 26; walk-client.mjs walks them now.
 // DEV ONLY — the walk for the agent's lines on Send (2026-10-21): the lines first, drafted from the notes,
 // tidied, Hubert's feedback and his edit to the email, with Undo; at 1440px and at phone width, against the
 // local dev server and the fakes. Needs 'npm i --no-save playwright-core' (the preinstalled Chromium).
 //   node tools-src/comp-report/dev/walk-lines.mjs <base> <outDir> [buyer|seller] [condo|coop]
 import { chromium } from 'playwright-core';
+import { chromePath } from './chrome-path.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -17,7 +19,7 @@ const tag = `${side}-${type}`;
 const errors = [];
 const check = (ok, what) => { if (!ok) errors.push(`expected: ${what}`); };
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const browser = await chromium.launch({ executablePath: chromePath() });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 await ctx.addInitScript((e) => sessionStorage.setItem('cr-dev-session', e), OWNER);
 await ctx.addInitScript(() => { try { localStorage.removeItem('cr-build-notes'); } catch {} });

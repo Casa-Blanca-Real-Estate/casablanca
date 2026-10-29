@@ -14,6 +14,7 @@ import { withActor, type PoolLike } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { normalizeEmail } from '../access.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
+import { logAccess, logViewed } from '../logs.ts';
 import { readsEveryReport, reportFor } from './workspace.ts';
 
 export interface ReportSummary {
@@ -93,12 +94,13 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
       const id = new URL(req.url).searchParams.get('id');
       if (id !== null) {
         if (!UUID.test(id)) throw new HttpError(400, 'bad_id');
-        const report = await withActor(pool, asUser(user), async (tx) => {
-          await reportFor(tx, user, id, false);
+        const { found, report } = await withActor(pool, asUser(user), async (tx) => {
+          const found = await reportFor(tx, user, id, false);
           const { rows } = await tx.query<ReportRow>(`select ${COLUMNS} from comp_report.reports where id = $1`, [id]);
-          return rows[0];
+          return { found, report: rows[0] };
         });
         if (!report) throw new HttpError(404, 'not_found', 'No such report.');
+        await logViewed(pool, user, found);
         return json({ report: summary(report) });
       }
       const params = new URL(req.url).searchParams;
@@ -137,6 +139,8 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
         );
         return rows;
       });
+      // An admin or mentor loading everyone's: one line per viewer and half hour (Dispatch 22b).
+      if (everyone) await logAccess(pool, { kind: 'viewed_list', source: 'server', byEmail: user.email, ownerEmail: owner });
       return json({ reports: reports.map(summary) });
     }
 

@@ -65,7 +65,7 @@ function isHeading(line: string): boolean {
  * disclaimer. Forgiving of the agent's edits: whatever it can't place is a
  * paragraph, so nothing they wrote is dropped.
  */
-export function parseEmailText(text: string, headline?: string): ParsedEmail {
+export function parseEmailText(text: string, headline?: string, signer?: string): ParsedEmail {
   const out: ParsedEmail = { sample: false, greeting: null, headline: null, intro: [], comps: [], consider: [], table: [], outro: [], signOff: null, disclaimer: null };
   const h = headline?.trim();
   const blocks = text.replace(/\r\n/g, '\n').split(/\n[ \t]*\n/).map((b) => b.replace(/^\n+|\s+$/g, '')).filter((b) => b.trim());
@@ -120,10 +120,12 @@ export function parseEmailText(text: string, headline?: string): ParsedEmail {
   }
   // Without the headline as written, the first paragraph after the greeting is it (the template's order).
   if (!out.headline && out.intro.length) out.headline = out.intro.shift()!;
-  // The sign-off: the last paragraph, when it's a short line that ends no sentence (the agent's name).
+  // The sign-off: the last paragraph, when it's a short line that ends no sentence (the agent's name),
+  // or when it is the signer's name, which may end in a period ("Kimani C.", "Sam Valk Jr.").
   const tail = out.outro.length ? out.outro : out.intro;
   const last = tail.at(-1);
-  if (last && last.length <= 60 && !/[.!?:]$/.test(last)) out.signOff = tail.pop()!;
+  const isSigner = Boolean(last && signer?.trim() && last.split('\n').at(-1)?.trim() === signer.trim());
+  if (last && last.length <= 60 && (isSigner || !/[.!?:]$/.test(last))) out.signOff = tail.pop()!;
   return out;
 }
 
@@ -229,7 +231,8 @@ export interface DesignedInput {
   email: ParsedEmail;
   anchor: DesignedComp | null;
   others: DesignedComp[];
-  agent: { name: string; office: string; email: string | null };
+  /** The sign-off: phone and headshot from Casa's roster, when it knows the agent (server/agent-card.ts). */
+  agent: { name: string; office: string; email: string | null; phone?: string | null; photo?: string | null };
   /** "Talk it through" (seller), "Plan the offer" (buyer). */
   cta: string;
   subject: string;
@@ -275,6 +278,13 @@ function quiet(text: string, url: string | null | undefined, style: string): str
 }
 
 const name = (c: DesignedComp, style: string) => quiet(c.name, c.url, style);
+
+/** A phone as the agent typed it, linked to call when it's a US number (10 digits, or 11 with the 1). */
+export function phoneLink(phone: string, style: string): string {
+  const digits = phone.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  const href = digits.length === 10 ? `tel:+1${digits}` : null;
+  return `<a${href ? ` href="${href}"` : ''} style="${style}color:#888680;text-decoration:none;">${esc(phone)}</a>`;
+}
 
 /** A box's photo: 494 × 330 inside its 1px border and 20px padding (536px within the email's 32px gutters). */
 const PHOTO_W = 494;
@@ -366,10 +376,17 @@ export function designedHtml(d: DesignedInput): string {
   }
   after.push(...e.outro.map((p) => para(p)));
   if (after.length) out.push(row(`<div style="font-size:15px;line-height:1.6;">${after.join('')}</div>`));
+  const signer = e.signOff?.split('\n').at(-1)?.trim() || d.agent.name || '[your name]';
+  const phone = d.agent.phone?.trim() || null;
+  // The headshot is Casa's copy, served from this site: the origin makes it absolute for the client's mail.
+  const headshot = d.agent.photo ? safeUrl(d.agent.photo.startsWith('/') ? `${d.origin}${d.agent.photo}` : d.agent.photo) : null;
   const mail = d.agent.email ? `mailto:${encodeURIComponent(d.agent.email).replace('%40', '@')}?subject=${encodeURIComponent(d.subject)}` : null;
   out.push(`<tr><td style="${CELL}padding:32px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid #0f0f0f;"><tr>`
-    + `<td width="56" style="${CELL}width:56px;padding:22px 16px 28px 0;"><div style="width:56px;height:56px;border-radius:50%;${HATCH}"></div></td>`
-    + `<td style="${CELL}padding:22px 0 28px;vertical-align:middle;"><div style="font-size:15px;font-weight:bold;">${esc(e.signOff?.split('\n').at(-1)?.trim() || d.agent.name)}</div>`
+    + `<td width="56" style="${CELL}width:56px;padding:22px 16px 28px 0;">${headshot
+      ? `<img src="${esc(headshot)}" alt="${esc(signer)}" width="56" height="56" style="display:block;width:56px;height:56px;border-radius:50%;object-fit:cover;border:0;">`
+      : `<div style="width:56px;height:56px;border-radius:50%;${HATCH}"></div>`}</td>`
+    + `<td style="${CELL}padding:22px 0 28px;vertical-align:middle;"><div style="font-size:15px;font-weight:bold;">${esc(signer)}</div>`
+    + (phone ? `<div style="font-size:13px;color:#888680;margin-top:2px;">${phoneLink(phone, 'font-size:13px;')}</div>` : '')
     + `<div style="font-size:12px;color:#888680;margin-top:2px;">${quiet(d.agent.office, null, 'font-size:12px;color:#888680;')}</div></td>`
     + (mail ? `<td align="right" style="${CELL}text-align:right;padding:22px 0 28px 12px;vertical-align:middle;"><a href="${esc(mail)}" style="display:inline-block;background:#0f0f0f;color:#ffffff;text-decoration:none;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;padding:12px 18px;white-space:nowrap;">${esc(d.cta)}</a></td>` : '')
     + '</tr></table></td></tr>');

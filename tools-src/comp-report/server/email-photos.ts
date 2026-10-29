@@ -50,10 +50,23 @@ const indexName = (reportId: string, url: string) => createHash('sha256').update
 export async function copyPhoto(store: EmailPhotoStore, fetchPhoto: PhotoFetch, reportId: string, url: unknown, now = () => new Date()): Promise<string | null> {
   const source = copyable(url);
   if (!source) return null;
-  const name = indexName(reportId, source);
+  return keepCopy(store, reportId, source, () => fetchPhoto(source), now);
+}
+
+/**
+ * One image kept in the store under a fresh key, once per owner and source: the
+ * key of the earlier copy when there is one, else `load`'s bytes, held to the
+ * same types and size. The agent's headshot (server/agent-card.ts) comes this
+ * way, from Casa's own photo store rather than a fetch.
+ */
+export async function keepCopy(
+  store: EmailPhotoStore, owner: string, source: string, load: () => ReturnType<PhotoFetch>, now = () => new Date(),
+): Promise<string | null> {
+  const reportId = owner;
+  const name = indexName(owner, source);
   const known = await store.getIndex(name).catch(() => null);
   if (known && PHOTO_KEY.test(known) && (await store.getPhoto(known).catch(() => null))) return known;
-  const got = await fetchPhoto(source).catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
+  const got = await load().catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
   if (!got.ok) return null;
   const type = got.contentType.split(';')[0]!.trim().toLowerCase();
   if (!PHOTO_TYPES.includes(type) || !got.data.byteLength || got.data.byteLength > MAX_PHOTO_BYTES) return null;

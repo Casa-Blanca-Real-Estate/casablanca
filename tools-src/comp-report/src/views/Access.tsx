@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { api, type AllowlistEntry, type Me, type Role } from '../api.ts';
+import { api, type AllowlistEntry, type Me, type Report, type Role } from '../api.ts';
+import { AuditLog, Levels, SignInLog, Timeline } from './AccessLog.tsx';
 
 // Admins only (server/api/allowlist.ts): who beyond Casa's domain may use the
 // comp report, and roles other than agent for Casa people. Admin isn't one of
@@ -12,7 +13,7 @@ const ROLES: { value: Role; label: string }[] = [
 // A row written before CR-1.1 could say admin. The access rule ignores it.
 const roleLabel = (role: Role) => ROLES.find((r) => r.value === role)?.label ?? 'Admin — not applied';
 
-export function Access({ me }: { me: Me }) {
+export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
   const [entries, setEntries] = useState<AllowlistEntry[] | null>(null);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('external');
@@ -122,6 +123,11 @@ export function Access({ me }: { me: Me }) {
         ))}
       </ul>
       {removed > 0 && <p className="sh-help">{removed} removed. Granting again restores access.</p>}
+
+      <Levels me={me} />
+      <SignInLog />
+      <Timeline reports={reports} />
+      <AuditLog />
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { requireUser, type AuthDeps } from '../session.ts';
 import { trailOf, type TrailEntry, type TrailSource } from '../hubert-trail.ts';
 import { asUser, requirePool } from './reports.ts';
 import { reportFor } from './workspace.ts';
+import { logViewed } from '../logs.ts';
 
 interface Row {
   seq: number;
@@ -27,14 +28,15 @@ export function handleMessages(req: Request, deps: AuthDeps): Promise<Response> 
     const reportId = new URL(req.url).searchParams.get('report') ?? '';
     if (!UUID.test(reportId)) throw new HttpError(400, 'bad_report');
 
-    const rows = await withActor(pool, asUser(user), async (tx) => {
-      await reportFor(tx, user, reportId, false);
-      return (await tx.query<Row>(
+    const { report, rows } = await withActor(pool, asUser(user), async (tx) => ({
+      report: await reportFor(tx, user, reportId, false),
+      rows: (await tx.query<Row>(
         `select seq, role, content, model, stop_reason, in_context, created_at
            from comp_report.messages where report_id = $1 order by seq`,
         [reportId],
-      )).rows;
-    });
+      )).rows,
+    }));
+    await logViewed(pool, user, report);
 
     // Hubert's trail (2026-10-28): what each reply's tools changed or read, from the results that answered them.
     const results = new Map<string, Record<string, unknown>>();

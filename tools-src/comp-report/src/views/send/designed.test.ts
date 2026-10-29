@@ -40,6 +40,10 @@ test('the template’s Full email reads back into its parts', () => {
   assert.equal(p.signOff, 'Kimani');
   assert.equal(p.disclaimer, DISCLAIMER);
   assert.equal(p.sample, false);
+  // A name that ends in a period ("Kimani C.", from the roster) is the sign-off when it's the signer's, not a last sentence.
+  const initial = buildEmail({ ...base, agentName: 'Kimani C.' }).text;
+  assert.equal(parseEmailText(initial, HEADLINE, 'Kimani C.').signOff, 'Kimani C.');
+  assert.equal(parseEmailText(initial, HEADLINE).signOff, null);
 });
 
 test('the writer’s points, a sample banner, and an edited headline still read back', () => {
@@ -290,4 +294,19 @@ test('the client’s paragraph wins over the writer’s lines and the Sort note,
   assert.equal(full.split('The writer’s line.').length - 1, others, 'the rest keep the writer’s');
   const noWriter = buildEmail({ ...base, comps: withLines }).text;
   assert.ok(noWriter.includes('  Written for Jordan and Sam.') && !noWriter.includes(`  ${anchorRow.comp.judgment!.reasons.at(-1)!.reason}`), 'over the Sort note too');
+});
+
+test('the sign-off: the roster’s headshot (absolute, on this site) and phone, linked to call; the hatched circle without them', () => {
+  const html = designedHtml(designedInput({ agent: {
+    name: 'Kimani', office: 'Casa Blanca · 10 Hubert St, Tribeca', email: 'kimani@casa-blanca.com',
+    phone: '(212) 555-0101', photo: '/api/comp-report/email-photo?k=abc',
+  } }));
+  assert.ok(html.includes('<img src="https://casa.example/api/comp-report/email-photo?k=abc" alt="Kimani" width="56" height="56"'));
+  assert.ok(html.includes('href="tel:+12125550101"') && html.includes('(212) 555-0101'));
+  const bare = designedHtml(designedInput());
+  assert.ok(!bare.includes('tel:') && !bare.includes('email-photo?k='));
+  assert.match(bare, /width:56px;height:56px;border-radius:50%;background-color:#eeece7/);
+  // A phone that isn't a US number shows as typed, linked nowhere; a photo that isn't https or this site isn't loaded.
+  const odd = designedHtml(designedInput({ agent: { name: 'K', office: 'o', email: null, phone: 'ext. 12', photo: 'javascript:alert(1)' } }));
+  assert.ok(odd.includes('ext. 12') && !odd.includes('tel:') && !odd.includes('javascript:'));
 });

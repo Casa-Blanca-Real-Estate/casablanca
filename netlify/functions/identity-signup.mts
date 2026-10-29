@@ -5,4 +5,4 @@
 import { productionGateDeps } from '../../tools-src/comp-report/server/deps.ts';
 import { handleIdentityEvent } from '../../tools-src/comp-report/server/identity-events.ts';
 
-export default (req: Request) => handleIdentityEvent(req, productionGateDeps());
+export default (req: Request, context: { ip?: string }) => handleIdentityEvent(req, productionGateDeps(), context);

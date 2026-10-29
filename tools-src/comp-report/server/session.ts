@@ -13,6 +13,7 @@ import { withActor, type PoolLike, type Role } from './db.ts';
 import { HttpError } from './http.ts';
 import { GUEST_EMAIL, GUEST_NAME, guestKeyMatches, isGuestToken, type GuestConfig } from './guest.ts';
 import { bearerToken, IdentityUnavailable, type IdentityVerifier } from './identity.ts';
+import { closedProvider, logAccess, REFUSAL_REASONS, type RefusalReason } from './logs.ts';
 
 export type Capability = 'practice' | 'full';
 
@@ -47,6 +48,9 @@ const ADDRESS_UNVERIFIED = 'Password sign-in is switched off: Identity is confir
 
 // last_seen_at is refreshed at most this often, so reads don't each cost a write.
 const SEEN_REFRESH_MS = 5 * 60_000;
+// A request after this long away (or a first one) starts a session in the sign-in log. Its own
+// condition: the refresh above writes nothing there.
+const SESSION_GAP_MS = 30 * 60_000;
 
 interface UserRow {
   email: string;
@@ -59,10 +63,41 @@ interface UserRow {
   last_seen_at: Date | string | null;
 }
 
+/**
+ * The per-request check. A refusal of someone Identity verified is logged, then rethrown; a
+ * request that starts a session is logged before it returns. Both writes are their own
+ * transactions, after the check's, and a failed write changes nothing (logs.ts).
+ */
 export async function requireUser(req: Request, deps: AuthDeps): Promise<SessionUser> {
   const token = bearerToken(req);
   if (!token) throw new HttpError(401, 'signed_out', 'Sign in to continue.');
   if (isGuestToken(token)) return requireGuest(token, deps);
+
+  const seen: Verified = { email: null, provider: null, started: false };
+  try {
+    const user = await requireIdentityUser(token, deps, seen);
+    if (seen.started) {
+      await logAccess(deps.pool, { kind: 'session_start', source: 'server', email: user.email, provider: closedProvider(user.provider) });
+    }
+    return user;
+  } catch (error) {
+    if (error instanceof HttpError && seen.email && (REFUSAL_REASONS as readonly string[]).includes(error.code)) {
+      await logAccess(deps.pool, {
+        kind: 'refused', source: 'server', reason: error.code as RefusalReason, email: seen.email, provider: closedProvider(seen.provider),
+      });
+    }
+    throw error;
+  }
+}
+
+/** What the check learned on the way, for the log: who Identity verified, and whether a session started. */
+interface Verified {
+  email: string | null;
+  provider: string | null;
+  started: boolean;
+}
+
+async function requireIdentityUser(token: string, deps: AuthDeps, seen: Verified): Promise<SessionUser> {
 
   let identity;
   try {
@@ -74,6 +109,8 @@ export async function requireUser(req: Request, deps: AuthDeps): Promise<Session
     throw error;
   }
   if (!identity) throw new HttpError(401, 'signed_out', 'Your session has ended. Sign in again.');
+  seen.email = identity.email;
+  seen.provider = identity.provider;
   if (!identity.confirmed) throw new HttpError(403, 'unconfirmed', 'Confirm your email address first.');
 
   // Whose address is proven (§13). Google has verified a Google account's
@@ -139,7 +176,10 @@ export async function requireUser(req: Request, deps: AuthDeps): Promise<Session
          returning email, name, role, status, capability, identity_id, identity_provider, last_seen_at`,
         [email, identity.name, identity.provider, identity.id, decision.role],
       );
-      if (inserted.rows[0]) return inserted.rows[0];
+      if (inserted.rows[0]) {
+        seen.started = true; // the race's winner starts the session; the loser doesn't log it twice
+        return inserted.rows[0];
+      }
       return (await tx.query<UserRow>(
         `select email, name, role, status, capability, identity_id, identity_provider, last_seen_at
            from comp_report.users where email = $1`,
@@ -148,6 +188,16 @@ export async function requireUser(req: Request, deps: AuthDeps): Promise<Session
     }
 
     const lastSeen = existing.last_seen_at ? new Date(existing.last_seen_at).getTime() : 0;
+    // A session starts once, however many requests arrive together after the gap: the first to
+    // move last_seen_at claims it, and the others' WHERE no longer matches once its lock is released.
+    if (Date.now() - lastSeen > SESSION_GAP_MS) {
+      const claimed = await tx.query(
+        `update comp_report.users set last_seen_at = now()
+          where email = $1 and (last_seen_at is null or last_seen_at < now() - interval '30 minutes')`,
+        [email],
+      );
+      seen.started = Boolean(claimed.rowCount);
+    }
     const stale = Date.now() - lastSeen > SEEN_REFRESH_MS;
     const changed = existing.role !== decision.role
       || existing.identity_id !== identity.id
@@ -167,6 +217,7 @@ export async function requireUser(req: Request, deps: AuthDeps): Promise<Session
 
   if (!row) throw new HttpError(500, 'user_not_recorded');
   if (row.status !== 'active') {
+    seen.started = false;
     throw new HttpError(403, 'disabled', 'This account has been turned off. Ask an admin if that\'s a mistake.');
   }
   return {

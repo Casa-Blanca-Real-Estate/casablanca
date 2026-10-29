@@ -2,9 +2,16 @@
 // page says what failed and how to get out. `resetKey` clears the error when the view changes
 // (another report, back to the list), so one bad view doesn't strand the rest of the app.
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { trackError } from './activity.ts';
+import { errorCode } from './error-codes.ts';
+
+// The fixed set of kinds the activity log takes as error.<code> (Dispatch 22b).
+export { ERROR_CODES } from './error-codes.ts';
 
 interface Props {
   resetKey: string;
+  /** The report on screen, if any, for the activity log. */
+  reportId?: string | null;
   onBack: () => void;
   children: ReactNode;
 }
@@ -18,6 +25,7 @@ export class ErrorBoundary extends Component<Props, { error: Error | null }> {
 
   override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('comp-report: a view failed to render', error, info.componentStack);
+    trackError(errorCode(error), this.props.reportId ?? null);
   }
 
   override componentDidUpdate(prev: Props) {
