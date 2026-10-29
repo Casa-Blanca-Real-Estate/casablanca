@@ -1,44 +1,48 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-22:</strong> <strong>New:</strong> PP-3 to PP-12, the roster import's questions about the email-signatures doc (Profile pics). Each defaults to importing what the doc says. Earlier: NB-11 to NB-28 are still open. The <a href=\"https://claude.ai/artifact/F8TzAoqtCVegpVM3EipGhS\">Key Maker</a> tracks every key.",
+  "since": "<strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
-    "NB-11",
-    "NB-12",
-    "NB-13",
-    "NB-14",
-    "NB-15",
-    "NB-16",
-    "NB-17",
-    "NB-18",
-    "NB-19",
-    "NB-20",
-    "NB-21",
-    "NB-22",
-    "NB-23",
-    "NB-24",
-    "NB-25",
-    "NB-26",
-    "NB-27",
-    "NB-28",
-    "TD-13",
-    "TD-15",
-    "TD-16",
-    "TD-17",
-    "TD-18",
-    "PP-3",
-    "PP-4",
-    "PP-5",
-    "PP-6",
-    "PP-7",
-    "PP-8",
-    "PP-9",
-    "PP-10",
-    "PP-11",
-    "PP-12"
+    "CR-8",
+    "CR-9",
+    "TD-24",
+    "DP-12",
+    "DP-13",
+    "DP-14",
+    "DP-15",
+    "NB-30",
+    "NB-31",
+    "NB-32",
+    "NB-33",
+    "TD-23",
+    "CR-3",
+    "CR-7",
+    "TD-19",
+    "TD-20",
+    "TD-21",
+    "TD-22"
   ],
   "topics": [
     {
       "num": "01",
+      "title": "Hubert",
+      "prefix": "HB",
+      "url": "{repo}/docs/comp-report/hubert-plan.md",
+      "linkLabel": "Open the Hubert plan",
+      "intro": "<p>From #109 (merged 2026-10-29). You answered HB-1 to HB-7 in chat on 2026-10-29; they're in the settled list below. One follow-up from your question about the web.</p>",
+      "questions": [],
+      "settled": [
+        "<strong>HB-1 · Practice agents dictating tiers</strong>: A, fine. However the thinking comes in (clicks, typing, dictation, telling Hubert), it's theirs; test how well dictation like \"comps 1 and 2 to 2nd tier, 3 and 5 to 1st\" works, recorded 2026-10-29 (in chat).",
+        "<strong>HB-2 · Web search limits</strong>: any public site and 60 a day at the Studio level; in the comp report, steer Hubert toward StreetEasy, NYC.gov, the MTA and building sites rather than hard-block the rest, recorded 2026-10-29 (in chat).",
+        "<strong>HB-3 · Hubert in New report</strong>: B, put him there now, rudimentary, as an anchor for the design pass, recorded 2026-10-29 (in chat).",
+        "<strong>HB-4 · Step guides</strong>: A, everyone. A separate first-run orientation and a hint/guide button for practice agents is a later item (09-plan, Phase C), recorded 2026-10-29 (in chat).",
+        "<strong>HB-5 · Undo on comp edits</strong>: A, yes, recorded 2026-10-29 (in chat).",
+        "<strong>HB-6 · Dispatch 24's items 1–2</strong>: A, <code>get_view</code> and the wider read now (\"Hubert needs to know where the user is\"); the target after the reveal later, recorded 2026-10-29 (in chat).",
+        "<strong>HB-7 · Hubert across the Studio</strong>: A, plan it after the build, recorded 2026-10-29 (in chat).",
+        "<strong>HB-8 · Web listings into the report</strong>: A, through its StreetEasy link, and Hubert asks the agent to check the link and what he pulled from it (right unit, a sale and not an ask, not stale) before it counts as a comp, recorded 2026-10-29 (in chat)."
+      ]
+    },
+    {
+      "num": "02",
       "title": "Noble's walk-through",
       "prefix": "NB",
       "url": "{repo}/docs/comp-report/feedback/2026-10-15-noble/09-plan.md",
@@ -123,52 +127,6 @@
           "source": "NW-068, NW-093 d"
         },
         {
-          "id": "NB-14",
-          "q": "Whose number is the target by default?",
-          "short": "Target owner default",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> A new toggle says whose the target is: client, agent or both (NW-070). The label follows it.</p><p><strong>Why it needs you.</strong> The field already reads as the client's hope, and Noble read it that way.</p>",
-          "options": [
-            [
-              "A",
-              "Client",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Agent"
-            ],
-            [
-              "C",
-              "Both"
-            ]
-          ],
-          "source": "NW-070"
-        },
-        {
-          "id": "NB-15",
-          "q": "Pre-approval: yes or no, or yes or no plus the amount?",
-          "short": "Pre-approval amount",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> The client fields (NW-074) add financing (cash or mortgage) and pre-approval.</p><p><strong>Why it needs you.</strong> The amount caps what a buyer can offer, which is what Noble used to argue his all-cash offer. It costs one optional field.</p>",
-          "options": [
-            [
-              "A",
-              "Yes or no, plus the amount",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Yes or no only"
-            ]
-          ],
-          "source": "NW-074"
-        },
-        {
           "id": "NB-16",
           "q": "Which good email is the example, and who writes it?",
           "short": "The example email",
@@ -245,7 +203,7 @@
           "short": "Who writes the Findings take",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble found it dense (NW-063). Today it is built in code from the engine's output, not by a model.</p><p><strong>Why it needs you.</strong> Every figure must come from the engine, the screen is opened constantly, and a model call adds cost and delay. An \"Ask Hubert about this\" chip can open the drawer instead.</p><p><strong>What it blocks.</strong> Dispatch 21 item 1 builds on A; B moves the item to Calliste.</p>",
+          "context": "<p><strong>What this is about.</strong> Noble found it dense (NW-063). Today it is built in code from the engine's output, not by a model.</p><p><strong>Why it needs you.</strong> Every figure must come from the engine, the screen is opened constantly, and a model call adds cost and delay. An \"Ask Hubert about this\" chip can open the drawer instead.</p><p><strong>What it blocks.</strong> Dispatch 21 item 1 builds on A; B moves the item to Collister.</p>",
           "options": [
             [
               "A",
@@ -262,15 +220,15 @@
         },
         {
           "id": "NB-20",
-          "q": "Does the writer move to Calliste, the new AI track?",
-          "short": "Writer's owner: Calliste or Mason",
+          "q": "Does the writer move to Collister, the new AI track?",
+          "short": "Writer's owner: Collister or Mason",
           "quick": true,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> You defined Calliste as owner of all AI prompts, tools and context (NW-093 a). It takes Hubert. The writer (Dispatch 13 phase 2) is also a Claude call with a prompt and an eval.</p><p><strong>Why it needs you.</strong> Splitting AI work across two tracks recreates the problem Calliste is for. Mason keeps Send UI, QA and fair-housing. Calliste starts after the account move.</p>",
+          "context": "<p><strong>What this is about.</strong> You defined Collister as owner of all AI prompts, tools and context (NW-093 a). It takes Hubert. The writer (Dispatch 13 phase 2) is also a Claude call with a prompt and an eval.</p><p><strong>Why it needs you.</strong> Splitting AI work across two tracks recreates the problem Collister is for. Mason keeps Send UI, QA and fair-housing. Collister starts after the account move.</p>",
           "options": [
             [
               "A",
-              "Yes, Calliste owns the writer's prompts and eval",
+              "Yes, Collister owns the writer's prompts and eval",
               "",
               true
             ],
@@ -330,31 +288,6 @@
           "source": "NW-090 a"
         },
         {
-          "id": "NB-23",
-          "q": "Should mentors see every agent's report, or only their own agents'?",
-          "short": "What mentors can see",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Admins can open any report by link, but only the owner's reports are listed, and mentors are admitted nowhere (NW-088).</p><p><strong>Why it needs you.</strong> There are two or three mentors; assignment needs someone to maintain it, and we don't build on agent responsiveness. Agents would be told in their welcome copy that mentors can read their reports. Until then: open Noble's report from its <code>?report=</code> link.</p><p><strong>What it holds.</strong> Deploying Dispatch 22a gives every mentor read access to every report, so Casanova holds 22a's merge until you answer. B changes one rule, in two places. The sign-in fix (22 item 2) can ship on its own first.</p>",
-          "options": [
-            [
-              "A",
-              "All agents' reports, read-only",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Only assigned agents"
-            ],
-            [
-              "C",
-              "Only reports shared with them"
-            ]
-          ],
-          "source": "NW-088 a"
-        },
-        {
           "id": "NB-24",
           "q": "Who may start and reset a sample report?",
           "short": "Who may use the sample",
@@ -386,7 +319,7 @@
           "short": "Dispatch before or after the move",
           "quick": false,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Sessions can't move between Claude accounts (NW-096). Mason, Abacus and Surveyor already run in this account; they can take Dispatches 15–22 now and restart in the Casa account later from kickoffs, as they did on 2026-10-13. A new track (Calliste, Dispatch 24) and anything that holds a production key (Dispatch 23) start in the Casa account.</p><p><strong>Why it needs you.</strong> Starting now gets the build moving while you design; holding everything costs about a week.</p>",
+          "context": "<p><strong>What this is about.</strong> Sessions can't move between Claude accounts (NW-096). Mason, Abacus and Surveyor already run in this account; they can take Dispatches 15–22 now and restart in the Casa account later from kickoffs, as they did on 2026-10-13. A new track (Collister, Dispatch 24) and anything that holds a production key (Dispatch 23) start in the Casa account.</p><p><strong>Why it needs you.</strong> Starting now gets the build moving while you design; holding everything costs about a week.</p>",
           "options": [
             [
               "A",
@@ -400,36 +333,10 @@
             ],
             [
               "C",
-              "Dispatch everything now, Calliste included"
+              "Dispatch everything now, Collister included"
             ]
           ],
           "source": "NW-096 · {repo}/docs/casa-accounts-transfer.md"
-        },
-        {
-          "id": "NB-26",
-          "q": "How do we record the next walk-through?",
-          "short": "Recording the next walk-through",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> The last walk-through wasn't recorded; the dictation is all we have (NW-097).</p><p><strong>Why it needs you.</strong> It costs nothing to record on your own machine. The activity log (NW-099) only shows what Noble did, not what he said.</p>",
-          "options": [
-            [
-              "A",
-              "Record on your machine (screen and mic)",
-              "activity log as backstop",
-              true
-            ],
-            [
-              "B",
-              "Upgrade the Meet host seat to one with recording"
-            ],
-            [
-              "C",
-              "No recording",
-              "activity log and notebook notes only"
-            ]
-          ],
-          "source": "NW-097"
         },
         {
           "id": "NB-27",
@@ -476,6 +383,100 @@
             ]
           ],
           "source": "NW-102 · NW-080 to NW-082"
+        },
+        {
+          "id": "NB-30",
+          "q": "\"Pre-approved for\": the price on the letter, or the loan amount?",
+          "short": "What the pre-approval amount means",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The new Your client section (on Details and in Findings) asks a buyer's pre-approval as yes or no plus the amount (NB-15). Findings then sets that amount against the true estimate and the ask: \"Reaches into the true estimate: up to $3.65M of $3.4M – $3.9M\", \"$345K short of the $4M ask\".</p><p><strong>Why it needs you.</strong> A lender's letter usually shows both a purchase price and a loan amount. Read as the price, the comparison is direct. Read as the loan, the tool would add the down payment to get the price, and needs the down payment filled in.</p>",
+          "options": [
+            [
+              "A",
+              "The purchase price on the letter: the most the buyer can pay",
+              "how it's built; the field's placeholder says so",
+              true
+            ],
+            [
+              "B",
+              "The loan amount: the tool adds the down payment",
+              "needs the down payment, or no comparison"
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
+        },
+        {
+          "id": "NB-31",
+          "q": "Should Hubert see the client's facts after the reveal?",
+          "short": "Client facts to Hubert",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Once the range is revealed, Hubert's numbers now carry what the agent gave about the client: cash or mortgage, pre-approved and for how much, how soon (as soon as possible or can wait), and what's moving them. Never the client's name. Before the reveal he sees none of it, so a budget can't steer the sorting.</p><p><strong>Why it needs you.</strong> NB-21 keeps the other deal terms (seller's target, price, rate) out for now. The pre-approval is a deal term too, but it's what you asked Hubert to know. B is a one-line change.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, after the reveal, never the client's name",
+              "how it's built",
+              true
+            ],
+            [
+              "B",
+              "Only how soon and what's moving them, no money",
+              ""
+            ],
+            [
+              "C",
+              "None of it",
+              ""
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
+        },
+        {
+          "id": "NB-32",
+          "q": "May the tool store a client's credit or income?",
+          "short": "Credit and income in the tool",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> You wondered whether agents learn a buyer's credit score, credit-worthiness or income, and whether the tool should hold it. It's noted as a future item, not built.</p><p><strong>Why it needs you.</strong> It's sensitive financial data about a client who never signed up to the tool, kept in Casa's database. That needs a privacy and legal call (consent, retention, who sees it) before any field exists. A pre-approval already says what a lender thinks the buyer can pay.</p>",
+          "options": [
+            [
+              "A",
+              "No: the pre-approval stands in for it; revisit with a privacy review",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Yes, as an optional field, after a privacy review",
+              ""
+            ],
+            [
+              "C",
+              "Never",
+              ""
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
+        },
+        {
+          "id": "NB-33",
+          "q": "Where do agents keep their clients today, and can the tool read it?",
+          "short": "Where client info lives",
+          "quick": false,
+          "context": "<p><strong>What this is about.</strong> The future plan is a client profile per agent: pick a client from a dropdown on a new report and the name, financing, pre-approval and pace fill in. If Casa's agent app or CRM already holds clients, the tool could read from it instead of agents typing them again.</p><p><strong>Why it needs you.</strong> Only you know what Casa's agents use. Name it in the note (and whether it has an export or an API); the profiles stay in the roadmap either way.</p>",
+          "options": [
+            [
+              "A",
+              "Nowhere the tool can read yet: agents type it into each report",
+              "",
+              true
+            ],
+            [
+              "B",
+              "There is one: I'll name it in the note",
+              ""
+            ]
+          ],
+          "source": "Your chat, 2026-10-29 · NW-074 · the client fields PR"
         }
       ],
       "settled": [
@@ -488,16 +489,21 @@
         "<strong>NB-7 · Overridden facts: fact or estimate</strong>: A, a fact marked \"changed\", recorded 2026-10-21.",
         "<strong>NB-8 · Note and tags: both required?</strong>: A, practice agents need both; C held for later, recorded 2026-10-21.",
         "<strong>NB-9 · Derived tags: pre-fill or suggest</strong>: C, pre-filled for full agents, suggested for practice agents, recorded 2026-10-21.",
-        "<strong>NB-10 · Size scale thresholds</strong>: A, ±10% / 10–25% / past 25%, recorded 2026-10-21."
+        "<strong>NB-10 · Size scale thresholds</strong>: A, ±10% / 10–25% / past 25%, recorded 2026-10-21.",
+        "<strong>NB-23 · What mentors can see</strong>: A, every report, read-only. Recorded 2026-10-27, built in #101.",
+        "<strong>NB-26 · Recording the next walk-through</strong>: A, on your machine (\"I'll figure it out\"). Recorded 2026-10-29.",
+        "<strong>NB-15 · Pre-approval</strong>: A, yes or no plus the amount, recorded 2026-10-29 (in chat).",
+        "<strong>NB-14 · Target owner default</strong>: A, client, recorded 2026-10-29 (on the sheet).",
+        "<strong>NB-29 · Buyer urgency</strong>: A, a field for context; it never changes the calculation. Urgency, pre-approval and cash change the justification: where in the range the client can reasonably offer, and what the agent tells them, recorded 2026-10-29 (in chat)."
       ]
     },
     {
-      "num": "02",
-      "title": "The design port",
+      "num": "03",
+      "title": "The design pass",
       "prefix": "DP",
-      "url": "{repo}/docs/dispatch/14-comp-report-design-port.md",
-      "linkLabel": "Open Dispatch 14",
-      "intro": "<p>The design port merged in #77 and is live. You confirmed DP-1 to DP-8 as built (DP-6 with free-text tags too). Two questions from Mason's PR:</p>",
+      "url": "https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md",
+      "linkLabel": "Open the design pass brief",
+      "intro": "<p>The brief for your Claude Design pass (#117) covers every surface and what's still open on each. Five questions from it change what gets designed (DP-11 to DP-15). DP-9 and DP-10 are left over from the design port (#77).</p>",
       "questions": [
         {
           "id": "DP-9",
@@ -543,6 +549,105 @@
             ]
           ],
           "source": "#77"
+        },
+        {
+          "id": "DP-12",
+          "q": "Which screens must work on a phone by Nov 13?",
+          "short": "Phone screens by Nov 13",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The top bar fits phones now (#106), but the screens under it are still desktop layouts that scroll sideways.</p>",
+          "options": [
+            [
+              "A",
+              "Reports, Review comps, Findings (reading), Send and Hubert",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Every screen",
+              ""
+            ],
+            [
+              "C",
+              "None yet: desktop only for the pilot",
+              ""
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-13",
+          "q": "Orientation: a pointing tour, a first-run checklist, or a short video per screen?",
+          "short": "Orientation style",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The first-run orientation you asked for on 2026-10-29: practice agents' first report, then a guide button in a corner that brings it back. It's separate from Hubert's step guides.</p>",
+          "options": [
+            [
+              "A",
+              "A pointing tour on the first report, behind the guide button after",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "A first-run checklist",
+              ""
+            ],
+            [
+              "C",
+              "A short video per screen",
+              ""
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-14",
+          "q": "One way to open Hubert: the top-bar pill or the edge tab?",
+          "short": "How Hubert opens",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Hubert opens from a pill in the top bar and from a tab on the screen's edge (#105). Two doors to the same drawer.</p>",
+          "options": [
+            [
+              "A",
+              "The pill; drop the tab",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "The tab; drop the pill",
+              ""
+            ],
+            [
+              "C",
+              "Keep both",
+              ""
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-15",
+          "q": "The tool's name on its own screens: \"Comp report\" under \"Casa Blanca Studio\", or something new?",
+          "short": "The tool's name",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The Studio was renamed (2026-10-28). The tool still calls itself \"Comp report\" on its own top bar, emails and sign-in.</p>",
+          "options": [
+            [
+              "A",
+              "\"Comp report\" under Casa Blanca Studio",
+              ""
+            ],
+            [
+              "B",
+              "Something new",
+              "put it in the note"
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117",
+          "needsYou": true
         }
       ],
       "settled": [
@@ -553,11 +658,12 @@
         "<strong>DP-5 · Default side</strong>: recorded 2026-10-15.",
         "<strong>DP-6 · Comp tags</strong>: recorded 2026-10-15.",
         "<strong>DP-7 · \"True estimate\" label</strong>: recorded 2026-10-15.",
-        "<strong>DP-8 · The assistant's name</strong>: recorded 2026-10-15."
+        "<strong>DP-8 · The assistant's name</strong>: recorded 2026-10-15.",
+        "<strong>DP-11 · A buyer's offer range</strong>: the true estimate never moves. Show the client-adjusted view as its own layer beside the true estimate, the agent's number and the target (perhaps separate or stacked bars); designed in the Claude Design pass, a mockup from any track welcome, recorded 2026-10-29 (in chat)."
       ]
     },
     {
-      "num": "03",
+      "num": "04",
       "title": "The comp report",
       "prefix": "CR",
       "url": "{repo}/docs/decisions.md",
@@ -584,50 +690,30 @@
           "source": "D-25 in {repo}/docs/decisions.md · #76"
         },
         {
-          "id": "CR-2",
-          "q": "\"Appraisal contingency\": keep it blocked, or allow it as a deal term?",
-          "short": "\"Appraisal contingency\": blocked or allowed?",
-          "quick": true,
-          "flag": "already works this way",
-          "context": "<p><strong>What this is about.</strong> \"Appraisal\" in client copy is a hard block (design §9.3), because a comp email must never read as an appraisal. So an agent who writes about waiving the appraisal contingency in the next step can't copy the email.</p><p><strong>Why it needs you.</strong> The phrase is a normal deal term in a buyer's offer. Allowing it means one exception in the list; keeping it means agents rephrase.</p>",
-          "options": [
-            [
-              "A",
-              "Keep it blocked",
-              "agents rephrase it",
-              true
-            ],
-            [
-              "B",
-              "Allow the phrase as a deal term",
-              "everything else with \"appraisal\" stays blocked"
-            ]
-          ],
-          "source": "D-25 in {repo}/docs/decisions.md · #76"
-        },
-        {
           "id": "CR-3",
           "q": "Does the writer's house voice read right?",
           "short": "The writer's house voice: right?",
           "quick": false,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> Claude now drafts the headlines and the email's sections in Casa's voice, in Frankie's order. The voice is a short style file: plain words, specific comparisons, numbers only from the comps, one to three lines a comp. It's quoted in full in #76's description ({repo}/tools-src/comp-report/server/house-voice.ts).</p><p><strong>Why it needs you.</strong> It's Casa's voice in front of clients. The real eval drafts (100 Barclay and Frankie's #517) come once <code>CR_EVAL_ANTHROPIC_API_KEY</code> is in the cloud environment (TD-3); read them together if you'd rather.</p>",
+          "context": "<p><strong>What this is about.</strong> Claude drafts the headlines and the email's sections in Casa's voice, in Frankie's order. You said to wait for the real eval drafts. They're in: 12 drafts (100 Barclay and Frankie's #517; full, short and text), about $0.20, in project files <code>writer-eval/2026-10-29-eval.md</code>, with the code in #112.</p><p><strong>The eval's read.</strong> Plain, specific, Frankie's order; 11 of 12 pass every number check. If you want a revision, four fixes: it adds its own points under Things to consider beyond the agent's; one headline gives a single price (\"about $4.23M\"); the carrying-cost line repeats on every comp; the text message still carries the whole email frame.</p>",
           "options": [
             [
               "A",
-              "Yes, as written"
+              "Fix those four, keep the rest of the voice",
+              "",
+              true
             ],
             [
               "B",
-              "Change it",
-              "say how in the note"
+              "Keep it exactly as is",
+              ""
             ],
             [
               "C",
-              "Wait for the eval drafts first"
+              "Change more",
+              "say how in the note"
             ]
           ],
-          "source": "#76"
+          "source": "#76 · #112"
         },
         {
           "id": "CR-4",
@@ -695,16 +781,82 @@
             ]
           ],
           "source": "D-17 in {repo}/docs/decisions.md"
+        },
+        {
+          "id": "CR-7",
+          "q": "Log sample fills and background link reads in the activity log?",
+          "short": "Activity log: samples and link reads",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The activity log (#110) records what agents and Hubert do. Filling a report with sample data, and comps added by a background link read, write nothing there.</p>",
+          "options": [
+            [
+              "A",
+              "Leave them out",
+              "as built",
+              true
+            ],
+            [
+              "B",
+              "Log them too",
+              ""
+            ]
+          ],
+          "source": "#110"
+        },
+        {
+          "id": "CR-8",
+          "q": "Turn off Netlify Identity's autoconfirm, so password sign-in works?",
+          "short": "Email confirmation for passwords",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> One sign-in for the whole Studio (#116). Password sign-in only works while Identity confirms new accounts by email. While <em>autoconfirm</em> is on, the comp report turns password sign-in off on purpose, because an unconfirmed address proves nothing.</p><p><strong>Why it needs you.</strong> It's a Netlify setting (Identity, then Emails / Registration). It affects password sign-ups only; Google sign-in is unchanged.</p>",
+          "options": [
+            [
+              "A",
+              "Turn autoconfirm off",
+              "new password accounts confirm by email",
+              true
+            ],
+            [
+              "B",
+              "Leave it on",
+              "password sign-in stays off; Google only"
+            ]
+          ],
+          "source": "#116"
+        },
+        {
+          "id": "CR-9",
+          "q": "Require the Studio sign-in on the older functions too?",
+          "short": "Lock down the older functions",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The new Studio sign-in (#116) hides pages but doesn't protect what's behind them. The older functions (Claude copy generation, the StreetEasy import, the image proxy, brand/site) still answer anyone without a signed-in token.</p><p><strong>Why it needs you.</strong> It's a small follow-up PR, but every tool call would then need a sign-in, including any outside script that calls them (a Make scenario, say). The PR would list every caller it finds first.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, in a follow-up PR, after checking what calls them",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Not now",
+              ""
+            ]
+          ],
+          "source": "#116"
         }
+      ],
+      "settled": [
+        "<strong>CR-2 · \"Appraisal contingency\"</strong>: A, keep it blocked; a note is kept for the day Casa does appraisal work. Recorded 2026-10-29 in D-25."
       ]
     },
     {
-      "num": "04",
+      "num": "05",
       "title": "Profile pics",
       "prefix": "PP",
       "url": "{repo}/docs/dispatch/12-profile-pic-tracker.md",
       "linkLabel": "Open Dispatch 12",
-      "intro": "<p>Phase 2, storage, is merged in #82. The one-time roster import is drafted from the email-signatures doc: 123 agents. These are the things in the doc that look wrong. Each default is \"import it as the doc has it\", so you can skip any you're not sure of.</p>",
+      "intro": "<p>The one-time roster import, from the email-signatures doc: 123 agents. You answered PP-4 to PP-12 on 2026-10-28; the import runs with those answers. One is left: PP-3, which imports as the doc has it unless you say otherwise.</p>",
       "questions": [
         {
           "id": "PP-3",
@@ -731,344 +883,30 @@
             ]
           ],
           "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-4",
-          "q": "Annika Yan's email: is it a.yen@ or a.yan@?",
-          "short": "Annika Yan: a.yen@ or a.yan@?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Her signature says <code>a.yen@casa-blanca.com</code>, but her name is spelled Yan.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
-          "options": [
-            [
-              "A",
-              "a.yen@, as the doc has it",
-              "",
-              true
-            ],
-            [
-              "B",
-              "a.yan@",
-              ""
-            ],
-            [
-              "C",
-              "Something else",
-              "put it in the note"
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-5",
-          "q": "Mónica-Tezla's surname: Vega-Gorsum or Vega-Gorsun?",
-          "short": "Mónica: Gorsum or Gorsun?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Her signature says Vega-Gorsum. Her email (<code>m.vegagorsun@</code>) and her Drive folder say Gorsun.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
-          "options": [
-            [
-              "A",
-              "Vega-Gorsun",
-              "the email and the folder are right",
-              true
-            ],
-            [
-              "B",
-              "Vega-Gorsum",
-              "and her email is right anyway"
-            ],
-            [
-              "C",
-              "Something else",
-              "put it in the note"
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-6",
-          "q": "Franceiry Rosario or Franciery Rosario?",
-          "short": "Franceiry or Franciery?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> The signature says Franceiry. The studio's photo library files her as <code>franciery-r</code>.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
-          "options": [
-            [
-              "A",
-              "Franceiry, as the signature has it",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Franciery",
-              ""
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-7",
-          "q": "Three phone numbers are on more than one agent. Are they right?",
-          "short": "Shared phone numbers: right?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> 301.456.5219 is on Alana Miller, Andrew Fludd and Melaina Ferguson. 646.340.2743 is on Erez, Eyal Zarur and Jeff Martin. 347.243.0953 is on Kursad Nural and Samir Sujkovic. That looks like copy-paste between signature blocks.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
-          "options": [
-            [
-              "A",
-              "Import them as they are",
-              "fix later in the CMS",
-              true
-            ],
-            [
-              "B",
-              "Here are the right numbers",
-              "put them in the note"
-            ],
-            [
-              "C",
-              "Import those agents with no phone",
-              "until someone checks"
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-8",
-          "q": "Oussama Ouatik and Sierra Jones have no phone. Do you have theirs?",
-          "short": "No phone: Oussama, Sierra",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Their signature blocks have no phone line.</p><p><strong>Why it needs you.</strong> The import copies the doc as it is. Whatever you answer is what goes into the agent's record, and later into their email signature.</p>",
-          "options": [
-            [
-              "A",
-              "Import them with no phone",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Here they are",
-              "put them in the note"
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-9",
-          "q": "Is Cecilia Rubenstein the Cecilia in the photo library (cecilia-c)?",
-          "short": "Cecilia Rubenstein = cecilia-c?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> The library has a photo filed as <code>cecilia-c</code>. The doc's only Cecilia is Cecilia Rubenstein.</p><p><strong>Why it needs you.</strong> If it's her, she imports as <code>cecilia-c</code> with her photo counted as placed. If not, she imports as <code>cecilia-r</code> with no photo.</p>",
-          "options": [
-            [
-              "A",
-              "Yes, same person",
-              "",
-              false
-            ],
-            [
-              "B",
-              "No, someone else",
-              "",
-              false
-            ],
-            [
-              "C",
-              "Not sure",
-              "import her as cecilia-r",
-              true
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-10",
-          "q": "Emma Caldicott: import her as Emma Liuzzi?",
-          "short": "Emma Caldicott → Emma Liuzzi?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Team feedback (Oct 9) says Emma C. is now Emma Liuzzi, with a new photo. The doc still has Emma Caldicott, <code>e.caldicott@</code>.</p><p><strong>Why it needs you.</strong> The name sets her slug for good (<code>emma-c</code> or <code>emma-l</code>). Her email may have changed too.</p>",
-          "options": [
-            [
-              "A",
-              "Yes, as Emma Liuzzi",
-              "put her new email in the note if it changed"
-            ],
-            [
-              "B",
-              "As Emma Caldicott for now",
-              "",
-              true
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-11",
-          "q": "Who's still at Casa among the people with photos but no signature?",
-          "short": "Photos but no signature: who's still here?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> These people have a photo folder or a library photo but no block in the signatures doc, so the import leaves them out. <strong>RAWS:</strong> Arianna Fotinos, Andrea Mezvinsky, Tyler W French, Yaya Barry, Logan Polish, Joshua Weidenbaum, Zein Aljabri, Shaul Batzon, Serhii Holovko, Sigmund Rhee, Amalie Nordstrand, William Monge, Nisha Saxena, Nadine Fuller. <strong>@ to do:</strong> Suraj Vishwakarma, Sharif Santiago, Nuri Daynish. <strong>Library only:</strong> brittany-f-2, kashief-e, sahara-c, shlomi-d.</p><p><strong>Why it needs you.</strong> Agents are never invented from a folder name. Anyone you name is added with just a name, and you fill in the rest in the Agent CMS.</p>",
-          "options": [
-            [
-              "A",
-              "Leave them all out",
-              "add them in the CMS when needed",
-              true
-            ],
-            [
-              "B",
-              "Add these",
-              "list the names in the note"
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
-        },
-        {
-          "id": "PP-12",
-          "q": "Already-filed photos: is Sept 29 fine as their generate date?",
-          "short": "Filed photos dated Sept 29: OK?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Per PP-2, the 103 agents whose photo is in the studio's library import as placed, with all five placements done. Drive gives no real date, so they're dated 2026-09-29, the day the library was added. A new photo after that date shows as needing placing again.</p>",
-          "options": [
-            [
-              "A",
-              "Sept 29 is fine",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Use another date",
-              "put it in the note"
-            ]
-          ],
-          "source": "The roster import's review notes (project files: agent-roster-import/review.md) · D-24"
         }
       ],
       "settled": [
         "<strong>PP-2 · Already-filed photos: placed or to do?</strong>: recorded 2026-10-15.",
-        "<strong>PP-1 · D-24: the signatures doc or FileMaker?</strong>: A, the email-signatures doc for now; Casa's own agent store and an Agent Character Poll later (D-24), recorded 2026-10-21."
+        "<strong>PP-1 · D-24: the signatures doc or FileMaker?</strong>: A, the email-signatures doc for now; Casa's own agent store and an Agent Character Poll later (D-24), recorded 2026-10-21.",
+        "<strong>PP-4 · Annika Yan</strong>: B, a.yan@ (no longer active). Recorded 2026-10-29.",
+        "<strong>PP-5</strong>: A, Vega-Gorsun. Recorded 2026-10-29.",
+        "<strong>PP-6</strong>: A, Franceiry, as the signature has it. Recorded 2026-10-29.",
+        "<strong>PP-7 · Shared phone numbers</strong>: C, import those agents with no phone. Recorded 2026-10-29.",
+        "<strong>PP-8 · No phone</strong>: A, import them with none. Recorded 2026-10-29.",
+        "<strong>PP-9 · Cecilia Rubenstein / cecilia-c</strong>: not sure; left unlinked. Recorded 2026-10-29.",
+        "<strong>PP-10 · Emma Caldicott</strong>: A, as Emma Liuzzi, same email; the roster gets a field for former names and aliases so Caldicott stays searchable. Recorded 2026-10-29.",
+        "<strong>PP-11 · Photos but no signature</strong>: B, add them all; you'll toggle anyone inactive in the CMS. Recorded 2026-10-29.",
+        "<strong>PP-12 · Generate date for filed photos</strong>: A, Sept 29 for now (Drive's file dates could replace it later). Recorded 2026-10-29."
       ]
     },
     {
-      "num": "05",
+      "num": "06",
       "title": "Team feedback",
       "prefix": "FB",
       "url": "https://casa-blanca-creative-studio.netlify.app/tools/dev-notebook/",
       "linkLabel": "Open the notebook page",
-      "intro": "<p>Six pieces from the team Feedback list, four of them the Cowork session's (Oct 8–9). Your answer here routes each one; <strong>Make a note</strong> on the notebook page still turns it into a note for the sessions.</p>",
+      "intro": "<p>The team Feedback list. You routed FB-1 to FB-5 on 2026-10-28. One left: FB-6.</p>",
       "questions": [
-        {
-          "id": "FB-1",
-          "q": "Agent photos and renames inside the studio (blocking posts now)",
-          "short": "Agent photos and renames: where?",
-          "quick": true,
-          "context": "<p><strong>The feedback (Oct 9).</strong> An easy way to add or replace an agent's photo and edit their library name in Creative Studio. Missing photos are blocking posts: Arianna Fotinos's new photo, Emma C. to Emma L. (Emma Liuzzi) with an updated photo, and Jackie Tran, who has none and two Greenpoint closings waiting.</p><p><strong>Why it needs you.</strong> Dispatch 12's roster and photo store is the natural home, but its phase 2 waits on D-24 (PP-1).</p>",
-          "options": [
-            [
-              "A",
-              "Fold it into Dispatch 12, first (Painter)",
-              "",
-              true
-            ],
-            [
-              "B",
-              "A separate quick fix now"
-            ],
-            [
-              "C",
-              "Not now"
-            ]
-          ],
-          "source": "Team feedback, 2026-10-09"
-        },
-        {
-          "id": "FB-2",
-          "q": "Instagram handles on each agent's record",
-          "short": "Agents' Instagram handles: where?",
-          "quick": true,
-          "context": "<p><strong>The feedback (Oct 9).</strong> Captions go out with name placeholders because there's no handle list anywhere. Once handles live on the agent record, the post builders could output a ready-to-paste tag line.</p>",
-          "options": [
-            [
-              "A",
-              "The roster gets the field now (Painter); tag lines in the builders later (Publisher)",
-              "",
-              true
-            ],
-            [
-              "B",
-              "With the CMS, when Concierge starts"
-            ],
-            [
-              "C",
-              "Not now"
-            ]
-          ],
-          "source": "Team feedback, 2026-10-09"
-        },
-        {
-          "id": "FB-3",
-          "q": "In Contract: the one-agent slide header",
-          "short": "In Contract one-agent header",
-          "quick": true,
-          "context": "<p><strong>The feedback (Oct 8).</strong> \"IN CONTRACT: FRANKIE D.\" next to \"IN CONTRACT: MORNINGSIDE HEIGHTS\" reads inconsistently, and the name is already on the photo. Allow a neighborhood or free-text header like two-agent mode, or a layout that doesn't need one.</p>",
-          "options": [
-            [
-              "A",
-              "Publisher's first dispatch",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Not now"
-            ]
-          ],
-          "source": "Team feedback, 2026-10-08"
-        },
-        {
-          "id": "FB-4",
-          "q": "Keep the StreetEasy link with each property, in every builder",
-          "short": "Keep the StreetEasy link per property",
-          "quick": true,
-          "context": "<p><strong>The feedback (Oct 8).</strong> Store the StreetEasy URL on each deal, show it as a link in the editor, keep it in saved sessions and exports, in the In Contract, Closed, Listing and Editorial builders.</p>",
-          "options": [
-            [
-              "A",
-              "Publisher's first dispatch",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Not now"
-            ]
-          ],
-          "source": "Team feedback, 2026-10-08"
-        },
-        {
-          "id": "FB-5",
-          "q": "Editorial builder: a caption generator, slide-filling instructions for the AI, end-slide layouts",
-          "short": "Editorial builder wish list",
-          "quick": true,
-          "context": "<p><strong>The feedback (Aug 28).</strong> A native Instagram caption generator; instructions so the AI fills each slide with the right photos and captions; a toggle for end-slide layouts.</p><p><strong>Note.</strong> The retiring Editorial session found the builder works in a sandbox; Publisher's first job there is one live run ({repo}/docs/parked/sessions/editorial-builder.md).</p>",
-          "options": [
-            [
-              "A",
-              "Queue it for Publisher, after the live run",
-              "",
-              true
-            ],
-            [
-              "B",
-              "In Publisher's first dispatch"
-            ],
-            [
-              "C",
-              "Won't do"
-            ]
-          ],
-          "source": "Team feedback, 2026-08-28"
-        },
         {
           "id": "FB-6",
           "q": "Business card: \"How do you upload your headshot?\"",
@@ -1089,56 +927,23 @@
           ],
           "source": "Team feedback, 2026-06-23"
         }
+      ],
+      "settled": [
+        "<strong>FB-1 · Agent photos and renames in the studio</strong>: A, with the profile pics work, split into project threads as needed. Recorded 2026-10-29.",
+        "<strong>FB-2 · Instagram handles</strong>: A, the roster gets the field now; tag lines in the builders later. Recorded 2026-10-29.",
+        "<strong>FB-3 · In Contract: the one-agent slide header</strong>: A, the post builders' first dispatch. Recorded 2026-10-29.",
+        "<strong>FB-4 · The StreetEasy link with each property</strong>: A, the post builders' first dispatch. Recorded 2026-10-29.",
+        "<strong>FB-5 · Editorial builder additions</strong>: A, queued for the post builders after the live run. Recorded 2026-10-29."
       ]
     },
     {
-      "num": "06",
+      "num": "07",
       "title": "Moving to Casa accounts",
       "prefix": "AC",
       "url": "{repo}/docs/casa-accounts-transfer.md",
       "linkLabel": "Open the transfer plan",
       "intro": "<p>Erez asked for Casa-owned accounts once the comp report settles (D-26). Settled so far: <code>casacalliste@gmail.com</code> stays Casa's identity, made Casa-held; the Post Log is the caption tracker the builders link to.</p>",
       "questions": [
-        {
-          "id": "AC-1",
-          "q": "Move the API keys that process client data to Casa accounts before the pilot widens?",
-          "short": "API keys to Casa before the pilot?",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> Anthropic, the AI Gateway (Jev) and Firecrawl process comp report data. Moving them is independent of GitHub and Claude: new key, set it in Netlify, redeploy, revoke the old one.</p><p><strong>Why it needs you.</strong> It means Casa accounts and a Casa card for three services before the rest of the move.</p>",
-          "options": [
-            [
-              "A",
-              "Yes, before the pilot widens",
-              "and every new key is made on a Casa account from now",
-              true
-            ],
-            [
-              "B",
-              "With everything else, after the comp report"
-            ]
-          ],
-          "source": "D-26 · {repo}/docs/casa-accounts-transfer.md"
-        },
-        {
-          "id": "AC-5",
-          "q": "What stays yours?",
-          "short": "What stays Kimani's",
-          "quick": false,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> Patterns you reuse elsewhere (the tool design system approach, the dispatch method, skill structure) can be kept as a personal copy. If your contractor agreement says anything about IP, that governs: check it rather than assume.</p>",
-          "options": [],
-          "source": "D-26"
-        },
-        {
-          "id": "AC-6",
-          "q": "Who's the second owner on the GitHub organization and each service account?",
-          "short": "The second owner",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> So Casa's tools don't depend on one person's logins: GitHub, Netlify, Anthropic, Vercel, Firecrawl, the Claude account and <code>casacalliste</code>'s recovery.</p>",
-          "options": [],
-          "source": "D-26"
-        },
         {
           "id": "AC-7",
           "q": "Is the GitHub Pages copy of the studio still used?",
@@ -1162,11 +967,14 @@
       "settled": [
         "<strong>AC-2 · Claude plan and second admin</strong>: Pro for now, Max 5x if use demands; no second admin yet, recorded 2026-10-21.",
         "<strong>AC-3 · What Casa info your personal Claude may see</strong>: A, that line, recorded 2026-10-21.",
-        "<strong>AC-4 · The Casa desk: move or keep?</strong>: already moved to the Casa account, work-only, recorded 2026-10-21."
+        "<strong>AC-4 · The Casa desk: move or keep?</strong>: already moved to the Casa account, work-only, recorded 2026-10-21.",
+        "<strong>AC-1 · Keys before the pilot widens</strong>: done already (the keys moved 2026-10-21), recorded 2026-10-29.",
+        "<strong>AC-5 · What stays yours</strong>: methods and patterns (dispatches, skills, design systems) are how you work, not Casa's IP; the Answer Sheet and the Dispatch Ledger were first made in your personal account, with dated proof. Recorded 2026-10-29 in D-26.",
+        "<strong>AC-6 · The second owner</strong>: you, on your personal Google address. Recorded 2026-10-29 in D-26."
       ]
     },
     {
-      "num": "07",
+      "num": "08",
       "title": "Your to-dos",
       "prefix": "TD",
       "url": "{repo}/docs/decisions.md",
@@ -1323,19 +1131,99 @@
           "source": "NW-045, NW-059"
         },
         {
-          "id": "TD-18",
-          "q": "Swap the Anthropic key in Make",
-          "short": "Make's Anthropic key",
+          "id": "TD-19",
+          "q": "Release this week's work",
+          "short": "Release #102–#110",
           "quick": true,
-          "needsYou": true,
-          "context": "<p>Make has one Anthropic connection, <strong>My Anthropic Claude connection</strong>, and the live <strong>Mailchimp ISO Blast Automation</strong> (every 15 minutes) uses it in its three Claude steps. In Casa's Anthropic workspace, make a key just for it (say <code>make-iso-blast</code>). In Make, go to Connections, find that connection, choose Reauthorize, and paste the new key. Watch one run go through, then revoke the old key in your personal console.</p>",
+          "context": "<p>Production stops at #101. Run the <strong>release to production</strong> workflow on GitHub (Actions) when you're ready: it puts #102 to #110 live in one deploy.</p>",
           "options": [
             [
               "A",
               "Done"
             ]
           ],
-          "source": "Casakwassa, 2026-10-21"
+          "source": "The week's rundown",
+          "needsYou": true
+        },
+        {
+          "id": "TD-20",
+          "q": "Run one real report on the live site, then paste the email into Gmail and Apple Mail",
+          "short": "A real report on production",
+          "quick": true,
+          "context": "<p>After the release: one real report end to end, then paste the Designed email into Gmail and into Apple Mail, and check that the photos show. Nobody has done this on production yet; it's the biggest risk to Nov 13.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
+          "source": "The Nov 13 readiness check",
+          "needsYou": true
+        },
+        {
+          "id": "TD-21",
+          "q": "Paste the sign-in gate's log line into #110",
+          "short": "The gate's log line",
+          "quick": true,
+          "context": "<p>After one real sign-in on production: Netlify → Logs → Functions → the identity gate. Copy one line (it shows a bucket, never an address) into a comment on #110. It sizes the gate's limits, which are guesses for now.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
+          "source": "#110",
+          "needsYou": true
+        },
+        {
+          "id": "TD-22",
+          "q": "Tell us what came of the Noble sit-down",
+          "short": "The Noble sit-down",
+          "quick": true,
+          "context": "<p>TD-9 is done, but what came of it isn't recorded: the glossary's questions, the floor and distance thresholds, the differences approach. A line in the note or a dev note is enough.</p>",
+          "options": [
+            [
+              "A",
+              "Written in the note"
+            ]
+          ],
+          "source": "D-28",
+          "needsYou": true
+        },
+        {
+          "id": "TD-23",
+          "q": "After the release: set the inspection API's four variables in Netlify",
+          "short": "The inspection API's keys",
+          "quick": true,
+          "context": "<p>Once #115 (sessions read production safely) is merged and released: in Netlify, <strong>Production context only</strong>, set <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> (each at least 32 characters, different from each other), <code>CR_TEST_USER_EMAIL</code> (an <code>@test.invalid</code> address) and <code>CR_EVAL_ANTHROPIC_API_KEY</code>. Then put the first two in the Casa cloud environment. Until then the endpoint refuses every request. Never paste a key into a chat.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
+          "source": "#115",
+          "needsYou": true
+        },
+        {
+          "id": "TD-24",
+          "q": "Get a password for your admin sign-in",
+          "short": "Your dev sign-in",
+          "quick": true,
+          "context": "<p>For #116's Studio sign-in, your admin address needs a password in Netlify Identity. Netlify → Identity → <strong>Invite users</strong>, invite the address, then set the password from the email. Put the address you want in the note (it should be one already in <code>CR_ADMIN_EMAILS</code>), or ask a thread to send the invite. Never paste a password into a chat.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ],
+            [
+              "B",
+              "Send the invite for me",
+              "put the address in the note"
+            ]
+          ],
+          "source": "#116",
+          "needsYou": true
         }
       ],
       "settled": [
@@ -1346,11 +1234,12 @@
         "<strong>TD-7 · The email-signatures credential</strong>: done 2026-10-21.",
         "<strong>TD-12 · The Casa account move</strong>: done 2026-10-21.",
         "<strong>TD-9 · Noble: glossary, thresholds, the differences approach</strong>: done, recorded 2026-10-21.",
-        "<strong>TD-14 · The inspect and test keys</strong>: done, recorded 2026-10-21."
+        "<strong>TD-14 · The inspect and test keys</strong>: done, recorded 2026-10-21.",
+        "<strong>TD-18 · Make's Anthropic key</strong>: done, 2026-10-28."
       ]
     },
     {
-      "num": "08",
+      "num": "09",
       "title": "What comes back next",
       "prefix": "QW",
       "url": "{repo}/docs/dispatch/README.md",
@@ -1394,14 +1283,58 @@
   ],
   "reading": [
     {
+      "id": "RL-12",
+      "date": "2026-10-29",
+      "qids": [
+        "DP-12",
+        "DP-13",
+        "DP-14",
+        "DP-15"
+      ],
+      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md\" target=\"_blank\" rel=\"noopener\">The design pass brief</a> (#117): every surface and what's still open on it, for your Claude Design pass.",
+      "settledIds": [
+        "DP-11"
+      ]
+    },
+    {
+      "id": "RL-11",
+      "date": "2026-10-29",
+      "qids": [
+        "CR-3"
+      ],
+      "html": "The writer's real eval: 12 drafts with a short read at the top (project files: <code>writer-eval/2026-10-29-eval.md</code>)."
+    },
+    {
+      "id": "RL-10",
+      "date": "2026-10-29",
+      "qids": [
+        "TD-19",
+        "TD-20",
+        "TD-21"
+      ],
+      "html": "<a href=\"https://claude.ai/artifact/8SjYxhoXL9uwzBURVrpXas\" target=\"_blank\" rel=\"noopener\">What changed this week</a>: #102 to #110 in plain words, what's waiting on you, and the next round."
+    },
+    {
+      "id": "RL-9",
+      "date": "2026-10-29",
+      "qids": [],
+      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/main/docs/comp-report/hubert-plan.md\" target=\"_blank\" rel=\"noopener\">The Hubert plan</a>: what he knows at each step, what he can do, and what's next.",
+      "settledIds": [
+        "HB-1",
+        "HB-2",
+        "HB-3",
+        "HB-4",
+        "HB-5",
+        "HB-6"
+      ]
+    },
+    {
       "id": "RL-8",
       "date": "2026-10-15",
       "qids": [
         "NB-11",
         "NB-12",
         "NB-13",
-        "NB-14",
-        "NB-15",
         "NB-16",
         "NB-17",
         "NB-18",
@@ -1409,14 +1342,18 @@
         "NB-20",
         "NB-21",
         "NB-22",
-        "NB-23",
         "NB-24",
         "NB-25",
-        "NB-26",
         "NB-27",
         "NB-28"
       ],
-      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/comp-report/feedback/2026-10-15-noble/09-plan.md\" target=\"_blank\" rel=\"noopener\">Noble's walk-through: the plan</a>, with the topic reports 01–08 beside it."
+      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/comp-report/feedback/2026-10-15-noble/09-plan.md\" target=\"_blank\" rel=\"noopener\">Noble's walk-through: the plan</a>, with the topic reports 01–08 beside it.",
+      "settledIds": [
+        "NB-23",
+        "NB-26",
+        "NB-15",
+        "NB-14"
+      ]
     },
     {
       "id": "RL-7",
@@ -1441,24 +1378,26 @@
       "qids": [
         "CR-3",
         "CR-1",
-        "CR-2",
         "TD-5"
       ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/76\" target=\"_blank\" rel=\"noopener\">The writer and QA (#76)</a>: Claude drafts the comp email in Casa's voice; the house voice is quoted at the end.",
       "settledIds": [
-        "TD-3"
+        "TD-3",
+        "CR-2"
       ]
     },
     {
       "id": "RL-5",
       "date": "2026-10-14",
       "qids": [
-        "AC-1",
-        "AC-5",
-        "AC-6",
         "AC-7"
       ],
-      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/casa-accounts-transfer.md\" target=\"_blank\" rel=\"noopener\">Moving to Casa accounts</a>: the plan, with the claude.ai side from the Casa Blanca Project."
+      "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/casa-accounts-transfer.md\" target=\"_blank\" rel=\"noopener\">Moving to Casa accounts</a>: the plan, with the claude.ai side from the Casa Blanca Project.",
+      "settledIds": [
+        "AC-1",
+        "AC-5",
+        "AC-6"
+      ]
     },
     {
       "id": "RL-4",
@@ -1487,14 +1426,16 @@
       "id": "RL-2",
       "date": "2026-10-14",
       "qids": [
+        "FB-6"
+      ],
+      "html": "<a href=\"https://casa-blanca-creative-studio.netlify.app/tools/dev-notebook/\" target=\"_blank\" rel=\"noopener\">The team Feedback list</a>, on the notebook page: <strong>Make a note</strong> on anything worth acting on.",
+      "settledIds": [
         "FB-1",
         "FB-2",
         "FB-3",
         "FB-4",
-        "FB-5",
-        "FB-6"
-      ],
-      "html": "<a href=\"https://casa-blanca-creative-studio.netlify.app/tools/dev-notebook/\" target=\"_blank\" rel=\"noopener\">The team Feedback list</a>, on the notebook page: <strong>Make a note</strong> on anything worth acting on."
+        "FB-5"
+      ]
     },
     {
       "id": "RL-1",

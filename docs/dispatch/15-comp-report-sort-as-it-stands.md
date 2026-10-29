@@ -85,7 +85,7 @@ data; don't move the card's sections, the table's columns or the flow. One PR.
     (`https://x@evil.example`), which stays plain text. Hubert's text only; the agent's bubble stays plain. It fixes old
     transcripts too. Tests for a script tag, a `javascript:` link, a userinfo link, the `rel` and `target` on a good link, the
     host shown beside a labelled link, and half-streamed text. It's in this
-    dispatch because the drawer opens on Sort; Calliste owns `Chat.tsx` from Dispatch 24 on.
+    dispatch because the drawer opens on Sort; Collister owns `Chat.tsx` from Dispatch 24 on.
 
 ## Not in scope (Claude Design, phase B)
 

@@ -17,10 +17,10 @@
 | NW-066 a | Kimani | Co-op: no interior-size gaps or $/sq ft wording | FIX | Abacus | A-now |
 | NW-066 b | Kimani | Review the co-op flow on the co-op sample | DESIGN | Kimani, Claude Design | B-after-design |
 | NW-067 a | Both | ⓘ on every accordion; say why these comps count; show the tags | BUILD | Mason | A-now |
-| NW-067 b | Both | Hubert's own reason per comp | LATER | Calliste | C-later |
-| NW-068 | Kimani | Hubert sees the target once Findings is reached; hint behind ⓘ | BUILD | Calliste (Mason if Calliste isn't up) | A-now |
+| NW-067 b | Both | Hubert's own reason per comp | LATER | Collister | C-later |
+| NW-068 | Kimani | Hubert sees the target once Findings is reached; hint behind ⓘ | BUILD | Collister (Mason if Collister isn't up) | A-now |
 | NW-069 a | Both | Pin the neutral result at the reveal; show movement toward the target | BUILD | Abacus, then Mason | A-now |
-| NW-069 b | Both | The loop after Findings: find better comps toward the target | DESIGN | Claude Design, then Calliste | B-after-design |
+| NW-069 b | Both | The loop after Findings: find better comps toward the target | DESIGN | Claude Design, then Collister | B-after-design |
 | NW-070 | Kimani | Whose target: client, agent or both | BUILD | Mason | A-now |
 | NW-071 a | Noble | Timing and Sales against ask: plain words | FIX | Mason | A-now |
 | NW-071 b | Noble | A strip chart of each sale against its ask | DESIGN | Claude Design | B-after-design |
@@ -29,7 +29,7 @@
 | NW-073 b | Kimani | Client and deal details first-class, not in the sixth accordion | DESIGN | Claude Design | B-after-design |
 | NW-074 a | Both | Client fields in the data model (financing, urgency, values, non-negotiables) | BUILD | Mason | A-now |
 | NW-074 b | Both | Where they're asked: intake or after Findings | DESIGN | Claude Design | B-after-design |
-| NW-075 | Kimani | A justification step after Findings, with Hubert | DESIGN | Claude Design, then Calliste | B-after-design |
+| NW-075 | Kimani | A justification step after Findings, with Hubert | DESIGN | Claude Design, then Collister | B-after-design |
 | NW-076 | Kimani | How this was worked out as a factor dropdown under How Hubert got there | DESIGN | Claude Design | B-after-design |
 | NW-077 a | Kimani | "13 still needed": count only what the agent can fill, and say what | FIX | Mason | A-now |
 | NW-077 b | Kimani | Engine: no gaps for comps that don't count or for facts no form asks | FIX | Abacus | A-now |
@@ -62,7 +62,7 @@
 
 **NW-066 a.** On a co-op the price table and the per-SF figures are already hidden (`ws.sf`, `hasSF`). But the engine still raises "The subject's interior area is only the agent's estimate, so 'on the facts' has no $/sqft implied values" and "has no interior area, so it contributes no unit-rate indication" on a co-op (checked on the sample run as a co-op). Drop both gaps when `property_type` is `coop`. **066 b** needs the co-op sample from NW-054 b first. A five-price ladder (low, quarters, high, with no $/sq ft) could stand in for the table on co-ops: Kimani's call during that review.
 
-**NW-067 a.** `CountingComps` already shows the agent's note ("No note yet. Edit to say why it's here." when there's none). Add the comp's tags beside the note. Add one line at the top: "Your 1st-tier comps. Only the sales set the range; the asks show where the market is." Give every accordion header an ⓘ. Reuse the one in `src/views/newcomp/Frame.tsx` (hover, focus and tap), not a new component. **067 b:** Hubert writes nothing per comp today, and he's a guide only (D-27.6). A per-comp reason waits for Calliste (NW-093).
+**NW-067 a.** `CountingComps` already shows the agent's note ("No note yet. Edit to say why it's here." when there's none). Add the comp's tags beside the note. Add one line at the top: "Your 1st-tier comps. Only the sales set the range; the asks show where the market is." Give every accordion header an ⓘ. Reuse the one in `src/views/newcomp/Frame.tsx` (hover, focus and tap), not a new component. **067 b:** Hubert writes nothing per comp today, and he's a guide only (D-27.6). A per-comp reason waits for Collister (NW-093).
 
 **NW-068. Hubert never receives the target today, and that's not what D-4 decided.** The target is stored in `comp_report.reports.target` (jsonb, `{price, note}`: `workspace/state.ts`, `TargetState`; saved by `PATCH /workspace`). `server/numbers.ts` never selects it ("the target isn't read at all"). The current prompt (`server/assistant.ts`, `cr6-2026-10-15`) tells Hubert "You never see the agent's own number or any target price". The writer can't receive it by construction either (`workspace/writer-input.ts`). D-4 (A), design §8.5 and D-27 item 5 all say Hubert sees the target **once the neutral result exists**. The copy on Findings ("Hubert never sees it") and the modal's tip contradict `Terms.tsx`'s own header comment. To do:
 - Add a new prompt version (never edit a shipped one). It says Hubert sees the target only after the reveal, and helps argue for it per §8.5: the legitimate levers, and the illegitimate ones named as such.

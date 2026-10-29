@@ -1,7 +1,7 @@
 # Dispatch 25 — Comp report: the per-comp review on Sort, the human first (CR-8a)
 
 **Dispatched by:** the bosses' demo debrief thread, for Kimani · 2026-10-22 · **To:** a build thread in
-Mason's lane (Calliste hasn't started; the prompt in item 5 moves to Calliste's track when it does)
+Mason's lane (Collister hasn't started; the prompt in item 5 moves to Collister's track when it does)
 **Builds from:** `docs/comp-report/feedback/2026-10-22-bosses-demo/notes.md`, **its last section (Kimani's
 decisions) first**; D-29 in `docs/decisions.md`; `src/views/comp/CompForm.tsx` and `src/views/sort/*` (the
 note, tags and tier today); `server/lines.ts` and `api/lines.ts` (#89: the pattern for a small model call that
