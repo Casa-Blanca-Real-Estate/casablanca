@@ -172,6 +172,41 @@ describe('get_numbers and prompt versions', { skip: skipWithoutDatabase }, () =>
     assert.ok(results.with_estimates!.base, 'with estimates has a base from the estimated size');
     assert.equal(results.on_facts!.base, null, 'on the facts has none: the size is only an estimate');
   });
+  test('a buyer’s client facts reach get_numbers after the reveal only, without the client’s name (Your client)', async () => {
+    const reportId = await createReport('A buyer with a pre-approval');
+    const PRE_APPROVAL = 3_777_777;
+    const saved = await handleWorkspace(request('workspace', 'PATCH', {
+      reportId,
+      brief: {
+        audience: { value: 'buyer', asOf: '2026-10-29' },
+        clientName: { value: 'Jordan Ames', asOf: '2026-10-29' },
+        client: { urgency: { pace: { value: 'asap', asOf: '2026-10-29' } }, motivations: { value: 'Lease ends in March', asOf: '2026-10-29' } },
+      },
+      state: { dealTerms: { template: 'buyer_traditional', financing: { value: 'mortgage', asOf: '2026-10-29' }, preApproved: { value: true, asOf: '2026-10-29' }, preApprovalAmount: { value: PRE_APPROVAL, asOf: '2026-10-29' } } },
+    }), deps);
+    assert.equal(saved.status, 200);
+    const read = () => withActor(pool as unknown as PoolLike, ana, (tx) => numbersFor(tx, reportId));
+    const before = await read();
+    assert.equal('client' in before!, false, 'nothing about the client before the reveal');
+    assert.equal(JSON.stringify(before).includes('3,777,777'), false);
+
+    const res = await handleWorkspace(request('workspace', 'PATCH', { reportId, call: { skipped: true, at: new Date().toISOString() } }), deps);
+    assert.equal(res.status, 200);
+    const after = await read();
+    const client = (after as Record<string, unknown>).client as Record<string, unknown>;
+    assert.equal(client.side, 'buyer');
+    assert.equal(client.pre_approved, true);
+    assert.equal(client.pre_approved_for, '$3,777,777');
+    assert.equal(client.how_soon, 'as soon as possible');
+    assert.equal(client.what_is_moving_them, 'Lease ends in March');
+    assert.equal(JSON.stringify(after).includes('Jordan'), false, 'never the client’s name');
+
+    // The pace is one of two, and a hard fair-housing term in what's moving them isn't saved.
+    const bad = await handleWorkspace(request('workspace', 'PATCH', { reportId, brief: { client: { urgency: { pace: { value: 'yesterday', asOf: '2026-10-29' } } } } }), deps);
+    assert.equal(bad.status, 400);
+    const fh = await handleWorkspace(request('workspace', 'PATCH', { reportId, brief: { client: { motivations: { value: 'Wants a building with no children', asOf: '2026-10-29' } } } }), deps);
+    assert.equal(fh.status, 400);
+  });
   test('the home’s time on the market, from its StreetEasy read, reaches get_numbers', async () => {
     const reportId = await createReport('100 Barclay Street #17L');
     const asOf = newYorkToday();

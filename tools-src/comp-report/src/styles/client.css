@@ -1,0 +1,26 @@
+/* Your client (2026-10-29): rudimentary, for Claude Design to place (NW-074 b). */
+.cl-fields { display: flex; flex-direction: column; }
+.cl-row {
+  display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: center;
+  padding: 10px 0; border-top: 1px solid var(--cb-line);
+}
+.cl-k { font-size: 11px; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--cb-black); }
+.cl-fields .chips.small { gap: 6px; }
+.cl-fields .chips.small .chip { padding: 7px 12px; }
+.cl-line { display: flex; align-items: center; border-bottom: 1px solid var(--cb-line); padding: 4px 0; font-size: 15px; font-weight: 800; }
+.cl-line:focus-within, .cl-input:focus { border-bottom-color: var(--cb-black); }
+.cl-line input { color: var(--cb-black); border: 0; background: none; font: inherit; color: inherit; padding: 0; outline: none; }
+.cl-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cl-input {
+  width: 100%; border: 0; border-bottom: 1px solid var(--cb-line); background: none; border-radius: 0;
+  padding: 6px 0; font-size: 14px; color: var(--cb-black); outline: none;
+}
+.cl-input::placeholder, .cl-line input::placeholder { color: var(--cb-sand); font-weight: 400; }
+.cl-warn { font-size: 12px; color: var(--cb-red); }
+.cl-note { margin: 10px 0 0; font-size: 12px; color: var(--cb-mid); }
+.cl-rows { margin-bottom: 12px; }
+.cl-switch { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--cb-line); }
+@media (max-width: 560px) {
+  .cl-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .cl-rows .fi-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

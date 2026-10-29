@@ -232,7 +232,8 @@ export const workspaceApi = {
   captureSamplePhotos: async (): Promise<void> => {
     await fetch('/.netlify/functions/comp-report-sample-photos-background', { method: 'POST', headers: await headers() }).catch(() => undefined);
   },
-  sample: (kind: 'condo' | 'coop' = 'condo') => api<SampleWalkthrough>(`/api/comp-report/sample?kind=${kind}`),
+  /** The sample for the report's side: a buyer's report gets the buyer's brief, terms and lines. */
+  sample: (kind: 'condo' | 'coop' = 'condo', side: 'buyer' | 'seller' = 'seller') => api<SampleWalkthrough>(`/api/comp-report/sample?kind=${kind}&side=${side}`),
   /** A new sample report, built on the server (Dispatch 23): the home, and its export imported, unsorted. */
   newSample: (kind: 'condo' | 'coop', title: string) =>
     api<{ report: Report }>('/api/comp-report/sample', { method: 'POST', body: { action: 'fill', kind, title } }),

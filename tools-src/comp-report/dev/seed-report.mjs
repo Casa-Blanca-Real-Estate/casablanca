@@ -24,7 +24,7 @@ await api('/api/comp-report/workspace', 'PATCH', {
   brief: { audience: { value: side, asOf: today }, clientName: { value: 'Jordan and Sam', asOf: today } },
 });
 if (stage !== 'empty') {
-  const s = await api('/api/comp-report/sample');
+  const s = await api(`/api/comp-report/sample?side=${side}`);
   const intake = { ...s.intake };
   // A co-op without a size: no per-SF figure anywhere.
   if (type === 'coop') delete intake.areaSqft;

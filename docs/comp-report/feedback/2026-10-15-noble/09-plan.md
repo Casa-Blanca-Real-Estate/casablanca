@@ -211,6 +211,8 @@ Workspace accounts only; personal Gmail keeps Copy. It needs Kimani's Google Clo
 | NW-032, 068 c | A first-run walkthrough | Try the ⓘ hints first (15, 20, 21); decide after Design |
 | NW-067 b | Hubert's reason per comp | He's a guide only (D-27.6); Calliste's later work |
 | NW-094 | Hubert reviews the tool | After round one, as a script on the seeded samples (about $1 a run) |
+| NW-074 c | Client profiles: each agent's clients saved once, picked from a dropdown on a new report, filling the name, financing, pre-approval and pace (Kimani, 2026-10-29) | Needs a client table, who-sees-what rules and a privacy call; first check whether Casa's agent app already holds clients (NB-33). The per-report Your client fields (2026-10-29) are the data it would fill. |
+| NW-074 d | Credit score, credit-worthiness and income (Kimani, 2026-10-29) | Sensitive financial data about someone who never signed up; needs a privacy and legal review first (NB-32). The pre-approval stands in for it. |
 | NW-083 c | Subject drafts from the writer | Needs the writer's real eval (Dispatch 13, keys) and NW-093 a's answer on who owns the writer; it goes with Calliste's second dispatch. |
 
 ## No action, and process

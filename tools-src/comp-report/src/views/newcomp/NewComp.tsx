@@ -347,8 +347,8 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
       return null;
     }
   });
-  // Edit details: what Cancel puts back.
-  const [before] = useState(() => ({ intake: ws.intake, brief: ws.brief, propertyType: ws.propertyType }));
+  // Edit details: what Cancel puts back. The deal terms too: Your client sets the pre-approval on them.
+  const [before] = useState(() => ({ intake: ws.intake, brief: ws.brief, propertyType: ws.propertyType, dealTerms: ws.dealTerms }));
 
   /** Moving on confirms what the page gave: the agent has seen it here. */
   async function confirmHome(): Promise<boolean> {
@@ -365,6 +365,7 @@ function DetailsScreen({ ws, editing, onScreen, onClose }: { ws: Workspace; edit
     if (ws.readOnly) return onClose();
     if (JSON.stringify(ws.intake) !== JSON.stringify(before.intake)) ws.setIntake(before.intake);
     if (JSON.stringify(ws.brief) !== JSON.stringify(before.brief)) ws.setBrief(before.brief);
+    if (JSON.stringify(ws.dealTerms) !== JSON.stringify(before.dealTerms)) ws.setDealTerms(before.dealTerms);
     if (ws.propertyType !== before.propertyType) ws.setPropertyType(before.propertyType);
     // Closing marks the screen reached, from the workspace state as it was rendered: a tick
     // later, that state has the details put back, so the close doesn't undo the Cancel.
