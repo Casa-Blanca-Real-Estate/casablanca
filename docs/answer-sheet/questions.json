@@ -1,7 +1,10 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
+    "CR-8",
+    "CR-9",
+    "TD-24",
     "DP-12",
     "DP-13",
     "DP-14",
@@ -799,6 +802,48 @@
             ]
           ],
           "source": "#110"
+        },
+        {
+          "id": "CR-8",
+          "q": "Turn off Netlify Identity's autoconfirm, so password sign-in works?",
+          "short": "Email confirmation for passwords",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> One sign-in for the whole Studio (#116). Password sign-in only works while Identity confirms new accounts by email. While <em>autoconfirm</em> is on, the comp report turns password sign-in off on purpose, because an unconfirmed address proves nothing.</p><p><strong>Why it needs you.</strong> It's a Netlify setting (Identity, then Emails / Registration). It affects password sign-ups only; Google sign-in is unchanged.</p>",
+          "options": [
+            [
+              "A",
+              "Turn autoconfirm off",
+              "new password accounts confirm by email",
+              true
+            ],
+            [
+              "B",
+              "Leave it on",
+              "password sign-in stays off; Google only"
+            ]
+          ],
+          "source": "#116"
+        },
+        {
+          "id": "CR-9",
+          "q": "Require the Studio sign-in on the older functions too?",
+          "short": "Lock down the older functions",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The new Studio sign-in (#116) hides pages but doesn't protect what's behind them. The older functions (Claude copy generation, the StreetEasy import, the image proxy, brand/site) still answer anyone without a signed-in token.</p><p><strong>Why it needs you.</strong> It's a small follow-up PR, but every tool call would then need a sign-in, including any outside script that calls them (a Make scenario, say). The PR would list every caller it finds first.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, in a follow-up PR, after checking what calls them",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Not now",
+              ""
+            ]
+          ],
+          "source": "#116"
         }
       ],
       "settled": [
@@ -1158,6 +1203,26 @@
             ]
           ],
           "source": "#115",
+          "needsYou": true
+        },
+        {
+          "id": "TD-24",
+          "q": "Get a password for your admin sign-in",
+          "short": "Your dev sign-in",
+          "quick": true,
+          "context": "<p>For #116's Studio sign-in, your admin address needs a password in Netlify Identity. Netlify → Identity → <strong>Invite users</strong>, invite the address, then set the password from the email. Put the address you want in the note (it should be one already in <code>CR_ADMIN_EMAILS</code>), or ask a thread to send the invite. Never paste a password into a chat.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ],
+            [
+              "B",
+              "Send the invite for me",
+              "put the address in the note"
+            ]
+          ],
+          "source": "#116",
           "needsYou": true
         }
       ],
