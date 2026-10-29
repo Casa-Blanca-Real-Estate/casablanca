@@ -315,7 +315,7 @@ export async function runLinkRead(req: Request, deps: LinkReadDeps): Promise<Res
     if (finished.status === 'done' && observationId !== null) {
       await enqueueListingJudgments(
         { observationId, record: finished.record, userEmail: user.email },
-        { pool, origin: new URL(req.url).origin, config: deps.decide?.config, fetchImpl: deps.decide?.fetchImpl },
+        { pool, origin: new URL(req.url).origin, config: deps.decide?.config, fetchImpl: deps.decide?.fetchImpl, testUser: Boolean(user.test) },
       );
     }
     return json({ read: readId, started: true, status: finished.status }, 200);

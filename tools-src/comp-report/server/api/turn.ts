@@ -32,9 +32,11 @@ import type { WebSearcher } from '../web-search.ts';
 import { allowMethods, HttpError, readJsonObject, respond, UUID } from '../http.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
+import { anthropicKeyFor, guardTestAi } from '../test-user.ts';
 
 export interface TurnDeps extends AuthDeps {
-  anthropic: () => Anthropic;
+  /** The client for this user's calls: the test user's uses the eval key (server/test-user.ts). */
+  anthropic: (user: SessionUser) => Anthropic;
   /** Hubert's web search and page reads (server/web-search.ts): without it, he says search isn't available. */
   web?: () => WebSearcher;
   deadlineMs?: number;
@@ -42,8 +44,9 @@ export interface TurnDeps extends AuthDeps {
   inFlightSeconds?: number;
 }
 
-export function productionAnthropic(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+export function productionAnthropic(user?: SessionUser): Anthropic {
+  // The test user's calls use CR_EVAL_ANTHROPIC_API_KEY only; ANTHROPIC_API_KEY is never read for it.
+  const apiKey = anthropicKeyFor(user);
   if (!apiKey) throw new HttpError(503, 'assistant_not_configured', 'The assistant has no API key in this environment.');
   return new Anthropic({ apiKey, maxRetries: 1 });
 }
@@ -137,7 +140,8 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
     if (message && message.length > MAX_MESSAGE) throw new HttpError(413, 'message_too_long');
 
     // Before anything is recorded: without a client (no key here) the agent's message isn't stored unanswered.
-    const client = deps.anthropic();
+    await guardTestAi(pool, user, deps.env);
+    const client = deps.anthropic(user);
     let prepared;
     try {
       prepared = await prepare(pool, user, reportId, message, deps.inFlightSeconds ?? IN_FLIGHT_SECONDS, deps.web?.());

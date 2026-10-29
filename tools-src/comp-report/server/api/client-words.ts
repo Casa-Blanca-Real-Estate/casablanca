@@ -31,12 +31,14 @@ import { withActor } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { neutralNumbers } from '../numbers.ts';
 import { appendClientRounds, reviewLimit } from '../reviews.ts';
-import { requireUser, type AuthDeps } from '../session.ts';
+import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
+import { guardTestAi } from '../test-user.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
 
 export interface ClientWordsDeps extends AuthDeps {
-  anthropic: () => Anthropic;
+  /** The client for this user's calls: the test user's uses the eval key (server/test-user.ts). */
+  anthropic: (user: SessionUser) => Anthropic;
   env?: Record<string, string | undefined>;
 }
 
@@ -99,7 +101,8 @@ export function handleClientWords(req: Request, deps: ClientWordsDeps): Promise<
       return { w, wrote: job === 'feedback' ? agentWords(w) : null };
     });
 
-    const outcome = await callClientWords(deps.anthropic(), prepared.w);
+    await guardTestAi(pool, user, deps.env);
+    const outcome = await callClientWords(deps.anthropic(user), prepared.w);
 
     if (outcome.usage && outcome.model) {
       const totals = usageTotals(outcome.model, outcome.usage as Parameters<typeof usageTotals>[1]);

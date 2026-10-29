@@ -50,6 +50,8 @@ export interface EnqueueDeps {
   now?: () => number;
   /** Names to scrub besides Casa's users'. */
   extraNames?: readonly string[];
+  /** The read was the test user's (Dispatch 23 item 4): nothing is queued, and no key is read. */
+  testUser?: boolean;
 }
 
 /** Casa's people, from comp_report.users — their names come out of any listing that mentions them. */
@@ -103,6 +105,7 @@ export async function kickDrainer(store: DecideStore, origin: string, fetchImpl:
 }
 
 export async function enqueueListingJudgments(obs: ListingObservation, deps: EnqueueDeps): Promise<EnqueueResult> {
+  if (deps.testUser) return { queued: false, why: 'off' };
   const config = deps.config ?? decideConfig();
   if (config.mode !== 'watch' || !deps.pool) return { queued: false, why: 'off' };
   try {

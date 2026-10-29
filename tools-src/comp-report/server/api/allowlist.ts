@@ -10,7 +10,7 @@
 // Inviting someone from outside Casa takes two steps: the grant here, then the
 // invitation from Netlify → Identity → Invite users. The sign-up gate and the
 // per-request check both read this table.
-import { GRANTABLE_ROLES, normalizeEmail } from '../access.ts';
+import { GRANTABLE_ROLES, isTestAddress, normalizeEmail } from '../access.ts';
 import { withActor, type Role } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond } from '../http.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
@@ -93,6 +93,7 @@ export function handleAllowlist(req: Request, deps: AuthDeps): Promise<Response>
     const email = normalizeEmail(body.email);
     if (!email) throw new HttpError(400, 'bad_email', 'Enter one email address.');
     if (email === user.email) throw new HttpError(400, 'own_access', 'You can\'t change your own access.');
+    if (isTestAddress(email)) throw new HttpError(400, 'test_address', 'An @test.invalid address is the test user\'s: it can\'t be granted access.');
     const role = body.role ?? 'external';
     if (role === 'admin') {
       throw new HttpError(400, 'bad_role', 'Admins are set in Netlify (CR_ADMIN_EMAILS), not here.');

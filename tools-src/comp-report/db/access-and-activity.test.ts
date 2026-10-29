@@ -481,7 +481,7 @@ describe('the sign-in log and the activity log (Dispatch 22b)', { skip: skipWith
     await raw("insert into comp_report.signin_error_buckets (hour, scope, ip_hash, n) values (now() - interval '2 days', 'gate', '*', 5)");
     // A kind Dispatch 23 may add: the purge must trim it by age, not by a list of kinds.
     await su.query('alter table comp_report.access_events drop constraint access_events_kind_check');
-    await raw("insert into comp_report.access_events (at, kind, source, created_by) values (now() - interval '14 months', 'inspect', 'server', 't')");
+    await raw("insert into comp_report.access_events (at, kind, source, view, text_flag, created_by) values (now() - interval '14 months', 'inspect', 'server', 'reports', false, 't')");
 
     for (const actor of [SYSTEM('access-log'), ADMIN]) {
       await assert.rejects(as(pool, actor, (tx) => tx.query('select comp_report.purge_access_events()')), /only the system actor log-purge|permission denied/);
