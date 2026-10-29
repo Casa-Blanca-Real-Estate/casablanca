@@ -8,6 +8,12 @@ behind an item (the `NW-` ids point there and to `feedback/2026-10-15-noble/00-i
 
 This file is meant to be enough on its own. Where it points elsewhere, it's for depth, not to fill a gap.
 
+**Read the code from `claude/main`, never `release`.** `claude/main` is where every PR merges; `release` is
+only what's live on production, and it runs behind. Anything this brief calls "built" is on `claude/main`.
+
+**Design for laptop and tablet widths only (Kimani, 2026-10-29).** Agents won't use the tool on phones for
+now; phone layouts get their own design later. Don't design phone breakpoints, and skip the phone screenshots.
+
 ## Contents
 
 1. [What the tool is, in one minute](#1-what-the-tool-is-in-one-minute)
@@ -563,9 +569,7 @@ answers questions, flags weak comps, and changes a comp or the email when the ag
 client's words and Send were checked at phone width in Dispatches 25 and 26. Everything else shows "Narrow
 windows aren't laid out yet. Use a wider window for now."
 
-**Needs design.** Which screens an agent must be able to use on a phone by 11-13. Recommended: the reports list,
-Review comps, Findings (read only), Send (copy and mark as sent), Hubert. The New report window and Sort's table
-can stay desktop-first for now.
+**Decided (Kimani, 2026-10-29): not in this pass.** Laptop and tablet only; phones get their own design later.
 
 ---
 
@@ -686,10 +690,10 @@ If the pass runs short, in this order (what Erez and Noble will see on 11-13 fir
 
 These change what gets designed. Each goes on the Casa Answer Sheet.
 
-1. **An offer range from the client fields?** Should pre-approval, cash and urgency produce a separate "what this
-   buyer can offer" range beside the true estimate (which they never move)? *Recommend: yes, as its own line on
-   Findings, after 11-13; design leaves room for it now.*
-2. **Which screens must work on a phone by 11-13?** *Recommend: reports, Review comps, Findings (read), Send, Hubert.*
+1. **An offer range from the client fields?** *Answered (Kimani, 2026-10-29, DP-11):* the true estimate never
+   moves. Show a client-adjusted view as its own layer beside the true estimate, the agent's number and the
+   target (separate or stacked bars, perhaps), designed in this pass.
+2. ~~Which screens must work on a phone by 11-13?~~ None: laptop and tablet only (Kimani, 2026-10-29).
 3. **Orientation:** a pointing tour, a first-run checklist, or a short video per screen? *Recommend: a pointing
    tour for practice agents' first report, behind the guide button after.*
 4. **One way to open Hubert,** the top-bar pill or the edge tab? *Recommend: the pill, and drop the tab.*
