@@ -48,6 +48,7 @@ function AccountMenu({ account, onSignOut, menuRef }: { account: Account; onSign
       <button ref={pill} type="button" className="sh-pill sh-acct" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className="sh-dot" aria-hidden="true" />
         <span className="sh-account-email">{account.email}</span>
+        <span className="sh-account-initial" aria-hidden="true">{account.email.charAt(0).toUpperCase()}</span>
       </button>
       {open && (
         <div className="sh-menu" role="group" aria-label="Account">

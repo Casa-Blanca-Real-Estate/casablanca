@@ -24,3 +24,18 @@ export function signInErrorNotice(hash: string): string | null {
   if (error === 'access_denied') return CANCELLED_NOTICE; // cancelled at Google
   return FAILED_NOTICE;
 }
+
+/**
+ * Tells the server what came back (Dispatch 22b): POST /api/comp-report/signin-error, with no
+ * sign-in. The server keeps only codes from its own closed lists, never the text. Fire and forget.
+ */
+export function reportSignInError(hash: string): void {
+  if (!/^#error=/.test(hash)) return;
+  const params = new URLSearchParams(hash.slice(1));
+  const body = JSON.stringify({
+    error: (params.get('error') ?? '').slice(0, 64),
+    error_description: (params.get('error_description') ?? '').slice(0, 300),
+  });
+  fetch('/api/comp-report/signin-error', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body })
+    .catch(() => undefined);
+}

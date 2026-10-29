@@ -27,6 +27,7 @@ import {
 import { withActor, type PoolLike, type Queryable } from '../db.ts';
 import { editFromResult, type HubertEmailEdit } from '../hubert-email.ts';
 import { trailOf, type TrailEntry } from '../hubert-trail.ts';
+import { logActivity, type Action } from '../logs.ts';
 import type { WebSearcher } from '../web-search.ts';
 import { allowMethods, HttpError, readJsonObject, respond, UUID } from '../http.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
@@ -85,11 +86,13 @@ async function prepare(pool: PoolLike, user: SessionUser, reportId: string, mess
     const edits: HubertEmailEdit[] = [];
     // And his trail: every change those tools made, for the chat to show at once.
     const changes: TrailEntry[] = [];
+    // And the activity log's rows for his comp edits, written once this transaction commits.
+    const actions: Action[] = [];
     if (pending.length) {
       // §8.3 rule 6: run the pending tool calls server-side first.
       const results = [];
       for (const call of pending) {
-        const result = await runTool(tx, reportId, call, prompt, { user, ...(web ? { web } : {}) });
+        const result = await runTool(tx, reportId, call, prompt, { user, actions, ...(web ? { web } : {}) });
         results.push(result);
         const edit = call.name === 'edit_email' ? editFromResult(result) : null;
         if (edit) edits.push(edit);
@@ -105,7 +108,7 @@ async function prepare(pool: PoolLike, user: SessionUser, reportId: string, mess
     } else {
       throw new HttpError(400, 'nothing_to_send', 'Send a message.');
     }
-    return { messages: buildMessages(stored), nextSeq: seq + 1, prompt, edits, changes };
+    return { messages: buildMessages(stored), nextSeq: seq + 1, prompt, edits, changes, actions };
   });
 }
 
@@ -144,6 +147,7 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
       }
       throw error;
     }
+    await logActivity(pool, user.email, prepared.actions);
 
     const deadline = deps.deadlineMs ?? 50_000;
     const heartbeat = deps.heartbeatMs ?? 10_000;

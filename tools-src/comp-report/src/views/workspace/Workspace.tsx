@@ -10,7 +10,7 @@
 // Admins can switch on the build's own notes; agents never see them.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
-import { ApiError, clientWordsApi, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
+import { agentCardApi, ApiError, clientWordsApi, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type LinkReadView, type LinksState, type AgentCard, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { cleanAllClientRounds } from '../../../workspace/client-words.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
@@ -36,6 +36,7 @@ import { SortStep } from './SortStep.tsx';
 import { ReviewFlow } from '../review/ReviewFlow.tsx';
 import { Center, DevStrip, DRAWER_SLIDE_MS, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
 import { ReportBar } from '../shell/ReportBar.tsx';
+import { trackScreen } from '../../activity.ts';
 import { ProgressRow, WorkspaceHeader } from '../shell/WorkspaceHeader.tsx';
 
 type Field = 'title' | 'brief' | 'call' | 'target' | 'state' | 'sampleData' | 'propertyType';
@@ -168,6 +169,10 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [state, setStateState] = useState<WorkspaceState>({});
   const [screen, setScreen] = useState<ScreenId>(screenFromUrl);
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
+  // The activity log's screen line (Dispatch 22b): the new report's steps while its modal is open, else the screen.
+  useEffect(() => {
+    trackScreen(start === 'home' ? 'new-report' : start ? (`new-report-${start}` as const) : screen, reportId);
+  }, [start, screen, reportId]);
   const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
   // The drawer stays mounted for its slide out (shell.css), then goes (Kimani's notebook, 2026-10-27).
   const [drawerShown, setDrawerShown] = useState(drawerOpen);
@@ -496,13 +501,26 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     }
   }, [homeRead?.id, homeRead?.status, readOnly]);
 
+  // The agent's card for the email's sign-off: name, phone, headshot, from Casa's roster.
+  const [agentCard, setAgentCard] = useState<AgentCard | null>(null);
+  useEffect(() => {
+    let live = true;
+    void agentCardApi.mine().then((card) => {
+      if (live) setAgentCard(card);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const ws: WorkspaceModel | null = data && {
     reportId,
     report: data.report,
     today,
     readOnly,
     canSample,
-    agentName: me.user.name ?? '',
+    agentName: agentCard?.name || me.user.name || '',
+    agentCard,
     brief,
     setBrief: (next) => {
       setBriefState(next);

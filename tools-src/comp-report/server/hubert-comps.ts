@@ -15,6 +15,7 @@ import { noteOf, OVERRIDE_KEYS, type OverrideKey } from '../workspace/state.ts';
 import { address } from '../workspace/summary.ts';
 import { patchComp } from './api/comps.ts';
 import type { Queryable } from './db.ts';
+import type { Action } from './logs.ts';
 import { HttpError } from './http.ts';
 import type { TrailEntry } from './hubert-trail.ts';
 import { neutralNumbers } from './numbers.ts';
@@ -60,7 +61,7 @@ function findComp(comps: WorkspaceComp[], name: string): WorkspaceComp | string 
     : `No comp in the report is named “${name}”. Call get_numbers and use a comp's name as it gives it.`;
 }
 
-export type CompEditOutcome = { ok: true; summary: string; trail: TrailEntry[] } | { ok: false; error: string };
+export type CompEditOutcome = { ok: true; summary: string; trail: TrailEntry[]; actions: Action[] } | { ok: false; error: string };
 
 /** edit_comp: the agent's change to one comp, checked and saved. */
 export async function editCompForAgent(tx: Queryable, user: SessionUser, reportId: string, input: unknown): Promise<CompEditOutcome> {
@@ -141,13 +142,14 @@ export async function editCompForAgent(tx: Queryable, user: SessionUser, reportI
 
   // A refused edit leaves the transcript's transaction usable: the save runs in a savepoint.
   await tx.query('savepoint hubert_edit_comp');
+  let actions: Action[];
   try {
-    await patchComp(tx, user, reportId, j.reportCompId, body, 'assistant');
+    actions = await patchComp(tx, user, reportId, j.reportCompId, body, 'assistant');
     await tx.query('release savepoint hubert_edit_comp');
   } catch (error) {
     await tx.query('rollback to savepoint hubert_edit_comp');
     if (error instanceof HttpError) return { ok: false, error: error.message };
     throw error;
   }
-  return { ok: true, summary: trail.map((t) => `${t.label}: ${t.after ?? 'cleared'}`).join('; '), trail };
+  return { ok: true, summary: trail.map((t) => `${t.label}: ${t.after ?? 'cleared'}`).join('; '), trail, actions };
 }

@@ -23,6 +23,7 @@ import { mayUseSample, requireUser } from '../session.ts';
 import { asUser, requirePool } from './reports.ts';
 import type { SamplePhotoDeps } from './sample-photos.ts';
 import { loadWorkspace, reportFor } from './workspace.ts';
+import { logActivity } from '../logs.ts';
 
 /** StreetEasy exports are a few kilobytes; this leaves room while staying under Netlify's 6 MB request limit. */
 export const MAX_EXPORT_BYTES = 2 * 1024 * 1024;
@@ -79,6 +80,8 @@ export function handleImports(req: Request, deps: SamplePhotoDeps): Promise<Resp
       }
       return loadWorkspace(tx, user, reportId);
     });
+    const format = sample ? 'sample' : parsedUpload!.format === 'xlsx' ? 'xlsx' : 'csv';
+    await logActivity(pool, user.email, { name: 'import.read', reportId, detail: { format, comps: sample ? workspace.comps.length : parsedUpload!.comps.length } });
     return json(workspace, 201);
   });
 }

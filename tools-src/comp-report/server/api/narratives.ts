@@ -43,6 +43,7 @@ import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { callWriter, CURRENT_WRITER_PROMPT, WRITER_PROMPTS, type WriterDraft } from '../writer.ts';
 import { asUser, requirePool } from './reports.ts';
 import { reportFor } from './workspace.ts';
+import { logActivity, logViewed } from '../logs.ts';
 
 const LENGTHS: EmailLength[] = ['full', 'short', 'text'];
 const RESULTS: ResultKind[] = ['on_facts', 'with_estimates'];
@@ -154,10 +155,12 @@ export function handleNarratives(req: Request, deps: AuthDeps & { env?: Record<s
     if (req.method === 'GET') {
       const reportId = new URL(req.url).searchParams.get('report') ?? '';
       if (!UUID.test(reportId)) throw new HttpError(400, 'bad_report', 'Which report?');
-      return json(await withActor(pool, asUser(user), async (tx) => {
-        await reportFor(tx, user, reportId, false);
-        return { narratives: await loadNarratives(tx, reportId) };
+      const { report, narratives } = await withActor(pool, asUser(user), async (tx) => ({
+        report: await reportFor(tx, user, reportId, false),
+        narratives: await loadNarratives(tx, reportId),
       }));
+      await logViewed(pool, user, report);
+      return json({ narratives });
     }
 
     const body = await readJsonObject(req, 160 * 1024);
@@ -176,7 +179,7 @@ export function handleNarratives(req: Request, deps: AuthDeps & { env?: Record<s
     }
     const parentId = typeof parentIn === 'string' ? parentIn : null;
 
-    return json(await withActor(pool, asUser(user), async (tx) => {
+    const done = await withActor(pool, asUser(user), async (tx) => {
       await reportFor(tx, user, reportId, true);
       const n = await neutralNumbers(tx, reportId);
       if (!n) throw new HttpError(404, 'not_found', 'No such report.');
@@ -251,7 +254,9 @@ export function handleNarratives(req: Request, deps: AuthDeps & { env?: Record<s
         [reportId, length, result, n.brief.audience?.value ?? null, ...pinned, JSON.stringify(input), CURRENT_WRITER_PROMPT.id],
       );
       return { narrative: view(rows[0]!), kept, limit: { perDay: limit, left: Math.max(limit - used - 1, 0) } };
-    }), body.action === 'copy' ? 201 : 202);
+    });
+    if (body.action === 'copy') await logActivity(pool, user.email, { name: 'narrative.copied', reportId, detail: { length } });
+    return json(done, body.action === 'copy' ? 201 : 202);
   });
 }
 

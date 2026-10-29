@@ -171,7 +171,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
   const homePhoto = homeRead?.extract ? cleanPhotoUrls([homeRead.extract['heroImageUrl'], ...(Array.isArray(homeRead.extract['photos']) ? homeRead.extract['photos'] : [])])[0] ?? null : null;
   const shownRows = () => {
     const full = drafts.full ? drafts.full.body : emailFor('full').text;
-    const parsed = parseEmailText(full, send.headline?.value);
+    const parsed = parseEmailText(full, send.headline?.value, signedAs);
     return { parsed, ...designedComps(countedComps(o, result, ws.comps), { parsed, homeStreet: ws.intake.address?.value ?? null, sf: ws.sf }) };
   };
 
@@ -181,7 +181,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
    */
   const designed = (copies?: EmailPhotos): string => {
     const full = { subject, text: drafts.full ? drafts.full.body : emailFor('full').text };
-    const parsed = parseEmailText(full.text, send.headline?.value);
+    const parsed = parseEmailText(full.text, send.headline?.value, signedAs);
     const { anchor, others } = designedComps(countedComps(o, result, ws.comps), {
       parsed,
       homeStreet: ws.intake.address?.value ?? null,
@@ -210,7 +210,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
       email: parsed,
       anchor,
       others,
-      agent: { name: signedAs, office: OFFICE, email: ws.report.ownerEmail || null },
+      agent: { name: signedAs, office: OFFICE, email: ws.report.ownerEmail || null, phone: ws.agentCard?.phone ?? null, photo: ws.agentCard?.photo ?? null },
       cta: designedCta(ws.side),
       subject: full.subject,
       homePhoto: copies ? (copies.home ? `${location.origin}${copies.home}` : homePhoto) : homePhoto,

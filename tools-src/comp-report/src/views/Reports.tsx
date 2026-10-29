@@ -5,6 +5,7 @@
 // sample report deleted, Kimani's decision of 2026-10-22); the archived ones fold at the bottom, with Restore.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type Me, type Report } from '../api.ts';
+import { trackScreen } from '../activity.ts';
 import { Access } from './Access.tsx';
 import { MenteePicker, loadMentees, type MenteesState } from './Mentees.tsx';
 import { NewCompStart } from './newcomp/NewComp.tsx';
@@ -146,6 +147,9 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   }, [load]);
 
   const sorted = useMemo(() => sortReports(reports ?? [], sort), [reports, sort]);
+  useEffect(() => {
+    if (ready) trackScreen(starting ? 'new-report' : 'reports');
+  }, [ready, starting]);
 
   if (!ready) {
     return (
@@ -317,9 +321,9 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
         {!onEveryone && <Archived refresh={refresh} busy={busy} onAct={(x, a) => void act(x, a)} />}
 
         {me.user.role === 'admin' && (
-          <details className="sh-access">
+          <details className="sh-access" onToggle={(e) => { if (e.currentTarget.open) trackScreen('access'); }}>
             <summary>Access · admins only</summary>
-            <Access me={me} />
+            <Access me={me} reports={sorted} />
           </details>
         )}
       </main>

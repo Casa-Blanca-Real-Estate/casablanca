@@ -131,6 +131,14 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
     assert.ok(events.some((e) => e.type === 'comps_changed'));
     assert.ok(events.findIndex((e) => e.type === 'change') < events.findIndex((e) => e.type === 'start'), 'before the reply');
 
+    // The activity log (Dispatch 22b) has it too, as Hubert's.
+    const su = new pg.Client({ connectionString: db.urlAs(new URL(process.env.CR_TEST_DATABASE_URL!).username || 'postgres') });
+    await su.connect();
+    const logged = (await su.query<{ name: string; detail: Block }>(
+      `select name, detail from comp_report.activity where report_id = $1 and kind = 'action'`, [reportId])).rows;
+    await su.end();
+    assert.ok(logged.some((r) => r.name === 'comp.tiered' && r.detail.by === 'hubert' && r.detail.tier === 'primary'), JSON.stringify(logged));
+
     // And the transcript keeps it: on the reply that made the call.
     const made = (await shown()).filter((m) => m.tools.includes('edit_comp'));
     assert.equal(made.length, 1);
