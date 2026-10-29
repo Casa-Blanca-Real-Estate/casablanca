@@ -7,7 +7,7 @@ import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
-import type { CompJudgment, Outcomes, Reached, RevealPin } from '../../../workspace/state.ts';
+import type { CompJudgment, GuideStep, Outcomes, Reached, RevealPin } from '../../../workspace/state.ts';
 import type { ScreenId, SortReadiness } from './screens.ts';
 import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
@@ -134,6 +134,8 @@ export interface Workspace {
   setDrawerOpen: (open: boolean) => void;
   /** Hubert changed a comp on the server (edit_comp): the comps load again, in order with the agent's own edits. */
   reloadComps: () => void;
+  /** When the agent first reached each step, for Hubert's step guides (hubert/guides.ts). */
+  stepsAt: Partial<Record<GuideStep, string>>;
   /** A trail entry's "Show" (Kimani, 2026-10-28): Sort opens on that comp's row, at the field he changed. `n` changes on each ask. */
   focus: { reportCompId: string; field: string; n: number; at: number } | null;
   showComp: (reportCompId: string, field: string) => void;

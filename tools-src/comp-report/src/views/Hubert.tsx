@@ -14,6 +14,7 @@ import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
 import { Chat } from './Chat.tsx';
 import { GREETING, intro, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
+import { reachedGuides } from './hubert/guides.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
 import type { Workspace } from './workspace/model.ts';
@@ -150,6 +151,7 @@ export function Hubert({ ws }: { ws: Workspace }) {
         beforeAsk={ws.flush}
         onEmailEdit={ws.queueHubertEdit}
         onCompsChanged={ws.reloadComps}
+        guides={reachedGuides(ws.stepsAt, ws.side)}
         onJump={(entry) => {
           if (entry.kind === 'email') {
             if (ws.screen !== 'send') ws.go('send');

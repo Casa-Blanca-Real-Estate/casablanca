@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError, streamTurn, type HubertEmailEdit, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
+import type { Guide } from './hubert/guides.ts';
 import { HubertNote, HubertText } from './hubert/markdown.tsx';
 
 interface Live {
@@ -68,7 +69,17 @@ function Trail({ changes, sources, onJump }: { changes: TrailEntry[]; sources: T
 
 const MAX_INPUT_PX = 120;
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onCompsChanged, onJump }: {
+/** A step guide (hubert/guides.ts): a new section of the chat, with Hubert's preset note for the step. */
+function GuideNote({ guide }: { guide: Guide }) {
+  return (
+    <div className="hb-guide" role="note">
+      <div className="hb-guide-rule"><span>{guide.title}</span></div>
+      <div className="hb-bubble hb-guide-text">{guide.text}</div>
+    </div>
+  );
+}
+
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onCompsChanged, onJump, guides = [] }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -86,6 +97,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   onCompsChanged?: () => void;
   /** A trail entry's "Show": to the field he changed. */
   onJump?: (entry: TrailEntry) => void;
+  /** The step guides reached, oldest first: each sits among the messages at the time the agent reached its step. */
+  guides?: (Guide & { at: string })[];
 }) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -180,6 +193,20 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
     void ask(draft);
   }
 
+  // One message, as the chat shows it: Hubert's notes, what he checked and changed, and the text.
+  const message = (m: ShownMessage) => (
+    <div key={`${m.seq}-${m.createdAt}`} className={`hb-msg ${m.role}${m.inContext ? '' : ' dim'}`}>
+      {m.progress.map((p, i) => <HubertNote key={i} text={p} />)}
+      {m.role === 'assistant' && looked(m.tools) && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
+      {m.role === 'assistant' && m.tools.includes('edit_email') && !m.changes?.length && <p className="hb-progress">Changed the email on Send.</p>}
+      {m.role === 'assistant' && <Trail changes={m.changes ?? []} sources={m.sources ?? []} onJump={onJump} />}
+      {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
+      {!m.inContext && m.role === 'assistant' && (
+        <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
+      )}
+    </div>
+  );
+
   const busy = Boolean(live) || waiting;
 
   return (
@@ -187,18 +214,22 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
       <div className="hb-body" ref={body}>
         {intro}
         {error && <p className="hb-notice" role="alert">{error}</p>}
-        {messages.filter((m) => !m.toolResultsOnly).map((m) => (
-          <div key={`${m.seq}-${m.createdAt}`} className={`hb-msg ${m.role}${m.inContext ? '' : ' dim'}`}>
-            {m.progress.map((p, i) => <HubertNote key={i} text={p} />)}
-            {m.role === 'assistant' && looked(m.tools) && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
-            {m.role === 'assistant' && m.tools.includes('edit_email') && !m.changes?.length && <p className="hb-progress">Changed the email on Send.</p>}
-            {m.role === 'assistant' && <Trail changes={m.changes ?? []} sources={m.sources ?? []} onJump={onJump} />}
-            {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
-            {!m.inContext && m.role === 'assistant' && (
-              <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
-            )}
-          </div>
-        ))}
+        {(() => {
+          // Each guide goes before the first message after it; the rest follow the conversation.
+          const shown = messages.filter((m) => !m.toolResultsOnly);
+          let g = 0;
+          const out: ReactNode[] = [];
+          const guide = () => {
+            const it = guides[g++]!;
+            out.push(<GuideNote key={`g-${it.step}`} guide={it} />);
+          };
+          for (const m of shown) {
+            while (g < guides.length && guides[g]!.at <= m.createdAt) guide();
+            out.push(message(m));
+          }
+          while (g < guides.length) guide();
+          return out;
+        })()}
         {live && (
           <div className="hb-msg assistant" aria-live="polite">
             {live.progress.map((p, i) => <HubertNote key={i} text={p} />)}

@@ -133,6 +133,9 @@ export interface ClientFacts {
   priorities?: ClientPriority[];
 }
 
+/** A step Hubert has a guide for (src/views/hubert/guides.ts): the new report's three, then the workspace's. */
+export type GuideStep = 'home' | 'details' | 'comps' | 'sort' | 'review' | 'gate' | 'findings' | 'send' | 'done';
+
 /** The furthest screen a report has reached, for the reports list's Stage (Dispatch 14). */
 export type Reached = 'sort' | 'findings' | 'send';
 
@@ -286,6 +289,8 @@ export interface WorkspaceState {
   subjectRead?: string;
   /** The furthest screen reached, for the reports list (Dispatch 14). */
   reached?: Reached;
+  /** When the agent first reached each step: Hubert's step guide joins his chat there (2026-10-28). */
+  stepsAt?: Partial<Record<GuideStep, string>>;
   outcomes?: Outcomes;
   /** Hubert's drawer has opened on Sort once: it opens by default only the first time (the handoff). */
   hubertSeen?: boolean;

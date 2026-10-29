@@ -88,3 +88,9 @@
 .hb-trail-go { flex: none; font: inherit; font-size: 12px; font-weight: 800; background: none; border: 0; padding: 0; color: var(--cb-black); border-bottom: 1px solid var(--cb-lavender); cursor: pointer; }
 .hb-trail-go:hover { color: var(--cb-deep); }
 .hb-sources { font-size: 11px; color: var(--cb-mid); margin: 4px 0 6px !important; line-height: 1.5; }
+
+/* Hubert's step guides (2026-10-28): a rule naming the step, then his preset note. A rough look until the design pass. */
+.hb-guide { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.hb-guide-rule { display: flex; align-items: center; gap: 10px; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--cb-mid); }
+.hb-guide-rule::before, .hb-guide-rule::after { content: ''; flex: 1; border-top: 1px solid var(--cb-line); }
+.hb-guide-text { border-left: 3px solid var(--cb-lavender); }

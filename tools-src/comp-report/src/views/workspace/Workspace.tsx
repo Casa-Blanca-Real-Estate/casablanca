@@ -17,7 +17,7 @@ import { homeFeatures } from '../../../workspace/features.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
-  isRevealed, type Brief, type CallState, type DealTermsState, type Intake, type Outcomes, type Reached, type RevealPin, type SendState, type TargetState, type WorkspaceState,
+  isRevealed, type Brief, type CallState, type DealTermsState, type GuideStep, type Intake, type Outcomes, type Reached, type RevealPin, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
@@ -451,6 +451,14 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     go(next);
   }, [go, setState]);
 
+  // Hubert's step guides (2026-10-28): the first time the agent reaches each step, it's noted, and his chat
+  // shows that step's guide from then on. The owner's only: a mentor reading the report changes nothing.
+  const guideStep: GuideStep = start ?? (reviewing && screen === 'sort' ? 'review' : screen);
+  useEffect(() => {
+    if (!data || readOnlyRef.current || stateRef.current.stepsAt?.[guideStep]) return;
+    setState({ ...stateRef.current, stepsAt: { ...stateRef.current.stepsAt, [guideStep]: new Date().toISOString() } });
+  }, [data, guideStep, setState]);
+
   // Hubert opens by default on the first Sort visit, once (the handoff).
   const loadedState = Boolean(data);
   useEffect(() => {
@@ -600,6 +608,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     drawerOpen,
     setDrawerOpen,
     reloadComps,
+    stepsAt: state.stepsAt ?? {},
     focus,
     showComp: (reportCompId, field) => {
       // The row shows whatever Sort's filter was, and Sort opens if another screen was showing.
