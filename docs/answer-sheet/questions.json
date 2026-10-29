@@ -1,7 +1,12 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> DP-11 to DP-15, from the design pass brief (on the reading list); HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
+    "DP-11",
+    "DP-12",
+    "DP-13",
+    "DP-14",
+    "DP-15",
     "HB-8",
     "NB-29",
     "TD-23",
@@ -447,11 +452,11 @@
     },
     {
       "num": "03",
-      "title": "The design port",
+      "title": "The design pass",
       "prefix": "DP",
-      "url": "{repo}/docs/dispatch/14-comp-report-design-port.md",
-      "linkLabel": "Open Dispatch 14",
-      "intro": "<p>The design port merged in #77 and is live. You confirmed DP-1 to DP-8 as built (DP-6 with free-text tags too). Two questions from Mason's PR:</p>",
+      "url": "https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md",
+      "linkLabel": "Open the design pass brief",
+      "intro": "<p>The brief for your Claude Design pass (#117) covers every surface and what's still open on each. Five questions from it change what gets designed (DP-11 to DP-15). DP-9 and DP-10 are left over from the design port (#77).</p>",
       "questions": [
         {
           "id": "DP-9",
@@ -497,6 +502,131 @@
             ]
           ],
           "source": "#77"
+        },
+        {
+          "id": "DP-11",
+          "q": "Should the client fields give a separate \"what this buyer can offer\" range?",
+          "short": "A buyer's offer range",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Pre-approval, cash and how soon the buyer wants to move (NB-15, NB-29) never move the true estimate. They could produce their own range, shown beside it.</p><p><strong>Why it needs you.</strong> If it's coming, the design leaves room for it now. Building it is engine work.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, as its own line on Findings, built after Nov 13; design leaves room now",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Yes, before Nov 13",
+              "engine work in the deadline window"
+            ],
+            [
+              "C",
+              "No",
+              "the client fields stay context only"
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-12",
+          "q": "Which screens must work on a phone by Nov 13?",
+          "short": "Phone screens by Nov 13",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The top bar fits phones now (#106), but the screens under it are still desktop layouts that scroll sideways.</p>",
+          "options": [
+            [
+              "A",
+              "Reports, Review comps, Findings (reading), Send and Hubert",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Every screen",
+              ""
+            ],
+            [
+              "C",
+              "None yet: desktop only for the pilot",
+              ""
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-13",
+          "q": "Orientation: a pointing tour, a first-run checklist, or a short video per screen?",
+          "short": "Orientation style",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The first-run orientation you asked for on 2026-10-29: practice agents' first report, then a guide button in a corner that brings it back. It's separate from Hubert's step guides.</p>",
+          "options": [
+            [
+              "A",
+              "A pointing tour on the first report, behind the guide button after",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "A first-run checklist",
+              ""
+            ],
+            [
+              "C",
+              "A short video per screen",
+              ""
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-14",
+          "q": "One way to open Hubert: the top-bar pill or the edge tab?",
+          "short": "How Hubert opens",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> Hubert opens from a pill in the top bar and from a tab on the screen's edge (#105). Two doors to the same drawer.</p>",
+          "options": [
+            [
+              "A",
+              "The pill; drop the tab",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "The tab; drop the pill",
+              ""
+            ],
+            [
+              "C",
+              "Keep both",
+              ""
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-15",
+          "q": "The tool's name on its own screens: \"Comp report\" under \"Casa Blanca Studio\", or something new?",
+          "short": "The tool's name",
+          "quick": true,
+          "context": "<p><strong>What this is about.</strong> The Studio was renamed (2026-10-28). The tool still calls itself \"Comp report\" on its own top bar, emails and sign-in.</p>",
+          "options": [
+            [
+              "A",
+              "\"Comp report\" under Casa Blanca Studio",
+              ""
+            ],
+            [
+              "B",
+              "Something new",
+              "put it in the note"
+            ]
+          ],
+          "source": "The design pass brief, section 10 · #117",
+          "needsYou": true
         }
       ],
       "settled": [
@@ -1068,6 +1198,18 @@
     }
   ],
   "reading": [
+    {
+      "id": "RL-12",
+      "date": "2026-10-29",
+      "qids": [
+        "DP-11",
+        "DP-12",
+        "DP-13",
+        "DP-14",
+        "DP-15"
+      ],
+      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md\" target=\"_blank\" rel=\"noopener\">The design pass brief</a> (#117): every surface and what's still open on it, for your Claude Design pass."
+    },
     {
       "id": "RL-11",
       "date": "2026-10-29",
