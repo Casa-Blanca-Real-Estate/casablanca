@@ -4,12 +4,16 @@
 //
 // It reads only what it needs. The call itself is never selected: the database
 // says whether one exists (the range is revealed), not what it is. The target
-// and the deal terms aren't read at all (§8.4).
+// and the deal terms never reach the engine here (§8.4). Once the range is
+// revealed, get_numbers adds the client's facts the agent gave (Your client,
+// 2026-10-29: financing, the pre-approval, the pace, what's moving them),
+// never the client's name (workspace/client.ts).
 import { compRecordFromListing, compute, parseExport, type EngineOutput } from '../engine/index.ts';
 import { engineInput, locationsFrom, removedExportComps, workspaceComps, type ParsedImport, type WorkspaceComp } from '../workspace/engine-input.ts';
 import type { CompRecord } from '../engine/index.ts';
 import type { Brief, WorkspaceState } from '../workspace/state.ts';
 import { numbersSummary } from '../workspace/summary.ts';
+import { clientForHubert } from '../workspace/client.ts';
 import { onMarket, type OnMarket } from '../workspace/on-market.ts';
 import { loadGeocodes, reportBuildings } from './buildings.ts';
 import type { Queryable } from './db.ts';
@@ -80,11 +84,14 @@ export async function numbersFor(tx: Queryable, reportId: string, opts: { asOf?:
 /** get_numbers' summary of numbers already run (get_view reads one comp of it). */
 export async function summaryOf(tx: Queryable, reportId: string, n: NeutralNumbers, opts: { asOf: string; wide: boolean }) {
   const asOf = opts.asOf;
-  return numbersSummary({
+  const summary = numbersSummary({
     output: n.output, comps: n.comps, intake: n.state.intake, revealed: n.revealed, removed: n.removed,
     homeOnMarket: await homeOnMarket(tx, reportId, asOf),
     ...(opts.wide ? { wide: { propertyType: n.propertyType } } : {}),
   });
+  // After the reveal only, like the target (§8.4): before it, a budget would anchor his help on Sort.
+  const client = n.revealed ? clientForHubert(n.brief, n.state.dealTerms) : null;
+  return client ? { ...summary, client } : summary;
 }
 
 /** The home's time on the market, from its latest StreetEasy read: null when it has none, or the page can't be read now. */

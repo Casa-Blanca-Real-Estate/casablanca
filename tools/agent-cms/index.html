@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. -->
+<script src="/assets/studio-auth.js"></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -604,7 +606,9 @@ var SECTIONS=[
     {p:'identity.displayName',l:'Display name',t:'text',help:'If the page should say “Sam” where the full name is too formal. Optional.'},
     {p:'identity.title',l:'Title',t:'text',ph:'Licensed Real Estate Salesperson'},
     {p:'identity.licenseNumber',l:'Licence number',t:'text',ph:'10401379863',
-     help:'Renders as “Lic. #:”. Never guess this — leave it empty and the line is omitted.'}
+     help:'Renders as “Lic. #:”. Never guess this — leave it empty and the line is omitted.'},
+    {p:'identity.formerNames',l:'Former names and aliases',t:'tags',
+     help:'Comma separated. Lets the studio find them by an old name. Never shown on the site.'}
    ],
    groups:[{l:'Coverage',fields:[
     {p:'content.neighborhoods',l:'Neighbourhoods',t:'tags',help:'Comma separated.'},
@@ -656,7 +660,7 @@ var SECTIONS=[
    fields:[
     {p:'contact.phone',l:'Phone',t:'text',ph:'401-440-3132'},
     {p:'contact.email',l:'Email',t:'text',ph:'s.valk@casa-blanca.com'},
-    {p:'contact.instagram',l:'Instagram',t:'url'},
+    {p:'contact.instagram',l:'Instagram',t:'text',ph:'@handle',help:'The handle, or the profile link. Saved as the link.'},
     {p:'contact.streeteasy',l:'StreetEasy',t:'url'},
     {p:'contact.linkedin',l:'LinkedIn',t:'url'}
    ]},
@@ -778,7 +782,7 @@ function rosterFiltered(){
   return S.roster.filter(function(r){
     if(S.filter!=='all'&&r.status!==S.filter)return false;
     if(!q)return true;
-    return (r.name+' '+r.slug+' '+(r.customDomain||'')).toLowerCase().indexOf(q)!==-1;
+    return (r.name+' '+(r.formerNames||[]).join(' ')+' '+r.slug+' '+(r.customDomain||'')).toLowerCase().indexOf(q)!==-1;
   });
 }
 

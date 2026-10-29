@@ -176,7 +176,12 @@ think it's worth?"* The agent gives a low and a high, with an optional line, or 
 5. **A price table** for the home: $/sq ft steps and the price each implies, as in Frankie's email.
 6. **The comps that count**, with their notes. These are the lists the email uses.
 7. **The target price** (after the reveal, D-4), where it sits, and Path to target (later).
-8. **Offer details** (folded): for a buyer, the offer price and terms; for a seller, pricing.
+8. **Your client** (folded, 2026-10-29): for a buyer, cash or a mortgage, pre-approved and for how much,
+   set against the range and the ask; for everyone, how soon (as soon as possible, or can wait), set
+   against how the comps sold, and what's moving them. All optional. The same fields sit on Details,
+   folded under "Your client". None of it moves a number (NB-29); Hubert reads it after the reveal,
+   never the client's name (NB-31). Rudimentary until Claude Design places it (NW-074 b).
+9. **Offer details** (folded): for a buyer, the offer price and terms; for a seller, pricing.
 
 **Folded ("How this was worked out"):**
 - the method (median $/sq ft, the default until Noble picks one)

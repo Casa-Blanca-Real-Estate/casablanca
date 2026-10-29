@@ -11,6 +11,9 @@
 // about…", so nothing the engine reads is dropped; Notes. Everything saves as
 // it's typed.
 //
+// Your client (Kimani, 2026-10-29): the client's facts, folded under the
+// building, before Notes (workspace/ClientFields.tsx).
+//
 // Dispatch 20: with no read of the home, the size is a plain field (the
 // Estimate toggle beside it); "Not listed" only after a read that gave none.
 // The page's type, when it isn't the report's, with a one-tap switch (NW-011);
@@ -22,6 +25,7 @@ import { onMarket, onMarketLine } from '../../../workspace/on-market.ts';
 import { HOME_KINDS, type Entry, type HomeKind, type Intake } from '../../../workspace/state.ts';
 import { FeaturePicker } from '../comp/Pickers.tsx';
 import { entry } from '../workspace/bits.tsx';
+import { ClientFields } from '../workspace/ClientFields.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { Info } from './Frame.tsx';
 import { TYPE_LABEL, typeFromPageKey } from './Home.tsx';
@@ -139,6 +143,7 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
     + (['exposure', 'corner'] as const).filter((k) => (feats[k] ?? []).length).length;
   const moreBuilding = (intake.newDevelopment !== undefined ? 1 : 0)
     + (['wellness', 'shared_outdoor'] as const).filter((k) => (feats[k] ?? []).length).length;
+  const clientFilled = clientCount(ws);
   const hasOutdoor = Boolean(intake.outdoorKind && intake.outdoorKind.value !== 'none');
 
   const notesSection = (
@@ -379,6 +384,13 @@ export function HomeDetails({ ws, notices }: { ws: Workspace; notices?: ReactNod
         </div>
       </details>
 
+      <details className="nr-more nr-client-more">
+        <summary>Your client <span className="nr-sub">(optional{clientFilled ? `, ${clientFilled} filled` : ''})</span></summary>
+        <div className="nr-more-body">
+          <ClientFields ws={ws} />
+        </div>
+      </details>
+
       {notesSection}
     </>
   );
@@ -416,4 +428,11 @@ function YesNo({ label, value, onChange, disabled }: { label: string; value: boo
       onChange={(v) => onChange(v === undefined ? undefined : v === 'yes')}
     />
   );
+}
+
+/** How many of the client's facts are filled, for Your client's summary. */
+function clientCount(ws: Workspace): number {
+  const c = ws.brief.client;
+  const t = ws.dealTerms?.template === 'buyer_traditional' && ws.side === 'buyer' ? ws.dealTerms : null;
+  return [t?.financing, t?.preApproved, c?.urgency?.pace, c?.motivations].filter(Boolean).length;
 }

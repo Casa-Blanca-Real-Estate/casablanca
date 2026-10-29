@@ -14,6 +14,7 @@ import { HttpError } from './http.ts';
 import { GUEST_EMAIL, GUEST_NAME, guestKeyMatches, isGuestToken, type GuestConfig } from './guest.ts';
 import { bearerToken, IdentityUnavailable, type IdentityVerifier } from './identity.ts';
 import { closedProvider, logAccess, REFUSAL_REASONS, type RefusalReason } from './logs.ts';
+import { testUser } from './test-user.ts';
 
 export type Capability = 'practice' | 'full';
 
@@ -28,6 +29,8 @@ export interface SessionUser {
   persisted: boolean;
   /** Signed in through guest mode (server/guest.ts), not Identity: an agent with the sample data. */
   guest: boolean;
+  /** The test user (server/test-user.ts), signed in with CR_TEST_KEY: its AI calls use the eval key only. */
+  test?: boolean;
 }
 
 /** The sample data (Dispatch 07) is for admins, and for a guest walking a preview through. */
@@ -41,6 +44,8 @@ export interface AuthDeps {
   pool: PoolLike | null;
   /** Guest mode, when it's on for this request; absent or null, a guest token is refused. */
   guest?: GuestConfig | null;
+  /** Where the test key is read (server/test-user.ts); process.env in production. */
+  env?: Record<string, string | undefined>;
 }
 
 const NOT_AUTHORISED = 'This account isn\'t authorised for the comp report. Sign in with your Casa Blanca Google account, or ask an admin to add you.';
@@ -69,6 +74,9 @@ interface UserRow {
  * transactions, after the check's, and a failed write changes nothing (logs.ts).
  */
 export async function requireUser(req: Request, deps: AuthDeps): Promise<SessionUser> {
+  // The test key first, before a bearer token is parsed: with the header, the test user or a refusal.
+  const test = await testUser(req, deps.env ?? process.env, deps.pool);
+  if (test) return test;
   const token = bearerToken(req);
   if (!token) throw new HttpError(401, 'signed_out', 'Sign in to continue.');
   if (isGuestToken(token)) return requireGuest(token, deps);

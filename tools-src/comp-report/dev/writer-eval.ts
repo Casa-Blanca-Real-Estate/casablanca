@@ -1,7 +1,8 @@
 // DEV ONLY — the writer's eval (Dispatch 13, item 8): drafts for two reports,
 // printed as Markdown for Kimani to read against Frankie's email.
 //
-//   1. The 100 Barclay #17L sample, with its own lines for the email.
+//   1. The 100 Barclay #17L sample, with its own brief (a seller) and its
+//      own lines for the email.
 //   2. Frankie's 111 Fulton #517 (sources/2026-07-29-frankie-…), rebuilt as a
 //      report: his comps typed in, his lines on each as the agent's notes,
 //      his first line as how he chose them, and his closing as the next step.
@@ -19,7 +20,7 @@
 import Anthropic from '@comp-report/anthropic-sdk';
 import { compute, parseExport, type EngineOutput, type ResultKind } from '../engine/index.ts';
 import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
-import { SAMPLE_INTAKE, SAMPLE_SEND, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
+import { SAMPLE_BRIEF, SAMPLE_INTAKE, SAMPLE_SEND, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
 import { callWriter, CURRENT_WRITER_PROMPT, WRITER } from '../server/writer.ts';
 import { usageTotals } from '../server/assistant.ts';
 import { buildEmail, type EmailLength } from '../workspace/email.ts';
@@ -55,7 +56,8 @@ function barclay(): Case {
   return {
     name: '100 Barclay Street #17L (the sample)', homeLine: '100 Barclay Street #17L', asOf,
     output: compute(engineInput({ asOf, intake: SAMPLE_INTAKE, comps })), comps, intake: SAMPLE_INTAKE,
-    brief: { audience: e('buyer' as const, asOf), clientName: e('Jordan', asOf) }, send: SAMPLE_SEND, agentName: 'Hannah', runs: ['full', 'text'],
+    // The sample's own brief: a seller, so its next step (list in October) reads as written.
+    brief: { ...SAMPLE_BRIEF, clientName: SAMPLE_SEND.clientName ?? e('Jordan and Sam', asOf) }, send: SAMPLE_SEND, agentName: 'Hannah', runs: ['full', 'short', 'text'],
   };
 }
 
@@ -97,7 +99,7 @@ function fulton517(): Case {
       consider: e('The Greenwich Club is a similar building that trades higher than 111 Fulton. 56 Pine trades lower than 111 Fulton. Lower carrying costs can motivate sellers to list higher, and higher carrying costs tend to result in lower asking prices.'),
       nextStep: e('Let me know if you have any questions. Feel free to share this with your father. If you put in an offer, I’d ask the seller to take care of the assessment.'),
     },
-    agentName: 'Frankie', runs: ['full', 'short'],
+    agentName: 'Frankie', runs: ['full', 'short', 'text'],
   };
 }
 

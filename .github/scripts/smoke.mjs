@@ -39,10 +39,15 @@ const PAGES = [
 
 const strip = (base, s) => String(s).split(base).join('');
 
-// Two tools (profile pic, in-contract carousel) bounce to the dashboard unless
-// a studio dev email is saved in localStorage — the casual members gate. Seed
-// one, as signing in on the dashboard does, so they render instead of redirect.
+// Every Studio page signs in first (assets/studio-auth.js) and sends a signed-out
+// visit to the comp report's sign-in. On a deploy preview, guest mode gets past it:
+// SMOKE_GUEST_KEY=<the preview's guest key> (tools-src/comp-report/server/guest.ts).
+// Production refuses guests, so there every page but the agent sites lands on the
+// sign-in screen. Two tools (profile pic, in-contract carousel) are team only; the
+// guest counts as the team on a preview, so they render instead of redirect. The team
+// email is still seeded for a local run, where the sign-in lets it decide.
 const DEV_EMAIL = 'creative@email.casa-blanca.com';
+const GUEST_KEY = process.env.SMOKE_GUEST_KEY || '';
 
 // Not the site's own requests: Netlify's deploy-preview toolbar, and requests a
 // navigation cancelled (net::ERR_ABORTED) — neither is a page failing.
@@ -55,7 +60,9 @@ async function run(base) {
   const results = {};
   for (const path of PAGES) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    await context.addInitScript((email) => { try { localStorage.setItem('cb_auth', email); } catch {} }, DEV_EMAIL);
+    await context.addInitScript(([email, guest]) => {
+      try { localStorage.setItem('cb_auth', email); if (guest) localStorage.setItem('cr-guest-key', guest); } catch {}
+    }, [DEV_EMAIL, GUEST_KEY]);
     const page = await context.newPage();
     const r = { status: null, finalPath: '', title: '', textLength: 0, pageErrors: [], consoleErrors: [], failedRequests: [] };
     page.on('pageerror', (e) => r.pageErrors.push(strip(base, e.message)));

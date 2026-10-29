@@ -61,6 +61,46 @@ export const SAMPLE_SEND: SendState = {
   nextStep: s('List in October near the top of what the sales support, with some room on price for a quick, clean close.'),
 };
 
+/**
+ * The same home for a buyer (the design brief thread, 2026-10-29): a buyer's
+ * report filled from the sample got the seller's lines ("List in October",
+ * "the owners are thinking about listing"). These are made up, like the
+ * seller's client, and carry Your client's facts so the section has something
+ * to show.
+ */
+export const SAMPLE_BUYER_BRIEF: Brief = {
+  audience: s('buyer' as const),
+  clientNote: s('The buyers are relocating for work and want to know what 17L is worth before they offer.'),
+  client: {
+    urgency: { pace: s('asap' as const), text: s('Their lease ends in March') },
+    motivations: s('Relocating for work; want a full-service building near the office'),
+  },
+};
+
+export const SAMPLE_BUYER_TARGET: TargetState = {
+  price: s(4_100_000),
+  note: s('What the buyers hope to pay.'),
+};
+
+export const SAMPLE_BUYER_DEAL_TERMS: DealTermsState = {
+  template: 'buyer_traditional',
+  price: s(4_100_000),
+  depositPercent: s(10),
+  financing: s('mortgage' as const),
+  downPaymentPercent: s(20),
+  ratePercent: s(6.25),
+  termYears: s(30),
+  preApproved: s(true),
+  preApprovalAmount: s(4_300_000),
+  timing: s('Wants to be in by March'),
+  flexibility: s('Can stretch for the right view'),
+};
+
+export const SAMPLE_BUYER_SEND: SendState = {
+  ...SAMPLE_SEND,
+  nextStep: s('Offer near the lower end of what the sales support, with room to come up if the sellers counter.'),
+};
+
 /** Hannah's own read in the briefing: "between 3.4 and 4-something". */
 export const SAMPLE_CALL: Omit<CallState, 'at'> = {
   low: 3_400_000,
@@ -133,17 +173,22 @@ export function sampleTiers(kind: SampleKind): SampleTier[] {
   });
 }
 
-/** What /api/comp-report/sample serves: everything but the export, which the sample import stores. */
-export function sampleWalkthrough(kind: SampleKind = SAMPLE_PROPERTY_TYPE) {
+/**
+ * What /api/comp-report/sample serves: everything but the export, which the
+ * sample import stores. The side's own brief, target, terms and lines: Hannah's
+ * seller by default, the buyer's for a buyer's report.
+ */
+export function sampleWalkthrough(kind: SampleKind = SAMPLE_PROPERTY_TYPE, side: 'buyer' | 'seller' = 'seller') {
+  const buyer = side === 'buyer';
   return {
     title: SAMPLE_TITLE,
     propertyType: kind,
     intake: sampleIntake(kind),
-    brief: SAMPLE_BRIEF,
-    target: SAMPLE_TARGET,
-    dealTerms: SAMPLE_DEAL_TERMS,
+    brief: buyer ? SAMPLE_BUYER_BRIEF : SAMPLE_BRIEF,
+    target: buyer ? SAMPLE_BUYER_TARGET : SAMPLE_TARGET,
+    dealTerms: buyer ? SAMPLE_BUYER_DEAL_TERMS : SAMPLE_DEAL_TERMS,
     call: SAMPLE_CALL,
-    send: SAMPLE_SEND,
+    send: buyer ? SAMPLE_BUYER_SEND : SAMPLE_SEND,
   };
 }
 

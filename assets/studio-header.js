@@ -1,12 +1,12 @@
 /* Casa Blanca Studio — shared tool chrome.
    Include once per tool:  <script src="../../assets/studio-header.js" defer></script>
-   Injects the "‹ Studio" home button + a "signed in" chip, and reserves header space. */
+   Injects the "‹ Studio" home button + a "signed in" chip, and reserves header space.
+   Who's signed in comes from the Studio sign-in (assets/studio-auth.js), loaded first. */
 (function () {
   var FB_SRC = (document.currentScript && document.currentScript.src || '').replace(/studio-header\.js.*$/, 'feedback.js') || 'feedback.js';
   var DN_SRC = (document.currentScript && document.currentScript.src || '').replace(/studio-header\.js.*$/, 'dev-notebook.js') || 'dev-notebook.js';
-  var ALLOWED = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
-  function email() { return (localStorage.getItem('cb_auth') || '').trim().toLowerCase(); }
-  function authed() { return ALLOWED.indexOf(email()) !== -1; }
+  var S = window.CBStudio;
+  function team() { return Boolean(S && S.isTeam()); }
 
   // Chrome layout: "‹ Studio" pins to the LEFT; the account chip + Feedback button
   // (the latter injected by feedback.js) cluster together on the RIGHT inside
@@ -44,32 +44,24 @@
     document.body.appendChild(home);
 
     var dock = rightDock();
-    if (authed()) {
+    if (S) S.ready.then(function (user) {
+      if (document.querySelector('.cb-whoami')) return;
       var who = document.createElement('button');
       who.type = 'button'; who.className = 'cb-whoami'; who.title = 'Click to sign out';
-      who.textContent = '● ' + email();
-      // Signing out ends this browser's dev notebook session too (Kimani's notebook, 2026-10-22).
+      who.textContent = '● ' + (user.name || user.email);
+      // Signing out ends the session everywhere in this browser, the dev notebook's too (Kimani's notebook, 2026-10-22).
       who.onclick = function () {
-        if (!confirm('Sign out of Dev on this device?')) return;
-        localStorage.removeItem('cb_auth');
-        // The CMS and roster tokens are remembered across tabs; signing out forgets them.
-        localStorage.removeItem('cb_cms_token'); localStorage.removeItem('cb_pics_token');
-        var done = function () { location.reload(); };
-        try {
-          var d = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null');
-          localStorage.removeItem('cb.devNotebook');
-          if (d && d.token) { fetch('/api/dev/notebook/session', { method: 'DELETE', headers: { Authorization: 'Bearer ' + d.token }, keepalive: true }).then(done, done); return; }
-        } catch (e) { /* storage blocked */ }
-        done();
+        if (!confirm('Sign out of the Studio on this device?')) return;
+        S.signOut();
       };
       dock.appendChild(who);
-    }
+    });
 
     // The dev notebook's capture box (docs/dev-notebook/README.md): only in a browser
-    // signed in to the notebook and to the studio, so nobody else downloads it.
+    // signed in to the notebook and to the studio as the team, so nobody else downloads it.
     try {
       var dn = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null');
-      if (authed() && dn && dn.token && Date.parse(dn.expiresAt) > Date.now() && !document.querySelector('script[data-cb-dev-notebook]')) {
+      if (team() && dn && dn.token && Date.parse(dn.expiresAt) > Date.now() && !document.querySelector('script[data-cb-dev-notebook]')) {
         var dns = document.createElement('script');
         dns.src = DN_SRC; dns.defer = true; dns.setAttribute('data-cb-dev-notebook', '1');
         document.head.appendChild(dns);

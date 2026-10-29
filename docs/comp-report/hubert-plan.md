@@ -71,6 +71,15 @@ Kimani's answers (Answer Sheet HB-1 to HB-7 and the project chat, 2026-10-29), a
 
 ## Questions for Kimani
 
+**Answered 2026-10-29** (chat and the Answer Sheet): 1 fine, any way the thinking comes in is the agent's;
+2 any site and 60 a day at Studio level, and in the comp report steer him toward StreetEasy, NYC.gov, the MTA
+and building sites without hard-blocking the rest; 3 **put him in the New report window now**, rudimentary, as
+an anchor for the design pass; 4 everyone; 5 yes; 6 `get_view` and the wider read now. Hubert across the Studio:
+plan it after the build. Follow-up on the sheet as HB-8: may a listing he finds on the web come into the report
+(recommended: only through its StreetEasy link, so it gets the same read and checks).
+**HB-8, answered 2026-10-29:** yes, through its StreetEasy link, and Hubert asks the agent to check the link and
+what he pulled from it (the right unit, a sale and not an ask, not stale) before it counts as a comp.
+
 1. **Practice agents dictating tiers.** This PR lets any agent tell Hubert "make it 1st tier". For a practice
    agent, should Hubert refuse until they've written their own reasoning in the review (Dispatch 25's order),
    or is dictating their own call fine? *Default built: fine, it's their call either way.*

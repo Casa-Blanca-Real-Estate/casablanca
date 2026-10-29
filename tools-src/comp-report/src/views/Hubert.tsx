@@ -15,7 +15,7 @@ import { noteOf } from '../../workspace/state.ts';
 import { undoStands } from '../../workspace/trail-undo.ts';
 import { linksApi, type CompEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
-import { GREETING, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
+import { greeting, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
 import { reachedGuides } from './hubert/guides.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
@@ -129,7 +129,7 @@ export function Hubert({ ws }: { ws: Workspace }) {
 
   const opening = ws.screen === 'sort' ? (
     <>
-      <div className="hb-bubble">{GREETING}</div>
+      <div className="hb-bubble">{greeting(ws.agentFirstName)}</div>
       <div className="hb-bubble">{intro(ws.side)}</div>
       <Suggestions ws={ws} />
       <p className="hb-hint">{SUGGESTIONS_LATER}</p>

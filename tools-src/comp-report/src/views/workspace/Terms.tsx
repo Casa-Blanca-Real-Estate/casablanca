@@ -6,13 +6,17 @@
 // says how far toward or away from it (§8.4's backstop). Pricing details shows
 // only rows with data, in plain sentences (NW-071 a, NW-072), then the deal
 // terms behind them (§6.7, D-10): the report side's template only (NW-073 a),
-// with cash or a mortgage and the pre-approval (NW-074 a).
+// with cash or a mortgage and the pre-approval (NW-074 a). Your client
+// (2026-10-29) shows the financing, the pre-approval, the pace and what's
+// moving them, set against the range and the ask (workspace/client.ts).
 import type { EngineOutput, ResultKind } from '../../../engine/index.ts';
 import { clientPrice, isoDay, pct, psf, usd } from '../../../workspace/format.ts';
 import { answerResult } from '../../../workspace/reading.ts';
 import { TARGET_OWNERS, type DealTermsState, type TargetOwner } from '../../../workspace/state.ts';
 import { daysOnMarketLine, movedLine, saleToAskLine } from '../findings/findings.ts';
 import { MoneyInput } from '../findings/MoneyInput.tsx';
+import { clientRows } from '../../../workspace/client.ts';
+import { ClientFields } from './ClientFields.tsx';
 import { targetLabel as labelFor } from '../newcomp/Home.tsx';
 import { DecisionTag, entry, Field, NumberInput, TextInput } from './bits.tsx';
 import type { StepProps, Workspace } from './model.ts';
@@ -137,12 +141,7 @@ export function pricingRows(ws: Workspace, kind: ResultKind): DetailRow[] {
     if (t.targetClosing?.value) rows.push({ k: 'Buyer’s closing', v: isoDay(t.targetClosing.value) });
     if (t.timing?.value) rows.push({ k: 'Buyer’s timing', v: t.timing.value });
     if (t.flexibility?.value) rows.push({ k: 'Flexibility', v: t.flexibility.value });
-    const cash = t.financing?.value === 'cash';
-    if (t.financing) rows.push({ k: 'Financing', v: cash ? 'Cash' : 'Mortgage' });
-    if (!cash && t.preApproved) {
-      const amount = t.preApproved.value && t.preApprovalAmount ? ` for ${usd(t.preApprovalAmount.value)}` : '';
-      rows.push({ k: 'Pre-approved', v: t.preApproved.value ? `Yes${amount}` : 'Not yet' });
-    }
+    // Financing and the pre-approval are in Your client now (ClientSection), set against the range.
   }
   const carry = r.carry;
   if (carry.subject && carry.comp_median) {
@@ -279,6 +278,34 @@ export function DealTerms({ ws }: StepProps) {
 }
 
 const TEMPLATE_LABEL: Record<DealTermsState['template'], string> = { buyer_traditional: 'Buyer’s terms', seller_pricing: 'Seller’s terms' };
+
+/** Your client: the facts set against the range, the ask and how the comps sold, then the fields. */
+export function ClientSection({ ws, kind }: { ws: Workspace; kind: ResultKind }) {
+  const r = ws.output?.results[kind] ?? null;
+  const rows = clientRows({
+    side: ws.side,
+    client: ws.brief.client,
+    terms: ws.dealTerms,
+    range: r?.range ? { low: r.range.low.value, high: r.range.high.value } : null,
+    ask: ws.intake.askingPrice?.value ?? null,
+    sold: { saleToAsk: r?.sale_to_ask ?? null, daysOnMarket: r?.days_on_market.sold ?? null },
+  });
+  return (
+    <div>
+      {rows.length > 0 && (
+        <div className="fi-rows cl-rows">
+          {rows.map((row) => (
+            <div key={row.k} className="fi-row">
+              <span className="fi-k">{row.k}</span>
+              <span>{row.v}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <ClientFields ws={ws} />
+    </div>
+  );
+}
 
 /** Pricing details: the rows with data, then the terms. */
 export function PricingDetails({ ws, kind }: { ws: Workspace; kind: ResultKind }) {

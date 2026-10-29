@@ -26,7 +26,9 @@ export interface Workspace {
   canSample: boolean;
   /** Who signs the email: the roster's name, else Identity's, else ''. */
   agentName: string;
-  /** The agent's card from Casa's roster (name, phone, headshot); null until it's read, or when the roster doesn't know them. */
+  /** What Hubert calls the agent: the roster's first name, else the first word of Identity's name, else ''. */
+  agentFirstName: string;
+  /** The agent's profile from Casa's roster (name, title, email, phone, headshot); null until it's read, or when the roster doesn't know them. */
   agentCard: AgentCard | null;
 
   brief: Brief;

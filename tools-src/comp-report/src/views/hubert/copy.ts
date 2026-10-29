@@ -11,7 +11,11 @@ import type { ScreenId } from '../workspace/screens.ts';
 import { shortName } from '../sort/rows.ts';
 
 // Kimani's notebook (2026-10-27): the greeting says what Hubert is for, not where his name comes from.
-export const GREETING = 'Hi, I’m Hubert! I’m here to help you build this comp report.';
+// Kimani (2026-10-29): it greets the agent by name, from their roster profile.
+export function greeting(firstName: string | null | undefined): string {
+  const name = firstName?.trim();
+  return `Hi${name ? ` ${name}` : ''}, I’m Hubert! I’m here to help you build this comp report.`;
+}
 
 export function intro(side: 'buyer' | 'seller'): string {
   return side === 'buyer'

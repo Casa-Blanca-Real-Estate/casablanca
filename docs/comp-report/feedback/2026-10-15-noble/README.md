@@ -11,7 +11,7 @@ Casanova's workflow (six grounding agents, a StreetEasy probe, a planner, an adv
 | `02-sort.md` | Sort: the table, the card, tags, the bin, Kara's checks explained |
 | `03-gate-findings-and-client.md` | The Gate, Findings, the target and the client's details |
 | `04-send-and-done.md` | Send, the Designed email in Gmail, and Done |
-| `05-hubert-and-ai.md` | Hubert, the markdown bug, and the new AI track (Calliste) |
+| `05-hubert-and-ai.md` | Hubert, the markdown bug, and the new AI track (Collister) |
 | `06-platform-access-and-data.md` | Who sees which reports, sharing, reading production, logs, samples, the invite bug |
 | `07-streeteasy-taxonomy.md` | StreetEasy's types, neighborhoods, amenity groups and policies |
 | `08-claude-design-handoff.md` | What Kimani takes into Claude Design, screen by screen |

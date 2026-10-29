@@ -94,6 +94,16 @@ function cleanUrl(v, max = 400) {
   }
 }
 
+// An Instagram handle is the usual paste (FB-2): "@sam.valk" or "sam.valk"
+// becomes the profile URL the site's social row needs. Anything else is a URL.
+const IG_HANDLE_RE = /^@?([A-Za-z0-9._]{1,30})$/;
+function cleanInstagram(v) {
+  const s = clean(v, 400);
+  const m = IG_HANDLE_RE.exec(s);
+  if (m && (s.startsWith('@') || !/\.(com|net|org|io|co)$/i.test(s))) return `https://instagram.com/${m[1]}`;
+  return cleanUrl(s);
+}
+
 // null, not 0, when the field is blank. `Number('')` is 0, and a stat that
 // silently became 0 would publish "0 years in NYC" as a claim about a real
 // person. Empty has to stay empty all the way to the page.
@@ -109,18 +119,21 @@ const isSlug = (s) => SLUG_RE.test(String(s || ''));
 const STATUSES = ['draft', 'live', 'suspended', 'archived'];
 const SOURCES = ['manual', 'google'];
 
-// `t` types: text | url | int | list (of text) | rows (of sub-fields).
+// `t` types: text | url | instagram (a handle or a URL) | int | list (of text) | rows (of sub-fields).
 const SPEC = {
   identity: {
     name:          { t: 'text', max: 80 },
     displayName:   { t: 'text', max: 80 },
     title:         { t: 'text', max: 80 },
     licenseNumber: { t: 'text', max: 40 },
+    // Names the agent went by before (Emma Caldicott, now Emma Liuzzi: PP-10).
+    // For finding them in the studio; never rendered on a site.
+    formerNames:   { t: 'list', max: 80, cap: 10 },
   },
   contact: {
     phone:      { t: 'text', max: 40 },
     email:      { t: 'text', max: 120 },
-    instagram:  { t: 'url' },
+    instagram:  { t: 'instagram' },
     linkedin:   { t: 'url' },
     streeteasy: { t: 'url' },
   },
@@ -187,6 +200,7 @@ const ROWS = {
 function cleanField(spec, value) {
   switch (spec.t) {
     case 'url':  return cleanUrl(value);
+    case 'instagram': return cleanInstagram(value);
     case 'int':  return cleanInt(value, spec.max);
     case 'enum': return spec.values.includes(value) ? value : spec.fallback;
     case 'list':
@@ -317,6 +331,7 @@ function summarise(rec) {
     status: rec.status,
     name: (d.identity && d.identity.name) || (l.identity && l.identity.name) || rec.slug,
     title: (d.identity && d.identity.title) || '',
+    formerNames: (d.identity && Array.isArray(d.identity.formerNames) && d.identity.formerNames) || [],
     customDomain: (d.delivery && d.delivery.customDomain) || '',
     studioUrl: (d.delivery && d.delivery.studioUrl) || '',
     heroPhoto: (d.assets && d.assets.heroPhoto) || '',

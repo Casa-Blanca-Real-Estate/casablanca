@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. -->
+<script src="/assets/studio-auth.js"></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -252,8 +254,7 @@
 (function(){
   var BACKEND=(localStorage.getItem('cb_backend')||'').replace(/\/+$/,'');
   var API=BACKEND+'/.netlify/functions/brand';
-  var ALLOWED=['creative@email.casa-blanca.com','derek@casa-blanca.com','emma@casa-blanca.com','erez@casa-blanca.com'];
-  function authed(){return ALLOWED.indexOf((localStorage.getItem('cb_auth')||'').trim().toLowerCase())!==-1;}
+  function authed(){return CBStudio.isTeam();}
 
   /* ---- Tabs ---- */
   var tabs=document.getElementById('tabs');
@@ -418,6 +419,7 @@
 
   /* ---- Dev: show add zones when signed in ---- */
   function applyDev(){var on=authed();[].forEach.call(document.querySelectorAll('[data-dev]'),function(z){z.hidden=!on;});}
+  document.addEventListener('cb-studio-ready',applyDev);
 
   /* ---- Dev: upload a file asset ---- */
   function readFile(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=rej;r.readAsDataURL(f);});}

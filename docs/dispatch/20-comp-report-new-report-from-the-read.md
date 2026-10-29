@@ -81,7 +81,7 @@ the existing pickers; how they're laid out is Claude Design's.
       if Dispatch 18's Designed email shows tags, it HTML-escapes them. They never go into a Jev input
       (D-12: no text an agent wrote reaches Jev; `server/decide/*` stays as it is). The writer's input
       (`agent_tags`) and Hubert get them only as quoted data in a data field, never joined into
-      instruction text; if `server/writer.ts` or `assistant.ts` does that, name it in the PR for Calliste.
+      instruction text; if `server/writer.ts` or `assistant.ts` does that, name it in the PR for Collister.
 13. **NW-037 a (Mason's half) · transit,** if Dispatch 17's data has merged. A pure function in
     `workspace/transit.ts` from the building's geocoded coordinates (`ws.geocodes`) to the nearest stations and
     their lines, and one line in the card's Distance section with plain coloured circles. Transit stays out of

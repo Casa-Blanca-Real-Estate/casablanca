@@ -25,13 +25,15 @@ import { withActor } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond, UUID } from '../http.ts';
 import { callLines, LINE_KEYS, type AgentLines, type LinesInput, type LinesJob } from '../lines.ts';
 import { neutralNumbers } from '../numbers.ts';
-import { requireUser, type AuthDeps } from '../session.ts';
+import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { writeLimit } from './narratives.ts';
 import { asUser, requirePool } from './reports.ts';
+import { guardTestAi } from '../test-user.ts';
 import { reportFor } from './workspace.ts';
 
 export interface LinesDeps extends AuthDeps {
-  anthropic: () => Anthropic;
+  /** The client for this user's calls: the test user's uses the eval key (server/test-user.ts). */
+  anthropic: (user: SessionUser) => Anthropic;
   env?: Record<string, string | undefined>;
 }
 
@@ -79,7 +81,8 @@ export function handleLines(req: Request, deps: LinesDeps): Promise<Response> {
       return { input, current };
     });
 
-    const outcome = await callLines(deps.anthropic(), prepared.input, prepared.current);
+    await guardTestAi(pool, user, deps.env);
+    const outcome = await callLines(deps.anthropic(user), prepared.input, prepared.current);
 
     if (outcome.usage && outcome.model) {
       const totals = usageTotals(outcome.model, outcome.usage as Parameters<typeof usageTotals>[1]);
