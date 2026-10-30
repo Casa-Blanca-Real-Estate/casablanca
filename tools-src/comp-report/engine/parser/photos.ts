@@ -18,7 +18,7 @@ export const PHOTO_HOSTS: readonly string[] = ['photos.zillowstatic.com'];
 /** At most this many photos are kept, hero first. */
 export const MAX_PHOTOS = 8;
 
-/** Not a listing photo: the carousel import's junk filter (netlify/functions/streeteasy-import-background.mjs). */
+/** Not a listing photo: the carousel import's junk filter (netlify/functions/streeteasy-import-background.mts). */
 const JUNK = /(logo|sprite|favicon|\bicon\b|\/icons?\/|placeholder|avatar|headshot|\bmap\b|\bads?\b|advert|badge|watermark|pixel|\.svg(\?|$))/i;
 
 const MAX_URL_LENGTH = 2048;

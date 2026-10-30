@@ -3,7 +3,7 @@
 // the Firecrawl stealth proxy, extracts the FULL fields (whole description, since time is
 // no longer tight), fetches + base64s the photos, and writes the finished result to the
 // `se-jobs` Blobs store keyed by jobId. The browser never waits on this — it polls
-// streeteasy-status.mjs for `{ status: 'done' | 'error', ... }`.
+// streeteasy-status.mts for `{ status: 'done' | 'error', ... }`.
 //
 // Client contract:
 //   POST /.netlify/functions/streeteasy-import-background   { url, jobId }
@@ -12,6 +12,7 @@
 //
 // Env: FIRECRAWL_API_KEY
 import { getStore } from '@netlify/blobs';
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 
 const SCHEMA = {
   type: 'object',
@@ -59,6 +60,8 @@ async function toDataUrl(u) {
 
 export default async (req) => {
   // Background functions are POST-invoked; there's no useful response to the caller.
+  // Netlify has already answered 202; a refused caller gets nothing done, and streeteasy-status refuses it too.
+  if (await requireStudio(req)) return new Response('', { status: 202 });
   let url, jobId;
   try { ({ url, jobId } = await req.json()); } catch { return new Response('bad json', { status: 202 }); }
   if (!url || !jobId) return new Response('missing url/jobId', { status: 202 });

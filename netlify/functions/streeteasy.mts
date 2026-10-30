@@ -1,7 +1,9 @@
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Studio-Token',
 };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
@@ -52,6 +54,8 @@ const EXTRACT_PROMPT =
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  const refused = await requireStudio(req, { headers: CORS });
+  if (refused) return refused;
   if (req.method !== 'POST') return json({ error: 'POST required' }, 405);
 
   try {

@@ -4,6 +4,31 @@ One backend, one set of keys, shared by every tool on the platform. Functions ar
 Netlify v2 (Web `Request`/`Response`), ESM. The static tools can be served from
 GitHub Pages and call these functions on the Netlify origin (CORS is open).
 
+## Who may call them (CR-9)
+
+Every Studio page signs in (`assets/studio-auth.js`, #116), and the functions those pages call
+check it: **`agents`, `brand`, `claude`, `copy`, `img`, `import`, `sessions`, `site` and the three
+`streeteasy*` functions answer only a request carrying the Identity token in `X-Studio-Token`**
+from someone the comp report lets in (the same check as `/api/comp-report/me`; a preview's guest
+counts). Anything else gets `401 signed_out` or `403` as JSON. Never `Authorization: Bearer`: with
+a new Google account's token there, Netlify fails the call before the function runs (a bare 500).
+`studio-auth.js` adds the header to
+every `fetch()` to them, so the pages' own calls didn't change. The gate is
+`tools-src/studio-auth/gate.ts`; its test fails when a new function is neither gated nor named with
+the reason it isn't.
+
+- **Team only** (the old dev list, a comp report admin, a preview's guest), as the pages' own
+  controls are: changing `site` (workshop, changelog), adding or removing a `brand` asset.
+- **Still open**: `brand?file=KEY` (the page shows those bytes in `<img>` and download links, which
+  can't carry a header; they're Casa's public brand assets), and `feedback` (posting).
+- **Their own tokens, unchanged**: `agent-store` and `agent-copy` (`CB_CMS_TOKEN`), `agent-pics`
+  (`CB_PICS_TOKEN`), so the roster import keeps running outside a browser. The comp report's and
+  the dev notebook's functions have their own checks; `identity-*` are called by Identity.
+- The watermarker's URL loader fetches through `img` and draws a `blob:` URL, rather than pointing
+  an `<img>` at the proxy, so the call carries the token.
+- An outside script (a Make scenario, say) can't call these any more without a signed-in token.
+  None did on 2026-10-29: no Make scenario calls the site.
+
 ## Endpoints
 
 **Editorial Carousel Builder** (`/tools/carousel/`)
