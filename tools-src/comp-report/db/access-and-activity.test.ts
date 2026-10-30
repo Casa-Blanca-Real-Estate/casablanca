@@ -152,7 +152,8 @@ describe('the sign-in log and the activity log (Dispatch 22b)', { skip: skipWith
       ['a 2 KB user object', () => gate(twoKb)],
     ];
     for (const [what, run] of cases) {
-      assert.equal((await run()).status, 204, `allowed, with ${what}`);
+      // 2xx admits: 200 when the gate also trims the user's metadata (identity-events.ts, trimmedMetadata).
+      assert.ok([200, 204].includes((await run()).status), `allowed, with ${what}`);
     }
     for (const [what, run] of [
       ['a database that throws', () => gate(gateBody(STRANGER), { pool: DOWN })],
