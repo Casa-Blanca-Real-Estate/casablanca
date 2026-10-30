@@ -2,7 +2,7 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, HubertView, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
+import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, HubertHomeEdit, HubertView, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
 import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
@@ -158,6 +158,8 @@ export interface Workspace {
   hubertEdits: HubertEmailEdit[];
   queueHubertEdit: (edit: HubertEmailEdit) => void;
   takeHubertEdits: (n: number) => void;
+  /** Hubert's edit to the home's details (server/hubert-home.ts), or its Undo: the entries written into the intake. */
+  applyHomeSet: (set: HubertHomeEdit['set']) => void;
   outcomes: Outcomes;
   setOutcomes: (next: Outcomes) => void;
   reached: Reached;

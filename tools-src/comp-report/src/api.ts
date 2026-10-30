@@ -125,6 +125,7 @@ export interface ShownMessage {
 }
 
 export type { HubertEmailEdit } from '../server/hubert-email.ts';
+export type { HubertHomeEdit } from '../workspace/home-edit.ts';
 export type { TrailEntry, TrailSource } from '../server/hubert-trail.ts';
 export type { HubertView } from '../server/hubert-view.ts';
 type HubertView = import('../server/hubert-view.ts').HubertView;
@@ -133,6 +134,7 @@ type TrailSource = import('../server/hubert-trail.ts').TrailSource;
 
 export type TurnEvent =
   | { type: 'email_edit'; edit: import('../server/hubert-email.ts').HubertEmailEdit }
+  | { type: 'home_edit'; edit: import('../workspace/home-edit.ts').HubertHomeEdit }
   | { type: 'change'; entry: TrailEntry }
   | { type: 'comps_changed' }
   | { type: 'start'; model: string }
