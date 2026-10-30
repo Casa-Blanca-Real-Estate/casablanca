@@ -261,6 +261,23 @@ describe('the sign-up and log-in gate, before the database exists', () => {
     assert.equal(reads, 0);
   });
 
+  test('keeps only the name in a new Google account\'s metadata, so its token fits Netlify\'s limit', async () => {
+    const res = await handleIdentityEvent(
+      new Request('https://site/x', { method: 'POST', body: JSON.stringify({ event: 'signup', user: {
+        email: 'new@casa-blanca.com', app_metadata: { provider: 'google' },
+        user_metadata: { full_name: 'New Agent', avatar_url: 'https://lh3.example/' + 'x'.repeat(1500), iss: 'https://accounts.google.com', custom_claims: { hd: 'casa-blanca.com' } },
+      } }) }),
+      { access: casa, pool: null },
+    );
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { user_metadata: { full_name: 'New Agent' } });
+    const trimmedAlready = await handleIdentityEvent(
+      new Request('https://site/x', { method: 'POST', body: JSON.stringify({ event: 'login', user: { email: 'new@casa-blanca.com', user_metadata: { full_name: 'New Agent' } } }) }),
+      { access: casa, pool: null },
+    );
+    assert.equal(trimmedAlready.status, 204);
+  });
+
   test('refuses a non-Casa Google account, junk, and anything but POST', async () => {
     assert.equal((await gate('someone@gmail.com')).status, 403);
     assert.equal((await gate('someone@gmail.com', 'login')).status, 403);

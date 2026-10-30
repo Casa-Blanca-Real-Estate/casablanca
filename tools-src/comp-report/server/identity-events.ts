@@ -102,7 +102,32 @@ export async function handleIdentityEvent(req: Request, deps: GateDeps, context?
     ? { gate: 'comp-report', event, email, provider, allowed: true, via: decision.via, ip: ipLine }
     : { gate: 'comp-report', event, domain: email ? emailDomain(email) : null, provider, allowed: false, ip: ipLine }));
 
-  return decision.allowed
-    ? new Response(null, { status: 204 })
-    : new Response('This account is not authorised for the Casa Blanca comp report.', { status: 403 });
+  if (!decision.allowed) return new Response('This account is not authorised for the Casa Blanca comp report.', { status: 403 });
+  const trimmed = trimmedMetadata(body?.user?.user_metadata);
+  if (!trimmed) return new Response(null, { status: 204 });
+  console.log(JSON.stringify({ gate: 'comp-report', event, trimmed: trimmed.dropped }));
+  return new Response(JSON.stringify({ user_metadata: trimmed.keep }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
+
+/** The only user_metadata the Studio reads (identity.ts, toIdentityUser). */
+const KEPT_METADATA = ['full_name', 'name'];
+
+/**
+ * A new Google account arrives with more user_metadata than Netlify can pass to a function: its token,
+ * copied into the Lambda client context, goes over AWS's 3,584-byte cap and every function call fails
+ * with Netlify's bare "Internal Error" (2026-10-30, creative@). GoTrue replaces user_metadata with what
+ * a 2xx hook answer carries (api/hooks.go), before it issues the token, so the gate keeps only the name.
+ * Returns null when there's nothing to drop, so an account already trimmed gets the empty 204.
+ */
+export function trimmedMetadata(raw: unknown): { keep: Record<string, string>; dropped: string[] } | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const meta = raw as Record<string, unknown>;
+  const dropped = Object.keys(meta).filter((k) => !KEPT_METADATA.includes(k) || typeof meta[k] !== 'string' || (meta[k] as string).length > 200);
+  if (!dropped.length) return null;
+  const keep: Record<string, string> = {};
+  for (const k of KEPT_METADATA) {
+    const v = meta[k];
+    if (typeof v === 'string' && v.trim()) keep[k] = v.trim().slice(0, 200);
+  }
+  return { keep, dropped: dropped.slice(0, 20) };
 }
