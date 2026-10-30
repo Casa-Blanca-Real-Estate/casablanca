@@ -3,11 +3,6 @@
 <head>
 <!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. -->
 <script src="/assets/studio-auth.js"></script>
-<script>
-/* Team only: the In Contract Roundup is a dev-only tool, so anyone signed in who isn't
-   on the Studio's team goes back to the studio home (assets/studio-auth.js). */
-CBStudio.ready.then(function(){ if(!CBStudio.isTeam()) location.replace('../../'); });
-</script>
 <script src="../../assets/studio-header.js" defer></script>
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 
