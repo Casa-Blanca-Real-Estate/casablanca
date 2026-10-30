@@ -16,8 +16,10 @@
 // there.
 //
 // Domains match exactly: listing casa-blanca.com does not admit
-// email.casa-blanca.com. Which domains Casa's Workspace uses is Kimani's call
-// (Dispatch 05 §4), so it's configuration: CR_ALLOWED_DOMAINS, comma-separated.
+// email.casa-blanca.com. casa-blanca.com is always one of them: any Casa Google
+// account signs in to the Studio, whatever the roster or the allowlist holds
+// (Kimani, 2026-10-30). CR_ALLOWED_DOMAINS, comma-separated, adds more; an entry
+// written "@casa-blanca.com" counts the same as "casa-blanca.com".
 import type { Role } from './db.ts';
 
 export const DEFAULT_DOMAINS = ['casa-blanca.com'];
@@ -44,9 +46,9 @@ function list(raw: string | undefined): string[] {
 }
 
 export function accessConfig(env: Record<string, string | undefined> = process.env): AccessConfig {
-  const domains = list(env.CR_ALLOWED_DOMAINS);
+  const extra = list(env.CR_ALLOWED_DOMAINS).map((d) => d.replace(/^@/, ''));
   return {
-    domains: domains.length ? domains : DEFAULT_DOMAINS,
+    domains: [...new Set([...DEFAULT_DOMAINS, ...extra])],
     adminEmails: list(env.CR_ADMIN_EMAILS).filter((e) => normalizeEmail(e) === e),
   };
 }
