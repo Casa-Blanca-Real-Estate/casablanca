@@ -47,6 +47,11 @@ describe('the gate', () => {
     assert.equal((await studioRefusal(req('guest.not-the-key-but-long-enough'), deps))?.status, 401);
   });
 
+  test('the token in X-Studio-Token, as studio-auth.js sends it, counts', async () => {
+    const own = new Request('https://studio.example/.netlify/functions/claude', { method: 'POST', headers: { 'X-Studio-Token': 'token-ana-0000000' } });
+    assert.equal(await studioRefusal(own, deps), null);
+  });
+
   test('team-only: the old dev list, an admin and a guest; not every agent', async () => {
     const team = { team: true };
     assert.equal(await studioRefusal(req('token-erez-000000'), deps, team), null);

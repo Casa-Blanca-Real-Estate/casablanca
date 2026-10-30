@@ -8,9 +8,11 @@ GitHub Pages and call these functions on the Netlify origin (CORS is open).
 
 Every Studio page signs in (`assets/studio-auth.js`, #116), and the functions those pages call
 check it: **`agents`, `brand`, `claude`, `copy`, `img`, `import`, `sessions`, `site` and the three
-`streeteasy*` functions answer only a request carrying `Authorization: Bearer <Identity token>`**
+`streeteasy*` functions answer only a request carrying the Identity token in `X-Studio-Token`**
 from someone the comp report lets in (the same check as `/api/comp-report/me`; a preview's guest
-counts). Anything else gets `401 signed_out` or `403` as JSON. `studio-auth.js` adds the header to
+counts). Anything else gets `401 signed_out` or `403` as JSON. Never `Authorization: Bearer`: with
+a new Google account's token there, Netlify fails the call before the function runs (a bare 500).
+`studio-auth.js` adds the header to
 every `fetch()` to them, so the pages' own calls didn't change. The gate is
 `tools-src/studio-auth/gate.ts`; its test fails when a new function is neither gated nor named with
 the reason it isn't.

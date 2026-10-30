@@ -8,7 +8,7 @@ export function cors() {
   const o = process.env.ALLOWED_ORIGIN || '*';
   return {
     'Access-Control-Allow-Origin': o,
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Studio-Token',
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
     'Vary': 'Origin',
   };

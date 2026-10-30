@@ -3,7 +3,7 @@ import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Studio-Token',
 };
 
 export default async (req) => {

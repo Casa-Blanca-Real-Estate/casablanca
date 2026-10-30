@@ -18,7 +18,7 @@
    pages are static files, so the protection is in each function that checks the token.
    The older functions the tools call (the carousels' Claude and StreetEasy import, the
    image proxy, brand, site, the headshot library, sessions) check it too, and this adds
-   the token to every fetch() to them (STUDIO_FUNCTIONS below).
+   the token to every fetch() to them, as X-Studio-Token (STUDIO_FUNCTIONS below).
 
    Window.CBStudio:
      ready         Promise of the user, {email, name, role, guest}; never resolves when
@@ -165,7 +165,8 @@
 
   // The functions written before the comp report check the sign-in too (CR-9; tools-src/studio-auth/gate.ts),
   // so their calls carry the token: the pages' own fetch() calls are left as they were, and this adds it.
-  // A call that already says who it is (the CMS's and the roster's own tokens) is left alone.
+  // A call that already says who it is (the CMS's and the roster's own tokens) is left alone. The token goes
+  // in X-Studio-Token, never Authorization, for the reason given at /api/comp-report/me below.
   var STUDIO_FUNCTIONS = ['agents', 'brand', 'claude', 'copy', 'img', 'import', 'sessions', 'site',
     'streeteasy', 'streeteasy-import-background', 'streeteasy-status'];
   function studioCall(u) {
@@ -183,9 +184,9 @@
     window.fetch = function (u, o) {
       if (!studioCall(u)) return plainFetch.call(window, u, o);
       var headers = new Headers((o && o.headers) || {});
-      if (headers.has('Authorization')) return plainFetch.call(window, u, o);
+      if (headers.has('Authorization') || headers.has('X-Studio-Token')) return plainFetch.call(window, u, o);
       return token().then(function (t) {
-        if (t) headers.set('Authorization', 'Bearer ' + t);
+        if (t) headers.set('X-Studio-Token', t);
         return plainFetch.call(window, u, Object.assign({}, o, { headers: headers }));
       });
     };
