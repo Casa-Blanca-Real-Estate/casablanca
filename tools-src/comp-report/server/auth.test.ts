@@ -46,6 +46,12 @@ describe('the access rule', () => {
   test('with no domains configured, the default is casa-blanca.com only', () => {
     assert.deepEqual(accessConfig({}).domains, ['casa-blanca.com']);
   });
+
+  test('casa-blanca.com is always in, whatever CR_ALLOWED_DOMAINS says, and an @ in front is ignored', () => {
+    assert.deepEqual(accessConfig({ CR_ALLOWED_DOMAINS: 'email.casa-blanca.com' }).domains, ['casa-blanca.com', 'email.casa-blanca.com']);
+    assert.deepEqual(accessConfig({ CR_ALLOWED_DOMAINS: '@Casa-Blanca.com, @email.casa-blanca.com' }).domains, ['casa-blanca.com', 'email.casa-blanca.com']);
+    assert.equal(decide('ana@casa-blanca.com', accessConfig({ CR_ALLOWED_DOMAINS: '@casa-blanca.com' }), null).allowed, true);
+  });
 });
 
 describe('verifying a session with Identity', () => {
@@ -240,6 +246,17 @@ describe('the sign-up and log-in gate, before the database exists', () => {
     assert.deepEqual(admitted, { gate: 'comp-report', event: 'signup', email: 'ana@casa-blanca.com', provider: 'google', allowed: true, via: 'domain', ip: noIp });
     assert.deepEqual(refused, { gate: 'comp-report', event: 'signup', domain: 'gmail.com', provider: 'google', allowed: false, ip: noIp });
     assert.equal(lines.join('\n').includes('someone.private'), false);
+  });
+
+  test('admits a Casa address without reading the allowlist, so a sleeping database can\'t make it late', async () => {
+    let reads = 0;
+    const pool = { connect: () => { reads++; return new Promise(() => {}); } };
+    const res = await handleIdentityEvent(
+      new Request('https://site/x', { method: 'POST', body: JSON.stringify({ event: 'login', user: { email: 'ana@casa-blanca.com' } }) }),
+      { access: casa, pool: pool as never },
+    );
+    assert.equal(res.status, 204);
+    assert.equal(reads, 0);
   });
 
   test('refuses a non-Casa Google account, junk, and anything but POST', async () => {

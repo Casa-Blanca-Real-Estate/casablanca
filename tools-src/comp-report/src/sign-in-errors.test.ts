@@ -11,6 +11,10 @@ test('our sign-up gate refusing an account reads as not authorised', () => {
   assert.equal(signInErrorNotice('#error=server_error&error_description=Failed%20to%20handle%20signup%20webhook'), NOT_AUTHORISED_NOTICE);
 });
 
+test('our gate not answering in time is a failure to retry, not a refusal', () => {
+  assert.equal(signInErrorNotice('#error=server_error&error_description=Failed+to+perform+webhook+in+time+frame+(5+seconds)'), FAILED_NOTICE);
+});
+
 test('invite-only registration, and a cancel at Google, each get their own wording', () => {
   assert.equal(signInErrorNotice('#error=access_denied&error_description=Signups+not+allowed+for+this+instance'), INVITE_ONLY_NOTICE);
   assert.equal(signInErrorNotice('#error=access_denied'), CANCELLED_NOTICE);

@@ -52,8 +52,12 @@ export async function handleIdentityEvent(req: Request, deps: GateDeps, context?
   const appMetadata = (body?.user?.app_metadata ?? {}) as Record<string, unknown>;
   const provider = closedProvider(appMetadata?.provider);
 
+  // Casa's domain and the admin list need no database, so they're decided first and the
+  // allowlist is read only for anyone else. Identity waits 5 seconds for an answer; a cold
+  // function waking a sleeping database could take longer, and the agent would be refused.
+  const settled = email ? decide(email, deps.access, null) : null;
   let allowlistRole: Role | null = null;
-  if (email && deps.pool) {
+  if (email && deps.pool && !settled?.allowed) {
     try {
       allowlistRole = await withActor(deps.pool, { kind: 'system', does: `identity-${event}` }, async (tx) => {
         const { rows } = await tx.query<{ role: Role }>(
@@ -69,7 +73,7 @@ export async function handleIdentityEvent(req: Request, deps: GateDeps, context?
     }
   }
 
-  const decision = email ? decide(email, deps.access, allowlistRole) : { allowed: false, via: null };
+  const decision = settled?.allowed ? settled : email ? decide(email, deps.access, allowlistRole) : { allowed: false, via: null };
 
   // The log row, once the answer is settled. No email (invalid or missing JSON) or an oversized
   // body: no row. A domain only from the closed list, so an anonymous caller can't plant text.
