@@ -136,7 +136,7 @@
     profile: function () {
       if (api._profile) return api._profile;
       api._profile = api.ready.then(token).then(function (t) {
-        return fetch('/api/comp-report/agent-card', { headers: t ? { Authorization: 'Bearer ' + t } : {} });
+        return fetch('/api/comp-report/agent-card', { headers: t ? { 'X-Studio-Token': t } : {} });
       }).then(function (r) { return r.ok ? r.json() : { card: null }; }).then(function (b) { return b.card || null; }, function () {
         api._profile = null;
         return null;
@@ -200,7 +200,9 @@
         var kept = JSON.parse(get(session, ME_KEY) || 'null');
         if (kept && kept.who === who && Date.now() - kept.at < ME_MS) return admit(kept.user);
       } catch (e) { /* unreadable: ask */ }
-      return fetch('/api/comp-report/me', { headers: { Authorization: 'Bearer ' + t } }).then(function (r) {
+      // The token goes in X-Studio-Token, never Authorization: Netlify fails the call before our function runs
+      // when a new Google account's token rides in Authorization (tools-src/comp-report/server/identity.ts).
+      return fetch('/api/comp-report/me', { headers: { 'X-Studio-Token': t } }).then(function (r) {
         if (r.status === 401 || r.status === 403) {
           // A guest key the server won't take (production, or out of date) is forgotten, as the comp report does.
           set(local, GUEST_KEY, null);

@@ -119,6 +119,8 @@ describe('verifying a session with Identity', () => {
   test('only an Authorization: Bearer header counts', () => {
     const req = (h: Record<string, string>) => new Request('https://x/api', { headers: h });
     assert.equal(bearerToken(req({ authorization: `Bearer ${token}` })), token);
+    assert.equal(bearerToken(req({ 'x-studio-token': token })), token, 'the Studio\'s own header, which Netlify leaves alone');
+    assert.equal(bearerToken(req({ 'x-studio-token': 'short' })), null);
     assert.equal(bearerToken(req({ cookie: `nf_jwt=${token}` })), null);
     assert.equal(bearerToken(req({ authorization: 'Basic abc' })), null);
     assert.equal(bearerToken(req({})), null);

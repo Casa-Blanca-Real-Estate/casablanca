@@ -1,5 +1,5 @@
 // Calls to the comp report's functions. Same origin; the session token rides
-// in the Authorization header on every request.
+// in the X-Studio-Token header on every request (not Authorization: server/identity.ts).
 import type { NarrativeView as Narrative } from '../server/api/narratives.ts';
 import type { LinkReadView, WorkspaceData } from '../server/api/workspace.ts';
 import type { GeocodeView } from '../server/buildings.ts';
@@ -24,7 +24,7 @@ async function headers(): Promise<Record<string, string>> {
   const token = await session.token();
   return {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(token ? { 'X-Studio-Token': token } : {}), // not Authorization: see server/identity.ts, TOKEN_HEADER
   };
 }
 
