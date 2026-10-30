@@ -30,6 +30,17 @@
   to   = "/agents/index.html"
   status = 200
 
+# The Studio's sign-in page (assets/studio-auth.js sends signed-out visits here). It's the comp
+# report's app, which knows it's at /sign-in and sends the visit on once the server says yes.
+[[redirects]]
+  from = "/sign-in"
+  to   = "/tools/comp-report/index.html"
+  status = 200
+[[redirects]]
+  from = "/sign-in/*"
+  to   = "/tools/comp-report/index.html"
+  status = 200
+
 # publish = "." serves the whole repo root, so everything that isn't meant to be
 # a public page has to be refused explicitly. force = true because the files do
 # exist — without it Netlify serves them anyway (shadowing). Nothing on the site

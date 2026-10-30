@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Role } from '../../api.ts';
 import '../../styles/shell.css';
 import { BarSlotsContext } from './slots.tsx';
+import { STUDIO_SIGN_IN } from '../../studio-sign-in.ts';
 
 export interface Account {
   email: string;
@@ -74,7 +75,7 @@ export function TopBar({ account, onSignOut, pillsRef, menuRef }: {
     // The studio chrome pads the page's first <header> to clear its Studio button, so this is the only <header>.
     <header className="bar sh-bar">
       <img src="/assets/brand/casa-blanca-wordmark-white.png" alt="Casa Blanca" />
-      <span className="bar-label">Comp report</span>
+      <span className="bar-label">{STUDIO_SIGN_IN ? 'Studio' : 'Comp report'}</span>
       <span className="sh-bar-spacer" />
       <span className="sh-bar-pills" ref={pillsRef} />
       {account && <AccountMenu account={account} onSignOut={onSignOut} menuRef={menuRef} />}

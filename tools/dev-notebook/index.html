@@ -248,7 +248,7 @@
   }
 
   function exchange(identityToken) {
-    return fetch(API + '/session', { method: 'POST', headers: { Authorization: 'Bearer ' + identityToken } })
+    return fetch(API + '/session', { method: 'POST', headers: { 'X-Studio-Token': identityToken } })
       .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
       .then(function (r) {
         if (!r.ok) { showSignedOut(r.data.message || 'Couldn’t sign in.'); return false; }

@@ -140,7 +140,18 @@ export function netlifyIdentityVerifier(
   };
 }
 
+/**
+ * The header the Studio sends its Identity token in. Not Authorization: when a request carries a valid
+ * Identity token as `Authorization: Bearer`, Netlify copies the user into the function's Lambda client
+ * context, which AWS caps at 3,584 bytes. A newly created Google account's metadata goes over it, and
+ * Netlify answers "Internal Error" without ever calling the function (2026-10-30, creative@).
+ */
+export const TOKEN_HEADER = 'X-Studio-Token';
+
 export function bearerToken(req: Request): string | null {
+  const token = /^[A-Za-z0-9._~+/=-]{16,8192}$/;
+  const own = (req.headers.get(TOKEN_HEADER) ?? '').trim();
+  if (token.test(own)) return own;
   const header = req.headers.get('authorization') ?? '';
   const match = /^Bearer\s+([A-Za-z0-9._~+/=-]{16,8192})$/i.exec(header.trim());
   return match?.[1] ?? null;

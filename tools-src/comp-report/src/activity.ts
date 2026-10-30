@@ -19,7 +19,7 @@ async function send(name: string, reportId: string | null): Promise<void> {
     await fetch('/api/comp-report/activity', {
       method: 'POST',
       keepalive: true,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', 'X-Studio-Token': token },
       body: JSON.stringify({ name, sessionId: SESSION_ID, ...(reportId ? { reportId } : {}) }),
     });
   } catch {

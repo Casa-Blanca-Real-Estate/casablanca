@@ -1,6 +1,6 @@
 // The browser side of sign-in: Netlify Identity through @netlify/identity.
 // Casa agents use Google; invited outsiders use email and password (§13).
-// The access token goes to our API as an Authorization header on every call —
+// The access token goes to our API in an X-Studio-Token header on every call —
 // the functions verify it with Identity themselves (server/session.ts).
 //
 // Under the local dev server (npm run dev:comp-report) there is no Identity,

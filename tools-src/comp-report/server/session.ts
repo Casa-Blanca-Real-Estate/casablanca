@@ -161,6 +161,10 @@ async function requireIdentityUser(token: string, deps: AuthDeps, seen: Verified
   }
 
   const row = await withActor(deps.pool, { kind: 'system', does: 'sign-in' }, async (tx) => {
+    // A lock held by a stalled transaction fails this check with an error, rather than stalling it until
+    // the function is killed and the browser gets a bare 500.
+    await tx.query("set local lock_timeout = '3s'");
+    await tx.query("set local statement_timeout = '8s'");
     const grant = await tx.query<{ role: Role }>(
       'select role from comp_report.allowlist where email = $1 and revoked_at is null',
       [email],
