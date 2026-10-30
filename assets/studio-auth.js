@@ -19,7 +19,7 @@
 
    Window.CBStudio:
      ready         Promise of the user, {email, name, role, guest}; never resolves when
-                   the visit is sent to sign in
+                   the visit is sent to sign in; null while OPEN lets a visit in without one
      user          the same, once ready
      isTeam()      the Studio's team (the old dev sign-in's list, a comp report admin, or a preview's guest):
                    the team-only tools, the CMS, the dev notebook
@@ -181,6 +181,18 @@
 
   // Local work on the hand-written tools (a plain static server, no Identity): let it through. The old dev
   // sign-in's mark decides the team there, as it did before, so a local test can be either.
+  // TEMPORARY (Kimani, 2026-10-30): while new Google accounts can't get through Netlify Identity, the Studio's
+  // pages open without a sign-in. Signed out, refused, or the check failing: the page shows as before #116, with
+  // no user and no team tools. Set back to false to require the sign-in again.
+  var OPEN = true;
+  function admitOpen() {
+    set(local, 'cb_auth', null);
+    api.user = null;
+    root.classList.remove('cb-gate');
+    try { document.dispatchEvent(new CustomEvent('cb-studio-ready', { detail: null })); } catch (e) { /* old browser */ }
+    return null;
+  }
+
   var LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   function localUser() {
     var mark = (get(local, 'cb_auth') || '').trim().toLowerCase();
@@ -190,6 +202,7 @@
   function check() {
     return token().then(function (t) {
       if (!t) {
+        if (OPEN) return admitOpen();
         if (!LOCAL) return toSignIn();
         return fetch('/.netlify/identity/settings').then(function (r) {
           return r.ok ? toSignIn() : localUser();
@@ -206,7 +219,7 @@
         if (r.status === 401 || r.status === 403) {
           // A guest key the server won't take (production, or out of date) is forgotten, as the comp report does.
           set(local, GUEST_KEY, null);
-          return toSignIn();
+          return OPEN ? admitOpen() : toSignIn();
         }
         if (!r.ok) throw new Error('me ' + r.status);
         return r.json();
@@ -218,6 +231,7 @@
         return admit(user);
       });
     }).catch(function () {
+      if (OPEN) return admitOpen();
       return new Promise(function (resolve) { trouble(function () { resolve(check()); }); });
     });
   }
