@@ -16,7 +16,7 @@
   /* Netlify Identity sends sign-in, invitation and password-reset links to the site root, and a
      refused sign-in comes back here as #error=…. They belong to the comp report
      (tools-src/comp-report/src/session.ts). Tab hashes never contain "=". */
-  if (/^#(access_token|confirmation_token|recovery_token|invite_token|email_change_token|error)=/.test(location.hash)) location.replace('/tools/comp-report/' + location.hash);
+  if (/^#(access_token|confirmation_token|recovery_token|invite_token|email_change_token|error)=/.test(location.hash)) location.replace('/sign-in/' + location.hash);
 </script>
 <style>
   @font-face{font-family:'Object Sans';src:url('assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}

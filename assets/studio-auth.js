@@ -5,8 +5,9 @@
    The Studio signs in the way the comp report does: Netlify Identity (a Casa Google
    account, or email and password), and the same rule of who's allowed in, which only
    the server applies (/api/comp-report/me; tools-src/comp-report/server/access.ts).
-   The sign-in screen is the comp report's own: a signed-out visit goes there with
-   ?next=<this page>, and the comp report sends it back once the server says yes.
+   The sign-in screen is the Studio's, at /sign-in/ (the comp report's app, served there by
+   netlify.toml): a signed-out visit goes there with ?next=<this page>, and it sends the visit
+   back once the server says yes, or to the dashboard without one.
 
    It reads the same session the comp report's library keeps (@netlify/identity: the
    nf_jwt and nf_refresh cookies, and gotrue.user in localStorage), and when the access
@@ -34,12 +35,12 @@
   if (window.CBStudio) return;
   // Identity's links (an invitation, a reset, a refused Google sign-in) belong to the sign-in screen.
   if (/^#(access_token|confirmation_token|recovery_token|invite_token|email_change_token|error)=/.test(location.hash)) {
-    location.replace('/tools/comp-report/' + location.hash);
+    location.replace('/sign-in/' + location.hash);
     return;
   }
 
   var TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
-  var SIGN_IN = '/tools/comp-report/';
+  var SIGN_IN = '/sign-in/';
   var ME_KEY = 'cb.studio.me';
   var ME_MS = 10 * 60 * 1000;
   var MARGIN_S = 60;

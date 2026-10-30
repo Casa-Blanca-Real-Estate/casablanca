@@ -49,7 +49,7 @@ file points you there by section when you need it.
 - Internal users are agents: zero-install, browser-based. **One sign-in for the whole Studio** (PR #116, Kimani
   2026-10-29): every Studio page loads `assets/studio-auth.js` first, which reads the comp report's Netlify
   Identity session (Casa Google, or email and password) and asks `/api/comp-report/me` who's allowed; signed
-  out, it goes to the comp report's sign-in and back. The team (`isTeam()`: the old four-email dev list, a
+  out, it goes to the Studio's sign-in page, `/sign-in/` (the comp report's app, served there), and back. The team (`isTeam()`: the old four-email dev list, a
   comp report admin, or a preview's guest) gets the team-only tools. It hides pages, it doesn't protect
   them: anything secret still needs its function to check the token. The public agent sites never load it.
 - `netlify.toml` must explicitly declare the functions directory.

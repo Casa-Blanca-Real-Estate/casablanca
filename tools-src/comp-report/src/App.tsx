@@ -12,6 +12,7 @@ import type { ScreenId } from './views/workspace/screens.ts';
 import { Center, StateLine } from './views/shell/Pieces.tsx';
 import { Shell } from './views/shell/TopBar.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
+import { STUDIO_SIGN_IN, studioSignInUrl } from './studio-sign-in.ts';
 
 function currentReportId(): string | null {
   return new URLSearchParams(location.search).get('report');
@@ -19,7 +20,7 @@ function currentReportId(): string | null {
 
 // A Studio page sent a signed-out visit here to sign in (assets/studio-auth.js): ?next=<that page>. It's kept
 // for this tab, since Google's sign-in comes back through the site root without it, and taken once the server
-// says yes. Only a path on this site, never the comp report itself.
+// says yes. Only a path on this site, never the sign-in page itself.
 const NEXT_KEY = 'cb.studio.next';
 function keepNext(): void {
   const params = new URLSearchParams(location.search);
@@ -29,7 +30,7 @@ function keepNext(): void {
   const rest = params.toString();
   history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : '') + location.hash);
   try {
-    if (/^\/(?![/\\])/.test(next) && !next.startsWith('/tools/comp-report')) sessionStorage.setItem(NEXT_KEY, next);
+    if (/^\/(?![/\\])/.test(next) && !/^\/sign-in(\/|\?|$)/.test(next)) sessionStorage.setItem(NEXT_KEY, next);
   } catch {
     /* storage blocked: the visit stays here */
   }
@@ -69,6 +70,7 @@ export function App() {
     api<Me>('/api/comp-report/me').then((m) => {
       const next = takeNext();
       if (next) location.replace(next);
+      else if (STUDIO_SIGN_IN) location.replace('/'); // signed in at the Studio's sign-in page: on to the dashboard
       else setMe(m);
     }, (e) => {
       // A guest key the server won't take (production, or out of date): back to signing in.
@@ -80,6 +82,13 @@ export function App() {
       setRefusal(e instanceof ApiError ? e : new ApiError(0, 'network', String(e)));
     });
   }, [state]);
+
+  // Signed out at the comp report's own address: the Studio's sign-in page, coming back here after.
+  // Not in local development, where Vite serves only the comp report.
+  const away = state.status === 'signed-out' && !STUDIO_SIGN_IN && !import.meta.env.DEV;
+  useEffect(() => {
+    if (away) location.replace(studioSignInUrl());
+  }, [away]);
 
   // The account menu's Sign out: the real Identity sign-out (the Studio chip only clears its own key).
   // The sign-in screen shows whether or not the call got through; a reload checks again.
@@ -116,6 +125,7 @@ export function App() {
   else if (state.status === 'unavailable') body = <Unavailable />;
   else if (state.status === 'invite') body = <AcceptInvite token={state.token} onDone={setState} />;
   else if (state.status === 'recovery') body = <SetNewPassword onDone={() => session.start().then(setState)} />;
+  else if (away) body = <StateLine>Taking you to sign in…</StateLine>;
   else if (state.status === 'signed-out') body = <SignIn notice={state.notice} onSignedIn={setState} />;
   else if (refusal) body = <NotAuthorised email={state.email} error={refusal} onSignOut={signOut} onRetry={() => setState({ ...state })} />;
   else if (!me) body = <StateLine>Checking your access…</StateLine>;
