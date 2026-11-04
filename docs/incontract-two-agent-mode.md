@@ -38,3 +38,10 @@ The one-agent mode set the pattern to copy:
   already re-labels every field from the mode — extend the same `setTxt` block.
 - Layout constants live in `TA` next to `T`; keep reusing `T.PHOTO_W/H`, `T.AGENT_W/H`
   and the 33/1047 margins so every mode stays on one grid.
+
+## 2026-11-04: co-listing built (issue #127)
+
+An agent asked to credit two agents on one deal. Each deal now takes an optional
+co-listing agent (`agent2Src` / `agent2Name` on the deal, saved with the session): the two
+agent squares sit side by side at half size and the address block hangs above them.
+Pair slides only. The "two agents, one property each" restyle above is still parked.

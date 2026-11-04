@@ -163,7 +163,7 @@ export default async (req) => {
     if (ex.heroImageUrl) urls.push(ex.heroImageUrl);
     if (Array.isArray(ex.photos)) for (const p of ex.photos) if (typeof p === 'string') urls.push(p);
     const seen = new Set();
-    const ordered = urls.filter((u) => looksLikePhoto(u) && !seen.has(u) && seen.add(u)).slice(0, 5);
+    const ordered = urls.filter((u) => looksLikePhoto(u) && !seen.has(u) && seen.add(u)).slice(0, 8);
     const photos = (await Promise.all(ordered.map(toDataUrl))).filter(Boolean);
     const heroImage = photos[0] || null;
 

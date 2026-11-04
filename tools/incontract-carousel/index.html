@@ -185,6 +185,21 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
    same width it has in the top card so both property frames stay the same size. */
 #ic-deal-B.solo-mode .up-block:has(#dz-prop-B) { flex: 0 0 calc(66.667% - 8px); }
 
+/* StreetEasy link row, the listing-photo tray and the co-listing agent (agent feedback, issue #127) */
+.ic-se-row { display:flex; gap:6px; margin-top:10px; }
+.ic-se-row input { flex:1; min-width:0; }
+.ic-se-row .btn-s { white-space:nowrap; }
+.ic-tray-lbl { margin-top:8px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--mid); }
+.ic-tray { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.ic-tray.hidden, .ic-tray-lbl.hidden, .ic-colist.hidden, .ic-colist-add.hidden { display:none; }
+.ic-tray button { width:72px; height:48px; padding:0; border:2px solid transparent; border-radius:4px; overflow:hidden; cursor:pointer; background:#ddd; }
+.ic-tray button img { width:100%; height:100%; object-fit:cover; display:block; }
+.ic-tray button.on { border-color:var(--black); }
+.ic-colist-add { margin-top:8px; width:100%; font-size:10px; padding:5px 8px; }
+.ic-colist { margin-top:10px; }
+.ic-colist .lbl { display:flex; align-items:center; justify-content:space-between; }
+.ic-colist .dz { aspect-ratio:1/1; width:100%; height:auto; min-height:0; padding:0; align-items:center; justify-content:center; }
+
 /* Slide-mode segmented control (two agents ⇄ one agent, two properties) */
 .seg { display:flex; gap:0; border:1.5px solid var(--bdr); border-radius:var(--rsm); overflow:hidden; }
 .seg-btn {
@@ -480,6 +495,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
       <div class="lbl" id="ic-card-lbl-A">Top deal</div>
       <div class="lbl" style="margin-top:8px;">Accent</div>
       <div id="ic-accent-row-A" class="ic-accent-row"></div>
+      <div class="ic-se-row">
+        <input type="text" id="i-se-url-A" placeholder="StreetEasy link: fills address, price and photos" autocomplete="off">
+        <button type="button" class="btn-s" id="btn-se-fetch-A">Fetch</button>
+      </div>
       <div class="up-grid" style="margin-top:10px;">
         <div class="up-block" id="ic-agent-block-A">
           <div class="lbl" id="ic-agent-lbl-A">Agent photo</div>
@@ -493,6 +512,20 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <input type="text" id="agent-search-A" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
             <div id="agent-results-A" class="agent-results hidden"></div>
           </div>
+          <button type="button" class="btn-s ic-colist-add" id="ic-colist-add-A">＋ Co-listing agent</button>
+          <div class="ic-colist hidden" id="ic-colist-A">
+            <div class="lbl"><span>Co-listing agent</span><button type="button" class="btn-s" id="ic-colist-rm-A" style="font-size:9px;padding:2px 8px;">Remove</button></div>
+            <div class="dz" id="dz-agent2-A">
+              <input type="file" id="f-agent2-A" accept="image/*">
+              <img class="dz-th" id="th-agent2-A" alt="">
+              <span class="dz-lbl">Drop or click</span>
+              <span class="dz-hint">Pre-composited with name</span>
+            </div>
+            <div class="agent-lib-wrap" data-slot="A2" style="margin-top:6px;">
+              <input type="text" id="agent-search-A2" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
+              <div id="agent-results-A2" class="agent-results hidden"></div>
+            </div>
+          </div>
         </div>
         <div class="up-block">
           <div class="lbl" id="ic-prop-lbl-A">Property photo</div>
@@ -502,6 +535,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <span class="dz-lbl">Drop or click</span>
             <span class="dz-hint">Drop, click, or paste</span>
           </div>
+          <div class="ic-tray-lbl hidden" id="ic-tray-lbl-A">Listing photos: click one to use it</div>
+          <div class="ic-tray hidden" id="ic-tray-A"></div>
         </div>
       </div>
       <div class="ig" style="margin-top:10px;">
@@ -520,6 +555,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
       </div>
       <div class="lbl" style="margin-top:8px;">Accent</div>
       <div id="ic-accent-row-B" class="ic-accent-row"></div>
+      <div class="ic-se-row">
+        <input type="text" id="i-se-url-B" placeholder="StreetEasy link: fills address, price and photos" autocomplete="off">
+        <button type="button" class="btn-s" id="btn-se-fetch-B">Fetch</button>
+      </div>
       <div class="up-grid" style="margin-top:10px;">
         <div class="up-block" id="ic-agent-block-B">
           <div class="lbl">Agent photo</div>
@@ -533,6 +572,20 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <input type="text" id="agent-search-B" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
             <div id="agent-results-B" class="agent-results hidden"></div>
           </div>
+          <button type="button" class="btn-s ic-colist-add" id="ic-colist-add-B">＋ Co-listing agent</button>
+          <div class="ic-colist hidden" id="ic-colist-B">
+            <div class="lbl"><span>Co-listing agent</span><button type="button" class="btn-s" id="ic-colist-rm-B" style="font-size:9px;padding:2px 8px;">Remove</button></div>
+            <div class="dz" id="dz-agent2-B">
+              <input type="file" id="f-agent2-B" accept="image/*">
+              <img class="dz-th" id="th-agent2-B" alt="">
+              <span class="dz-lbl">Drop or click</span>
+              <span class="dz-hint">Pre-composited with name</span>
+            </div>
+            <div class="agent-lib-wrap" data-slot="B2" style="margin-top:6px;">
+              <input type="text" id="agent-search-B2" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
+              <div id="agent-results-B2" class="agent-results hidden"></div>
+            </div>
+          </div>
         </div>
         <div class="up-block">
           <div class="lbl" id="ic-prop-lbl-B">Property photo</div>
@@ -542,6 +595,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <span class="dz-lbl">Drop or click</span>
             <span class="dz-hint">Drop, click, or paste</span>
           </div>
+          <div class="ic-tray-lbl hidden" id="ic-tray-lbl-B">Listing photos: click one to use it</div>
+          <div class="ic-tray hidden" id="ic-tray-B"></div>
         </div>
       </div>
       <div class="ig" style="margin-top:10px;">
@@ -762,7 +817,11 @@ function makeDeal() {
     // is "one agent, two properties": the agent's name takes the neighborhood line in
     // the header with their photo beside it, and both deals' property photos belong to
     // them. agentLabel is the typed header name; the lower deal's agent photo is unused.
-    soloAgent:false, agentLabel:''
+    soloAgent:false, agentLabel:'',
+    // Co-listing: a second agent on the same deal (pair slides only). Both agent squares
+    // then sit side by side at half size. photoChoices: the listing photos a StreetEasy
+    // fetch brought back, offered as a tray under the property photo (not saved).
+    agent2Img:null, agent2Src:'', agent2Name:'', photoChoices:[]
   };
 }
 
@@ -1068,6 +1127,14 @@ function syncForm() {
     // Agent thumbnail + property adjustable frame
     syncDZ('dz-agent-' + slot, 'th-agent-' + slot, d ? (d.agentSrc || '') : '');
     if (typeof buildPropManip === 'function') buildPropManip(slot);
+    // Co-listing agent: pair slides only (a one-agent slide is one agent by definition).
+    const co = document.getElementById('ic-colist-' + slot), coAdd = document.getElementById('ic-colist-add-' + slot);
+    const coOpen = !!(d && (d.agent2Src || d._coOpen));
+    if (co)    co.classList.toggle('hidden', solo || !coOpen);
+    if (coAdd) coAdd.classList.toggle('hidden', solo || coOpen);
+    syncDZ('dz-agent2-' + slot, 'th-agent2-' + slot, d ? (d.agent2Src || '') : '');
+    const se = document.getElementById('i-se-url-' + slot); if (se) se.value = d ? (d._seUrl || '') : '';
+    renderPhotoTray(slot);
   });
 }
 
@@ -1370,6 +1437,26 @@ function drawAgentName(ctx, name, ax, ay, aw, ah){
   ctx.restore();
 }
 
+// Co-listing (a second agent on one deal): the two agent squares sit side by side at
+// half size, bottom-aligned where the single square's bottom edge was (flush with the
+// property photo's bottom), and the address block hangs a fixed gap above them instead
+// of floating at the top of the column.
+const CO = { GAP:10, TEXT_GAP:24 };
+function coSquare(){ return (T.AGENT_W - CO.GAP) / 2; }
+function drawAgentSquares(ctx, d, x, y, acc){
+  if (d && d.agent2Img) {
+    const s = coSquare(), sy = y + T.AGENT_H - s;
+    drawFramedPhoto(ctx, d.agentImg,  x,                sy, s, s, acc, 0);
+    drawFramedPhoto(ctx, d.agent2Img, x + s + CO.GAP,   sy, s, s, acc, 0);
+  } else {
+    drawFramedPhoto(ctx, d?.agentImg, x, y, T.AGENT_W, T.AGENT_H, acc, 0);
+  }
+}
+function coTextY(d, textY, agentY){
+  if (!(d && d.agent2Img)) return textY;
+  return agentY + T.AGENT_H - coSquare() - CO.TEXT_GAP - dealTextH(d, false);
+}
+
 // Pair-slide renderer — used by renderCanvas for every middle slide.
 function drawPairSlide(cv, dealA, dealB, slideHeader){
   const ctx = cv.getContext('2d');
@@ -1398,14 +1485,14 @@ function drawPairSlide(cv, dealA, dealB, slideHeader){
   const A = dealA, accA = A?.accent || ACCENTS[0];
   const maxAW = (T.U_AGENT_X + T.AGENT_W) - T.U_TEXT_X;
   drawFramedPhoto(ctx, A?.propImg,  T.U_PHOTO_X, T.U_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
-  drawDealText  (ctx, A,            T.U_TEXT_X,  T.U_TEXT_Y, maxAW);
-  drawFramedPhoto(ctx, A?.agentImg, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H, accA, 0);
+  drawDealText  (ctx, A,            T.U_TEXT_X,  coTextY(A, T.U_TEXT_Y, T.U_AGENT_Y), maxAW);
+  drawAgentSquares(ctx, A, T.U_AGENT_X, T.U_AGENT_Y, accA);
 
   if (!solo) {
     const B = dealB, accB = B?.accent || ACCENTS[1];
     const maxBW = (T.L_AGENT_X + T.AGENT_W) - T.L_TEXT_X;
-    drawDealText  (ctx, B,            T.L_TEXT_X,  T.L_TEXT_Y, maxBW);
-    drawFramedPhoto(ctx, B?.agentImg, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H, accB, 0);
+    drawDealText  (ctx, B,            T.L_TEXT_X,  coTextY(B, T.L_TEXT_Y, T.L_AGENT_Y), maxBW);
+    drawAgentSquares(ctx, B, T.L_AGENT_X, T.L_AGENT_Y, accB);
     drawFramedPhoto(ctx, B?.propImg,  T.L_PHOTO_X, T.L_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
   }
 
@@ -2309,6 +2396,121 @@ function buildPropManip(slot){
   });
 });
 
+// ── Co-listing agent (issue #127: "it won't add both of us, only one") ──
+['A','B'].forEach(slot => {
+  setupDZ('dz-agent2-' + slot, 'f-agent2-' + slot, 'th-agent2-' + slot, (img, src, fname) => {
+    const d = dealForSlot(slot); if (!d) return;
+    d.agent2Img = img; d.agent2Src = src; d.agent2Name = parseAgentName(fname);
+    updateStripLabel(activeIdx); renderCanvas(activeIdx);
+  });
+  document.getElementById('ic-colist-add-' + slot).addEventListener('click', () => {
+    const d = slot === 'B' ? (dealForSlot('B') || ensureSlotB()) : dealForSlot('A'); if (!d) return;
+    d._coOpen = true; syncForm();
+    const inp = document.getElementById('agent-search-' + slot + '2'); if (inp) inp.focus();
+  });
+  document.getElementById('ic-colist-rm-' + slot).addEventListener('click', () => {
+    const d = dealForSlot(slot); if (!d) return;
+    d.agent2Img = null; d.agent2Src = ''; d.agent2Name = ''; d._coOpen = false;
+    syncForm(); updateStripLabel(activeIdx); renderCanvas(activeIdx);
+  });
+});
+async function applyCoAgentFromLibrary(key, name, slot) {
+  const entry = agentLibrary.find(a => a.key === key);
+  if (!entry) { showToast('✗ Agent not found'); return; }
+  const d = dealForSlot(slot); if (!d) return;
+  try {
+    const img = await loadImagePromise(entry.src);
+    if (!img) throw new Error('load');
+    d.agent2Img = img; d.agent2Src = entry.src; d.agent2Name = name;
+    syncDZ('dz-agent2-' + slot, 'th-agent2-' + slot, entry.src);
+    updateStripLabel(activeIdx); renderCanvas(activeIdx);
+    showToast('✓ ' + name + ' added as co-listing agent');
+  } catch (e) { showToast('✗ Failed to load agent photo'); }
+}
+
+// ── Listing photos tray: every photo the StreetEasy fetch brought back ──
+function renderPhotoTray(slot){
+  const tray = document.getElementById('ic-tray-' + slot), lbl = document.getElementById('ic-tray-lbl-' + slot);
+  if (!tray) return;
+  const d = dealForSlot(slot);
+  const photos = (d && d.photoChoices) || [];
+  tray.classList.toggle('hidden', photos.length < 2); if (lbl) lbl.classList.toggle('hidden', photos.length < 2);
+  tray.innerHTML = '';
+  photos.forEach((src, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.title = 'Use photo ' + (i + 1);
+    if (d.propSrc === src) b.classList.add('on');
+    const im = document.createElement('img'); im.src = src; im.alt = 'Listing photo ' + (i + 1);
+    b.appendChild(im);
+    b.addEventListener('click', () => usePhotoChoice(slot, src));
+    tray.appendChild(b);
+  });
+}
+function usePhotoChoice(slot, src){
+  const d = dealForSlot(slot); if (!d) return;
+  const img = new Image();
+  img.onload = () => {
+    d.propImg = img; d.propSrc = src; d.propOX = 0; d.propOY = 0; d.propScale = 1;
+    buildPropManip(slot); renderPhotoTray(slot);
+    renderCanvas(activeIdx);
+    if (S.deals.indexOf(d) === 0) { renderCanvas(0); if (typeof syncCoverPanel === 'function') syncCoverPanel(); }
+  };
+  img.src = src;
+}
+
+// ── StreetEasy link → address, price, neighborhood and the listing's photos, per deal ──
+// StreetEasy is slow behind its bot wall: about one fetch in three runs out of time on
+// the first try, so a timed-out fetch is retried once on its own (a "verify you are
+// human" wall is not; it says so instead).
+async function fetchListing(url){
+  let last = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 90000);
+    try {
+      const res = await fetch('/.netlify/functions/streeteasy', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }), signal: ctl.signal
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) return { data: body };
+      last = { error: body.error || body.message || ('StreetEasy fetch ' + res.status), blocked: !!body.blocked };
+      if (body.blocked || res.status !== 502) break;
+    } catch (e) {
+      last = { error: e && e.name === 'AbortError' ? 'Timed out at 90s' : 'Could not reach the StreetEasy fetch' };
+    } finally { clearTimeout(to); }
+  }
+  return last;
+}
+['A','B'].forEach(slot => {
+  const btn = document.getElementById('btn-se-fetch-' + slot);
+  const inp = document.getElementById('i-se-url-' + slot);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+  btn.addEventListener('click', async () => {
+    const url = inp.value.trim();
+    if (!/streeteasy\.com\//i.test(url)) { showToast('Paste a StreetEasy listing link first'); return; }
+    const d = slot === 'B' ? (dealForSlot('B') || ensureSlotB()) : dealForSlot('A'); if (!d) return;
+    d._seUrl = url;
+    const old = btn.textContent; btn.disabled = true;
+    const t0 = Date.now(); const ti = setInterval(() => { btn.textContent = '⌛ ' + Math.round((Date.now() - t0) / 1000) + 's'; }, 250);
+    try {
+      const r = await fetchListing(url);
+      if (!r || !r.data) { showToast('✗ ' + ((r && r.error) || 'StreetEasy fetch failed').slice(0, 160)); return; }
+      const data = r.data, filled = [];
+      if (data.address && !(d.address || '').trim()) { d.address = data.address; filled.push('address'); }
+      if (data.price && !(d.price || '').trim()) { d.price = data.price; filled.push('price'); }
+      if (data.neighborhood && !(d.neighborhood || '').trim()) d.neighborhood = data.neighborhood;
+      d.photoChoices = Array.isArray(data.photos) ? data.photos : (data.heroImage ? [data.heroImage] : []);
+      buildStrip(); syncForm();
+      if (d.photoChoices.length && !d.propImg) { usePhotoChoice(slot, d.photoChoices[0]); filled.push('photo'); }
+      renderCanvas(activeIdx); if (S.deals.indexOf(d) === 0) renderCanvas(0);
+      if (typeof updateDlBtn === 'function') updateDlBtn();
+      const n = d.photoChoices.length;
+      showToast(data.warning ? ('⚠ ' + data.warning)
+        : ('✓ ' + (filled.length ? 'Filled ' + filled.join(', ') : 'Kept what you typed') + (n > 1 ? ' · ' + n + ' photos to pick from' : '')));
+    } finally { clearInterval(ti); btn.textContent = old; btn.disabled = false; }
+  });
+});
+
 // Swap the top and bottom deals on this slide. The slide header belongs to the slide
 // (stored on the top deal), so it stays put while the two deals trade places.
 document.getElementById('ic-swap').addEventListener('click', () => {
@@ -2357,6 +2559,23 @@ function renderAgentResultsInto(elId, slot, results){
   if (res) res.addEventListener('click', e => {
     const row = e.target.closest('.agent-result'); if (!row) return;
     applyAgentFromLibrary(row.dataset.key, row.dataset.name, slot);
+    if (inp) inp.value = '';
+    res.classList.add('hidden');
+  });
+});
+// The co-listing agent's search (slots A2 / B2): same library, writes agent2 on the deal.
+['A','B'].forEach(slot => {
+  const s2 = slot + '2';
+  const inp = document.getElementById('agent-search-' + s2);
+  const res = document.getElementById('agent-results-' + s2);
+  if (inp) inp.addEventListener('input', function(){
+    const q = this.value;
+    if (!q.trim()) { res.classList.add('hidden'); return; }
+    renderAgentResultsInto('agent-results-' + s2, s2, searchAgents(q));
+  });
+  if (res) res.addEventListener('click', e => {
+    const row = e.target.closest('.agent-result'); if (!row) return;
+    applyCoAgentFromLibrary(row.dataset.key, row.dataset.name, slot);
     if (inp) inp.value = '';
     res.classList.add('hidden');
   });
@@ -2511,6 +2730,7 @@ function serializeSession() {
       price: d.price||'', description: d.description||'',
       accent: d.accent||'#aaa3cf', slideHeader: d.slideHeader||'',
       soloAgent: !!d.soloAgent, agentLabel: d.agentLabel||'',
+      agent2Src: d.agent2Src||'', agent2Name: d.agent2Name||'',
     }))
   };
 }
@@ -2557,6 +2777,8 @@ function applySession(s) {
     deal.propOX=d.propOX||0; deal.propOY=d.propOY||0; deal.propScale=d.propScale||1;
     deal.accent=d.accent||'#aaa3cf'; deal.slideHeader=d.slideHeader||'';
     deal.soloAgent=!!d.soloAgent; deal.agentLabel=d.agentLabel||'';
+    deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
+    if (d.agent2Src) { const img=new Image(); img.src=d.agent2Src; deal.agent2Img=img; img.onload=()=>{ renderCanvas(Math.floor(S.deals.indexOf(deal)/2)+1); }; }
     if (d.agentSrc) { const img=new Image(); img.src=d.agentSrc; deal.agentImg=img; img.onload=()=>{ const i=S.deals.indexOf(deal)+1; renderCanvas(i); }; }
     if (d.propSrc)  { const img=new Image(); img.src=d.propSrc;  deal.propImg=img;  img.onload=()=>{ const i=S.deals.indexOf(deal)+1; renderCanvas(i); if(i===1)renderCanvas(0); }; }
     return deal;
@@ -2658,6 +2880,8 @@ document.getElementById('f-import').addEventListener('change',function(){
         deal.agentSrc=d.agentSrc||''; deal.propSrc=d.propSrc||'';
         deal.accent=d.accent||'#aaa3cf'; deal.slideHeader=d.slideHeader||'';
         deal.soloAgent=!!d.soloAgent; deal.agentLabel=d.agentLabel||'';
+        deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
+        if (d.agent2Src) { const img=new Image(); img.src=d.agent2Src; deal.agent2Img=img; img.onload=()=>{ renderCanvas(Math.floor(S.deals.indexOf(deal)/2)+1); }; }
         if (d.agentSrc) { const img=new Image(); img.src=d.agentSrc; deal.agentImg=img; img.onload=()=>{ const idx=S.deals.indexOf(deal)+1; renderCanvas(idx); }; }
         if (d.propSrc)  { const img=new Image(); img.src=d.propSrc;  deal.propImg=img;  img.onload=()=>{ const idx=S.deals.indexOf(deal)+1; renderCanvas(idx); if(idx===1)renderCanvas(0); }; }
         return deal;
@@ -3140,6 +3364,7 @@ async function bulkFetchOne(row){
     if(data.price&&!_p.value.trim())_p.value=data.price;
     if(data.description&&!_d.value.trim())_d.value=data.description;
     if(data.heroImage&&!row.dataset.heroImage)row.dataset.heroImage=data.heroImage;
+    if(Array.isArray(data.photos)&&data.photos.length)row._photos=data.photos;
     return {ok:true};
   }catch(err){ return {ok:false,msg:(err&&err.name==='AbortError')?'timed out':'unreachable'}; }
   finally{ if(ti)clearInterval(ti); clearTimeout(to); if(btn){btn.textContent=oldTxt;btn.disabled=false;} }
@@ -3200,6 +3425,7 @@ document.getElementById('bulk-rows').addEventListener('click', async (e) => {
       if (data.price && !_p.value.trim())        _p.value = data.price;
       if (data.description && !_d.value.trim())  _d.value = data.description;
       if (data.heroImage && !row.dataset.heroImage) row.dataset.heroImage = data.heroImage;
+      if (Array.isArray(data.photos) && data.photos.length) row._photos = data.photos;
       showToast('✓ Row filled from StreetEasy');
     } catch(err) {
       showToast(err && err.name === 'AbortError'
@@ -3238,6 +3464,7 @@ document.getElementById('bulk-create-btn').addEventListener('click', async () =>
     neighborhood: row.querySelector('.bulk-nbr').value.trim(),
     description: row.querySelector('.bulk-desc').value.trim(),
     heroImage: row.dataset.heroImage || '',
+    photos: row._photos || [],
   })).filter(j => j.seUrl || j.agent || j.address || j.description);
 
   if (!jobs.length) { showToast('Fill at least one row'); createBtn.disabled = false; return; }
@@ -3261,6 +3488,7 @@ document.getElementById('bulk-create-btn').addEventListener('click', async () =>
           if (!job.price && data.price) job.price = data.price;
           if (!job.description && data.description) job.description = data.description;
           if (!job.heroImage && data.heroImage) job.heroImage = data.heroImage;
+          if (!job.photos.length && Array.isArray(data.photos)) job.photos = data.photos;
         }
       } catch(e) {}
     }
@@ -3279,6 +3507,7 @@ document.getElementById('bulk-create-btn').addEventListener('click', async () =>
     deal.price = job.price;
     deal.description = job.description;
     deal.agentName = job.agent;
+    deal.photoChoices = job.photos;
 
     // 4. Attach agent photo from library (exact name match, case-insensitive)
     if (job.agent) {
