@@ -513,6 +513,12 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <div id="agent-results-A" class="agent-results hidden"></div>
           </div>
           <div class="ic-colist hidden" id="ic-colist-A">
+            <div class="lbl"><span>Layout</span></div>
+            <div class="seg" id="ic-colayout-seg" style="margin-bottom:10px;">
+              <button type="button" class="seg-btn" data-lay="side">Text right</button>
+              <button type="button" class="seg-btn" data-lay="split">Text middle</button>
+              <button type="button" class="seg-btn" data-lay="sideR">Text left</button>
+            </div>
             <div class="lbl"><span>Second agent photo</span></div>
             <div class="dz" id="dz-agent2-A">
               <input type="file" id="f-agent2-A" accept="image/*">
@@ -807,7 +813,7 @@ function makeDeal() {
     // deal's two agents both get full-size squares and the property photo grows; the
     // slide's bottom slot is left empty. agent2* is the second agent. photoChoices: the listing photos a StreetEasy
     // fetch brought back, offered as a tray under the property photo (not saved).
-    coListing:false, agent2Img:null, agent2Src:'', agent2Name:'', photoChoices:[]
+    coListing:false, coLayout:'', agent2Img:null, agent2Src:'', agent2Name:'', photoChoices:[]
   };
 }
 
@@ -1118,6 +1124,8 @@ function syncForm() {
     // Co-listing agent: pair slides only (a one-agent slide is one agent by definition).
     const co = document.getElementById('ic-colist-' + slot);
     if (co) co.classList.toggle('hidden', !coMode);
+    if (co && d) co.querySelectorAll('[data-lay]').forEach(b =>
+      b.classList.toggle('on', b.dataset.lay === (d.coLayout || IC_CO_LAYOUT)));
     if (co) syncDZ('dz-agent2-' + slot, 'th-agent2-' + slot, d ? (d.agent2Src || '') : '');
     const se = document.getElementById('i-se-url-' + slot); if (se) se.value = d ? (d._seUrl || '') : '';
     renderPhotoTray(slot);
@@ -1433,6 +1441,9 @@ function drawAgentName(ctx, name, ax, ay, aw, ah){
 //   'side'   — (Kimani, 11-05, second round) agents 15% smaller, tucked under a full-width
 //              photo, side by side on the left; address and last ask in the space to their right.
 //   'split'  — the same, with one agent at each side and the address and last ask between them.
+//   'sideR'  — the mirror of 'side': address and last ask on the left, agents on the right.
+// In all three the text's top lines up with the agents' top (Kimani, 11-05). The agent
+// picks one per slide (deal.coLayout); IC_CO_LAYOUT is the default.
 let IC_CO_LAYOUT = 'side';
 const TC = {
   BOTTOM:1217,                         // where the pair slide's lower photo ends
@@ -1450,17 +1461,19 @@ function drawCoSlide(cv, d){
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   drawInContractHeader(ctx, (d && d.slideHeader) || d?.neighborhood || 'NEIGHBORHOOD');
   const acc = d?.accent || ACCENTS[0], A = T.AGENT_W;
-  if (IC_CO_LAYOUT === 'side' || IC_CO_LAYOUT === 'split') {
+  const layout = (d && d.coLayout) || IC_CO_LAYOUT;
+  if (layout === 'side' || layout === 'split' || layout === 'sideR') {
     const a = TC.SMALL, ay = TC.BOTTOM - a, ph = ay - TC.NEAR - TC.S_PHOTO_Y;
     drawFramedPhoto(ctx, d?.propImg, TC.S_PHOTO_X, TC.S_PHOTO_Y, TC.S_PHOTO_W, ph, acc, T.FRAME_T);
     const left = TC.S_PHOTO_X, right = TC.S_PHOTO_X + TC.S_PHOTO_W;
     let x1, x2, tx0, tx1;
-    if (IC_CO_LAYOUT === 'side') { x1 = left; x2 = left + a + TC.GAP; tx0 = x2 + a + 36; tx1 = right; }
-    else                         { x1 = left; x2 = right - a;         tx0 = x1 + a + 24; tx1 = x2 - 24; }
+    if (layout === 'side')       { x1 = left;                   x2 = left + a + TC.GAP; tx0 = x2 + a + 36;   tx1 = right; }
+    else if (layout === 'sideR') { x1 = right - 2*a - TC.GAP;   x2 = right - a;         tx0 = TC.S_TEXT_X; tx1 = x1 - 36; }
+    else                         { x1 = left;                   x2 = right - a;         tx0 = x1 + a + 24;   tx1 = x2 - 24; }
     drawFramedPhoto(ctx, d?.agentImg,  x1, ay, a, a, acc, 0);
     drawFramedPhoto(ctx, d?.agent2Img, x2, ay, a, a, acc, 0);
-    drawCoText(ctx, d || {}, tx0, tx1, ay + a / 2, IC_CO_LAYOUT === 'split');
-  } else if (IC_CO_LAYOUT === 'column') {
+    drawCoText(ctx, d || {}, tx0, tx1, ay, layout === 'split');
+  } else if (layout === 'column') {
     const y2 = TC.BOTTOM - A, y1 = y2 - TC.GAP - A;
     drawFramedPhoto(ctx, d?.propImg, TC.C_PHOTO_X, TC.C_PHOTO_Y, TC.C_PHOTO_W, TC.BOTTOM - TC.C_PHOTO_Y, acc, T.FRAME_T);
     drawDealText(ctx, d || {}, TC.C_TEXT_X, TC.C_TEXT_Y, (TC.C_AGENT_X + A) - TC.C_TEXT_X);
@@ -1478,8 +1491,8 @@ function drawCoSlide(cv, d){
   drawWordmarkBottom(ctx);
 }
 // Address over "Last Ask: $price", larger than the pair slide's (up to 52px, shrinking to
-// fit), vertically centred on cy between x0 and x1. Centred text for 'split', left for 'side'.
-function drawCoText(ctx, d, x0, x1, cy, centred){
+// fit), its top on the agents' top (y), between x0 and x1. Centred for 'split', else left.
+function drawCoText(ctx, d, x0, x1, top, centred){
   const maxW = x1 - x0, addr = (d.address || '').trim().toUpperCase() || 'ADDRESS';
   const raw = (d.price || '').trim().replace(/^\$+/, ''), price = raw ? '$' + raw : '—';
   const fitSize = (measure) => { let sz = 52; while (sz > 22 && measure(sz) > maxW) sz--; return sz; };
@@ -1487,7 +1500,7 @@ function drawCoText(ctx, d, x0, x1, cy, centred){
   const wAddr = sz => { ctx.font = f(800, sz); ctx.letterSpacing = trackPx(sz); return ctx.measureText(addr).width; };
   const wAsk = sz => { ctx.letterSpacing = trackPx(sz); ctx.font = f(400, sz); const a = ctx.measureText('Last Ask: ').width; ctx.font = f(900, sz); return a + ctx.measureText(price).width; };
   const sz = Math.min(fitSize(wAddr), fitSize(wAsk)), lh = Math.round(sz * 0.98);
-  const y = cy - (sz + lh) / 2;
+  const y = top;
   const aW = wAddr(sz); ctx.fillText(addr, centred ? x0 + (maxW - aW) / 2 : x0, y);
   const kW = wAsk(sz); let x = centred ? x0 + (maxW - kW) / 2 : x0;
   ctx.font = f(400, sz); ctx.fillText('Last Ask: ', x, y + lh); x += ctx.measureText('Last Ask: ').width;
@@ -2471,6 +2484,11 @@ function buildPropManip(slot){
 });
 
 // ── Co-listing agent (issue #127: "it won't add both of us, only one") ──
+document.getElementById('ic-colayout-seg').addEventListener('click', e => {
+  const b = e.target.closest('[data-lay]'); if (!b) return;
+  const d = dealForSlot('A'); if (!d) return;
+  d.coLayout = b.dataset.lay; syncForm(); renderCanvas(activeIdx);
+});
 ['A'].forEach(slot => {
   setupDZ('dz-agent2-' + slot, 'f-agent2-' + slot, 'th-agent2-' + slot, (img, src, fname) => {
     const d = dealForSlot(slot); if (!d) return;
@@ -2794,7 +2812,7 @@ function serializeSession() {
       price: d.price||'', description: d.description||'',
       accent: d.accent||'#aaa3cf', slideHeader: d.slideHeader||'',
       soloAgent: !!d.soloAgent, agentLabel: d.agentLabel||'',
-      coListing: !!d.coListing, agent2Src: d.agent2Src||'', agent2Name: d.agent2Name||'',
+      coListing: !!d.coListing, coLayout: d.coLayout||'', agent2Src: d.agent2Src||'', agent2Name: d.agent2Name||'',
     }))
   };
 }
@@ -2841,7 +2859,7 @@ function applySession(s) {
     deal.propOX=d.propOX||0; deal.propOY=d.propOY||0; deal.propScale=d.propScale||1;
     deal.accent=d.accent||'#aaa3cf'; deal.slideHeader=d.slideHeader||'';
     deal.soloAgent=!!d.soloAgent; deal.agentLabel=d.agentLabel||'';
-    deal.coListing=!!d.coListing; deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
+    deal.coListing=!!d.coListing; deal.coLayout=d.coLayout||''; deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
     if (d.agent2Src) { const img=new Image(); img.src=d.agent2Src; deal.agent2Img=img; img.onload=()=>{ renderCanvas(Math.floor(S.deals.indexOf(deal)/2)+1); }; }
     if (d.agentSrc) { const img=new Image(); img.src=d.agentSrc; deal.agentImg=img; img.onload=()=>{ const i=S.deals.indexOf(deal)+1; renderCanvas(i); }; }
     if (d.propSrc)  { const img=new Image(); img.src=d.propSrc;  deal.propImg=img;  img.onload=()=>{ const i=S.deals.indexOf(deal)+1; renderCanvas(i); if(i===1)renderCanvas(0); }; }
@@ -2912,7 +2930,7 @@ document.getElementById('btn-save-json').addEventListener('click',()=>{
       price:d.price, description:d.description,
       accent:d.accent, slideHeader:d.slideHeader,
       soloAgent:!!d.soloAgent, agentLabel:d.agentLabel||'',
-      coListing:!!d.coListing, agent2Src:d.agent2Src||'', agent2Name:d.agent2Name||'',
+      coListing:!!d.coListing, coLayout:d.coLayout||'', agent2Src:d.agent2Src||'', agent2Name:d.agent2Name||'',
     })),
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -2945,7 +2963,7 @@ document.getElementById('f-import').addEventListener('change',function(){
         deal.agentSrc=d.agentSrc||''; deal.propSrc=d.propSrc||'';
         deal.accent=d.accent||'#aaa3cf'; deal.slideHeader=d.slideHeader||'';
         deal.soloAgent=!!d.soloAgent; deal.agentLabel=d.agentLabel||'';
-        deal.coListing=!!d.coListing; deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
+        deal.coListing=!!d.coListing; deal.coLayout=d.coLayout||''; deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
         if (d.agent2Src) { const img=new Image(); img.src=d.agent2Src; deal.agent2Img=img; img.onload=()=>{ renderCanvas(Math.floor(S.deals.indexOf(deal)/2)+1); }; }
         if (d.agentSrc) { const img=new Image(); img.src=d.agentSrc; deal.agentImg=img; img.onload=()=>{ const idx=S.deals.indexOf(deal)+1; renderCanvas(idx); }; }
         if (d.propSrc)  { const img=new Image(); img.src=d.propSrc;  deal.propImg=img;  img.onload=()=>{ const idx=S.deals.indexOf(deal)+1; renderCanvas(idx); if(idx===1)renderCanvas(0); }; }
