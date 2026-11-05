@@ -11,11 +11,15 @@ This file is meant to be enough on its own. Where it points elsewhere, it's for 
 **Read the code from `claude/main`, never `release`.** `claude/main` is where every PR merges; `release` is
 only what's live on production, and it runs behind. Anything this brief calls "built" is on `claude/main`.
 
+**Updated 2026-11-05: what landed after this was written** is in [section 0](#0-since-this-was-written-2026-11-05).
+Everything else below still describes the tool as built; where a line has changed, it's marked.
+
 **Design for laptop and tablet widths only (Kimani, 2026-10-29).** Agents won't use the tool on phones for
 now; phone layouts get their own design later. Don't design phone breakpoints, and skip the phone screenshots.
 
 ## Contents
 
+0. [Since this was written (2026-11-05)](#0-since-this-was-written-2026-11-05)
 1. [What the tool is, in one minute](#1-what-the-tool-is-in-one-minute)
 2. [How to use this file](#2-how-to-use-this-file)
 3. [Rules a design can't change](#3-rules-a-design-cant-change)
@@ -31,6 +35,43 @@ now; phone layouts get their own design later. Don't design phone breakpoints, a
 10. [Open questions for Kimani](#10-open-questions-for-kimani)
 11. [Not in this pass](#11-not-in-this-pass)
 12. [Screenshots](#12-screenshots)
+
+---
+
+## 0. Since this was written (2026-11-05)
+
+The screenshots in `screens/` are from #110. These landed on `claude/main` after it, and the design should cover them:
+
+- **Hubert beside the New report window** (#114). A rough version is built: his drawer sits beside the modal
+  (the window moves left), and he knows which step the agent is on. 7.1 is now "restyle what's there", not
+  "design from nothing".
+- **Hubert sees the screen and the open comp** (#114), so "this one" works; **Undo** on every change in his trail;
+  **web sources** under a reply. His full list of tools: `docs/comp-report/hubert-tools.md`.
+- **A sale Hubert finds on the web comes in as a card in his chat** (#114): the link, and an Approve that only
+  wakes once the agent has opened it. Approved, it lands on Sort untiered. Rough look; 7.5 is its design.
+- **Your client** (#118): pre-approval (yes or no, and the amount), how soon (ASAP or can wait), what's moving
+  them. Folded under "Your client" on step 2 of the New report window, and a "Your client" accordion on Findings
+  (`workspace/ClientFields.tsx`). Rudimentary on purpose; 7.3 places it. None of it moves the true estimate
+  (Kimani, DP-11 and NB-29): a client-adjusted view is its own layer beside it.
+- **One sign-in for the whole Studio** (#116, #123, #124): the sign-in page is now `/sign-in/` at the Studio's
+  root, not on the comp report; the account pill knows the agent from the roster (name, phone, headshot), which
+  also fills the email's sign-off. For now every Studio page opens without a sign-in (the comp report still asks).
+  The roster import ran on 2026-11-05: 144 agents, 135 with photos, so the sign-off has real faces now.
+- **The tool's name (DP-15, Kimani 2026-11-05):** "Comp report" under "Casa Blanca Studio". Settles 6.1 and
+  question 5 in section 10.
+
+**In review, not merged yet** (design for them, but they may still change): #122, Hubert fills in the home's
+details when dictated ("it's 1,850 feet, floor 12"), and stars, takes out and puts back comps, each with a trail
+entry and Undo; #121, the writer's four fixes from the real eval (the email's words, not its look).
+
+**Kimani's asks for the pass, gathered (2026-10-28 and 10-29):** Hubert's chat delineated into sections by the
+step guides as the agent moves through the flow; every field he fills shows in the chat as a trail entry; no raw
+text or JSON ever showing in his chat; the email's sign-off from the roster (works, restyle only); orientation for
+first-time practice agents, then a guide button in a bottom corner; the web-find card; client fields; and the
+Designed email first (the bosses judge the tool by it).
+
+Not part of the comp report, so not in this pass: the **Property Sign** builder (#129, its Studio hookup #130) and
+the In contract co-listing work (#128) are other Studio tools.
 
 ---
 
@@ -542,10 +583,10 @@ answers questions, flags weak comps, and changes a comp or the email when the ag
   centred eyebrow ("SORT", "YOUR NUMBER"). His messages are grey blocks; guides have a lavender left rule. The
   agent's messages are plain bubbles. Markdown renders (bold, lists, links).
 - **The trail:** every change he makes shows under his reply: the comp, the field, before → after, **Show**
-  (opens Sort at that comp and field), and **Undo** (#114, in review). **Web sources** show as links under a reply.
+  (opens Sort at that comp and field), and **Undo** (#114, merged). **Web sources** show as links under a reply.
 - **Two preset chips** per screen above the input ("How long has 17L been listed?"), an input ("Ask Hubert about
   the listings…") and a black send button.
-- He knows which screen and which comp is open (#114, in review), so "this one" works.
+- He knows which screen and which comp is open (#114, merged), so "this one" works.
 
 **Needs design.**
 - **NW-024 a: his look and presence.** A mark or avatar, bubbles, motion. Today he's grey boxes; the step guides
@@ -578,7 +619,7 @@ windows aren't laid out yet. Use a wider window for now."
 ### 7.1 Hubert in the New report window
 
 **Kimani, 2026-10-29:** put Hubert in the New report window now, "rudimentary, just so it's there", and refine it
-in the design pass, so there's an anchor to design against. A build thread is adding the rough version in
+in the design pass, so there's an anchor to design against. *Built since (#114): the rough version is on `claude/main`; restyle it.* A build thread was adding the rough version in
 parallel with this brief; check `claude/main` for it.
 
 **What it's for.**
@@ -616,6 +657,8 @@ per browser, if it's to follow them between laptop and phone (a build call).
 **Kimani, 2026-10-29:** "we need to add client fields … it does change the estimated range of what a buyer can
 offer, and how quickly a buyer client is trying to move." Pre-approval, yes or no plus the amount, is the
 example.
+
+*Since (#118): a rough "Your client" section is built on step 2 and on Findings; see section 0.*
 
 **Today (Dispatch 21, data only).** Inside Findings' **Pricing details** accordion (`Terms.tsx`): for a buyer,
 financing (cash or mortgage; cash hides rate, down payment and term), **pre-approved** and the amount, deposit,
@@ -697,7 +740,7 @@ These change what gets designed. Each goes on the Casa Answer Sheet.
 3. **Orientation:** a pointing tour, a first-run checklist, or a short video per screen? *Recommend: a pointing
    tour for practice agents' first report, behind the guide button after.*
 4. **One way to open Hubert,** the top-bar pill or the edge tab? *Recommend: the pill, and drop the tab.*
-5. **The tool's name on its own surfaces:** "Comp report" under "Casa Blanca Studio", or something new?
+5. ~~The tool's name on its own surfaces?~~ "Comp report" under "Casa Blanca Studio" (Kimani, DP-15, 2026-11-05).
 
 ## 11. Not in this pass
 
