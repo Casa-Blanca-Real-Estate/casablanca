@@ -62,9 +62,10 @@ Kimani's answers (Answer Sheet HB-1 to HB-7 and the project chat, 2026-10-29), a
    and "the comp I'm looking at" start to work. (Dispatch 24 item 2 has it.)
 2. **A wider `get_numbers`**: each comp's features, amenities and building, the home's neighborhood and
    type, listing text as quoted data. (Dispatch 24 item 2.)
-3. **`set_home_fact`**: the home's details on dictation, with the trail. Needs Hubert in the New report
-   window, or on Sort through the details.
-4. **Star, take out, put back** through `edit_comp`: small, the PATCH already does them.
+3. **`set_home_fact`**: the home's details on dictation, with the trail. *Built 2026-10-29 (prompt
+   `hb-home-2026-10-29`), with Undo and Show.*
+4. **Star, take out, put back** through `edit_comp`: small, the PATCH already does them. *Built 2026-10-29,
+   same prompt, each with Undo.*
 5. **Add a comp from a link** pasted in the chat, through the link read that exists.
 6. **The target after the reveal** (D-4, NB-13): Dispatch 24 item 1.
 7. After 11-13: comp search from the anchor (Erez's phase 2), Hubert across the Studio.

@@ -8,7 +8,9 @@
 // stored but the tool's result. The open comp comes back as get_numbers'
 // wider read gives it, so one call answers about it.
 import { address } from '../workspace/summary.ts';
+import type { Intake } from '../workspace/state.ts';
 import type { Queryable } from './db.ts';
+import { homeDetailsOf } from './hubert-home.ts';
 import { neutralNumbers, newYorkToday, summaryOf } from './numbers.ts';
 
 export const VIEW_SCREENS = ['new_report', 'sort', 'review', 'gate', 'findings', 'send', 'done'] as const;
@@ -43,7 +45,7 @@ export function readView(raw: unknown): HubertView | null {
 }
 
 const SCREEN_WORDS: Record<ViewScreen, string> = {
-  new_report: 'The New report window: the home, its details, and adding comps. You can answer questions here; the agent types the details.',
+  new_report: 'The New report window: the home, its details, and adding comps. The agent types the details, or tells you them (set_home_fact, where you have it).',
   sort: 'Sort: the comps table, where the agent tiers each comp, writes why it’s a comp and tags it.',
   review: 'The per-comp review on Sort: one comp at a time, the agent’s note and tags first, then the tier.',
   gate: 'Your number: the agent gives their own number before the range shows. The number is theirs alone.',
@@ -56,6 +58,11 @@ export async function viewFor(tx: Queryable, reportId: string, view: HubertView 
   if (!view) return { screen: null, about: 'The screen didn’t come with this message. Ask the agent which comp they mean.' };
   const out: Record<string, unknown> = { screen: view.screen, about: SCREEN_WORDS[view.screen] };
   if (view.step) out.new_report_step = { home: 'the home: its StreetEasy link or address', details: 'the home’s details', comps: 'adding comps: the export and links' }[view.step];
+  // The home's details as the agent has them (set_home_fact changes them): in the New report window, where they're filled.
+  if (view.screen === 'new_report') {
+    const intake = (await tx.query<{ intake: Intake | null }>(`select state -> 'intake' as intake from comp_report.reports where id = $1`, [reportId])).rows[0]?.intake ?? null;
+    out.home_details = homeDetailsOf(intake);
+  }
   const asOf = newYorkToday();
   const wantsComps = (view.screen === 'sort' && (view.compId || view.order?.length)) || (view.screen === 'review' && view.compId);
   if (!wantsComps) {

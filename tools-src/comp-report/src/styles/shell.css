@@ -294,6 +294,8 @@ body:has(.hubert-drawer.resizing) .sh-hubert-tab { transition: none; }
    backdrop (58), under the toast (60), and the window moves left to make room for him. */
 body:has(.nr-scrim) .hubert-drawer, body:has(.nr-scrim) .sh-hubert-tab { z-index: 59; }
 body:has(.hubert-drawer:not(.closing)) .nr-scrim { padding-right: var(--sh-drawer-w); }
+/* On a tablet the 820px window doesn't fit beside him: it narrows rather than slide under the left edge. */
+body:has(.hubert-drawer:not(.closing)) .nr-scrim .nr-modal { width: min(820px, calc(100vw - var(--sh-drawer-w) - 32px)); }
 
 /* The drawer slides in from the right, and back out (DRAWER_SLIDE_MS in Pieces.tsx). */
 @keyframes hubert-slide-in { from { transform: translateX(100%); } to { transform: none; } }

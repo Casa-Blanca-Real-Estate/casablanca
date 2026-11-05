@@ -32,7 +32,7 @@ const ask = (label: string): Chip => ({ label, kind: 'ask' });
 
 // Beside the New report window (Kimani, 2026-10-29): a rough start for the design pass. He answers
 // questions here; filling a detail on dictation comes with set_home_fact.
-export const NEW_REPORT_HINT = 'I’m here while you set up the report. Ask me what a field means or what makes a good comp. Typing the details is yours for now.';
+export const NEW_REPORT_HINT = 'I’m here while you set up the report. Tell me the home’s details ("1,240 square feet, 2 beds, doorman and gym") and I’ll fill them in, or ask what a field means or what makes a good comp.';
 export const NEW_REPORT_CHIPS: Chip[] = [ask('What makes a good comp?'), ask('Where do I find the StreetEasy export?')];
 
 export interface Said {

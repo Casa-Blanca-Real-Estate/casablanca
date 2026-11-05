@@ -9,7 +9,7 @@
 // 2026-10-29: financing, the pre-approval, the pace, what's moving them),
 // never the client's name (workspace/client.ts).
 import { compRecordFromListing, compute, parseExport, type EngineOutput } from '../engine/index.ts';
-import { engineInput, locationsFrom, removedExportComps, workspaceComps, type ParsedImport, type WorkspaceComp } from '../workspace/engine-input.ts';
+import { engineInput, locationsFrom, removedComps, removedExportComps, workspaceComps, type ParsedImport, type WorkspaceComp } from '../workspace/engine-input.ts';
 import type { CompRecord } from '../engine/index.ts';
 import type { Brief, WorkspaceState } from '../workspace/state.ts';
 import { numbersSummary } from '../workspace/summary.ts';
@@ -32,6 +32,8 @@ export interface NeutralNumbers {
   revealed: boolean;
   /** Export rows the agent took out of the report: the only other sales Hubert may point to (Dispatch 14). */
   removed: CompRecord[];
+  /** Every comp the agent took out, whatever its source: what edit_comp can put back. Never in the engine's input. */
+  removedComps: WorkspaceComp[];
   /** The Co-op/Condo toggle the engine computed with. */
   propertyType: 'condo' | 'coop';
 }
@@ -71,7 +73,10 @@ export async function neutralNumbers(tx: Queryable, reportId: string, asOf = new
   const locations = locationsFrom(await loadGeocodes(tx, (await reportBuildings(tx, reportId)).map((b) => b.key)));
   // No prices, no deal terms: nothing here can carry the call or a target.
   const output = compute(engineInput({ asOf, intake: state.intake, comps, locations, propertyType: report.property_type }));
-  return { output, comps, state, brief: report.brief ?? {}, revealed: report.revealed, removed, propertyType: report.property_type };
+  return {
+    output, comps, state, brief: report.brief ?? {}, revealed: report.revealed, removed,
+    removedComps: removedComps(parsed, judgments), propertyType: report.property_type,
+  };
 }
 
 /** get_numbers. `wide` is the wider read (each comp's features, amenities, building, listing text) from hb-view on. */
@@ -85,7 +90,9 @@ export async function numbersFor(tx: Queryable, reportId: string, opts: { asOf?:
 export async function summaryOf(tx: Queryable, reportId: string, n: NeutralNumbers, opts: { asOf: string; wide: boolean }) {
   const asOf = opts.asOf;
   const summary = numbersSummary({
-    output: n.output, comps: n.comps, intake: n.state.intake, revealed: n.revealed, removed: n.removed,
+    output: n.output, comps: n.comps, intake: n.state.intake, revealed: n.revealed,
+    // The wider read lists every comp taken out, so edit_comp can put back a link's or a typed-in one too.
+    removed: opts.wide ? n.removedComps.map((c) => c.record) : n.removed,
     homeOnMarket: await homeOnMarket(tx, reportId, asOf),
     ...(opts.wide ? { wide: { propertyType: n.propertyType } } : {}),
   });

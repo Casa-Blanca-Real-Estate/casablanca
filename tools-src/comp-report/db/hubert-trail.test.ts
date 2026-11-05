@@ -24,6 +24,8 @@ import { withActor, type PoolLike } from '../server/db.ts';
 import type { TrailEntry, TrailSource } from '../server/hubert-trail.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import type { WebSearcher } from '../server/web-search.ts';
+import { applyHomeSet, homeUndoStands, type HubertHomeEdit } from '../workspace/home-edit.ts';
+import type { Intake } from '../workspace/state.ts';
 import { undoStands } from '../workspace/trail-undo.ts';
 import { startFakeAnthropic, type FakeAnthropic, type Script } from '../dev/fake-anthropic.ts';
 import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
@@ -344,5 +346,144 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
     // The agent's own paste is no find of Hubert's.
     const pasted = (await (await handleLinks(request('links', 'POST', { reportId, urls: ['https://streeteasy.com/building/5-franklin-place/14a'] }), deps)).json());
     assert.equal(pasted.reads.find((r: { url: string }) => /5-franklin/.test(r.url)).foundBy, undefined);
+  });
+  test('the star through edit_comp: moves from the comp that had it, makes it 1st tier, and Undo takes it off', async () => {
+    const id = chambers().reportCompId;
+    const other = comps.find((c) => c.reportCompId && c.reportCompId !== id && c.evidenceClass === 'sold')!.reportCompId!;
+    // The other comp is the ★ and Chambers 2nd tier, as the agent left them.
+    assert.equal((await handleComps(request('comps', 'PATCH', { reportId, reportCompId: other, anchor: true }), deps)).status, 200);
+    assert.equal((await handleComps(request('comps', 'PATCH', { reportId, reportCompId: id, tier: 'secondary' }), deps)).status, 200);
+    const { events, result } = await call('edit_comp', { comp: CHAMBERS, changes: { star: true } }, 'Star 200 Chambers.');
+    assert.equal(result.is_error, undefined, String(result.content));
+    const entries = events.filter((e) => e.type === 'change').map((e) => e.entry as TrailEntry);
+    assert.deepEqual(entries.map((e) => [e.compId, e.field, e.before, e.after]), [[id, 'anchor', null, '★'], [other, 'anchor', '★', null]]);
+    assert.match(entries[0]!.label, /1st tier/);
+    const anchors = async () => withActor(pool as unknown as PoolLike, ana, async (tx) =>
+      (await tx.query<{ id: string }>('select id from comp_report.report_comps where report_id = $1 and is_anchor', [reportId])).rows.map((r) => r.id));
+    assert.deepEqual(await anchors(), [id]);
+    assert.equal((await row(id)).tier, 'primary');
+    assert.deepEqual(entries[0]!.undo, { edit: { anchor: false, tier: 'secondary' }, left: true });
+
+    assert.equal((await handleComps(request('comps', 'PATCH', { reportId, reportCompId: id, ...entries[0]!.undo!.edit }), deps)).status, 200);
+    assert.deepEqual(await anchors(), []);
+    assert.equal((await row(id)).tier, 'secondary', 'its tier back');
+
+    const refused = await call('edit_comp', { comp: CHAMBERS, changes: { star: true, tier: 'excluded' } });
+    assert.equal(refused.result.is_error, true);
+    assert.match(String(refused.result.content), /★ comp is 1st tier/);
+  });
+
+  test('taking a comp out and putting it back through edit_comp, each with Undo', async () => {
+    const id = chambers().reportCompId;
+    const removedAt = async () => withActor(pool as unknown as PoolLike, ana, async (tx) =>
+      (await tx.query<{ removed_at: Date | null }>('select removed_at from comp_report.report_comps where id = $1', [id])).rows[0]!.removed_at);
+    const out = await call('edit_comp', { comp: CHAMBERS, changes: { removed: true } }, 'Take 200 Chambers out.');
+    assert.equal(out.result.is_error, undefined, String(out.result.content));
+    const taken = out.events.find((e) => e.type === 'change')!.entry as TrailEntry;
+    assert.deepEqual([taken.field, taken.after, taken.undo], ['removed', 'Taken out', { edit: { removed: false }, left: true }]);
+    assert.ok(await removedAt());
+    assert.ok(out.events.some((e) => e.type === 'comps_changed'));
+
+    // Taken out: other changes wait until it's back.
+    const waits = await call('edit_comp', { comp: CHAMBERS, changes: { tier: 'primary' } });
+    assert.equal(waits.result.is_error, true);
+    assert.match(String(waits.result.content), /Put it back first/);
+    // Taking out is a change of its own.
+    const mixed = await call('edit_comp', { comp: CHAMBERS, changes: { removed: true, note: 'x' } });
+    assert.equal(mixed.result.is_error, true);
+
+    const back = await call('edit_comp', { comp: CHAMBERS, changes: { removed: false } }, 'Put it back.');
+    assert.equal(back.result.is_error, undefined, String(back.result.content));
+    const restored = back.events.find((e) => e.type === 'change')!.entry as TrailEntry;
+    assert.deepEqual([restored.field, restored.after, restored.undo], ['removed', 'In the report', { edit: { removed: true }, left: false }]);
+    assert.equal(await removedAt(), null);
+
+    // The activity log has both, as Hubert's.
+    const su = new pg.Client({ connectionString: db.urlAs(new URL(process.env.CR_TEST_DATABASE_URL!).username || 'postgres') });
+    await su.connect();
+    const names = (await su.query<{ name: string; detail: Block }>(
+      `select name, detail from comp_report.activity where report_id = $1 and kind = 'action' and name in ('comp.removed', 'comp.restored')`, [reportId])).rows;
+    await su.end();
+    assert.deepEqual(names.filter((r) => r.detail.by === 'hubert').map((r) => r.name).sort(), ['comp.removed', 'comp.restored']);
+  });
+
+  test('set_home_fact: the details the agent dictated, handed to the screen with the trail, Show and Undo', async () => {
+    // As the agent left the details: the size from the home's StreetEasy page, two beds.
+    const intake: Intake = {
+      areaSqft: { value: 1200, asOf: '2026-10-01', from: 'listing' },
+      beds: { value: 2, asOf: '2026-10-01' },
+      exposure: { value: 'South', asOf: '2026-10-01' },
+    };
+    const save = async (next: Intake) => assert.equal((await handleWorkspace(request('workspace', 'PATCH', { reportId, state: { intake: next } }), deps)).status, 200);
+    const stored = async () => withActor(pool as unknown as PoolLike, ana, async (tx) =>
+      (await tx.query<{ intake: Intake }>(`select state -> 'intake' as intake from comp_report.reports where id = $1`, [reportId])).rows[0]!.intake);
+    await save(intake);
+
+    const view = { screen: 'new_report', compId: null, step: 'details' };
+    const seen = JSON.parse(String((await call('get_view', {}, 'What have I got so far?', view)).result.content));
+    assert.equal(seen.home_details.areaSqft, '1,200 sq ft (from its StreetEasy page)');
+
+    const { events, result } = await call('set_home_fact', {
+      changes: [
+        { field: 'areaSqft', value: '1,240 sq ft', estimate: true },
+        { field: 'baths', value: '1.5' },
+        { field: 'building', add: ['doorman', 'Gym'] },
+        { field: 'exposures', value: 'North, East' },
+        { field: 'condition', value: 'well kept' },
+        { field: 'notes', add: ['Great light in the living room.'] },
+      ],
+    }, 'About 1,240 feet I think, a bath and a half, doorman and gym, north and east, well kept. Note: great light in the living room.', view);
+    assert.equal(result.is_error, undefined, String(result.content));
+
+    // Handed to the screen first, then the trail: nothing is written by the server.
+    const edit = events.find((e) => e.type === 'home_edit')!.edit as HubertHomeEdit;
+    assert.ok(events.findIndex((e) => e.type === 'home_edit') < events.findIndex((e) => e.type === 'start'));
+    assert.deepEqual(await stored(), intake, 'the screen writes it, not the turn');
+    assert.ok(!events.some((e) => e.type === 'comps_changed'));
+    assert.equal((edit.set.areaSqft as { value: number; estimate?: boolean }).value, 1240);
+    assert.equal((edit.set.areaSqft as { estimate?: boolean }).estimate, true);
+    assert.deepEqual((edit.set.building as { value: string[] }).value, ['Doorman', 'Gym']);
+    assert.equal((edit.set.condition as { value: string }).value, 'good');
+    assert.equal(edit.set.exposure, null, 'the pickers’ exposure replaces the old line of text');
+
+    const entries = events.filter((e) => e.type === 'change').map((e) => e.entry as TrailEntry);
+    assert.deepEqual(entries.map((e) => [e.kind, e.field, e.before, e.after]), [
+      ['home', 'areaSqft', '1,200 sq ft', '1,240 sq ft'],
+      ['home', 'baths', null, '1.5'],
+      ['home', 'building', null, 'Doorman, Gym'],
+      ['home', 'exposures', null, 'North, East'],
+      ['home', 'condition', null, 'Well kept'],
+      ['home', 'notes', null, 'Great light in the living room.'],
+    ]);
+    assert.match(entries[0]!.label, /estimate/);
+
+    // The screen applies it and saves; Undo stands while each reads as he left it, and puts back what was there.
+    const applied = applyHomeSet(intake, edit.set);
+    await save(applied);
+    assert.ok(entries.every((e) => homeUndoStands(e, applied)));
+    let now = applied;
+    for (const e of entries) now = applyHomeSet(now, e.undo!.edit as HubertHomeEdit['set']);
+    assert.deepEqual(now, intake, 'every field back, the StreetEasy mark and the old exposure too');
+    assert.ok(entries.every((e) => !homeUndoStands(e, now)));
+
+    // And the transcript keeps the trail, for a reload.
+    const made = (await shown()).filter((m) => m.tools.includes('set_home_fact'));
+    assert.deepEqual(made.at(-1)!.changes, entries);
+  });
+
+  test('set_home_fact refuses what doesn’t fit, and changes nothing', async () => {
+    for (const [changes, says] of [
+      [[{ field: 'beds', value: 'two and a bit' }], /beds is a whole number/],
+      [[{ field: 'views', add: ['Ocean'] }], /isn’t on the views list/],
+      [[{ field: 'laundry', value: 'sometimes' }], /washer\/dryer is one of/i],
+      [[{ field: 'address', value: '1 Main St' }], /names a field/],
+      [[{ field: 'neighborhood', estimate: true, value: 'Tribeca' }], /Only a number can be an estimate/],
+      [[{ field: 'beds', value: '2' }], /already reads that way/],
+    ] as const) {
+      const { events, result } = await call('set_home_fact', { changes } as unknown as Block);
+      assert.equal(result.is_error, true, JSON.stringify(changes));
+      assert.match(String(result.content), says);
+      assert.ok(!events.some((e) => e.type === 'home_edit' || e.type === 'change'));
+    }
   });
 });

@@ -14,6 +14,7 @@ import { agentCardApi, ApiError, clientWordsApi, geocodeApi, maySample, reviewAp
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { cleanAllClientRounds } from '../../../workspace/client-words.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
+import { applyHomeSet } from '../../../workspace/home-edit.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import {
@@ -659,6 +660,11 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     hubertEdits,
     queueHubertEdit: (edit) => setHubertEdits((list) => [...list, edit]),
     takeHubertEdits: (n) => setHubertEdits((list) => list.slice(n)),
+    // From the state as it stands, so two edits in a row both land; the autosave writes it like the agent's typing.
+    applyHomeSet: (set) => {
+      if (readOnlyRef.current) return;
+      setState({ ...stateRef.current, intake: applyHomeSet(stateRef.current.intake ?? {}, set) });
+    },
     outcomes: state.outcomes ?? {},
     setOutcomes: (next: Outcomes) => setState({ ...stateRef.current, outcomes: next }),
     reached,

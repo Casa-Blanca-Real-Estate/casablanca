@@ -4,7 +4,7 @@
 //                                  continue after a tool call. view is what the agent
 //                                  has on screen as the request goes (server/hubert-view.ts)
 //   reply: text/event-stream of JSON events —
-//     email_edit (Hubert's checked edit, for Send) · change (one entry of Hubert's trail, server/hubert-trail.ts)
+//     email_edit (Hubert's checked edit, for Send) · home_edit (his edit to the home's details, for the intake) · change (one entry of Hubert's trail, server/hubert-trail.ts)
 //     · comps_changed (he changed a comp: the screen reloads them) · start · progress · text · tool · done
 //     · refused · interrupted · error
 //
@@ -27,6 +27,8 @@ import {
 } from '../assistant.ts';
 import { withActor, type PoolLike, type Queryable } from '../db.ts';
 import { editFromResult, type HubertEmailEdit } from '../hubert-email.ts';
+import { homeEditFromResult } from '../hubert-home.ts';
+import type { HubertHomeEdit } from '../../workspace/home-edit.ts';
 import { trailOf, type TrailEntry } from '../hubert-trail.ts';
 import { readView, type HubertView } from '../hubert-view.ts';
 import { logActivity, type Action } from '../logs.ts';
@@ -91,6 +93,8 @@ async function prepare(
     const pending = pendingToolUses(stored.findLast((m) => m.in_context));
     // Hubert's checked edits to the email, for this response to hand to the agent's Send screen.
     const edits: HubertEmailEdit[] = [];
+    // And his edits to the home's details, for the agent's screen to write into the intake it saves.
+    const homeEdits: HubertHomeEdit[] = [];
     // And his trail: every change those tools made, for the chat to show at once.
     const changes: TrailEntry[] = [];
     // And the activity log's rows for his comp edits, written once this transaction commits.
@@ -103,6 +107,8 @@ async function prepare(
         results.push(result);
         const edit = call.name === 'edit_email' ? editFromResult(result) : null;
         if (edit) edits.push(edit);
+        const home = call.name === 'set_home_fact' ? homeEditFromResult(result) : null;
+        if (home) homeEdits.push(home);
         changes.push(...trailOf(call.name, result).changes);
       }
       const content = message ? [...results, { type: 'text', text: message }] : results;
@@ -115,7 +121,7 @@ async function prepare(
     } else {
       throw new HttpError(400, 'nothing_to_send', 'Send a message.');
     }
-    return { messages: buildMessages(stored), nextSeq: seq + 1, prompt, edits, changes, actions };
+    return { messages: buildMessages(stored), nextSeq: seq + 1, prompt, edits, homeEdits, changes, actions };
   });
 }
 
@@ -184,6 +190,7 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
         const emit = (e: Event) => write(`data: ${JSON.stringify(e)}\n\n`);
         // First, before the model's reply: the edits Hubert just made, for Send to apply.
         for (const edit of prepared.edits) emit({ type: 'email_edit', edit });
+        for (const edit of prepared.homeEdits) emit({ type: 'home_edit', edit });
         for (const entry of prepared.changes) emit({ type: 'change', entry });
         if (prepared.changes.some((c) => c.kind === 'comp')) emit({ type: 'comps_changed' });
         const aborter = new AbortController();
