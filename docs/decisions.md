@@ -51,7 +51,7 @@ each was applied.
   uses Netlify's default Google client. To make it say Casa Blanca, paste your Google Cloud client's
   ID and secret into Netlify → **Identity → Registration → External providers → Google**, not into
   environment variables.
-- [x] ~~Delete the 11 merged branches.~~ Done. **Still to delete: `samplepics`** (D-16).
+- [x] ~~Delete the 11 merged branches, and `samplepics`.~~ Done (`samplepics` 2026-11-05, TD-8).
 - [x] ~~Give Casa sessions their own cloud environment.~~ Done 2026-10-13: no `DATABASE_URL` in it.
   The old one still carries it, for any track still running there. It holds MindBinder's database address, and every Casa session carries it.
 - [ ] **Soon — label 30 listings for Jev's calibration** (Dispatch 10 phase 2), once Arbiter's phase 2 PR
@@ -100,8 +100,8 @@ each was applied.
   A session confirms them in the Casa environment when Dispatch 23 items 3–4 start.
 - [x] ~~Sit down with Noble (TD-9).~~ Done (Kimani, 2026-10-21). What came of it (the glossary's questions, the
   thresholds, the differences approach) isn't recorded yet: tell Casanova, or leave a dev note.
-- [ ] **Soon — check whether the GitHub Pages copy of the studio is still used** (D-26 Q7). Your answer
-  (2026-10-21): "Don't think so. Remind me to check." If not, it's turned off.
+- [ ] **Turn off the GitHub Pages copy of the studio before the move** (D-26 Q7, AC-7). Not used (2026-11-05);
+  you're flipping it yourself.
 - [ ] **Soon — a co-op and its StreetEasy export** for the co-op sample (TD-15); **test an invite end to end** (TD-16);
   **Noble on the size-scale bands** (TD-17); **record the next walk-through** (TD-13).
 - [x] ~~Swap the Anthropic key in Make (TD-18).~~ Done 2026-10-28. The connection "My Anthropic Claude connection" feeds
@@ -321,7 +321,7 @@ Blanca Project. Settled so far: `casacalliste@gmail.com` **stays** Casa's identi
 - **Q4 (AC-4):** "Moved already, no?" Yes: the Casa desk is in the Casa account
   (https://claude.ai/artifact/PyiLHNqBZhCyyQYZRXWZco), so it's work-only from here. The personal copy goes in
   the clean-out.
-- **Q7 (AC-7):** "Don't think so. Remind me to check." On **Your actions**.
+- **Q7 (AC-7), 2026-11-05:** not used. Turn it off before the move; Kimani flips it himself (on **Your actions**).
 
 - **Q1 (AC-1):** done already (the keys moved, 2026-10-21).
 - **Q5 (AC-5), 2026-10-28:** methods and patterns (the dispatch method, skill structure, tool design systems) are
@@ -330,7 +330,7 @@ Blanca Project. Settled so far: `casacalliste@gmail.com` **stays** Casa's identi
   work. "Don't worry so much about what stays mine."
 - **Q6 (AC-6), 2026-10-28:** the second owner is Kimani himself, on his personal Google address (kjocalliste@gmail.com).
 
-Q7 is still open (on **Your actions**).
+All seven are answered.
 
 ---
 
