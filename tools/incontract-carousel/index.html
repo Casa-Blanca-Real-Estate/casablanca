@@ -482,7 +482,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
       <div class="seg" id="ic-mode-seg">
         <button type="button" class="seg-btn on" data-mode="pair">Two deals</button>
         <button type="button" class="seg-btn"    data-mode="agent">One agent · two properties</button>
-        <button type="button" class="seg-btn"    data-mode="co">Co-listing · one deal</button>
+        <button type="button" class="seg-btn"    data-mode="co" title="Coming soon">Co-listing · coming soon</button>
       </div>
     </div>
 
@@ -1430,9 +1430,13 @@ function drawAgentName(ctx, name, ax, ay, aw, ah){
 //              block and the two agent squares sit in a row beneath it.
 //   'column' — a tall property photo on the left; the address on top of the right
 //              column, the two agent squares stacked under it, bottom-aligned with the photo.
-let IC_CO_LAYOUT = 'stack';
+//   'side'   — (Kimani, 11-05, second round) agents 15% smaller, tucked under a full-width
+//              photo, side by side on the left; address and last ask in the space to their right.
+//   'split'  — the same, with one agent at each side and the address and last ask between them.
+let IC_CO_LAYOUT = 'side';
 const TC = {
   BOTTOM:1217,                         // where the pair slide's lower photo ends
+  SMALL:314, NEAR:24,                  // 'side'/'split': agent square (369 less 15%), gap under the photo
   GAP:10,                              // between the two agent squares
   // stack
   S_PHOTO_X:33, S_PHOTO_Y:200, S_PHOTO_W:1014, S_TEXT_GAP:30,
@@ -1446,7 +1450,17 @@ function drawCoSlide(cv, d){
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   drawInContractHeader(ctx, (d && d.slideHeader) || d?.neighborhood || 'NEIGHBORHOOD');
   const acc = d?.accent || ACCENTS[0], A = T.AGENT_W;
-  if (IC_CO_LAYOUT === 'column') {
+  if (IC_CO_LAYOUT === 'side' || IC_CO_LAYOUT === 'split') {
+    const a = TC.SMALL, ay = TC.BOTTOM - a, ph = ay - TC.NEAR - TC.S_PHOTO_Y;
+    drawFramedPhoto(ctx, d?.propImg, TC.S_PHOTO_X, TC.S_PHOTO_Y, TC.S_PHOTO_W, ph, acc, T.FRAME_T);
+    const left = TC.S_PHOTO_X, right = TC.S_PHOTO_X + TC.S_PHOTO_W;
+    let x1, x2, tx0, tx1;
+    if (IC_CO_LAYOUT === 'side') { x1 = left; x2 = left + a + TC.GAP; tx0 = x2 + a + 36; tx1 = right; }
+    else                         { x1 = left; x2 = right - a;         tx0 = x1 + a + 24; tx1 = x2 - 24; }
+    drawFramedPhoto(ctx, d?.agentImg,  x1, ay, a, a, acc, 0);
+    drawFramedPhoto(ctx, d?.agent2Img, x2, ay, a, a, acc, 0);
+    drawCoText(ctx, d || {}, tx0, tx1, ay + a / 2, IC_CO_LAYOUT === 'split');
+  } else if (IC_CO_LAYOUT === 'column') {
     const y2 = TC.BOTTOM - A, y1 = y2 - TC.GAP - A;
     drawFramedPhoto(ctx, d?.propImg, TC.C_PHOTO_X, TC.C_PHOTO_Y, TC.C_PHOTO_W, TC.BOTTOM - TC.C_PHOTO_Y, acc, T.FRAME_T);
     drawDealText(ctx, d || {}, TC.C_TEXT_X, TC.C_TEXT_Y, (TC.C_AGENT_X + A) - TC.C_TEXT_X);
@@ -1462,6 +1476,23 @@ function drawCoSlide(cv, d){
     drawFramedPhoto(ctx, d?.agent2Img, TC.S_AGENT_X + A + TC.GAP, ay, A, A, acc, 0);
   }
   drawWordmarkBottom(ctx);
+}
+// Address over "Last Ask: $price", larger than the pair slide's (up to 52px, shrinking to
+// fit), vertically centred on cy between x0 and x1. Centred text for 'split', left for 'side'.
+function drawCoText(ctx, d, x0, x1, cy, centred){
+  const maxW = x1 - x0, addr = (d.address || '').trim().toUpperCase() || 'ADDRESS';
+  const raw = (d.price || '').trim().replace(/^\$+/, ''), price = raw ? '$' + raw : '—';
+  const fitSize = (measure) => { let sz = 52; while (sz > 22 && measure(sz) > maxW) sz--; return sz; };
+  ctx.save(); ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
+  const wAddr = sz => { ctx.font = f(800, sz); ctx.letterSpacing = trackPx(sz); return ctx.measureText(addr).width; };
+  const wAsk = sz => { ctx.letterSpacing = trackPx(sz); ctx.font = f(400, sz); const a = ctx.measureText('Last Ask: ').width; ctx.font = f(900, sz); return a + ctx.measureText(price).width; };
+  const sz = Math.min(fitSize(wAddr), fitSize(wAsk)), lh = Math.round(sz * 0.98);
+  const y = cy - (sz + lh) / 2;
+  const aW = wAddr(sz); ctx.fillText(addr, centred ? x0 + (maxW - aW) / 2 : x0, y);
+  const kW = wAsk(sz); let x = centred ? x0 + (maxW - kW) / 2 : x0;
+  ctx.font = f(400, sz); ctx.fillText('Last Ask: ', x, y + lh); x += ctx.measureText('Last Ask: ').width;
+  ctx.font = f(900, sz); ctx.fillText(price, x, y + lh);
+  ctx.letterSpacing = '0px'; ctx.restore();
 }
 // Header band + wordmark, as the pair slide draws them.
 function drawInContractHeader(ctx, sub){
@@ -2331,6 +2362,9 @@ document.getElementById('ic-mode-seg').addEventListener('click', e => {
   const btn = e.target.closest('.seg-btn'); if (!btn) return;
   const top = dealsForSlide(activeIdx)[0]; if (!top) return;
   const mode = btn.dataset.mode;
+  // Co-listing slides wait on Kimani's layout (11-05): the team can try them, everyone
+  // else sees "coming soon". coListingOpen() is the one switch to flip when it ships.
+  if (mode === 'co' && !coListingOpen()) { showToast('Co-listing slides are coming soon'); return; }
   const cur = top.coListing ? 'co' : (top.soloAgent ? 'agent' : 'pair');
   if (mode === cur) return;
   const i = 2*(activeIdx-1) + 1;
@@ -3576,6 +3610,16 @@ document.getElementById('bulk-modal').addEventListener('click', (e) => { if (e.t
 // ── Auto-save (local, dev-only): persist unsaved work across reloads on this device ──
 const AUTOSAVE_KEY = 'cb_autosave_incontract';
 function devAuthed(){ return CBStudio.isTeam(); }
+function coListingOpen(){ try { return CBStudio.isTeam(); } catch (e) { return false; } }
+function syncCoListingGate(){
+  const b = document.querySelector('#ic-mode-seg [data-mode="co"]'); if (!b) return;
+  const open = coListingOpen();
+  b.textContent = open ? 'Co-listing · one deal (team preview)' : 'Co-listing · coming soon';
+  b.title = open ? 'Only the team sees this until the layout is final' : 'Coming soon';
+  b.style.opacity = open ? '' : '.45'; b.style.cursor = open ? '' : 'not-allowed';
+}
+syncCoListingGate();
+document.addEventListener('cb-studio-ready', syncCoListingGate);
 document.addEventListener('cb-studio-ready', function(){ refreshSaveStatus(); });
 function autosaveHasContent(s){ return !!(s && ((s.deals && s.deals.some(d=>d.address||d.price||d.description||d.agentName||d.propSrc||d.agentSrc)) || s.coverSrc)); }
 function autosave(){
