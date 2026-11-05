@@ -1,25 +1,10 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
-    "CR-8",
-    "CR-9",
-    "TD-24",
-    "DP-12",
-    "DP-13",
-    "DP-14",
-    "DP-15",
-    "NB-30",
-    "NB-31",
-    "NB-32",
-    "NB-33",
-    "TD-23",
-    "CR-3",
-    "CR-7",
-    "TD-19",
-    "TD-20",
-    "TD-21",
-    "TD-22"
+    "TD-25",
+    "TD-26",
+    "QW-2"
   ],
   "topics": [
     {
@@ -314,56 +299,6 @@
           "source": "NW-054"
         },
         {
-          "id": "NB-25",
-          "q": "When do the Phase A dispatches start, given the move to Casa's Claude account?",
-          "short": "Dispatch before or after the move",
-          "quick": false,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Sessions can't move between Claude accounts (NW-096). Mason, Abacus and Surveyor already run in this account; they can take Dispatches 15–22 now and restart in the Casa account later from kickoffs, as they did on 2026-10-13. A new track (Collister, Dispatch 24) and anything that holds a production key (Dispatch 23) start in the Casa account.</p><p><strong>Why it needs you.</strong> Starting now gets the build moving while you design; holding everything costs about a week.</p>",
-          "options": [
-            [
-              "A",
-              "Running tracks start now; new tracks and production keys wait for the Casa account",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Hold everything until the move"
-            ],
-            [
-              "C",
-              "Dispatch everything now, Collister included"
-            ]
-          ],
-          "source": "NW-096 · {repo}/docs/casa-accounts-transfer.md"
-        },
-        {
-          "id": "NB-27",
-          "q": "A rental-comps report: wanted, and when?",
-          "short": "Rental comps reports",
-          "quick": true,
-          "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> Noble comped rentals for a client buying to rent out (NW-021). Today the tool warns when a pasted link is a rental, which he liked. A rental-comps report would take rentals and warn on sales instead, and needs the engine to price rents: a new report kind.</p><p><strong>Why it needs you.</strong> It's a real use, but not the pilot's core. Today's gate stays either way.</p>",
-          "options": [
-            [
-              "A",
-              "Later: after the pilot's sales flow settles",
-              "",
-              true
-            ],
-            [
-              "B",
-              "Soon: investor clients are part of the pilot"
-            ],
-            [
-              "C",
-              "Not planned"
-            ]
-          ],
-          "source": "NW-021"
-        },
-        {
           "id": "NB-28",
           "q": "Create the email as a Gmail draft, for Casa Workspace accounts?",
           "short": "Gmail drafts",
@@ -494,7 +429,9 @@
         "<strong>NB-26 · Recording the next walk-through</strong>: A, on your machine (\"I'll figure it out\"). Recorded 2026-10-29.",
         "<strong>NB-15 · Pre-approval</strong>: A, yes or no plus the amount, recorded 2026-10-29 (in chat).",
         "<strong>NB-14 · Target owner default</strong>: A, client, recorded 2026-10-29 (on the sheet).",
-        "<strong>NB-29 · Buyer urgency</strong>: A, a field for context; it never changes the calculation. Urgency, pre-approval and cash change the justification: where in the range the client can reasonably offer, and what the agent tells them, recorded 2026-10-29 (in chat)."
+        "<strong>NB-29 · Buyer urgency</strong>: A, a field for context; it never changes the calculation. Urgency, pre-approval and cash change the justification: where in the range the client can reasonably offer, and what the agent tells them, recorded 2026-10-29 (in chat).",
+        "<strong>NB-25 · Dispatch before or after the move</strong>: A, running tracks start now; new tracks and production keys wait for the Casa account, recorded 2026-11-05 (on the sheet, 10-29). Your follow-up on whether the named tracks are still worth it is answered in the thread.",
+        "<strong>NB-27 · Rental comps reports</strong>: A, later, after the pilot's sales flow settles, recorded 2026-11-05 (on the sheet, 10-29)."
       ]
     },
     {
@@ -551,32 +488,6 @@
           "source": "#77"
         },
         {
-          "id": "DP-12",
-          "q": "Which screens must work on a phone by Nov 13?",
-          "short": "Phone screens by Nov 13",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> The top bar fits phones now (#106), but the screens under it are still desktop layouts that scroll sideways.</p>",
-          "options": [
-            [
-              "A",
-              "Reports, Review comps, Findings (reading), Send and Hubert",
-              "recommended",
-              true
-            ],
-            [
-              "B",
-              "Every screen",
-              ""
-            ],
-            [
-              "C",
-              "None yet: desktop only for the pilot",
-              ""
-            ]
-          ],
-          "source": "The design pass brief, section 10 · #117"
-        },
-        {
           "id": "DP-13",
           "q": "Orientation: a pointing tour, a first-run checklist, or a short video per screen?",
           "short": "Orientation style",
@@ -627,27 +538,6 @@
             ]
           ],
           "source": "The design pass brief, section 10 · #117"
-        },
-        {
-          "id": "DP-15",
-          "q": "The tool's name on its own screens: \"Comp report\" under \"Casa Blanca Studio\", or something new?",
-          "short": "The tool's name",
-          "quick": true,
-          "context": "<p><strong>What this is about.</strong> The Studio was renamed (2026-10-28). The tool still calls itself \"Comp report\" on its own top bar, emails and sign-in.</p>",
-          "options": [
-            [
-              "A",
-              "\"Comp report\" under Casa Blanca Studio",
-              ""
-            ],
-            [
-              "B",
-              "Something new",
-              "put it in the note"
-            ]
-          ],
-          "source": "The design pass brief, section 10 · #117",
-          "needsYou": true
         }
       ],
       "settled": [
@@ -659,7 +549,9 @@
         "<strong>DP-6 · Comp tags</strong>: recorded 2026-10-15.",
         "<strong>DP-7 · \"True estimate\" label</strong>: recorded 2026-10-15.",
         "<strong>DP-8 · The assistant's name</strong>: recorded 2026-10-15.",
-        "<strong>DP-11 · A buyer's offer range</strong>: the true estimate never moves. Show the client-adjusted view as its own layer beside the true estimate, the agent's number and the target (perhaps separate or stacked bars); designed in the Claude Design pass, a mockup from any track welcome, recorded 2026-10-29 (in chat)."
+        "<strong>DP-11 · A buyer's offer range</strong>: the true estimate never moves. Show the client-adjusted view as its own layer beside the true estimate, the agent's number and the target (perhaps separate or stacked bars); designed in the Claude Design pass, a mockup from any track welcome, recorded 2026-10-29 (in chat).",
+        "<strong>DP-12 · Phone layouts</strong>: none. Laptop and tablet only; phones get their own design later, recorded 2026-10-29 (in chat).",
+        "<strong>DP-15 · The tool's name on its screens</strong>: A, \"Comp report\" under \"Casa Blanca Studio\", recorded 2026-11-05 in the design brief (#131)."
       ]
     },
     {
@@ -943,34 +835,15 @@
       "url": "{repo}/docs/casa-accounts-transfer.md",
       "linkLabel": "Open the transfer plan",
       "intro": "<p>Erez asked for Casa-owned accounts once the comp report settles (D-26). Settled so far: <code>casacalliste@gmail.com</code> stays Casa's identity, made Casa-held; the Post Log is the caption tracker the builders link to.</p>",
-      "questions": [
-        {
-          "id": "AC-7",
-          "q": "Is the GitHub Pages copy of the studio still used?",
-          "short": "GitHub Pages: still used?",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> Its address changes with the repo and doesn't redirect. <code>agents/SCHEMA.md</code> and the functions' CORS note name <code>kjcamron.github.io</code>.</p><p><strong>Your note (2026-10-21):</strong> \"Don't think so. Remind me to check.\" This is the reminder: check, then pick A or B.</p>",
-          "options": [
-            [
-              "A",
-              "No: turn it off before the move"
-            ],
-            [
-              "B",
-              "Yes: keep it, and update its address"
-            ]
-          ],
-          "source": "D-26"
-        }
-      ],
+      "questions": [],
       "settled": [
         "<strong>AC-2 · Claude plan and second admin</strong>: Pro for now, Max 5x if use demands; no second admin yet, recorded 2026-10-21.",
         "<strong>AC-3 · What Casa info your personal Claude may see</strong>: A, that line, recorded 2026-10-21.",
         "<strong>AC-4 · The Casa desk: move or keep?</strong>: already moved to the Casa account, work-only, recorded 2026-10-21.",
         "<strong>AC-1 · Keys before the pilot widens</strong>: done already (the keys moved 2026-10-21), recorded 2026-10-29.",
         "<strong>AC-5 · What stays yours</strong>: methods and patterns (dispatches, skills, design systems) are how you work, not Casa's IP; the Answer Sheet and the Dispatch Ledger were first made in your personal account, with dated proof. Recorded 2026-10-29 in D-26.",
-        "<strong>AC-6 · The second owner</strong>: you, on your personal Google address. Recorded 2026-10-29 in D-26."
+        "<strong>AC-6 · The second owner</strong>: you, on your personal Google address. Recorded 2026-10-29 in D-26.",
+        "<strong>AC-7 · The GitHub Pages copy</strong>: A, not used. Turn it off before the move; you'll flip it yourself, recorded 2026-11-05 in D-26."
       ]
     },
     {
@@ -1034,21 +907,6 @@
             ]
           ],
           "source": "Dispatch 05 · {repo}/docs/decisions.md"
-        },
-        {
-          "id": "TD-8",
-          "q": "Delete the samplepics branch",
-          "short": "Delete samplepics",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p>D-16 said delete it. Sessions can't delete branches (the proxy refuses), so it's yours on GitHub.</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ],
-          "source": "D-16"
         },
         {
           "id": "TD-10",
@@ -1224,6 +1082,46 @@
           ],
           "source": "#116",
           "needsYou": true
+        },
+        {
+          "id": "TD-25",
+          "q": "Take your Claude Design pass on the In contract builder",
+          "short": "Design the In contract builder",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>From the In contract work (#127, #128). Two things to design: the co-listing slide, where two agents on one deal keep full-size photos and the deal gets the slide to itself (with room for a bigger property photo), and the agent-facing clarity the agent asked for in #127. The pick between the two co-listing layouts happens in that thread, not here.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ],
+            [
+              "B",
+              "Later, after Nov 13"
+            ]
+          ],
+          "source": "#127 · #128"
+        },
+        {
+          "id": "TD-26",
+          "q": "Note: fold the deal carousel builders into one",
+          "short": "One deal carousel builder (later)",
+          "quick": true,
+          "needsYou": false,
+          "context": "<p>Your idea, for after Nov 13: In contract, Just closed, the For sale roundup and maybe Editorial become one builder. Nothing to decide now; it's here so it isn't lost. Pick A to keep it on the list, B to drop it.</p>",
+          "options": [
+            [
+              "A",
+              "Keep it for after Nov 13",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Drop it"
+            ]
+          ],
+          "source": "#127"
         }
       ],
       "settled": [
@@ -1235,7 +1133,8 @@
         "<strong>TD-12 · The Casa account move</strong>: done 2026-10-21.",
         "<strong>TD-9 · Noble: glossary, thresholds, the differences approach</strong>: done, recorded 2026-10-21.",
         "<strong>TD-14 · The inspect and test keys</strong>: done, recorded 2026-10-21.",
-        "<strong>TD-18 · Make's Anthropic key</strong>: done, 2026-10-28."
+        "<strong>TD-18 · Make's Anthropic key</strong>: done, 2026-10-28.",
+        "<strong>TD-8 · Delete samplepics</strong>: done, 2026-11-05."
       ]
     },
     {
@@ -1277,6 +1176,27 @@
             ]
           ],
           "source": "{repo}/docs/dispatch/README.md"
+        },
+        {
+          "id": "QW-2",
+          "q": "Make the sign shop's email address a Studio setting?",
+          "short": "Sign shop email as a setting",
+          "quick": true,
+          "context": "<p>The Property Sign builder (#130) sends its order to a fixed address in the page (<code>MAIL_TO</code>). As a Studio setting, you could change the vendor without a code change. It's small either way; the default leaves it fixed until the vendor changes.</p>",
+          "options": [
+            [
+              "A",
+              "Leave it fixed in the page",
+              "change it with a one-line PR when needed",
+              true
+            ],
+            [
+              "B",
+              "Make it a Studio setting",
+              "like the shared order message"
+            ]
+          ],
+          "source": "#130"
         }
       ]
     }
@@ -1286,14 +1206,14 @@
       "id": "RL-12",
       "date": "2026-10-29",
       "qids": [
-        "DP-12",
         "DP-13",
-        "DP-14",
-        "DP-15"
+        "DP-14"
       ],
-      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md\" target=\"_blank\" rel=\"noopener\">The design pass brief</a> (#117): every surface and what's still open on it, for your Claude Design pass.",
+      "html": "<a href=\"https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/main/docs/comp-report/design-pass/README.md\" target=\"_blank\" rel=\"noopener\">The design pass brief</a> (#117): every surface and what's still open on it, for your Claude Design pass.",
       "settledIds": [
-        "DP-11"
+        "DP-11",
+        "DP-12",
+        "DP-15"
       ]
     },
     {
@@ -1343,8 +1263,6 @@
         "NB-21",
         "NB-22",
         "NB-24",
-        "NB-25",
-        "NB-27",
         "NB-28"
       ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/comp-report/feedback/2026-10-15-noble/09-plan.md\" target=\"_blank\" rel=\"noopener\">Noble's walk-through: the plan</a>, with the topic reports 01–08 beside it.",
@@ -1352,7 +1270,9 @@
         "NB-23",
         "NB-26",
         "NB-15",
-        "NB-14"
+        "NB-14",
+        "NB-25",
+        "NB-27"
       ]
     },
     {
@@ -1389,14 +1309,13 @@
     {
       "id": "RL-5",
       "date": "2026-10-14",
-      "qids": [
-        "AC-7"
-      ],
+      "qids": [],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/blob/claude/main/docs/casa-accounts-transfer.md\" target=\"_blank\" rel=\"noopener\">Moving to Casa accounts</a>: the plan, with the claude.ai side from the Casa Blanca Project.",
       "settledIds": [
         "AC-1",
         "AC-5",
-        "AC-6"
+        "AC-6",
+        "AC-7"
       ]
     },
     {
