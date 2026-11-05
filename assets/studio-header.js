@@ -45,7 +45,8 @@
 
     var dock = rightDock();
     if (S) S.ready.then(function (user) {
-      if (document.querySelector('.cb-whoami')) return;
+      // Signed out while the Studio is open to everyone (studio-auth.js OPEN): nobody to show.
+      if (!user || document.querySelector('.cb-whoami')) return;
       var who = document.createElement('button');
       who.type = 'button'; who.className = 'cb-whoami'; who.title = 'Click to sign out';
       who.textContent = '● ' + (user.name || user.email);
