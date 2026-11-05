@@ -12,7 +12,7 @@ import { buildEmail } from '../workspace/email.ts';
 import { engineInput, workspaceComps } from '../workspace/engine-input.ts';
 import { draftChecks, ledgerFor, qaStatus } from '../workspace/qa.ts';
 import { writerInput, type WriterInput } from '../workspace/writer-input.ts';
-import { callWriter, CURRENT_WRITER_PROMPT, parseDraft, WRITER, writerRequest } from './writer.ts';
+import { callWriter, CURRENT_WRITER_PROMPT, parseDraft, WRITER, WRITER_PROMPTS, writerRequest } from './writer.ts';
 
 const parsed = parseExport(new TextEncoder().encode(SAMPLE_EXPORT.csv), { as_of: SAMPLE_EXPORT.asOf });
 const comps = workspaceComps([{ importId: 'i', createdAt: '2026-09-29T00:00:00Z', parsed }], SAMPLE_TIERS.map((t, i) => ({
@@ -79,7 +79,11 @@ test('the request: Opus 5.5, adaptive thinking, effort set, structured output, s
   assert.equal(r.fallbacks, 'default');
   assert.deepEqual(r.betas, ['server-side-fallback-2026-07-01']);
   assert.ok(r.system[0]!.text.includes("Casa Blanca's house voice"), 'the house voice is in the system prompt');
-  assert.equal(CURRENT_WRITER_PROMPT.voice, 'house-2026-10-14');
+  assert.equal(CURRENT_WRITER_PROMPT.id, 'cr5-2026-10-29');
+  assert.equal(CURRENT_WRITER_PROMPT.voice, 'house-2026-10-29');
+  assert.ok(r.system[0]!.text.includes('Never add a point of your own'), 'things to consider are the agent’s (CR-3)');
+  assert.ok(r.system[0]!.text.includes('Carrying costs come up once'), 'carrying costs once (CR-3)');
+  assert.ok(WRITER_PROMPTS['cr5-2026-10-14']!.system.includes('buildings that trade higher or lower, carrying costs'), 'a shipped prompt never changes');
   assert.equal(WRITER.maxTokens, 16_000);
 });
 
@@ -94,6 +98,10 @@ test('the draft is held to its brief: up to three headlines, lines only for comp
   assert.deepEqual(d.headlines, ['One.', 'Two.', 'Three.']);
   assert.deepEqual(d.sections, { chosen: '', comps: [{ id, lines: ['First.'] }], consider: [], nextStep: 'Call me.' });
   assert.equal(parseDraft('{"headlines": []}', w), null, 'no headline, no draft');
+  const points = (agentLines: { consider?: string }) => parseDraft(JSON.stringify({ headlines: ['One.'], chosen: '', comps: [], consider: ['A point of its own.'], next_step: '' }),
+    writerInput({ output: withEverything, result: 'with_estimates', comps, homeAddress: '100 Barclay Street', homeUnit: '17L', audience: 'buyer', clientName: 'Sam', length: 'full', agentLines }))!.sections.consider;
+  assert.deepEqual(points({}), [], 'no points from the agent, none drafted (CR-3)');
+  assert.deepEqual(points({ consider: 'The Greenwich Club trades higher.' }), ['A point of its own.'], 'the agent’s points, as the writer tightened them');
   assert.equal(parseDraft('not json', w), null);
 });
 

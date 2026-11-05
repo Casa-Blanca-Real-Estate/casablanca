@@ -118,6 +118,8 @@ each was applied.
   reports, three lengths), with a short read at the top. 11 of 12 pass QA. Four things you might want changed in a new
   voice version: it adds its own points to Things to consider; one headline names a single price; carrying-cost lines
   repeat on every comp; the text message carries the email frame. Answer: keep the voice as is, or revise it.
+  **Answered (CR-3, default A, 2026-10-29): revise it.** All four fixed in a new voice (`house-2026-10-29`,
+  prompt `cr5-2026-10-29`) and rerun: `docs/comp-report/writer-eval-2026-10-29-rerun.md`. Left: read the rerun.
 - [ ] **Parked — profile pic:** 3–5 hard portraits for the Phase 1 re-cut, then the outpaint key.
 
 ---

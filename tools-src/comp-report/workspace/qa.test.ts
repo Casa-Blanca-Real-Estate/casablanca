@@ -64,6 +64,9 @@ test('a point value warns; a range, a list price and an offer don’t (§9.2)', 
   assert.deepEqual(pointValueFindings('I think it’s worth $4.5M.').map((f) => f.text), ['worth $4.5M']);
   assert.deepEqual(pointValueFindings('The market value is about $4.5M, and it’s a $4.5M apartment.').map((f) => f.text), ['market value is about $4.5M', 'it’s a $4.5M apartment']);
   assert.deepEqual(pointValueFindings('It’s worth $4.2M–$4.9M. Worth noting: list it at $4.5M, or offer $4.3M.'), []);
+  // The 2026-10-29 eval: one comp's rate carried to the home, in a headline.
+  assert.deepEqual(pointValueFindings('The closest match sold at $2,112 a sq ft, which would put #17L at about $4.23M.').map((f) => f.text), ['put #17L at about $4.23M']);
+  assert.deepEqual(pointValueFindings('The three closest sales put #17L at $2,112–$2,457 a square foot, or about $4.23M–$4.92M.'), []);
 });
 
 test('appraisal language blocks, outside the approved disclaimer', () => {

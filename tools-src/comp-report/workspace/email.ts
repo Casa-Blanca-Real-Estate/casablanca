@@ -140,19 +140,23 @@ function blocks(input: EmailInput): Block[] {
   const chosen = w ? w.chosen : input.chosen;
   const nextStep = w ? w.nextStep : input.nextStep;
   const consider = w ? w.consider.map((x) => x.trim()).filter(Boolean) : input.consider?.trim() ? [input.consider.trim()] : [];
-  if (input.sample) p(SAMPLE_BANNER);
-  p(`Hi ${input.clientName?.trim() || '[client name]'},`);
-  p(input.headline?.trim() || HEADLINE_PLACEHOLDER);
   const r = input.output.results[input.result];
-  if (input.result === 'with_estimates' && r.estimates_used.length) {
-    p([...new Set(r.estimates_used.map(estimateWords))].join(' '));
-  }
+  const estimates = input.result === 'with_estimates' && r.estimates_used.length
+    ? [...new Set(r.estimates_used.map(estimateWords))].join(' ')
+    : '';
   if (input.length === 'text') {
-    p(nextStep);
-    p(input.agentName || '[your name]');
+    // A text, not an email in a bubble (CR-3): no greeting or layout, one
+    // message and the agent's name. The disclaimer still goes (D-13, QA).
+    if (input.sample) p(SAMPLE_BANNER);
+    const message = [input.headline?.trim() || HEADLINE_PLACEHOLDER, estimates, nextStep?.trim()].filter(Boolean).join(' ');
+    p(`${message}\n– ${input.agentName || '[your name]'}`);
     p(DISCLAIMER);
     return out;
   }
+  if (input.sample) p(SAMPLE_BANNER);
+  p(`Hi ${input.clientName?.trim() || '[client name]'},`);
+  p(input.headline?.trim() || HEADLINE_PLACEHOLDER);
+  p(estimates);
   if (input.length === 'full') p(chosen);
 
   const writtenLines = new Map((w?.comps ?? []).map((c) => [c.id, c.lines.map((l) => l.trim()).filter(Boolean)]));
