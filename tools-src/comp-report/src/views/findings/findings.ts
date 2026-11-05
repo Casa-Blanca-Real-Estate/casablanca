@@ -36,7 +36,11 @@ export function identityName(c: CompOut | undefined): string {
 /** The engine's reasons speak of "primary" comps; the screens call them 1st tier. */
 export function engineWhy(reason: string): string {
   // The engine's method label carries a note for the build ("the default method, pending Noble"): agents don't need it.
-  return reason.replace(/\s+—\s+the default method, pending Noble/, '').replace(/\bprimary\b/g, '1st-tier').replace(/\s+—\s+/g, ': ');
+  return reason.replace(/\s+—\s+the default method, pending Noble/, '').replace(/\bprimary\b/g, '1st-tier').replace(/\s+—\s+/g, ': ')
+    // The engine's words for the home's size; an agent says square footage, and "the home".
+    .replace(/no implied values without the subject's interior area/, 'there’s no known square footage for the home')
+    .replace(/\bthe subject's area\b/g, 'the home’s square footage')
+    .replace(/\bthe subject\b/g, 'the home');
 }
 
 export interface TakeArgs {

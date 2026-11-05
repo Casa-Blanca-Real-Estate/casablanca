@@ -85,8 +85,8 @@ function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; 
   const n = range?.comp_ids.length ?? 0;
   const unitRate = r.lead.indicator.startsWith('unit_rate');
   const call = ws.call!;
-  const verdict = call.skipped ? 'You skipped your guess at the gate.' : verdictLine(o, kind);
-  const why = call.note?.trim() || (call.skipped ? 'You skipped this at the gate.' : 'You didn’t write a why at the gate.');
+  const verdict = call.skipped ? 'You skipped your guess before Findings.' : verdictLine(o, kind);
+  const why = call.note?.trim() || (call.skipped ? 'You skipped this before Findings.' : 'You didn’t write a why before Findings.');
   return (
     <section className="fi-card fi-top" aria-label="The true estimate">
       {range && (
@@ -114,7 +114,7 @@ function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; 
           </div>
         </div>
         <div className="fi-col fi-yours">
-          <span className="fi-label">Your reasoning <span className="fi-from">(from the gate)</span></span>
+          <span className="fi-label">Your reasoning <span className="fi-from">(before Findings)</span></span>
           <div className="fi-reason">{why}</div>
           {!ws.readOnly && (
             <button type="button" className="link fi-change" onClick={() => ws.go('gate')}>
@@ -463,7 +463,7 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
         </Row>
       )}
       <Row k="Why your number" flag={!call?.note?.trim()}>
-        {call?.note?.trim() ? 'Written at the gate' : call?.skipped ? 'You skipped your number' : 'Not written yet'}
+        {call?.note?.trim() ? 'Written before Findings' : call?.skipped ? 'You skipped your number' : 'Not written yet'}
       </Row>
       <Row k="Left out">{leftOut ? leftOut.charAt(0).toUpperCase() + leftOut.slice(1) : 'Nothing'}</Row>
       {kinds.map((k) => {
