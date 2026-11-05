@@ -88,7 +88,7 @@ canvas#cv { width:100%; max-width:400px; height:auto; display:block; box-shadow:
 <main>
   <div class="hero">
     <h1>Property Sign</h1>
-    <p>24 × 36 in For Sale lawn sign, same art on both sides. Fill in the agent, add their square headshot and download the print PDF. The order email for the sign shop is at the bottom.</p>
+    <p>24 × 36 in For Sale lawn sign, same art on both sides. Fill in the agent, add their square headshot and download the print PDF. The order email to the sign shop is at the bottom.</p>
   </div>
 
   <div class="grid">
@@ -107,9 +107,10 @@ canvas#cv { width:100%; max-width:400px; height:auto; display:block; box-shadow:
       <details class="panel fold" id="mailPanel">
         <summary><span class="panel-title">Order email</span><span class="hint">For the sign shop</span></summary>
         <div class="fold-body">
-          <div class="field"><label for="addr">Property address</label><input type="text" id="addr" placeholder="105-11 Ditmars Blvd, East Elmhurst, NY 11369" value="105-11 Ditmars Blvd, East Elmhurst, NY 11369"></div>
-          <div class="field"><label for="mTo">To</label>
-            <div class="mail-row"><input type="text" id="mTo" value="matthew@alpsigns.com"><button type="button" class="btn ghost small" data-copy="mTo">Copy</button></div></div>
+          <div class="field"><label for="addr">Property address</label><input type="text" id="addr" placeholder="10 Hubert St, Tribeca, NY 10013"></div>
+          <div class="field"><div class="lbl-row"><label for="mCc">CC</label><button type="button" class="mini" id="ccReset" hidden>Use agent emails</button></div>
+            <div class="mail-row"><input type="text" id="mCc" placeholder="The agent's email"><button type="button" class="btn ghost small" data-copy="mCc">Copy</button></div>
+            <span class="hint">Goes to Matthew at ALP Signs (matthew@alpsigns.com). The agent is copied.</span></div>
           <div class="field"><label for="mSubj">Subject</label>
             <div class="mail-row"><input type="text" id="mSubj" readonly><button type="button" class="btn ghost small" data-copy="mSubj">Copy</button></div></div>
           <div class="field"><label for="mBody">Message</label><textarea id="mBody" spellcheck="true"></textarea>
@@ -150,12 +151,12 @@ canvas#cv { width:100%; max-width:400px; height:auto; display:block; box-shadow:
 <template id="agentTpl">
   <div class="agent">
     <div class="agent-tag"></div>
-    <div class="field"><label>Name</label><input type="text" data-k="name" autocomplete="off"></div>
+    <div class="field"><label>Name</label><input type="text" data-k="name" autocomplete="off" placeholder="First Last"></div>
     <div class="field">
       <div class="lbl-row"><label>Email</label><button type="button" class="mini" data-act="email">Edit</button></div>
-      <input type="email" data-k="email" readonly>
+      <input type="email" data-k="email" readonly placeholder="f.last@casa-blanca.com">
     </div>
-    <div class="field"><label>Phone</label><input type="tel" data-k="phone" placeholder="917.555.0123"></div>
+    <div class="field"><label>Phone</label><input type="tel" data-k="phone" placeholder="xxx.xxx.xxxx" inputmode="tel"></div>
     <div class="field">
       <span class="lbl">Headshot</span>
       <div class="drop" tabindex="0" role="button"><b>Choose headshot</b> or drop it here<br><span class="hint">The square headshot (e.g. Name_SquareClean).</span></div>
@@ -213,7 +214,7 @@ var F = {}, wordmark = new Image();
 var state = {
   layout:'single',
   agents:[
-    { name:'Emilia Bruzzo', email:'', emailCustom:false, phone:'805.235.5311', img:null },
+    { name:'', email:'', emailCustom:false, phone:'', img:null },
     { name:'', email:'', emailCustom:false, phone:'', img:null }
   ]
 };
@@ -297,7 +298,7 @@ function render(){
   });
   ctx.fillStyle = '#ffffff';
   buildText().forEach(function(t){ ctx.fill(new Path2D(t.d)); });
-  updateMail(); save();
+  updateMail();
 }
 
 // ---- PDF ----------------------------------------------------------------------
@@ -390,7 +391,8 @@ var TPL_ORIGINAL =
   'How soon could you get it made, delivered and installed?\n\n' +
   'Thanks so much!\n\nBest,\n- Kimani';
 function getTpl(){ try { return localStorage.getItem(TPL_KEY) || TPL_ORIGINAL; } catch(e){ return TPL_ORIGINAL; } }
-var mailEdited = false;
+var mailEdited = false, ccEdited = false;
+var MAIL_TO = 'matthew@alpsigns.com'; // ALP Signs. CASANOVA: vendor contact could live in settings.
 function agentNames(){
   var n = activeAgents().map(function(a){ return a.name.trim(); }).filter(Boolean);
   return n.length ? n.join(' and ') : 'our agent';
@@ -398,12 +400,13 @@ function agentNames(){
 function updateMail(){
   var addr = $('addr').value.trim() || '[property address]';
   $('mSubj').value = 'New Sign Order – ' + addr;
+  if (!ccEdited) $('mCc').value = activeAgents().map(emailOf).filter(Boolean).join(', ');
   if (!mailEdited) $('mBody').value = getTpl().replace(/\{agents\}/g, agentNames()).replace(/\{address\}/g, addr);
   gmailLink();
 }
 function gmailLink(){
-  $('gmail').href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent($('mTo').value.trim()) +
-    '&su=' + encodeURIComponent($('mSubj').value) + '&body=' + encodeURIComponent($('mBody').value);
+  $('gmail').href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(MAIL_TO) +
+    '&cc=' + encodeURIComponent($('mCc').value.trim()) + '&su=' + encodeURIComponent($('mSubj').value) + '&body=' + encodeURIComponent($('mBody').value);
 }
 $('tplOpen').addEventListener('click', function(){ $('tplText').value = getTpl(); $('tplBox').hidden = false; $('tplText').focus(); });
 $('tplCancel').addEventListener('click', function(){ $('tplBox').hidden = true; });
@@ -414,8 +417,9 @@ $('tplSave').addEventListener('click', function(){
 });
 $('tplReset').addEventListener('click', function(){ $('tplText').value = TPL_ORIGINAL; });
 $('mBody').addEventListener('input', function(){ mailEdited = true; gmailLink(); });
-$('addr').addEventListener('input', function(){ updateMail(); save(); });
-$('mTo').addEventListener('input', gmailLink);
+$('addr').addEventListener('input', updateMail);
+$('mCc').addEventListener('input', function(){ ccEdited = true; $('ccReset').hidden = false; gmailLink(); });
+$('ccReset').addEventListener('click', function(){ ccEdited = false; this.hidden = true; updateMail(); });
 document.addEventListener('click', function(e){
   var b = e.target.closest('[data-copy]'); if (!b) return;
   var el = $(b.dataset.copy), text = el.value, done = function(){ var t = b.textContent; b.textContent = 'Copied'; setTimeout(function(){ b.textContent = t; }, 1400); };
@@ -445,8 +449,12 @@ function buildAgents(){
     nm.value = a.name; ph.value = a.phone; em.value = a.emailCustom ? a.email : autoEmail(a.name); syncEmail();
     nm.addEventListener('input', function(){ a.name = nm.value; syncEmail(); render(); });
     em.addEventListener('input', function(){ a.email = em.value; render(); });
-    ph.addEventListener('input', function(){ a.phone = ph.value; render(); });
-    ph.addEventListener('blur', function(){ var f = formatPhone(ph.value); if (f) { ph.value = a.phone = f; render(); } });
+    ph.addEventListener('input', function(){
+      // Any digits, dashes, spaces or brackets become xxx.xxx.xxxx as they're typed.
+      var d = ph.value.replace(/\D/g,''); if (d.length === 11 && d[0] === '1') d = d.slice(1); d = d.slice(0,10);
+      ph.value = a.phone = d.length > 6 ? d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6) : d.length > 3 ? d.slice(0,3)+'.'+d.slice(3) : d;
+      render();
+    });
     eb.addEventListener('click', function(){
       a.emailCustom = !a.emailCustom; if (a.emailCustom) a.email = em.value || autoEmail(a.name);
       syncEmail(); render(); if (a.emailCustom) em.focus();
@@ -482,29 +490,13 @@ $('layout').addEventListener('click', function(e){
   state.layout = b.dataset.v; setSeg('layout', state.layout); buildAgents(); render();
 });
 
-// ---- Remember the last fields (this browser only; photos aren't kept) ----------
-var KEY = 'cb_property_sign_v3';
-function save(){
-  try {
-    localStorage.setItem(KEY, JSON.stringify({ layout:state.layout, addr:$('addr').value,
-      agents:state.agents.map(function(a){ return { name:a.name, email:a.email, emailCustom:a.emailCustom, phone:a.phone }; }) }));
-  } catch(e){}
-}
-function restore(){
-  try {
-    var s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!s) return;
-    if (s.layout) state.layout = s.layout;
-    if (typeof s.addr === 'string') $('addr').value = s.addr;
-    (s.agents || []).forEach(function(a, i){ if (state.agents[i]) Object.assign(state.agents[i], a); });
-  } catch(e){}
-}
+// Fields are not remembered between visits: the form opens empty (Kimani, 2026-11-05).
 
 // ---- Boot ----------------------------------------------------------------------
 function boot(){
   if (!window.fontkit || !window.PDFLib) { setStatus('Could not load the PDF library. Check your connection and reload.'); return; }
   F.heavy = fontkit.create(b64ToBytes(FONT_HEAVY_B64));
   F.reg   = fontkit.create(b64ToBytes(FONT_REG_B64));
-  restore();
   setSeg('layout', state.layout);
   buildAgents();
   wordmark.onload = render; wordmark.src = WORDMARK_URI;
