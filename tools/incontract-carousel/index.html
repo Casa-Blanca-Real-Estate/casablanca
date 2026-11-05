@@ -191,11 +191,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
 .ic-se-row .btn-s { white-space:nowrap; }
 .ic-tray-lbl { margin-top:8px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--mid); }
 .ic-tray { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-.ic-tray.hidden, .ic-tray-lbl.hidden, .ic-colist.hidden, .ic-colist-add.hidden { display:none; }
+.ic-tray.hidden, .ic-tray-lbl.hidden, .ic-colist.hidden { display:none; }
 .ic-tray button { width:72px; height:48px; padding:0; border:2px solid transparent; border-radius:4px; overflow:hidden; cursor:pointer; background:#ddd; }
 .ic-tray button img { width:100%; height:100%; object-fit:cover; display:block; }
 .ic-tray button.on { border-color:var(--black); }
-.ic-colist-add { margin-top:8px; width:100%; font-size:10px; padding:5px 8px; }
 .ic-colist { margin-top:10px; }
 .ic-colist .lbl { display:flex; align-items:center; justify-content:space-between; }
 .ic-colist .dz { aspect-ratio:1/1; width:100%; height:auto; min-height:0; padding:0; align-items:center; justify-content:center; }
@@ -481,8 +480,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
     <div class="card">
       <div class="lbl">Slide mode</div>
       <div class="seg" id="ic-mode-seg">
-        <button type="button" class="seg-btn on" data-mode="pair">Two agents</button>
+        <button type="button" class="seg-btn on" data-mode="pair">Two deals</button>
         <button type="button" class="seg-btn"    data-mode="agent">One agent · two properties</button>
+        <button type="button" class="seg-btn"    data-mode="co">Co-listing · one deal</button>
       </div>
     </div>
 
@@ -512,9 +512,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
             <input type="text" id="agent-search-A" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
             <div id="agent-results-A" class="agent-results hidden"></div>
           </div>
-          <button type="button" class="btn-s ic-colist-add" id="ic-colist-add-A">＋ Co-listing agent</button>
           <div class="ic-colist hidden" id="ic-colist-A">
-            <div class="lbl"><span>Co-listing agent</span><button type="button" class="btn-s" id="ic-colist-rm-A" style="font-size:9px;padding:2px 8px;">Remove</button></div>
+            <div class="lbl"><span>Second agent photo</span></div>
             <div class="dz" id="dz-agent2-A">
               <input type="file" id="f-agent2-A" accept="image/*">
               <img class="dz-th" id="th-agent2-A" alt="">
@@ -571,20 +570,6 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:50%;}
           <div class="agent-lib-wrap" data-slot="B" style="margin-top:6px;">
             <input type="text" id="agent-search-B" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
             <div id="agent-results-B" class="agent-results hidden"></div>
-          </div>
-          <button type="button" class="btn-s ic-colist-add" id="ic-colist-add-B">＋ Co-listing agent</button>
-          <div class="ic-colist hidden" id="ic-colist-B">
-            <div class="lbl"><span>Co-listing agent</span><button type="button" class="btn-s" id="ic-colist-rm-B" style="font-size:9px;padding:2px 8px;">Remove</button></div>
-            <div class="dz" id="dz-agent2-B">
-              <input type="file" id="f-agent2-B" accept="image/*">
-              <img class="dz-th" id="th-agent2-B" alt="">
-              <span class="dz-lbl">Drop or click</span>
-              <span class="dz-hint">Pre-composited with name</span>
-            </div>
-            <div class="agent-lib-wrap" data-slot="B2" style="margin-top:6px;">
-              <input type="text" id="agent-search-B2" class="agent-search-inp" placeholder="Search agent library…" autocomplete="off">
-              <div id="agent-results-B2" class="agent-results hidden"></div>
-            </div>
           </div>
         </div>
         <div class="up-block">
@@ -818,10 +803,11 @@ function makeDeal() {
     // the header with their photo beside it, and both deals' property photos belong to
     // them. agentLabel is the typed header name; the lower deal's agent photo is unused.
     soloAgent:false, agentLabel:'',
-    // Co-listing: a second agent on the same deal (pair slides only). Both agent squares
-    // then sit side by side at half size. photoChoices: the listing photos a StreetEasy
+    // Co-listing slide ("two agents · one deal", read off the UPPER deal of a slide): the
+    // deal's two agents both get full-size squares and the property photo grows; the
+    // slide's bottom slot is left empty. agent2* is the second agent. photoChoices: the listing photos a StreetEasy
     // fetch brought back, offered as a tray under the property photo (not saved).
-    agent2Img:null, agent2Src:'', agent2Name:'', photoChoices:[]
+    coListing:false, agent2Img:null, agent2Src:'', agent2Name:'', photoChoices:[]
   };
 }
 
@@ -1064,8 +1050,10 @@ function syncForm() {
   // One-agent mode lives on the top deal and re-labels the whole panel.
   const solo = !!(pair[0] && pair[0].soloAgent);
 
+  const coMode = !!(pair[0] && pair[0].coListing);
+  const modeNow = coMode ? 'co' : (solo ? 'agent' : 'pair');
   document.querySelectorAll('#ic-mode-seg .seg-btn').forEach(b =>
-    b.classList.toggle('on', (b.dataset.mode === 'agent') === solo));
+    b.classList.toggle('on', b.dataset.mode === modeNow));
 
   // Slide header (set on the top deal) — the agent's name in one-agent mode.
   const hdrInp = document.getElementById('i-slidehdr');
@@ -1100,7 +1088,7 @@ function syncForm() {
   // Bottom-deal card visibility + add/remove buttons
   const cardB  = document.getElementById('ic-deal-B');
   const addBtn = document.getElementById('ic-add-B');
-  if (cardB) { cardB.style.display = hasB ? '' : 'none'; cardB.classList.toggle('solo-mode', solo); }
+  if (cardB) { cardB.style.display = (hasB && !coMode) ? '' : 'none'; cardB.classList.toggle('solo-mode', solo); }
   if (addBtn) {
     addBtn.style.display = hasB ? 'none' : '';
     addBtn.textContent   = solo ? '＋ Add second property' : '＋ Add bottom deal to this slide';
@@ -1128,11 +1116,9 @@ function syncForm() {
     syncDZ('dz-agent-' + slot, 'th-agent-' + slot, d ? (d.agentSrc || '') : '');
     if (typeof buildPropManip === 'function') buildPropManip(slot);
     // Co-listing agent: pair slides only (a one-agent slide is one agent by definition).
-    const co = document.getElementById('ic-colist-' + slot), coAdd = document.getElementById('ic-colist-add-' + slot);
-    const coOpen = !!(d && (d.agent2Src || d._coOpen));
-    if (co)    co.classList.toggle('hidden', solo || !coOpen);
-    if (coAdd) coAdd.classList.toggle('hidden', solo || coOpen);
-    syncDZ('dz-agent2-' + slot, 'th-agent2-' + slot, d ? (d.agent2Src || '') : '');
+    const co = document.getElementById('ic-colist-' + slot);
+    if (co) co.classList.toggle('hidden', !coMode);
+    if (co) syncDZ('dz-agent2-' + slot, 'th-agent2-' + slot, d ? (d.agent2Src || '') : '');
     const se = document.getElementById('i-se-url-' + slot); if (se) se.value = d ? (d._seUrl || '') : '';
     renderPhotoTray(slot);
   });
@@ -1167,7 +1153,8 @@ function renderCanvas(i) {
   else if (i === endIdx()) drawEnd(cv);
   else {
     const [a, b] = dealsForSlide(i);
-    if (a && a.soloAgent) drawAgentSlide(cv, a, b);
+    if (a && a.coListing)      drawCoSlide(cv, a);
+    else if (a && a.soloAgent) drawAgentSlide(cv, a, b);
     else                  drawPairSlide(cv, a, b, (a && a.slideHeader) || '');
   }
 }
@@ -1437,24 +1424,61 @@ function drawAgentName(ctx, name, ax, ay, aw, ah){
   ctx.restore();
 }
 
-// Co-listing (a second agent on one deal): the two agent squares sit side by side at
-// half size, bottom-aligned where the single square's bottom edge was (flush with the
-// property photo's bottom), and the address block hangs a fixed gap above them instead
-// of floating at the top of the column.
-const CO = { GAP:10, TEXT_GAP:24 };
-function coSquare(){ return (T.AGENT_W - CO.GAP) / 2; }
-function drawAgentSquares(ctx, d, x, y, acc){
-  if (d && d.agent2Img) {
-    const s = coSquare(), sy = y + T.AGENT_H - s;
-    drawFramedPhoto(ctx, d.agentImg,  x,                sy, s, s, acc, 0);
-    drawFramedPhoto(ctx, d.agent2Img, x + s + CO.GAP,   sy, s, s, acc, 0);
+// Co-listing slide — one deal, two agents, both full size (Kimani, 11-05). Two layouts
+// are drafted for him to choose from; IC_CO_LAYOUT picks one:
+//   'stack'  — the property photo runs the full width under the header; the address
+//              block and the two agent squares sit in a row beneath it.
+//   'column' — a tall property photo on the left; the address on top of the right
+//              column, the two agent squares stacked under it, bottom-aligned with the photo.
+let IC_CO_LAYOUT = 'stack';
+const TC = {
+  BOTTOM:1217,                         // where the pair slide's lower photo ends
+  GAP:10,                              // between the two agent squares
+  // stack
+  S_PHOTO_X:33, S_PHOTO_Y:200, S_PHOTO_W:1014, S_TEXT_GAP:30,
+  S_AGENT_X:34, S_TEXT_X:47,
+  // column
+  C_PHOTO_X:33, C_PHOTO_Y:200, C_PHOTO_W:617,
+  C_TEXT_X:682, C_TEXT_Y:202, C_AGENT_X:678,
+};
+function drawCoSlide(cv, d){
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  drawInContractHeader(ctx, (d && d.slideHeader) || d?.neighborhood || 'NEIGHBORHOOD');
+  const acc = d?.accent || ACCENTS[0], A = T.AGENT_W;
+  if (IC_CO_LAYOUT === 'column') {
+    const y2 = TC.BOTTOM - A, y1 = y2 - TC.GAP - A;
+    drawFramedPhoto(ctx, d?.propImg, TC.C_PHOTO_X, TC.C_PHOTO_Y, TC.C_PHOTO_W, TC.BOTTOM - TC.C_PHOTO_Y, acc, T.FRAME_T);
+    drawDealText(ctx, d || {}, TC.C_TEXT_X, TC.C_TEXT_Y, (TC.C_AGENT_X + A) - TC.C_TEXT_X);
+    drawFramedPhoto(ctx, d?.agentImg,  TC.C_AGENT_X, y1, A, A, acc, 0);
+    drawFramedPhoto(ctx, d?.agent2Img, TC.C_AGENT_X, y2, A, A, acc, 0);
   } else {
-    drawFramedPhoto(ctx, d?.agentImg, x, y, T.AGENT_W, T.AGENT_H, acc, 0);
+    const ay = TC.BOTTOM - A;
+    const ty = ay - 24 - dealTextH(d || {}, false);
+    const ph = ty - TC.S_TEXT_GAP - TC.S_PHOTO_Y;
+    drawFramedPhoto(ctx, d?.propImg, TC.S_PHOTO_X, TC.S_PHOTO_Y, TC.S_PHOTO_W, ph, acc, T.FRAME_T);
+    drawDealText(ctx, d || {}, TC.S_TEXT_X, ty, TC.S_PHOTO_W - 28);
+    drawFramedPhoto(ctx, d?.agentImg,  TC.S_AGENT_X,             ay, A, A, acc, 0);
+    drawFramedPhoto(ctx, d?.agent2Img, TC.S_AGENT_X + A + TC.GAP, ay, A, A, acc, 0);
   }
+  drawWordmarkBottom(ctx);
 }
-function coTextY(d, textY, agentY){
-  if (!(d && d.agent2Img)) return textY;
-  return agentY + T.AGENT_H - coSquare() - CO.TEXT_GAP - dealTextH(d, false);
+// Header band + wordmark, as the pair slide draws them.
+function drawInContractHeader(ctx, sub){
+  drawBuildingIcon(ctx, T.ICON_X + T.ICON_W/2, T.ICON_Y, T.ICON_W, T.ICON_H, '#000');
+  ctx.save();
+  ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.letterSpacing = trackPx(T.HDR_FONT);
+  ctx.font = f(900, T.HDR_FONT); ctx.fillText('IN CONTRACT:', T.HDR_X, T.HDR_Y);
+  ctx.font = f(400, T.HDR_FONT); ctx.fillText(String(sub).toUpperCase(), T.HDR_X, T.HDR_Y + T.HDR_LH);
+  ctx.letterSpacing = '0px';
+  ctx.restore();
+}
+function drawWordmarkBottom(ctx){
+  if (wmBlackImg.naturalWidth) {
+    const dw = wmBlackImg.naturalWidth * (T.WM_H / wmBlackImg.naturalHeight);
+    ctx.drawImage(wmBlackImg, T.WM_X_RIGHT - dw, T.WM_Y, dw, T.WM_H);
+  }
 }
 
 // Pair-slide renderer — used by renderCanvas for every middle slide.
@@ -1485,14 +1509,14 @@ function drawPairSlide(cv, dealA, dealB, slideHeader){
   const A = dealA, accA = A?.accent || ACCENTS[0];
   const maxAW = (T.U_AGENT_X + T.AGENT_W) - T.U_TEXT_X;
   drawFramedPhoto(ctx, A?.propImg,  T.U_PHOTO_X, T.U_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accA, T.FRAME_T);
-  drawDealText  (ctx, A,            T.U_TEXT_X,  coTextY(A, T.U_TEXT_Y, T.U_AGENT_Y), maxAW);
-  drawAgentSquares(ctx, A, T.U_AGENT_X, T.U_AGENT_Y, accA);
+  drawDealText  (ctx, A,            T.U_TEXT_X,  T.U_TEXT_Y, maxAW);
+  drawFramedPhoto(ctx, A?.agentImg, T.U_AGENT_X, T.U_AGENT_Y, T.AGENT_W, T.AGENT_H, accA, 0);
 
   if (!solo) {
     const B = dealB, accB = B?.accent || ACCENTS[1];
     const maxBW = (T.L_AGENT_X + T.AGENT_W) - T.L_TEXT_X;
-    drawDealText  (ctx, B,            T.L_TEXT_X,  coTextY(B, T.L_TEXT_Y, T.L_AGENT_Y), maxBW);
-    drawAgentSquares(ctx, B, T.L_AGENT_X, T.L_AGENT_Y, accB);
+    drawDealText  (ctx, B,            T.L_TEXT_X,  T.L_TEXT_Y, maxBW);
+    drawFramedPhoto(ctx, B?.agentImg, T.L_AGENT_X, T.L_AGENT_Y, T.AGENT_W, T.AGENT_H, accB, 0);
     drawFramedPhoto(ctx, B?.propImg,  T.L_PHOTO_X, T.L_PHOTO_Y, T.PHOTO_W, T.PHOTO_H, accB, T.FRAME_T);
   }
 
@@ -2306,11 +2330,27 @@ function dropSlotB(){
 document.getElementById('ic-mode-seg').addEventListener('click', e => {
   const btn = e.target.closest('.seg-btn'); if (!btn) return;
   const top = dealsForSlide(activeIdx)[0]; if (!top) return;
-  const solo = btn.dataset.mode === 'agent';
-  if (!!top.soloAgent === solo) return;
-  top.soloAgent = solo;
-  if (solo && !top.agentLabel) top.agentLabel = top.agentName || '';
-  syncForm(); updateStripLabel(activeIdx); renderCanvas(activeIdx);
+  const mode = btn.dataset.mode;
+  const cur = top.coListing ? 'co' : (top.soloAgent ? 'agent' : 'pair');
+  if (mode === cur) return;
+  const i = 2*(activeIdx-1) + 1;
+  if (mode === 'co') {
+    // A co-listing slide shows one deal. A bottom deal with anything in it moves to the
+    // end of the post; the slot stays reserved (empty) so later slides keep their pairs.
+    const b = S.deals[i];
+    if (b && (b.address || b.price || b.agentSrc || b.propSrc)) {
+      S.deals[i] = makeDeal(); S.deals.push(b);
+      showToast('Bottom deal moved to the last slide');
+    } else if (!b) S.deals[i] = makeDeal();
+  } else if (cur === 'co' && i === S.deals.length - 1) {
+    const b = S.deals[i];
+    if (b && !(b.address || b.price || b.agentSrc || b.propSrc)) S.deals.splice(i, 1);
+  }
+  top.coListing = mode === 'co';
+  top.soloAgent = mode === 'agent';
+  if (top.soloAgent && !top.agentLabel) top.agentLabel = top.agentName || '';
+  buildStrip(); syncForm(); updateStripLabel(activeIdx); renderCanvas(activeIdx);
+  if (typeof updateDlBtn === 'function') updateDlBtn();
 });
 
 // Slide-header field → top deal's slideHeader (or the agent name in one-agent mode)
@@ -2397,21 +2437,11 @@ function buildPropManip(slot){
 });
 
 // ── Co-listing agent (issue #127: "it won't add both of us, only one") ──
-['A','B'].forEach(slot => {
+['A'].forEach(slot => {
   setupDZ('dz-agent2-' + slot, 'f-agent2-' + slot, 'th-agent2-' + slot, (img, src, fname) => {
     const d = dealForSlot(slot); if (!d) return;
     d.agent2Img = img; d.agent2Src = src; d.agent2Name = parseAgentName(fname);
     updateStripLabel(activeIdx); renderCanvas(activeIdx);
-  });
-  document.getElementById('ic-colist-add-' + slot).addEventListener('click', () => {
-    const d = slot === 'B' ? (dealForSlot('B') || ensureSlotB()) : dealForSlot('A'); if (!d) return;
-    d._coOpen = true; syncForm();
-    const inp = document.getElementById('agent-search-' + slot + '2'); if (inp) inp.focus();
-  });
-  document.getElementById('ic-colist-rm-' + slot).addEventListener('click', () => {
-    const d = dealForSlot(slot); if (!d) return;
-    d.agent2Img = null; d.agent2Src = ''; d.agent2Name = ''; d._coOpen = false;
-    syncForm(); updateStripLabel(activeIdx); renderCanvas(activeIdx);
   });
 });
 async function applyCoAgentFromLibrary(key, name, slot) {
@@ -2563,8 +2593,8 @@ function renderAgentResultsInto(elId, slot, results){
     res.classList.add('hidden');
   });
 });
-// The co-listing agent's search (slots A2 / B2): same library, writes agent2 on the deal.
-['A','B'].forEach(slot => {
+// The second agent's search on a co-listing slide (slot A2): same library, writes agent2.
+['A'].forEach(slot => {
   const s2 = slot + '2';
   const inp = document.getElementById('agent-search-' + s2);
   const res = document.getElementById('agent-results-' + s2);
@@ -2730,7 +2760,7 @@ function serializeSession() {
       price: d.price||'', description: d.description||'',
       accent: d.accent||'#aaa3cf', slideHeader: d.slideHeader||'',
       soloAgent: !!d.soloAgent, agentLabel: d.agentLabel||'',
-      agent2Src: d.agent2Src||'', agent2Name: d.agent2Name||'',
+      coListing: !!d.coListing, agent2Src: d.agent2Src||'', agent2Name: d.agent2Name||'',
     }))
   };
 }
@@ -2777,7 +2807,7 @@ function applySession(s) {
     deal.propOX=d.propOX||0; deal.propOY=d.propOY||0; deal.propScale=d.propScale||1;
     deal.accent=d.accent||'#aaa3cf'; deal.slideHeader=d.slideHeader||'';
     deal.soloAgent=!!d.soloAgent; deal.agentLabel=d.agentLabel||'';
-    deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
+    deal.coListing=!!d.coListing; deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
     if (d.agent2Src) { const img=new Image(); img.src=d.agent2Src; deal.agent2Img=img; img.onload=()=>{ renderCanvas(Math.floor(S.deals.indexOf(deal)/2)+1); }; }
     if (d.agentSrc) { const img=new Image(); img.src=d.agentSrc; deal.agentImg=img; img.onload=()=>{ const i=S.deals.indexOf(deal)+1; renderCanvas(i); }; }
     if (d.propSrc)  { const img=new Image(); img.src=d.propSrc;  deal.propImg=img;  img.onload=()=>{ const i=S.deals.indexOf(deal)+1; renderCanvas(i); if(i===1)renderCanvas(0); }; }
@@ -2848,6 +2878,7 @@ document.getElementById('btn-save-json').addEventListener('click',()=>{
       price:d.price, description:d.description,
       accent:d.accent, slideHeader:d.slideHeader,
       soloAgent:!!d.soloAgent, agentLabel:d.agentLabel||'',
+      coListing:!!d.coListing, agent2Src:d.agent2Src||'', agent2Name:d.agent2Name||'',
     })),
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -2880,7 +2911,7 @@ document.getElementById('f-import').addEventListener('change',function(){
         deal.agentSrc=d.agentSrc||''; deal.propSrc=d.propSrc||'';
         deal.accent=d.accent||'#aaa3cf'; deal.slideHeader=d.slideHeader||'';
         deal.soloAgent=!!d.soloAgent; deal.agentLabel=d.agentLabel||'';
-        deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
+        deal.coListing=!!d.coListing; deal.agent2Name=d.agent2Name||''; deal.agent2Src=d.agent2Src||'';
         if (d.agent2Src) { const img=new Image(); img.src=d.agent2Src; deal.agent2Img=img; img.onload=()=>{ renderCanvas(Math.floor(S.deals.indexOf(deal)/2)+1); }; }
         if (d.agentSrc) { const img=new Image(); img.src=d.agentSrc; deal.agentImg=img; img.onload=()=>{ const idx=S.deals.indexOf(deal)+1; renderCanvas(idx); }; }
         if (d.propSrc)  { const img=new Image(); img.src=d.propSrc;  deal.propImg=img;  img.onload=()=>{ const idx=S.deals.indexOf(deal)+1; renderCanvas(idx); if(idx===1)renderCanvas(0); }; }
@@ -3652,6 +3683,7 @@ async function generateCaption(promptName, btnEl, btnLabel) {
   // In one-agent mode the second property carries no agent photo of its own — the slide's
   // agent (held on its top deal) closed both, so the caption credits them on each line.
   const agentFor = (d, i) => {
+    if (d.coListing && d.agent2Name) return [d.agentName, d.agent2Name].filter(Boolean).join(' & ');
     if (d.agentName) return d.agentName;
     const top = S.deals[i - (i % 2)];
     return (top && top.soloAgent) ? (top.agentLabel || top.agentName || '') : '';
