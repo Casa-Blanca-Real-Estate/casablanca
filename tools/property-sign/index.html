@@ -82,6 +82,24 @@ canvas#cv { width:100%; max-width:400px; height:auto; display:block; box-shadow:
 .mail-row { display:flex; gap:8px; align-items:center; }
 .mail-row input { flex:1; min-width:0; }
 .mail-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+/* The roster search under the Name field. */
+.search { position:relative; }
+.results { position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:20; list-style:none; background:#fff; border:1px solid var(--cb-border); border-radius:4px; box-shadow:0 10px 24px rgba(0,0,0,.12); max-height:320px; overflow:auto; }
+.results li { padding:9px 12px; cursor:pointer; display:flex; flex-direction:column; gap:2px; }
+.results li + li { border-top:1px solid #efede8; }
+.results li.on, .results li:hover { background:#f8f7fc; }
+.results .r-name { font-size:14px; }
+.results .r-sub { font-size:11.5px; color:var(--cb-mid); }
+.results .r-sign { font-size:11px; font-weight:800; color:#2f6b3a; letter-spacing:.02em; }
+.results .r-empty { cursor:default; color:var(--cb-mid); font-size:12.5px; }
+.loaded { font-size:12px; line-height:1.45; color:var(--cb-mid); margin-top:6px; }
+.loaded .mini { margin-left:6px; }
+.saved-list { list-style:none; }
+.saved-list li { display:flex; align-items:center; gap:10px; padding:10px 0; font-size:13px; }
+.saved-list li + li { border-top:1px solid var(--cb-border); }
+.saved-list .s-main { flex:1; min-width:0; }
+.saved-list .s-sub { font-size:11.5px; color:var(--cb-mid); }
+.saved-list .mini { flex:none; }
 </style>
 </head>
 <body>
@@ -133,8 +151,12 @@ canvas#cv { width:100%; max-width:400px; height:auto; display:block; box-shadow:
           </div>
         </div>
       </details>
+      <details class="panel fold" id="savedPanel" hidden>
+        <summary><span class="panel-title">Saved signs</span><span class="hint" id="savedCount"></span></summary>
+        <div class="fold-body"><ul class="saved-list" id="savedList"></ul>
+          <span class="hint">Every download is saved here, with the agents it was made for. Load one to change it or download it again.</span></div>
+      </details>
     </div>
-
     <div class="preview-wrap">
       <div class="stage"><canvas id="cv" width="2400" height="3600" aria-label="Sign preview"></canvas></div>
       <div class="actions">
@@ -151,7 +173,10 @@ canvas#cv { width:100%; max-width:400px; height:auto; display:block; box-shadow:
 <template id="agentTpl">
   <div class="agent">
     <div class="agent-tag"></div>
-    <div class="field"><label>Name</label><input type="text" data-k="name" autocomplete="off" placeholder="First Last"></div>
+    <div class="field"><label>Name</label>
+      <div class="search"><input type="text" data-k="name" autocomplete="off" placeholder="First Last" role="combobox" aria-autocomplete="list" aria-expanded="false"><ul class="results" role="listbox" hidden></ul></div>
+      <div class="loaded" hidden></div>
+    </div>
     <div class="field">
       <div class="lbl-row"><label>Email</label><button type="button" class="mini" data-act="email">Edit</button></div>
       <input type="email" data-k="email" readonly placeholder="f.last@casa-blanca.com">
@@ -171,7 +196,10 @@ canvas#cv { width:100%; max-width:400px; height:auto; display:block; box-shadow:
 <script>
 (function(){
 'use strict';
-/* ==== CASANOVA: to connect when this joins the Studio (Kimani, 2026-11-05) ====
+/* ==== Connected to the Studio (2026-11-05), through /api/property-signs ====
+ * (tools-src/property-signs/api.ts). Signed in as the team, the five hooks below are live;
+ * signed out, or as anyone else, the tool works by hand as before.
+ * ---- Kimani's hand-off list (PR #129) ----
  * 1. Name is a search over the agent roster (CMS). Picking an agent fills name, email,
  *    phone and the square headshot (Name_SquareClean). Until the roster is imported,
  *    the email falls back to autoEmail() below.                      -> see buildAgents()
@@ -214,8 +242,8 @@ var F = {}, wordmark = new Image();
 var state = {
   layout:'single',
   agents:[
-    { name:'', email:'', emailCustom:false, phone:'', img:null },
-    { name:'', email:'', emailCustom:false, phone:'', img:null }
+    { name:'', email:'', emailCustom:false, phone:'', img:null, slug:null, rosterEmail:'' },
+    { name:'', email:'', emailCustom:false, phone:'', img:null, slug:null, rosterEmail:'' }
   ]
 };
 
@@ -227,8 +255,8 @@ function autoEmail(name){
   if (parts.length < 2) return '';
   return parts[0][0] + '.' + parts[parts.length-1].replace(/-/g,'') + '@casa-blanca.com';
 }
-// CASANOVA: replace with the agent's email from the CMS record when one is picked (note 1).
-function emailOf(a){ return a.emailCustom ? a.email.trim() : autoEmail(a.name); }
+// A roster pick brings the agent's email from the CMS; typed by hand, it's Casa's standard form (notes 1, 6).
+function emailOf(a){ return a.emailCustom ? a.email.trim() : (a.rosterEmail || autoEmail(a.name)); }
 function activeAgents(){ return state.layout === 'double' ? state.agents : state.agents.slice(0,1); }
 
 // ---- Text -> outline path (shared by preview and PDF) ------------------------
@@ -351,8 +379,34 @@ async function download(bytes, name, type){
   setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
   return 'saved';
 }
-// CASANOVA (note 3): persist the sign for the agent(s) on every download. No-op until the backend exists.
-function saveSignRecord(kind){ /* e.g. POST /api/property-signs { agents, address, kind, pdf } */ }
+// Note 3: every download saves the sign for its agent(s): the fields, the photos as used, the
+// address and the PDF. The same sign downloaded twice is one record; a change makes a new one.
+var current = null; // { id, fp, pdf } of the sign the form holds, once saved or loaded
+var imgSeq = 0;
+function fingerprint(){
+  return JSON.stringify({ l:state.layout, ad:$('addr').value.trim(), b:$('bleed').checked,
+    a:activeAgents().map(function(a){ return [a.slug, a.name.trim(), emailOf(a), a.emailCustom, a.phone.trim(), a.imgId || 0]; }) });
+}
+function photoData(a){ return a.img ? photoCanvas(a.img, photoExportPx(a.img)).toDataURL('image/jpeg', 0.9) : null; }
+async function saveSignRecord(kind, pdfBytes){
+  if (!Studio.on) return '';
+  try {
+    var fp = fingerprint();
+    if (!current || current.fp !== fp) {
+      var body = { action:'save', kind:kind, layout:state.layout, address:$('addr').value.trim(), bleed:$('bleed').checked,
+        agents:activeAgents().map(function(a){ return { slug:a.slug, name:a.name.trim(), email:emailOf(a), emailCustom:a.emailCustom, phone:a.phone.trim() }; }),
+        photos:activeAgents().map(photoData) };
+      var r = await Studio.call('', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(body) });
+      current = { id:(await r.json()).sign.id, fp:fp, pdf:false };
+    }
+    if (pdfBytes && !current.pdf) {
+      await Studio.call('?sign=' + current.id + '&pdf=1', { method:'POST', headers:{ 'Content-Type':'application/pdf' }, body:pdfBytes });
+      current.pdf = true;
+    }
+    Studio.refresh();
+    return ' Saved to the Studio.';
+  } catch(e){ console.warn('property sign: not saved', e); return ' It couldn\u2019t be saved to the Studio (' + e.message + ').'; }
+}
 function slug(s){ return (s||'agent').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function fileBase(){ return 'for-sale-sign-' + slug(activeAgents().map(function(a){ return a.name.trim().split(/\s+/).pop(); }).filter(Boolean).join('-')); }
 function setStatus(t){ $('status').textContent = t; }
@@ -360,10 +414,11 @@ function setStatus(t){ $('status').textContent = t; }
 $('pdfBtn').addEventListener('click', async function(){
   var b = this; b.disabled = true; setStatus('Building PDF…');
   try {
-    var r = await download(await makePdf(), fileBase() + '-24x36.pdf', 'application/pdf');
-    if (r === 'saved') saveSignRecord('pdf');
+    var pdf = await makePdf();
+    var r = await download(pdf, fileBase() + '-24x36.pdf', 'application/pdf');
+    var kept = r === 'saved' ? await saveSignRecord('pdf', pdf) : '';
     var missing = activeAgents().some(function(a){ return !a.img; });
-    setStatus(r === 'declined' ? 'Download cancelled.' : (missing ? 'PDF saved. A headshot is still missing.' : 'PDF saved.'));
+    setStatus(r === 'declined' ? 'Download cancelled.' : (missing ? 'PDF saved. A headshot is still missing.' : 'PDF saved.') + kept);
   } catch(e){ console.error(e); setStatus('Could not save the PDF: ' + e.message); }
   b.disabled = false;
 });
@@ -372,16 +427,16 @@ $('pngBtn').addEventListener('click', async function(){
   try {
     var bl = await new Promise(function(res){ cv.toBlob(res, 'image/png'); });
     var r = await download(new Uint8Array(await bl.arrayBuffer()), fileBase() + '.png', 'image/png');
-    if (r === 'saved') saveSignRecord('png');
-    setStatus(r === 'declined' ? 'Download cancelled.' : 'PNG saved.');
+    var kept = r === 'saved' ? await saveSignRecord('png') : '';
+    setStatus(r === 'declined' ? 'Download cancelled.' : 'PNG saved.' + kept);
   } catch(e){ setStatus('Could not save the PNG: ' + e.message); }
   b.disabled = false;
 });
 
 // ---- Order email --------------------------------------------------------------
 // The default message is a template: {agents} and {address} are filled in.
-// CASANOVA: the saved default lives in this browser's localStorage for now. Move it to
-// the backend (Blobs or the CMS) so it follows Kimani across browsers.
+// Note 5: signed in as the team, the saved default is the Studio's, so it follows Kimani
+// between browsers. This browser's copy (localStorage) stays as the fallback when signed out.
 var TPL_KEY = 'cb_property_sign_mail_tpl';
 var TPL_ORIGINAL =
   'Hi Matthew,\n\n' +
@@ -390,9 +445,13 @@ var TPL_ORIGINAL =
   'Same as before: a 2\'x3\' double-sided framed aluminum sign on an 8\' aluminum post, delivered and installed in the front lawn, with the same artwork on both sides. I\'ve attached the print-ready PDF and a current photo of the property exterior.\n\n' +
   'How soon could you get it made, delivered and installed?\n\n' +
   'Thanks so much!\n\nBest,\n- Kimani';
-function getTpl(){ try { return localStorage.getItem(TPL_KEY) || TPL_ORIGINAL; } catch(e){ return TPL_ORIGINAL; } }
+var serverTpl; // undefined until the Studio answers; null when it has none saved
+function getTpl(){
+  if (serverTpl !== undefined) return serverTpl || TPL_ORIGINAL;
+  try { return localStorage.getItem(TPL_KEY) || TPL_ORIGINAL; } catch(e){ return TPL_ORIGINAL; }
+}
 var mailEdited = false, ccEdited = false;
-var MAIL_TO = 'matthew@alpsigns.com'; // ALP Signs. CASANOVA: vendor contact could live in settings.
+var MAIL_TO = 'matthew@alpsigns.com'; // ALP Signs. Note 7 (optional): could become a Studio setting if the shop changes.
 function agentNames(){
   var n = activeAgents().map(function(a){ return a.name.trim(); }).filter(Boolean);
   return n.length ? n.join(' and ') : 'our agent';
@@ -410,10 +469,17 @@ function gmailLink(){
 }
 $('tplOpen').addEventListener('click', function(){ $('tplText').value = getTpl(); $('tplBox').hidden = false; $('tplText').focus(); });
 $('tplCancel').addEventListener('click', function(){ $('tplBox').hidden = true; });
-$('tplSave').addEventListener('click', function(){
-  var t = $('tplText').value;
-  try { if (t.trim() && t !== TPL_ORIGINAL) localStorage.setItem(TPL_KEY, t); else localStorage.removeItem(TPL_KEY); } catch(e){}
-  $('tplBox').hidden = true; mailEdited = false; updateMail(); setStatus('Default message saved.');
+$('tplSave').addEventListener('click', async function(){
+  var t = $('tplText').value, keep = t.trim() && t !== TPL_ORIGINAL ? t : '';
+  try { if (keep) localStorage.setItem(TPL_KEY, keep); else localStorage.removeItem(TPL_KEY); } catch(e){}
+  var where = 'in this browser';
+  if (Studio.on) {
+    try {
+      await Studio.call('', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ action:'template', text:keep }) });
+      serverTpl = keep || null; where = 'for the Studio';
+    } catch(e){ where = 'in this browser only (the Studio didn\u2019t answer)'; }
+  }
+  $('tplBox').hidden = true; mailEdited = false; updateMail(); setStatus('Default message saved ' + where + '.');
 });
 $('tplReset').addEventListener('click', function(){ $('tplText').value = TPL_ORIGINAL; });
 $('mBody').addEventListener('input', function(){ mailEdited = true; gmailLink(); });
@@ -428,12 +494,144 @@ document.addEventListener('click', function(e){
 });
 
 // ---- Agent fields ---------------------------------------------------------------
-// Casa's phone format: 917.388.0550. CASANOVA: use for CMS phones too (note 2).
+// Casa's phone format: 917.388.0550. The server formats the CMS's phones the same way (note 2).
 function formatPhone(v){
   var d = String(v).replace(/\D/g,''); if (d.length === 11 && d[0] === '1') d = d.slice(1);
   return d.length === 10 ? d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6) : '';
 }
-// CASANOVA: the Name input becomes the roster search (notes 1 and 4).
+// ---- The Studio: roster search, saved signs (notes 1, 2, 4, 6) -------------------
+var Studio = {
+  on:false, agents:[], signs:[],
+  call: async function(qs, init){
+    var t = await window.CBStudio.token();
+    if (!t) throw new Error('signed out');
+    init = init || {}; init.headers = Object.assign({ Authorization:'Bearer ' + t }, init.headers || {});
+    var r = await fetch('/api/property-signs' + qs, init);
+    if (!r.ok) { var m = ''; try { m = (await r.json()).message; } catch(e){} throw new Error(m || ('HTTP ' + r.status)); }
+    return r;
+  },
+  load: async function(){
+    var r = await Studio.call('');
+    var d = await r.json();
+    Studio.agents = d.agents || []; Studio.signs = d.signs || [];
+    Studio.on = true;
+    return d;
+  },
+  refresh: function(){ Studio.load().then(renderSaved, function(){}); },
+  image: async function(qs){
+    var b = await (await Studio.call(qs)).blob();
+    return await new Promise(function(res, rej){ var im = new Image(); im.onload = function(){ res(im); }; im.onerror = rej; im.src = URL.createObjectURL(b); });
+  }
+};
+function fold(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function fmtDate(iso){ try { return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); } catch(e){ return iso; } }
+function matches(q){
+  q = fold(q.trim()); if (!q) return [];
+  var words = q.split(/\s+/);
+  return Studio.agents.filter(function(r){
+    var n = fold(r.name), parts = n.split(/[\s-]+/);
+    return n.indexOf(q) === 0 || words.every(function(w){ return parts.some(function(p){ return p.indexOf(w) === 0; }); }) || fold(r.email).indexOf(q) === 0;
+  }).slice(0, 8);
+}
+async function pickAgent(i, r){
+  var a = state.agents[i];
+  // Note 4: an agent with a sign already loads that sign back; one without fills from the roster.
+  if (r.sign) { await loadSign(r.sign.id, i, r); return; }
+  fillFromRoster(a, r);
+  buildAgents(); render();
+  if (r.photo) {
+    setStatus('Loading ' + r.name + '\u2019s headshot\u2026');
+    try { a.img = await Studio.image('?photo=' + encodeURIComponent(r.slug)); a.imgName = r.name + ' (Studio headshot)'; a.imgId = ++imgSeq; setStatus(''); }
+    catch(e){ setStatus('Couldn\u2019t load ' + r.name + '\u2019s headshot. Add it by hand.'); }
+    buildAgents(); render();
+  } else setStatus(r.name + ' has no square headshot in the Studio yet. Add it by hand.');
+}
+function fillFromRoster(a, r){
+  a.name = r.name; a.slug = r.slug; a.rosterEmail = r.email || ''; a.emailCustom = false; a.email = '';
+  a.phone = r.phone || ''; a.img = null; a.imgName = ''; a.imgId = 0; a.loaded = null;
+}
+async function loadSign(id, pickedAt, picked){
+  setStatus('Loading the saved sign\u2026');
+  try {
+    var rec = (await (await Studio.call('?sign=' + encodeURIComponent(id))).json()).sign;
+    state.layout = rec.layout;
+    var photos = await Promise.all(rec.agents.map(function(_, i){
+      return rec.photos[i] ? Studio.image('?sign=' + rec.id + '&photo=' + i).catch(function(){ return null; }) : null;
+    }));
+    rec.agents.forEach(function(s, i){
+      var a = state.agents[i];
+      var r = s.slug && Studio.agents.filter(function(x){ return x.slug === s.slug; })[0];
+      a.name = s.name; a.slug = s.slug; a.rosterEmail = r ? r.email : (s.emailCustom ? '' : s.email);
+      a.emailCustom = s.emailCustom; a.email = s.email; a.phone = s.phone;
+      a.img = photos[i]; a.imgName = photos[i] ? 'From the saved sign' : ''; a.imgId = photos[i] ? ++imgSeq : 0;
+      a.loaded = null;
+    });
+    var at = typeof pickedAt === 'number' ? pickedAt : 0;
+    state.agents[at].loaded = { id:rec.id, at:rec.at, address:rec.address, picked:picked || null };
+    $('addr').value = rec.address || ''; $('bleed').checked = !!rec.bleed;
+    ccEdited = false; $('ccReset').hidden = true;
+    setSeg('layout', state.layout); buildAgents(); render();
+    current = { id:rec.id, fp:fingerprint(), pdf:rec.pdf };
+    setStatus('Loaded the sign made ' + fmtDate(rec.at) + '.');
+  } catch(e){
+    setStatus('Couldn\u2019t load the saved sign (' + e.message + ').');
+    if (picked) pickAgent(pickedAt, Object.assign({}, picked, { sign:null }));
+  }
+}
+function renderSaved(){
+  var list = $('savedList'); if (!Studio.on) return;
+  $('savedPanel').hidden = !Studio.signs.length;
+  $('savedCount').textContent = Studio.signs.length ? (Studio.signs.length >= 60 ? 'Latest 60' : Studio.signs.length + ' made') : '';
+  list.innerHTML = '';
+  Studio.signs.slice(0, 25).forEach(function(s){
+    var li = document.createElement('li');
+    li.innerHTML = '<div class="s-main"><div class="s-name"></div><div class="s-sub"></div></div>';
+    li.querySelector('.s-name').textContent = s.agents.map(function(a){ return a.name; }).join(' & ');
+    li.querySelector('.s-sub').textContent = fmtDate(s.at) + (s.address ? ' \u00b7 ' + s.address : '') + (s.layout === 'double' ? ' \u00b7 Double' : '');
+    var load = document.createElement('button'); load.type = 'button'; load.className = 'mini'; load.textContent = 'Load';
+    load.onclick = function(){ loadSign(s.id); window.scrollTo({ top:0, behavior:'smooth' }); };
+    li.appendChild(load);
+    if (s.pdf) {
+      var pdf = document.createElement('button'); pdf.type = 'button'; pdf.className = 'mini'; pdf.textContent = 'PDF';
+      pdf.onclick = async function(){
+        try { var b = await (await Studio.call('?sign=' + s.id + '&pdf=1')).arrayBuffer(); await download(new Uint8Array(b), 'for-sale-sign-' + slug(s.agents.map(function(a){ return a.name.split(/\s+/).pop(); }).join('-')) + '-24x36.pdf', 'application/pdf'); }
+        catch(e){ setStatus('Couldn\u2019t fetch that PDF (' + e.message + ').'); }
+      };
+      li.appendChild(pdf);
+    }
+    list.appendChild(li);
+  });
+}
+function wireSearch(i, a, nm){
+  var box = nm.parentNode.querySelector('.results'), at = -1, found = [];
+  var close = function(){ box.hidden = true; nm.setAttribute('aria-expanded', 'false'); at = -1; };
+  var show = function(){
+    if (!Studio.on) return close();
+    found = matches(nm.value); box.innerHTML = ''; at = -1;
+    if (!nm.value.trim()) return close();
+    if (!found.length) box.innerHTML = '<li class="r-empty">Not in the Studio\u2019s roster. Type the details by hand.</li>';
+    found.forEach(function(r){
+      var li = document.createElement('li'); li.setAttribute('role', 'option');
+      li.innerHTML = '<span class="r-name"></span><span class="r-sub"></span>';
+      li.querySelector('.r-name').textContent = r.name;
+      li.querySelector('.r-sub').textContent = [r.email, r.phone].filter(Boolean).join(' \u00b7 ') || 'No contact details in the CMS';
+      if (r.sign) { var c = document.createElement('span'); c.className = 'r-sign'; c.textContent = '\u2713 Sign made ' + fmtDate(r.sign.at); li.appendChild(c); }
+      li.addEventListener('mousedown', function(e){ e.preventDefault(); close(); pickAgent(i, r); });
+      box.appendChild(li);
+    });
+    box.hidden = false; nm.setAttribute('aria-expanded', 'true');
+  };
+  var mark = function(){ [].forEach.call(box.children, function(li, k){ li.classList.toggle('on', k === at); if (k === at) li.scrollIntoView({ block:'nearest' }); }); };
+  nm.addEventListener('input', show);
+  nm.addEventListener('blur', function(){ setTimeout(close, 120); });
+  nm.addEventListener('keydown', function(e){
+    if (box.hidden || !found.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); at = (at + 1) % found.length; mark(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); at = (at - 1 + found.length) % found.length; mark(); }
+    else if (e.key === 'Enter' && at >= 0) { e.preventDefault(); var r = found[at]; close(); pickAgent(i, r); }
+    else if (e.key === 'Escape') close();
+  });
+}
 function buildAgents(){
   var host = $('agents'); host.innerHTML = '';
   activeAgents().forEach(function(a, i){
@@ -443,11 +641,29 @@ function buildAgents(){
     var nm = node.querySelector('[data-k=name]'), em = node.querySelector('[data-k=email]'), ph = node.querySelector('[data-k=phone]'), eb = node.querySelector('[data-act=email]');
     [['name',nm],['email',em],['phone',ph]].forEach(function(p){ p[1].id = 'a' + i + '-' + p[0]; p[1].closest('.field').querySelector('label').htmlFor = p[1].id; });
     var syncEmail = function(){
-      em.readOnly = !a.emailCustom; eb.textContent = a.emailCustom ? 'Use standard' : 'Edit';
-      if (!a.emailCustom) em.value = autoEmail(a.name);
+      em.readOnly = !a.emailCustom; eb.textContent = a.emailCustom ? (a.rosterEmail ? 'Use CMS email' : 'Use standard') : 'Edit';
+      if (!a.emailCustom) em.value = emailOf(a);
     };
-    nm.value = a.name; ph.value = a.phone; em.value = a.emailCustom ? a.email : autoEmail(a.name); syncEmail();
-    nm.addEventListener('input', function(){ a.name = nm.value; syncEmail(); render(); });
+    nm.value = a.name; ph.value = a.phone; em.value = emailOf(a); syncEmail();
+    if (Studio.on) nm.placeholder = 'Search the roster, or type a name';
+    // Typing a name again lets go of the roster pick (and its CMS email).
+    nm.addEventListener('input', function(){ a.name = nm.value; a.slug = null; a.rosterEmail = ''; syncEmail(); render(); });
+    wireSearch(i, a, nm);
+    var ld = node.querySelector('.loaded');
+    if (a.loaded) {
+      ld.textContent = 'Loaded the sign made ' + fmtDate(a.loaded.at) + (a.loaded.address ? ' for ' + a.loaded.address : '') + '.';
+      if (a.loaded.picked) {
+        var fresh = document.createElement('button'); fresh.type = 'button'; fresh.className = 'mini'; fresh.textContent = 'Start a new one';
+        var picked = a.loaded.picked;
+        fresh.onclick = function(){
+          current = null; $('addr').value = ''; state.layout = 'single'; setSeg('layout', 'single');
+          state.agents.forEach(function(x){ fillFromRoster(x, { name:'', slug:null, email:'', phone:'' }); });
+          pickAgent(0, Object.assign({}, picked, { sign:null }));
+        };
+        ld.appendChild(fresh);
+      }
+      ld.hidden = false;
+    }
     em.addEventListener('input', function(){ a.email = em.value; render(); });
     ph.addEventListener('input', function(){
       // Any digits, dashes, spaces or brackets become xxx.xxx.xxxx as they're typed.
@@ -456,7 +672,7 @@ function buildAgents(){
       render();
     });
     eb.addEventListener('click', function(){
-      a.emailCustom = !a.emailCustom; if (a.emailCustom) a.email = em.value || autoEmail(a.name);
+      a.emailCustom = !a.emailCustom; if (a.emailCustom) a.email = em.value || emailOf(a);
       syncEmail(); render(); if (a.emailCustom) em.focus();
     });
     var drop = node.querySelector('.drop'), file = node.querySelector('input[type=file]'), warn = node.querySelector('.warn');
@@ -471,7 +687,7 @@ function buildAgents(){
     };
     var load = function(f){
       var r = new FileReader();
-      r.onload = function(){ var im = new Image(); im.onload = function(){ a.img = im; a.imgName = f.name; showFile(); render(); }; im.src = r.result; };
+      r.onload = function(){ var im = new Image(); im.onload = function(){ a.img = im; a.imgName = f.name; a.imgId = ++imgSeq; showFile(); render(); }; im.src = r.result; };
       r.readAsDataURL(f);
     };
     drop.addEventListener('click', function(){ file.click(); });
@@ -502,9 +718,24 @@ function boot(){
   wordmark.onload = render; wordmark.src = WORDMARK_URI;
   $('pdfBtn').disabled = $('pngBtn').disabled = false; setStatus('');
   render();
+  connectStudio();
+}
+// Signed in as the team, the roster search, saved signs and shared default message come on.
+// Signed out (the Studio's creative tools are open for now), or as anyone else, it's all by hand.
+function connectStudio(){
+  if (!window.CBStudio) return;
+  window.CBStudio.ready.then(function(user){
+    if (!user || !window.CBStudio.isTeam()) return;
+    return Studio.load().then(function(d){
+      serverTpl = d.template ? d.template.text : null;
+      if (!mailEdited) updateMail();
+      renderSaved();
+      [].forEach.call(document.querySelectorAll('[data-k=name]'), function(n){ n.placeholder = 'Search the roster, or type a name'; });
+    });
+  }).catch(function(e){ console.warn('property sign: the Studio roster is unavailable', e); });
 }
 // Test hook: set headshots from a URL without the file picker.
-window.__sign = { state:state, render:render, makePdf:makePdf, buildAgents:buildAgents,
+window.__sign = { state:state, render:render, makePdf:makePdf, buildAgents:buildAgents, Studio:Studio,
   setPhoto:function(i, url){ return new Promise(function(res){ var im = new Image(); im.onload = function(){ state.agents[i].img = im; buildAgents(); render(); res(); }; im.src = url; }); } };
 if (document.readyState === 'complete') boot(); else window.addEventListener('load', boot);
 })();

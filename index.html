@@ -719,6 +719,10 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
     bizcard:{name:'Business card',icon:'print',href:'tools/business-card/',
       blurb:'Your details on the house card, ready for the printer.',
       caption:'Front + back · 3.5 × 2 in, print-ready',sample:'assets/outputs/bizcard.png'},
+    /* Team only: the roster search and saved signs need the team's sign-in (/api/property-signs). */
+    propertysign:{name:'Property sign',icon:'print',href:'tools/property-sign/',badge:'Team',team:true,
+      blurb:'The 24 × 36 For Sale lawn sign, the agent filled in from the roster.',
+      caption:'24 × 36 in print PDF · order email',sample:'assets/outputs/propertysign.png'},
     guide:{name:'Ordering guide',icon:'print',href:'assets/biz-card-ordering-guide.pdf',badge:'PDF',ext:true,
       blurb:'How to order printed cards — specs and vendor steps.',
       caption:'PDF · specs and vendor steps',sample:null,phLabel:'Opens the PDF'},
@@ -736,7 +740,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
       blurb:'One template plus a JSON file per agent, built into a page each.',
       caption:'Sample build · placeholder agent',sample:null,phLabel:'Opens a generated page'}
   };
-  var ALL_KEYS=['editorial','closed','forsale','incontract','watermarker','bizcard','guide','profilepic','agentcms','agentsites'];
+  var ALL_KEYS=['editorial','closed','forsale','incontract','watermarker','bizcard','propertysign','guide','profilepic','agentcms','agentsites'];
 
   /* Abstract slide sketches. Drawn at full size, then scaled by half — see buildMotif. */
   var MOTIF={
@@ -755,6 +759,8 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
     bizcard:{frames:[
       {w:58,h:92,rows:[{h:12,w:'46%',c:'bar',self:'flex-start'},{h:5,w:'70%',c:'bar',push:1},{h:3,w:'90%',c:'soft'},{h:3,w:'60%',c:'soft'}]},
       {w:58,h:92,center:1,rows:[{h:10,w:'62%',c:'bar',self:'center'}]}]},
+    propertysign:{frames:[
+      {w:58,h:86,center:1,rows:[{h:5,w:'52%',c:'bar',self:'center'},{h:10,w:'60%',c:'bar',self:'center'},{h:22,w:'22px',c:'soft',self:'center'},{h:3,w:'50%',c:'soft',self:'center',push:1}]}]},
     guide:{frames:[
       {w:68,h:86,rows:[{h:6,w:'60%',c:'bar'},{h:3,c:'soft'},{h:3,c:'soft'},{h:3,w:'80%',c:'soft'},{h:3,c:'soft'},{h:3,w:'62%',c:'soft'}]}]},
     profilepic:{frames:[
@@ -773,8 +779,8 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
       keys:['editorial','closed','forsale','bizcard','profilepic'],next:true},
     {id:'instagram',heading:'Instagram & content',sub:'A listing goes in, a ready-to-post set comes out.',
       keys:['editorial','closed','forsale','incontract'],next:true},
-    {id:'print',heading:'Print & forms',sub:'Cards that get printed, and requests that reach the studio.',
-      keys:['bizcard','guide']},
+    {id:'print',heading:'Print & forms',sub:'Cards and signs that get printed, and requests that reach the studio.',
+      keys:['bizcard','propertysign','guide']},
     {id:'photos',heading:'Photos & headshots',sub:'Watermarks on or off, and headshots cut to the house standard.',
       keys:['watermarker','profilepic'],
       note:'Team badge means sign-in only. Everyone else never sees that card.'},
