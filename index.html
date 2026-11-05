@@ -456,7 +456,7 @@
       </a>
       <a class="tab" href="#print" data-tab="print" title="Print &amp; forms"><span>Print &amp; forms</span></a>
       <a class="tab" href="#photos" data-tab="photos" title="Photos"><span>Photos</span></a>
-      <a class="tab" id="webTab" href="#web" data-tab="web" title="Agent sites" hidden><span>Agent sites</span></a>
+      <a class="tab" id="webTab" href="#web" data-tab="web" title="CMS" hidden><span>CMS</span></a>
     </div>
   </nav>
 
@@ -725,11 +725,11 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
     profilepic:{name:'Profile pic',icon:'photo',href:'tools/profile-pic/',badge:'Team',team:true,
       blurb:'Branded agent headshots, background removed in-browser.',
       caption:'Headshot cut to the taupe standard',sample:'assets/outputs/profilepic.png'},
-    /* Needs the CMS token (Netlify env CB_CMS_TOKEN) — the dashboard sign-in is
-       not what protects it. See docs/agent-cms/security-model.md. */
+    /* Needs the CMS token (Netlify env CB_CMS_TOKEN); the team's Studio sign-in fetches it
+       (/api/studio/keys). See docs/agent-cms/security-model.md. */
     agentcms:{name:'Agent CMS',icon:'web',href:'tools/agent-cms/',badge:'Team',team:true,
       blurb:'Create, edit, preview and publish an agent’s site without touching JSON.',
-      caption:'Roster · draft → preview → live',sample:null,phLabel:'Asks for the CMS token'},
+      caption:'Roster · draft → preview → live',sample:null,phLabel:'Opens with your Studio sign-in'},
     /* Early prototype, not a shipped tool — team-gated so it stays out of the agent-facing list.
        Opens a generated sample page, not the directory index. See docs/dispatch/ for the port. */
     agentsites:{name:'Agent sites',icon:'web',href:'agents/claire-dubois/',badge:'Prototype',team:true,
@@ -778,9 +778,9 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
     {id:'photos',heading:'Photos & headshots',sub:'Watermarks on or off, and headshots cut to the house standard.',
       keys:['watermarker','profilepic'],
       note:'Team badge means sign-in only. Everyone else never sees that card.'},
-    {id:'web',heading:'Agent sites & web',sub:'Individual agent pages, built from one template.',
+    {id:'web',heading:'Agent CMS',sub:'Individual agent pages, built from one template.',
       keys:['agentcms','agentsites'],
-      note:'The CMS is where agent content is written and published; it needs the CMS token, not just a dashboard sign-in. The prototype below is an old test build on a generic design, kept visible while the visual port is scoped.'}
+      note:'The CMS is where every agent’s record lives, and where their site is written and published. Signed in as the team, it opens straight away. The prototype below is an old test build on a generic design, kept visible while the visual port is scoped.'}
   ];
   var TABS_BY_ID={}; TABS.forEach(function(t){TABS_BY_ID[t.id]=t;});
   var state={tab:'home'};

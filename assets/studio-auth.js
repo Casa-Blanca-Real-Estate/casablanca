@@ -26,6 +26,9 @@
      token()       Promise of the access token, renewed when near its end
      profile()     Promise of the agent's profile from Casa's roster (name, firstName,
                    title, email, phone, photo) or null; /api/comp-report/agent-card
+     keys()        Promise of {cms, pics}: the agent CMS's and the profile-pic roster's tokens, for
+                   the team, from /api/studio/keys, remembered as cb_cms_token / cb_pics_token so
+                   nobody pastes them; null when this visit isn't signed in as the team
      signOut()     ends the session everywhere in this browser and goes to sign in
 
    For the scripts written before it, a team member's email is also kept in
@@ -142,6 +145,24 @@
         return null;
       });
       return api._profile;
+    },
+    // Asked once a page, and only of the team: an agent's visit never calls it.
+    keys: function () {
+      if (api._keys) return api._keys;
+      api._keys = api.ready.then(function (user) {
+        if (!user || user.guest || !isTeamUser(user)) return null;
+        return token().then(function (t) {
+          if (!t) return null;
+          return fetch('/api/studio/keys', { headers: { 'X-Studio-Token': t }, cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; });
+        });
+      }).then(function (k) {
+        if (!k) return null;
+        if (k.cms) set(local, 'cb_cms_token', k.cms);
+        if (k.pics) set(local, 'cb_pics_token', k.pics);
+        return { cms: k.cms || null, pics: k.pics || null };
+      }, function () { api._keys = null; return null; });
+      return api._keys;
     },
     signOut: function () {
       var jwt = cookie('nf_jwt');

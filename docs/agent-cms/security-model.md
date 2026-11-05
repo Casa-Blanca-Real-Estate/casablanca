@@ -47,12 +47,19 @@ and out of scope here, but they are the reason "the dashboard has sign-in" must 
 - Reads are gated too, not just writes. The records hold agents' direct phone numbers and email
   addresses; an unauthenticated roster read would be a contact-list scrape.
 
-The token is typed by the human into the CMS and held in **`localStorage`**: the browser remembers
-it across tabs and visits until **Lock** in the CMS, a rejected request, or the studio's sign-out
-forgets it. It is never in the URL and never in the committed HTML. (Until 2026-10-28 it lived in
+The token is held in **`localStorage`**: the browser remembers it across tabs and visits until a
+rejected request or the studio's sign-out forgets it. **Since 2026-11-05 nobody types it** when signed
+in to the Studio as the team: `GET /api/studio/keys` (`tools-src/comp-report/server/api/studio-keys.ts`)
+checks the Studio's Identity session the way every comp report call does, and hands `CB_CMS_TOKEN`
+and `CB_PICS_TOKEN` to a comp report admin (`CR_ADMIN_EMAILS`) or one of the four old team emails,
+and to nobody else: never a guest, the test user or an agent. Kimani asked for it ("I do not want to
+put in a CMS token every single time"). It widens who can hold the tokens from "whoever was told
+them" to "whoever can sign in as an admin", which is the same set of people. Signed out, the CMS
+still asks for the token, and the corner offers to forget it behind a confirm (it used to lock on
+one click, which read as the sign-in button). It is never in the URL and never in the committed HTML. (Until 2026-10-28 it lived in
 `sessionStorage` and died with the tab. Kimani asked for it to stay — "this ain't Guantanamo Bay" —
 since he is the one user and was re-pasting it in every tab. The cost is that the token now sits on
-that machine's disk; a shared or borrowed computer should use Lock.) The roster token,
+that machine's disk; a shared or borrowed computer should sign out of the Studio.) The roster token,
 `CB_PICS_TOKEN`, is held the same way in the profile pic generator.
 
 **The CMS token reads one thing from the photo side.** `agent-pics` takes `CB_CMS_TOKEN` for a

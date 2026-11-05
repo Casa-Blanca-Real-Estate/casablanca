@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent sites — Casa Blanca Studio</title>
+<title>Agent CMS — Casa Blanca Studio</title>
 <meta name="description" content="Create, edit, preview and publish Casa Blanca agent sites.">
 <meta name="robots" content="noindex, nofollow">
 <script>
@@ -387,7 +387,7 @@
       <a class="home" href="../../index.html#web"><span aria-hidden="true">&lsaquo;</span> Studio</a>
       <a class="lockup" href="#/">
         <img src="../../assets/cb-logo-white.png" alt="Casa Blanca">
-        <span>Agent sites</span>
+        <span>Agent CMS</span>
       </a>
     </div>
     <div class="hdr-r">
@@ -437,8 +437,9 @@
     <p class="tight">This tool writes the public sites of real agents, so the backend checks a
       shared secret on every request &mdash; the dashboard&rsquo;s email sign-in is a UI affordance
       and doesn&rsquo;t protect anything.</p>
-    <p>Paste the CMS token (Netlify env <code>CB_CMS_TOKEN</code>). This browser remembers it, in every
-      tab, until you lock the CMS or sign out of the studio.</p>
+    <p>Signed in to the Studio as the team, you never see this: the token comes with the sign-in.
+      Otherwise paste it (Netlify env <code>CB_CMS_TOKEN</code>). This browser remembers it, in every
+      tab, until you sign out of the Studio.</p>
     <label for="tokenInput">CMS token</label>
     <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
     <div class="err" id="tokenErr"></div>
@@ -539,8 +540,9 @@
 
    All data-derived DOM is built with textContent / createElement,
    never innerHTML. The CMS token lives in localStorage, remembered
-   across tabs until Lock or the studio's sign-out clears it (Kimani's
-   notebook, 2026-10-27), and any script on this origin could read
+   across tabs until the studio's sign-out clears it (Kimani's
+   notebook, 2026-10-27). The team's Studio sign-in fetches it from
+   /api/studio/keys, so nobody pastes it (2026-11-05). Any script on this origin could read
    it, so the page loads nothing third-party. See security-model.md §4.
    ═══════════════════════════════════════════════════════════════ */
 
@@ -557,6 +559,18 @@ function tok(){try{return localStorage.getItem(TOKEN_KEY)||'';}catch(e){return '
 function setTok(v){try{v?localStorage.setItem(TOKEN_KEY,v):localStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(TOKEN_KEY);}catch(e){}}
 // A token typed before it was remembered lives in this tab's sessionStorage: keep it.
 try{var older=sessionStorage.getItem(TOKEN_KEY);if(older&&!tok())setTok(older);}catch(e){}
+// Signed in to the Studio as the team, the token comes from the server (/api/studio/keys) and
+// nobody pastes it (Kimani, 2026-11-05). Asked at most once on load and once after a rejection.
+var studioAsked={first:false,again:false};
+function fromStudio(again){
+  var k=again?'again':'first';
+  if(studioAsked[k]||!window.CBStudio||!CBStudio.keys)return Promise.resolve(false);
+  studioAsked[k]=true;
+  if(again)CBStudio._keys=null;
+  return CBStudio.keys().then(function(keys){ if(keys&&keys.cms){ setTok(keys.cms); paintAcct(); return true; } return false; },
+    function(){ return false; });
+}
+function studioName(){var u=window.CBStudio&&CBStudio.user;return u?(u.name||u.email||''):'';}
 
 /* ───────────────────────── theme (dashboard .themebtn) ───────────────────────── */
 var SUN='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></svg>';
@@ -582,7 +596,7 @@ function api(url,opts){
     .then(function(r){
       return r.json().catch(function(){return {error:'The backend returned something that isn’t JSON (HTTP '+r.status+').'};})
         .then(function(d){
-          if(r.status===401){setTok('');openToken('That token was rejected.');throw new Error('unauthorized');}
+          if(r.status===401){setTok('');fromStudio(true).then(function(ok){ if(ok)route(); else openToken('That token was rejected.'); });throw new Error('unauthorized');}
           if(!r.ok)throw new Error((d&&d.message)||(d&&d.error)||('Request failed ('+r.status+')'));
           return d;
         });
@@ -850,7 +864,7 @@ function renderRoster(){
       'cannot kick a Netlify build — set NETLIFY_BUILD_HOOK in the site environment, or rebuild by hand.'));
     c.appendChild(warn);
   }
-  c.appendChild(el('div','footline','Casa Blanca Studio · agent sites'));
+  c.appendChild(el('div','footline','Casa Blanca Studio · Agent CMS'));
 }
 
 function rosterRow(r){
@@ -859,6 +873,7 @@ function rosterRow(r){
   var face=faceEl(r.heroPhoto,r.name); left.appendChild(face);
   // No hero photo yet: the one saved from the profile pic generator, once the row is on screen.
   if(!r.heroPhoto&&r.photo)lazyFace(face,r.slug,r.photo);
+  else if(!r.heroPhoto)libraryFace(face,r.slug,r.formerNames);
 
   var txt=el('div','row-txt');
   var tr=el('div','titlerow');
@@ -1115,6 +1130,32 @@ function picURL(slug,f){
   return picURLs[f.key];
 }
 var faceIO=null;
+/* The studio's headshot library (assets/agents/agents.json, the carousels' "Agent Library"):
+   where the photos of the 2026-11-05 roster import actually are. The import recorded those
+   agents as photographed and placed, but copied no files into the store, so without this the
+   CMS showed no faces. A library file is named <slug>.<ext>, the slug the import used; a former
+   name ("Emma Caldicott" → emma-c) finds a renamed agent's old photo. */
+var LIB=null;
+function library(){
+  if(!LIB)LIB=fetch('../../assets/agents/agents.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():[];})
+    .then(function(list){var m={};(list||[]).forEach(function(x){
+      var f=String(x&&x.file||''), k=f.replace(/^.*\//,'').replace(/\.[a-z0-9]+$/i,'');
+      if(k&&!m[k])m[k]='../../assets/agents/'+f;});return m;},function(){return {};});
+  return LIB;
+}
+function nameSlug(n){var w=String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z]+/g)||[];
+  return w.length>1?w[0]+'-'+w[w.length-1][0]:'';}
+function libraryPhoto(slug,formerNames){
+  return library().then(function(m){
+    if(m[slug])return m[slug];
+    var hit=(formerNames||[]).map(nameSlug).filter(function(k){return k&&m[k];})[0];
+    return hit?m[hit]:'';
+  });
+}
+function libraryFace(face,slug,formerNames){
+  libraryPhoto(slug,formerNames).then(function(u){ if(!u||face.querySelector('img'))return;
+    face.title='From the studio’s headshot library'; face.textContent=''; var i=el('img'); i.src=u; i.alt=''; i.loading='lazy'; face.appendChild(i); });
+}
 function lazyFace(face,slug,f){
   face.title='Saved from the profile pic generator';
   var show=function(){ picURL(slug,f).then(function(u){ face.textContent=''; var i=el('img'); i.src=u; i.alt=''; face.appendChild(i); },function(){}); };
@@ -1150,7 +1191,17 @@ function photosEl(){
   bd.appendChild(top);
 
   if(!outs.length){
+    var libBox=el('div');
+    bd.appendChild(libBox);
     bd.appendChild(el('div','sect-note','Generate the set in the profile pic generator, then “Save to the roster” under its downloads, picking this agent.'));
+    libraryPhoto(slug,get(S.record.draft,'identity.formerNames')).then(function(u){
+      if(!u)return;
+      var grid=el('div','pics'), tile=el('a','pic'); tile.href=u; tile.download=''; tile.title='Download the library photo';
+      var box=el('div','pic-img'), i=el('img'); i.src=u; i.alt='Headshot'; box.appendChild(i);
+      tile.appendChild(box); tile.appendChild(el('div','pic-cap','Library headshot'));
+      grid.appendChild(tile); libBox.appendChild(grid);
+      libBox.appendChild(el('div','sect-note','The headshot the carousels use, from the studio’s library. The full set of ten isn’t stored for this agent yet.'));
+    });
   }else{
     var grid=el('div','pics');
     outs.forEach(function(f){
@@ -1174,7 +1225,8 @@ function photosEl(){
 
 function heroBand(){
   var b=el('div','heroband');
-  b.appendChild(faceEl(get(S.draft,'assets.heroPhoto'),get(S.draft,'identity.name')));
+  var hf=faceEl(get(S.draft,'assets.heroPhoto'),get(S.draft,'identity.name')); b.appendChild(hf);
+  if(!get(S.draft,'assets.heroPhoto'))libraryFace(hf,S.slug,get(S.draft,'identity.formerNames'));
   var t=el('div','hb-txt');
   var nm=get(S.draft,'identity.name');
   var n=el('div','hb-name'+(nm?'':' hb-empty'),nm||'Name not set yet');
@@ -1686,16 +1738,22 @@ function tryToken(){
 $('tokenGo').onclick=tryToken;
 $('tokenInput').addEventListener('keydown',function(e){ if(e.key==='Enter')tryToken(); });
 
+// Signed in, the corner names who; it never locks on a click. Forgetting the token is behind a
+// confirm, and only offered where it means something: signed in to the Studio, it comes straight back.
 $('acctBtn').onclick=function(){
-  if(tok()){ setTok(''); paintAcct(); toast('Locked. This browser has forgotten the token.'); openToken(); }
-  else openToken();
+  if(!tok()){ openToken(); return; }
+  if(studioName())return;
+  confirmBox('Forget the CMS token?','This browser stops remembering it, and the CMS asks for it again next time.',null,function(){
+    setTok(''); paintAcct(); toast('This browser has forgotten the token.'); openToken();
+  });
 };
 function paintAcct(){
-  var on=!!tok(), t=$('acctTile'), n=$('acctName');
-  t.hidden=!on; t.textContent='CB';
-  n.textContent=on?'Unlocked':'Locked';
-  $('acctBtn').title=on?'Remembered in this browser — click to lock and forget the token':'Enter the CMS token';
+  var on=!!tok(), who=studioName(), t=$('acctTile'), n=$('acctName');
+  t.hidden=!on; t.textContent=who?((who.split('@')[0].match(/[A-Za-z]+/g)||[]).map(function(w){return w[0];}).join('').slice(0,2).toUpperCase()||'CB'):'CB';
+  n.textContent=on?(who||'Signed in'):'Sign in';
+  $('acctBtn').title=on?(who?'Signed in to the Studio as '+who+'. The CMS token comes with it.':'This browser remembers the CMS token. Click to forget it.'):'Enter the CMS token';
 }
+document.addEventListener('cb-studio-ready',paintAcct);
 
 function openNew(){
   $('newName').value=''; $('newSlug').value=''; $('newErr').textContent='';
@@ -1819,14 +1877,14 @@ function route(){
         .catch(function(e){ S.preview=null; render(); toast(e.message,true); });
       return;
     }
-    if(!tok()){ openToken(); return; }
+    if(!tok()){ fromStudio().then(function(ok){ if(ok)route(); else openToken(); }); return; }
     api(STORE+'?slug='+encodeURIComponent(slug))
       .then(function(d){ S.record=d.record; S.preview={draft:d.record.draft,status:d.record.status,readonly:false}; render(); })
       .catch(function(e){ if(e.message!=='unauthorized')toast(e.message,true); });
     return;
   }
 
-  if(!tok()){ openToken(); return; }
+  if(!tok()){ fromStudio().then(function(ok){ if(ok)route(); else openToken(); }); return; }
 
   if(a==='agent'&&slug){
     if(S.view==='agent'&&S.slug===slug&&S.draft){ render(); return; }

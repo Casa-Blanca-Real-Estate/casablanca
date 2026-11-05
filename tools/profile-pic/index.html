@@ -2022,8 +2022,15 @@ window.cbZip = downloadAllZip;
     setTok(v);$('roToken').value='';start();
   });
 
+  // Signed in to the Studio as the team, the token comes from the server (/api/studio/keys), once.
+  var studioAsked=false;
+  function fromStudio(){
+    if(studioAsked||!window.CBStudio||!CBStudio.keys)return Promise.resolve(false);
+    studioAsked=true;
+    return CBStudio.keys().then(function(k){if(k&&k.pics){setTok(k.pics);return true;}return false;},function(){return false;});
+  }
   function start(){
-    if(!tok()){connect();return;}
+    if(!tok()){fromStudio().then(function(ok){if(ok)start();else connect();});return;}
     $('roConnect').hidden=true;
     load();
   }
