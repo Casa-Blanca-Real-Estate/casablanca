@@ -16,6 +16,9 @@
 
    This gate hides the page until the server has answered. It's a door, not a lock: the
    pages are static files, so the protection is in each function that checks the token.
+   The older functions the tools call (the carousels' Claude and StreetEasy import, the
+   image proxy, brand, site, the headshot library, sessions) check it too, and this adds
+   the token to every fetch() to them, as X-Studio-Token (STUDIO_FUNCTIONS below).
 
    Window.CBStudio:
      ready         Promise of the user, {email, name, role, guest}; never resolves when
@@ -159,6 +162,35 @@
       return Promise.all(end).then(function () { location.assign(SIGN_IN); });
     },
   };
+
+  // The functions written before the comp report check the sign-in too (CR-9; tools-src/studio-auth/gate.ts),
+  // so their calls carry the token: the pages' own fetch() calls are left as they were, and this adds it.
+  // A call that already says who it is (the CMS's and the roster's own tokens) is left alone. The token goes
+  // in X-Studio-Token, never Authorization, for the reason given at /api/comp-report/me below.
+  var STUDIO_FUNCTIONS = ['agents', 'brand', 'claude', 'copy', 'img', 'import', 'sessions', 'site',
+    'streeteasy', 'streeteasy-import-background', 'streeteasy-status'];
+  function studioCall(u) {
+    if (typeof u !== 'string' && !(u instanceof URL)) return false;
+    var url;
+    try { url = new URL(String(u), location.href); } catch (e) { return false; }
+    var backend = (get(local, 'cb_backend') || '').replace(/\/+$/, '');
+    var origin = url.origin === location.origin;
+    if (!origin && backend) { try { origin = url.origin === new URL(backend).origin; } catch (e) { /* not a URL */ } }
+    var m = /^\/\.netlify\/functions\/([a-z-]+)$/.exec(url.pathname);
+    return origin && Boolean(m) && STUDIO_FUNCTIONS.indexOf(m[1]) !== -1;
+  }
+  var plainFetch = window.fetch;
+  if (plainFetch) {
+    window.fetch = function (u, o) {
+      if (!studioCall(u)) return plainFetch.call(window, u, o);
+      var headers = new Headers((o && o.headers) || {});
+      if (headers.has('Authorization') || headers.has('X-Studio-Token')) return plainFetch.call(window, u, o);
+      return token().then(function (t) {
+        if (t) headers.set('X-Studio-Token', t);
+        return plainFetch.call(window, u, Object.assign({}, o, { headers: headers }));
+      });
+    };
+  }
 
   function admit(user, local) {
     api.user = user;

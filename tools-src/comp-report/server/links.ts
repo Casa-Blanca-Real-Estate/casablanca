@@ -65,7 +65,7 @@ function hasAnything(extract: Record<string, unknown>): boolean {
 
 /**
  * Firecrawl's scrape with extract, as the carousel tools' import already calls
- * it (netlify/functions/streeteasy-import-background.mjs): the stealth proxy
+ * it (netlify/functions/streeteasy-import-background.mts): the stealth proxy
  * first, a plain request if that's refused at once, and a wait-and-retry when
  * Firecrawl is busy. Runs in a background function, so it can take its time.
  */
