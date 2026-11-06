@@ -35,7 +35,9 @@ const ACTIONS: Record<string, string> = {
   'call.given': 'Gave their call',
   'narrative.copied': 'Copied the email',
   'report.sent': 'Marked it sent',
+  'report.next_ticked': 'What’s next',
 };
+const NEXT_ITEMS: Record<string, string> = { 'follow-up': 'followed up', 'plan-offer': 'planned the offer' };
 const TIERS: Record<string, string> = { primary: '1st', secondary: '2nd', excluded: '✕' };
 
 const who = (l: AccessLine) => l.email ?? (l.domain ? `someone at ${l.domain}` : 'someone not signed up');
@@ -63,6 +65,10 @@ function activityText(a: ActivityLine): string {
   if (a.kind === 'screen') return `On ${a.name.slice('screen.'.length).replace(/-/g, ' ')}`;
   if (a.kind === 'error') return `Hit an error (${a.name.slice('error.'.length).replace(/_/g, ' ')})`;
   const d = a.detail as Record<string, string | number | boolean | undefined>;
+  if (a.name === 'report.next_ticked') {
+    const item = NEXT_ITEMS[String(d.item)] ?? String(d.item);
+    return d.on === false ? `Unticked “${item}” on Done` : `Ticked “${item}” on Done`;
+  }
   const bits = [
     d.tier ? TIERS[String(d.tier)] ?? String(d.tier) : null,
     d.format ? String(d.format) : null,

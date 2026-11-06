@@ -1,13 +1,15 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-11-06, morning (wiring):</strong> DP-20 now asks about the fuller Start with Hubert, wired and in review. <strong>New:</strong> DP-21 (the top bar for the Studio's other tools) and DP-22 (Sort's default order, newest first). <strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
     "DP-16",
     "DP-17",
     "DP-18",
     "DP-19",
     "DP-20",
-    "TD-27"
+    "TD-27",
+    "DP-21",
+    "DP-22"
   ],
   "topics": [
     {
@@ -633,23 +635,71 @@
         },
         {
           "id": "DP-20",
-          "q": "Start with Hubert on Reports: is opening the New report window with the link filled in enough for Nov 13?",
+          "q": "Start with Hubert on Reports: keep the fuller version that's now wired?",
           "short": "Start with Hubert",
           "quick": true,
-          "context": "<p>The hero's <strong>Start with Hubert</strong> works today: paste a StreetEasy link or type an address, press Start, and the New report window opens with it filled in. The agent still picks Buyer or Seller and presses Next; the listing is read and fills the details on step 2. The canvas's fuller version (Hubert reads it first and fills the window, with him beside it) waits on the New report window's design (§7.1), which isn't drawn yet. A follow-up thread is wiring what this pass needs beyond design.</p>",
+          "context": "<p><strong>Wired since the overnight build</strong> (the wiring thread, 2026-11-06, in review): type a StreetEasy link or an address into the hero's <strong>Start with Hubert</strong>, and say who it's for if you like (&ldquo;buyer, Jordan and Sam, condo, budget $4.5M&rdquo;). He reads the words first, makes the report with the side, client, type and budget filled in, and opens the window on step 2, the details, with his drawer beside it: what he took from your words, a Buyer / Seller switch when you didn't say, and once the listing is read, what it couldn't give (&ldquo;I don't have the size and the floor yet&rdquo;). Plain rules, no AI call, so it's instant and free. Without a home it can use (a link that isn't a listing), the window opens on step 1 with what it did read. The look is still rough until the New report window is designed (&sect;7.1).</p>",
           "options": [
             [
               "A",
-              "Enough for Nov 13; the fuller one after §7.1 is designed",
+              "Keep it, as wired",
               "recommended",
               true
             ],
             [
               "B",
-              "Wire the fuller one before Nov 13"
+              "Go back to opening step 1 with the link filled in"
             ]
           ],
-          "source": "The overnight build, 2026-11-06"
+          "source": "The overnight build · the wiring thread, 2026-11-06"
+        },
+        {
+          "id": "DP-21",
+          "q": "The comp report's new top bar: give the Studio's other tools the same bar?",
+          "short": "One top bar across the Studio",
+          "quick": true,
+          "context": "<p>The design pass gave the comp report one bar on every screen: the wordmark, &lsaquo; Studio, the tool's name, the role badge, Hubert, the account and Feedback. The Studio's other tools (the carousel builders, the Property Sign, the profile pics, the CMS) still have their own headers and the floating studio chrome. The brief left them out on purpose (&ldquo;this is the comp report's bar&rdquo;). Giving them the same bar is a shared component in <code>assets/</code> and a pass per tool; nothing about it is needed for Nov 13. Not built: your pick.</p>",
+          "options": [
+            [
+              "A",
+              "After Nov 13, one tool at a time",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Before Nov 13"
+            ],
+            [
+              "C",
+              "Keep each tool's own header"
+            ]
+          ],
+          "source": "The design pass brief, reports-and-workspace.md · the wiring thread, 2026-11-06"
+        },
+        {
+          "id": "DP-22",
+          "q": "Sort's rows: newest first within each status, as now wired?",
+          "short": "Sort's default order",
+          "quick": true,
+          "context": "<p>The audit of Sort's order (the wiring thread, 2026-11-06): with no column header clicked, each status group listed comps in the order they came in, which for a StreetEasy export is StreetEasy's own order (Hannah's sold rows ran Aug 27, Aug 24, Sep 17, Sep 15, Sep 2), with comps added from links at the end whatever their date. It's now <strong>newest first</strong> in each group (the sale, contract or listing date), undated last; the one-comp-at-a-time review walks the same order. Clicking a header still sorts by it. Other choices: the starred and 1st-tier comps first, or closest first.</p>",
+          "options": [
+            [
+              "A",
+              "Newest first, as wired",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Starred and 1st tier first, then newest"
+            ],
+            [
+              "C",
+              "Closest first"
+            ]
+          ],
+          "source": "The wiring thread, 2026-11-06"
         }
       ],
       "settled": [
@@ -1337,9 +1387,11 @@
         "DP-17",
         "DP-18",
         "DP-19",
-        "DP-20"
+        "DP-20",
+        "DP-21",
+        "DP-22"
       ],
-      "html": "The overnight build's before and after screenshots, at 1440 and 2400 wide (project files: <code>design-pass-2-before/</code> and <code>design-pass-2-after/</code>), and the <a href=\"https://claude.ai/artifact/XnksprsS99rBRX8AZkgiYa\">morning briefing</a>."
+      "html": "The overnight build's before and after screenshots, at 1440 and 2400 wide (project files: <code>design-pass-2-before/</code> and <code>design-pass-2-after/</code>), the wiring PR #143's screens (<code>comp-tool-wiring/screens/</code>), and the <a href=\"https://claude.ai/artifact/XnksprsS99rBRX8AZkgiYa\">morning briefing</a>."
     },
     {
       "id": "RL-12",
