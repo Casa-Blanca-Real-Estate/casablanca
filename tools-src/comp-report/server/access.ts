@@ -2,9 +2,10 @@
 // Identity event functions at sign-up and log-in, and by every API request,
 // whatever Identity decided.
 //
-//   1. an email in CR_ADMIN_EMAILS            → admin (the only way to be one)
-//   2. an unrevoked allowlist entry           → that entry's role: agent,
-//                                               mentor or external, never admin
+//   1. an email in CR_ADMIN_EMAILS            → admin (the root list)
+//   2. an unrevoked allowlist entry           → admin if an admin ticked Admin on it
+//                                               (allowlist.admin, from 2026-11-06), else
+//                                               that entry's role: agent, mentor or external
 //   3. an email on one of Casa's domains      → agent
 //   4. anything else                          → refused
 //
@@ -87,9 +88,11 @@ export function isCasaEmail(email: string, config: AccessConfig): boolean {
 export const TEST_DOMAIN = 'test.invalid';
 export const isTestAddress = (email: string) => emailDomain(email) === TEST_DOMAIN;
 
-export function decide(email: string, config: AccessConfig, allowlistRole: Role | null): AccessDecision {
+export function decide(email: string, config: AccessConfig, allowlistRole: Role | null, allowlistAdmin = false): AccessDecision {
   if (isTestAddress(email)) return { allowed: false, role: null, via: null };
   if (config.adminEmails.includes(email)) return { allowed: true, role: 'admin', via: 'admin' };
+  // An admin grant rides on a valid grant: an old row that says role admin still grants nothing.
+  if (allowlistAdmin && allowlistRole && GRANTABLE_ROLES.includes(allowlistRole)) return { allowed: true, role: 'admin', via: 'allowlist' };
   if (allowlistRole && GRANTABLE_ROLES.includes(allowlistRole)) return { allowed: true, role: allowlistRole, via: 'allowlist' };
   if (isCasaEmail(email, config)) return { allowed: true, role: 'agent', via: 'domain' };
   return { allowed: false, role: null, via: null };

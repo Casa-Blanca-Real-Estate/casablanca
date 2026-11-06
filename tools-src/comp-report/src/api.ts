@@ -109,6 +109,7 @@ export interface AllowlistEntry {
   role: Role;
   note: string | null;
   studioTeam: boolean;
+  admin: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;

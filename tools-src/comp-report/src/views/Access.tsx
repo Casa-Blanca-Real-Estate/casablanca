@@ -3,9 +3,9 @@ import { api, type AllowlistEntry, type Me, type Report, type Role } from '../ap
 import { AuditLog, Levels, SignInLog, Timeline } from './AccessLog.tsx';
 
 // Admins only (server/api/allowlist.ts): who beyond Casa's domain may use the
-// comp report, and roles other than agent for Casa people. Admin isn't one of
-// them: admins come from CR_ADMIN_EMAILS in Netlify, nowhere else. "Studio team" puts someone on the
-// Studio's team (the CMS, the profile-pic roster, the team tools) without a PR (Kimani, 2026-11-06).
+// comp report, and roles other than agent for Casa people. "Studio team" puts someone on the Studio's
+// team (the CMS, the profile-pic roster, the team tools) and "Admin" makes them an admin, both without a
+// PR (Kimani, 2026-11-06). CR_ADMIN_EMAILS in Netlify stays the root list, which the panel can't change.
 const ROLES: { value: Role; label: string }[] = [
   { value: 'external', label: 'External' },
   { value: 'mentor', label: 'Mentor' },
@@ -20,6 +20,8 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
   const [role, setRole] = useState<Role>('external');
   const [note, setNote] = useState('');
   const [team, setTeam] = useState(false);
+  const [admin, setAdmin] = useState(false);
+  const [rootAdmins, setRootAdmins] = useState<string[]>([]);
   const [roleTouched, setRoleTouched] = useState(false);
   const [builtIn, setBuiltIn] = useState<string[]>([]);
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -27,9 +29,10 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const r = await api<{ entries: AllowlistEntry[]; builtInTeam?: string[] }>('/api/comp-report/allowlist');
+    const r = await api<{ entries: AllowlistEntry[]; builtInTeam?: string[]; rootAdmins?: string[] }>('/api/comp-report/allowlist');
     setEntries(r.entries);
     setBuiltIn(r.builtInTeam ?? []);
+    setRootAdmins(r.rootAdmins ?? []);
   }
 
   useEffect(() => {
@@ -41,12 +44,13 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
     setBusy(true);
     setError(null);
     try {
-      await api('/api/comp-report/allowlist', { method: 'POST', body: { email, role, note, studioTeam: team } });
+      await api('/api/comp-report/allowlist', { method: 'POST', body: { email, role, note, studioTeam: team, admin } });
       setEmail('');
       setRole('external');
       setRoleTouched(false);
       setNote('');
       setTeam(false);
+      setAdmin(false);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save that.');
@@ -55,11 +59,13 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
     }
   }
 
-  async function setOnTeam(e: AllowlistEntry, on: boolean) {
+  async function change(e: AllowlistEntry, to: { studioTeam?: boolean; admin?: boolean }) {
+    if (to.admin === true && !window.confirm(`Make ${e.email} an admin? They can see everyone's reports and change who has access.`)) return;
     setBusy(true);
     setError(null);
     try {
-      await api('/api/comp-report/allowlist', { method: 'POST', body: { email: e.email, role: e.role, note: e.note, studioTeam: on } });
+      const body = { email: e.email, role: e.role, note: e.note, studioTeam: e.studioTeam, admin: e.admin, ...to };
+      await api('/api/comp-report/allowlist', { method: 'POST', body });
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save that.');
@@ -92,8 +98,8 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
           Anyone with a Casa Blanca address gets in as an agent. Add anyone else here, or give a Casa
           address another role. For someone new, then send the invitation from Netlify → Identity →
           Invite users. Tick Studio team to give them the Studio's team tools too (the agent CMS,
-          profile pics, the property sign's roster). Changes apply when the person next signs in or
-          reloads. Admins are set in Netlify (CR_ADMIN_EMAILS), not here.
+          profile pics, the property sign's roster), or Admin for everything, this panel included.
+          Changes apply when the person next signs in or reloads.
         </p>
         <div className="sh-access-row">
           <input
@@ -123,6 +129,10 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
           <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} /> Studio team: the
           CMS, profile pics and the team tools
         </label>
+        <label className="sh-help">
+          <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} /> Admin: everything,
+          including everyone's reports and this panel
+        </label>
         <div>
           <button className="btn primary" disabled={busy || !email.trim()}>Grant access</button>
         </div>
@@ -135,15 +145,20 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
         {current.map((e) => (
           <li key={e.email} className="sh-access-entry">
             <div>
-              <span className="sh-access-who">{e.email}</span> <span className="sh-help">· {roleLabel(e.role)}{e.studioTeam ? ' · Studio team' : ''}</span>
+              <span className="sh-access-who">{e.email}</span> <span className="sh-help">· {e.admin ? 'Admin' : roleLabel(e.role)}{e.studioTeam && !e.admin ? ' · Studio team' : ''}</span>
               <p className="sh-help">
                 {e.note ? `${e.note} · ` : ''}added by {e.createdBy}, {new Date(e.createdAt).toLocaleDateString()}
               </p>
             </div>
             {e.email !== me.user.email && (
               <span className="sh-access-confirm">
-                <button type="button" className="link" disabled={busy} onClick={() => setOnTeam(e, !e.studioTeam)}>
-                  {e.studioTeam ? 'Take off the team' : 'Add to the team'}
+                {!e.admin && (
+                  <button type="button" className="link" disabled={busy} onClick={() => change(e, { studioTeam: !e.studioTeam })}>
+                    {e.studioTeam ? 'Take off the team' : 'Add to the team'}
+                  </button>
+                )}
+                <button type="button" className="link" disabled={busy} onClick={() => change(e, { admin: !e.admin })}>
+                  {e.admin ? 'Remove admin' : 'Make admin'}
                 </button>
                 {confirming === e.email ? (
                   <>
@@ -162,6 +177,11 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
       {builtIn.length > 0 && (
         <p className="sh-help">
           Always on the Studio team, with the admins: {builtIn.join(', ')}. These are set in the code.
+        </p>
+      )}
+      {rootAdmins.length > 0 && (
+        <p className="sh-help">
+          Always admins (CR_ADMIN_EMAILS in Netlify, so the panel can't remove them): {rootAdmins.join(', ')}.
         </p>
       )}
 

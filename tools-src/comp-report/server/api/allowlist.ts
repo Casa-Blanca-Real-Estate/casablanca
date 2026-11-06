@@ -1,8 +1,9 @@
 // /api/comp-report/allowlist — admins decide who beyond Casa's domain may use
-// the comp report, and with which role (design §13). Admins only. A grant is
-// agent, mentor or external: admin comes from CR_ADMIN_EMAILS alone.
+// the comp report, and with which role (design §13). Admins only. A grant's role
+// is agent, mentor or external; admin is its own flag (2026-11-06), with
+// CR_ADMIN_EMAILS as the root list that the panel can't change.
 //   GET                           every entry, current ones first
-//   POST {email, role?, note?, studioTeam?}
+//   POST {email, role?, note?, studioTeam?, admin?}
 //                                 grant access or change a grant; granting a
 //                                 removed entry again restores it. studioTeam
 //                                 puts the person on the Studio's team (the
@@ -26,6 +27,7 @@ export interface AllowlistEntry {
   role: Role;
   note: string | null;
   studioTeam: boolean;
+  admin: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -39,6 +41,7 @@ interface EntryRow {
   role: Role;
   note: string | null;
   studio_team: boolean;
+  admin: boolean;
   created_at: Date;
   created_by: string;
   updated_at: Date;
@@ -47,7 +50,7 @@ interface EntryRow {
   revoked_by: string | null;
 }
 
-const COLUMNS = 'email, role, note, studio_team, created_at, created_by, updated_at, updated_by, revoked_at, revoked_by';
+const COLUMNS = 'email, role, note, studio_team, admin, created_at, created_by, updated_at, updated_by, revoked_at, revoked_by';
 
 function entry(r: EntryRow): AllowlistEntry {
   return {
@@ -55,6 +58,7 @@ function entry(r: EntryRow): AllowlistEntry {
     role: r.role,
     note: r.note,
     studioTeam: r.studio_team === true,
+    admin: r.admin === true,
     createdAt: new Date(r.created_at).toISOString(),
     createdBy: r.created_by,
     updatedAt: new Date(r.updated_at).toISOString(),
@@ -77,7 +81,7 @@ export function handleAllowlist(req: Request, deps: AuthDeps): Promise<Response>
           `select ${COLUMNS} from comp_report.allowlist
             order by revoked_at is not null, updated_at desc limit 500`,
         )).rows);
-      return json({ entries: rows.map(entry), builtInTeam: STUDIO_TEAM });
+      return json({ entries: rows.map(entry), builtInTeam: STUDIO_TEAM, rootAdmins: deps.access.adminEmails });
     }
 
     if (req.method === 'DELETE') {
@@ -102,7 +106,7 @@ export function handleAllowlist(req: Request, deps: AuthDeps): Promise<Response>
     if (isTestAddress(email)) throw new HttpError(400, 'test_address', 'An @test.invalid address is the test user\'s: it can\'t be granted access.');
     const role = body.role ?? 'external';
     if (role === 'admin') {
-      throw new HttpError(400, 'bad_role', 'Admins are set in Netlify (CR_ADMIN_EMAILS), not here.');
+      throw new HttpError(400, 'bad_role', 'Tick Admin instead: the role is external, mentor or agent.');
     }
     if (!GRANTABLE_ROLES.includes(role as Role)) throw new HttpError(400, 'bad_role', 'The role is external, mentor or agent.');
     if (body.note !== undefined && body.note !== null && typeof body.note !== 'string') {
@@ -113,16 +117,20 @@ export function handleAllowlist(req: Request, deps: AuthDeps): Promise<Response>
       throw new HttpError(400, 'bad_team', 'studioTeam is true or false.');
     }
     const studioTeam = body.studioTeam === true;
+    if (body.admin !== undefined && typeof body.admin !== 'boolean') {
+      throw new HttpError(400, 'bad_admin', 'admin is true or false.');
+    }
+    const admin = body.admin === true;
     if (note && note.length > MAX_NOTE) throw new HttpError(400, 'bad_note', `Keep the note under ${MAX_NOTE} characters.`);
 
     const row = await withActor(pool, asUser(user), async (tx) =>
       (await tx.query<EntryRow>(
-        `insert into comp_report.allowlist (email, role, note, studio_team) values ($1, $2, $3, $4)
+        `insert into comp_report.allowlist (email, role, note, studio_team, admin) values ($1, $2, $3, $4, $5)
          on conflict (email) do update
            set role = excluded.role, note = excluded.note, studio_team = excluded.studio_team,
-               revoked_at = null, revoked_by = null
+               admin = excluded.admin, revoked_at = null, revoked_by = null
          returning ${COLUMNS}`,
-        [email, role, note, studioTeam],
+        [email, role, note, studioTeam, admin],
       )).rows[0]);
     if (!row) throw new HttpError(500, 'not_saved');
     return json({ entry: entry(row) });

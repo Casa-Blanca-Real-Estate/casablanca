@@ -133,6 +133,21 @@ describe('the allowlist API', { skip: skipWithoutDatabase }, () => {
     await call('tok-kimani-000000', 'DELETE', undefined, '?email=ana@casa-blanca.com');
   });
 
+  test('an admin grant makes someone an admin, and taking it off undoes it; a root admin stays', async () => {
+    await call('tok-kimani-000000', 'POST', { email: 'hannah@partner.com', role: 'mentor', admin: true });
+    assert.equal(await roleOf('tok-hannah-000000'), 'admin');
+    assert.equal((await call('tok-hannah-000000')).status, 200); // a granted admin manages grants
+    const listed = await (await call('tok-hannah-000000')).json();
+    assert.deepEqual(listed.rootAdmins, ['kimani@casa-blanca.com']);
+    assert.equal((await call('tok-kimani-000000', 'POST', { email: 'hannah@partner.com', admin: 'yes' })).status, 400);
+    // A granted admin can't strip the root admin: CR_ADMIN_EMAILS wins over any row.
+    await call('tok-hannah-000000', 'POST', { email: 'kimani@casa-blanca.com', role: 'agent', admin: false });
+    assert.equal(await roleOf('tok-kimani-000000'), 'admin');
+    await call('tok-kimani-000000', 'DELETE', undefined, '?email=kimani@casa-blanca.com').catch(() => null);
+    await call('tok-kimani-000000', 'POST', { email: 'hannah@partner.com', role: 'mentor', admin: false });
+    assert.equal(await roleOf('tok-hannah-000000'), 'mentor');
+  });
+
   test('a grant can never make someone an admin: not through the API, not in the database', async () => {
     const res = await call('tok-kimani-000000', 'POST', { email: 'hannah@partner.com', role: 'admin' });
     assert.equal(res.status, 400);

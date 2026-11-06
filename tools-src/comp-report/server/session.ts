@@ -169,12 +169,12 @@ async function requireIdentityUser(token: string, deps: AuthDeps, seen: Verified
     // the function is killed and the browser gets a bare 500.
     await tx.query("set local lock_timeout = '3s'");
     await tx.query("set local statement_timeout = '8s'");
-    const grant = await tx.query<{ role: Role; studio_team: boolean }>(
-      'select role, studio_team from comp_report.allowlist where email = $1 and revoked_at is null',
+    const grant = await tx.query<{ role: Role; studio_team: boolean; admin: boolean }>(
+      'select role, studio_team, admin from comp_report.allowlist where email = $1 and revoked_at is null',
       [email],
     );
     teamGrant = grant.rows[0]?.studio_team === true;
-    const decision = decide(email, deps.access, grant.rows[0]?.role ?? null);
+    const decision = decide(email, deps.access, grant.rows[0]?.role ?? null, grant.rows[0]?.admin === true);
     if (!decision.allowed || !decision.role) throw new HttpError(403, 'not_authorised', NOT_AUTHORISED);
 
     const existing = (await tx.query<UserRow>(
