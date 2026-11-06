@@ -19,6 +19,7 @@ import { withActor, type PoolLike } from '../server/db.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import { SAMPLE_BRIEF, SAMPLE_INTAKE, SAMPLE_SEND } from '../server/sample/barclay-17l.ts';
 import type { AuthDeps } from '../server/session.ts';
+import { CURRENT_WRITER_PROMPT } from '../server/writer.ts';
 import { DISCLAIMER } from '../workspace/frame.ts';
 import { ENGINE_VERSION } from '../engine/version.ts';
 import { createTestDatabase, skipWithoutDatabase, testPool, type TestDatabase } from './testing.ts';
@@ -110,7 +111,7 @@ describe('the writer and its drafts', { skip: skipWithoutDatabase }, () => {
     const queued = await write('tok-kimani-000000');
     assert.equal(queued.status, 202);
     first = queued.body.narrative;
-    assert.deepEqual([first.status, first.origin, first.length, first.result, first.promptVersion], ['queued', 'writer', 'full', 'with_estimates', 'cr5-2026-10-29']);
+    assert.deepEqual([first.status, first.origin, first.length, first.result, first.promptVersion], ['queued', 'writer', 'full', 'with_estimates', CURRENT_WRITER_PROMPT.id]);
     assert.match(first.inputsHash, /^sha256:/);
     assert.match(first.inputKey ?? '', /^sha256:/, 'what the writer is given is stored with it, and the browser gets its key');
 
@@ -144,7 +145,7 @@ describe('the writer and its drafts', { skip: skipWithoutDatabase }, () => {
     const usage = (await asKimani<{ purpose: string; model: string; input_tokens: number; detail: { narrative: string; prompt: string } }>(
       `select purpose, model, input_tokens, detail from comp_report.usage where purpose = 'writer'`)).rows;
     assert.equal(usage.length, 1);
-    assert.deepEqual([usage[0]!.model, usage[0]!.detail.narrative, usage[0]!.detail.prompt], ['claude-opus-5-5', first.id, 'cr5-2026-10-29']);
+    assert.deepEqual([usage[0]!.model, usage[0]!.detail.narrative, usage[0]!.detail.prompt], ['claude-opus-5-5', first.id, CURRENT_WRITER_PROMPT.id]);
     assert.ok(usage[0]!.input_tokens > 0);
   });
 
