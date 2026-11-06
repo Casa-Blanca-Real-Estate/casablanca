@@ -139,7 +139,9 @@ export function App() {
     body = <Reports me={me} onOpen={open} />;
   }
 
-  const account = state.status === 'signed-in' ? { email: state.email, role: me?.user.role, dev: session.dev, guest: session.guest } : null;
+  const account = state.status === 'signed-in'
+    ? { email: state.email, role: me?.user.role, dev: session.dev, guest: session.guest, me, identityToken: session.guest ? undefined : () => session.token() }
+    : null;
 
   return (
     <Shell account={account} onSignOut={() => void signOut()}>

@@ -18,6 +18,7 @@ import {
   COLUMNS, DEFAULT_SORT, PAGE_SIZE, STAGE_SQUARE, compsLabel, listStats, matchesSearch, nextSort, pickUp, rangeLabel, screenFor, shortDate,
   sortReports, stageLabel, stageOf, updatedLabel, type SortState,
 } from './shell/reports-list.ts';
+import { Dialog } from './shell/Dialog.tsx';
 import { InBar } from './shell/slots.tsx';
 import { roleBadge } from './shell/TopBar.tsx';
 import type { ScreenId } from './workspace/screens.ts';
@@ -101,6 +102,9 @@ const ArchiveIcon = () => (
 const TrashIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M2.5 4H13.5" /><path d="M6 4V2.5H10V4" /><path d="M3.5 4L4.5 13.5H11.5L12.5 4" /><path d="M6.5 6.5V11M9.5 6.5V11" /></svg>
 );
+const CopyIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" /><path d="M10.5 5.5V2.5H2.5V10.5H5.5" /></svg>
+);
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg>
 );
@@ -134,6 +138,51 @@ function DeleteButton({ r, busy, onAct, icon = false }: { r: Report; busy: boole
     <button type="button" className="link sh-act" disabled={busy} onClick={() => confirm(DELETE_ASK) && onAct(r, 'delete')}>
       Delete
     </button>
+  );
+}
+
+/**
+ * Duplicate (Kimani, 2026-11-06): a new report with the same home, details, comps, tiers and reads, to work
+ * on again without starting over. Hubert's chat comes along only when ticked (off by default).
+ */
+function DuplicateDialog({ r, onDone, onClose }: { r: Report; onDone: (id: string) => void; onClose: () => void }) {
+  const [chat, setChat] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const go = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { duplicateOf: r.id, carryChat: chat } });
+      onDone(report.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog
+      title="Duplicate report"
+      testId="duplicate-report"
+      onClose={onClose}
+      footer={(
+        <>
+          <button type="button" className="link" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn primary" disabled={busy} onClick={() => void go()}>{busy ? 'Duplicating…' : 'Duplicate'}</button>
+        </>
+      )}
+    >
+      <p className="sh-dlg-lead">{r.title}</p>
+      <p className="sh-help">A new report with the same home, details, comps and tiers, and the listings already read. This one stays as it is.</p>
+      <label className="sh-switch-row">
+        <input type="checkbox" role="switch" checked={chat} onChange={(e) => setChat(e.target.checked)} />
+        <span>
+          <span className="sh-switch-label">Carry over the chat with Hubert</span>
+          <span className="sh-help">Off: Hubert starts fresh on the copy. On: he picks up the conversation where it left off.</span>
+        </span>
+      </label>
+      {error && <p className="sh-note error" role="alert">{error}</p>}
+    </Dialog>
   );
 }
 
@@ -188,6 +237,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   const [error, setError] = useState<string | null>(null);
   // The New report window: open, and what Start with Hubert handed it.
   const [starting, setStarting] = useState<{ text: string } | null>(null);
+  const [copying, setCopying] = useState<Report | null>(null);
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [all, setAll] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -378,6 +428,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
           />
         )}
         {starting && <NewCompStart me={me} initialText={starting.text} onCreated={(id) => onOpen(id, 'details')} onClose={() => setStarting(null)} />}
+        {copying && <DuplicateDialog r={copying} onClose={() => setCopying(null)} onDone={(id) => { setCopying(null); const at = screenFor(copying); onOpen(id, undefined, at === 'done' ? 'send' : at); }} />}
         {error && <p className="sh-note error" role="alert">{error}</p>}
         {reports === null && !error && <StateLine>Loading…</StateLine>}
 
@@ -458,6 +509,9 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                   </a>
                   {mine(r) && (
                     <span className="sh-row-acts">
+                      <button type="button" className="sh-ia" aria-label={`Duplicate ${r.title}`} title="Duplicate: a new report with the same home, comps and details" disabled={busy} onClick={() => setCopying(r)}>
+                        <CopyIcon />
+                      </button>
                       <button type="button" className="sh-ia" aria-label={`Archive ${r.title}`} title="Archive: moves it to Archived, below. You can restore it." disabled={busy} onClick={() => void act(r, 'archive')}>
                         <ArchiveIcon />
                       </button>

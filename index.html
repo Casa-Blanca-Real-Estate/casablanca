@@ -662,7 +662,7 @@
 <script src="assets/feedback.js" defer></script>
 <script>
 /* The dev notebook's capture box (docs/dev-notebook/README.md): loaded only in a browser signed in to the notebook and to the studio. */
-try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localStorage.getItem('cb_auth')&&dn&&dn.token&&Date.parse(dn.expiresAt)>Date.now()){var dns=document.createElement('script');dns.src='assets/dev-notebook.js';dns.defer=true;dns.setAttribute('data-cb-dev-notebook','1');document.head.appendChild(dns);}}catch(e){}
+try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localStorage.getItem('cb_auth')&&localStorage.getItem('cb.devNotebook.off')!=='1'&&dn&&dn.token&&Date.parse(dn.expiresAt)>Date.now()){var dns=document.createElement('script');dns.src='assets/dev-notebook.js';dns.defer=true;dns.setAttribute('data-cb-dev-notebook','1');document.head.appendChild(dns);}}catch(e){}
 </script>
 <script>
 (function(){
@@ -1011,6 +1011,8 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   var buildInfo=null, buildOn=false;
   function showBuild(on){
     var tag=$('buildTag'), div=$('buildDiv');
+    /* Turned off in Settings (the comp report's name menu → Settings, 2026-11-06). */
+    try{ if(localStorage.getItem('cb.buildMarker.off')==='1') on=false; }catch(e){}
     buildOn=on;
     if(!on){tag.hidden=true;div.hidden=true;return;}
     function paint(b){
