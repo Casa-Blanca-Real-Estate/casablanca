@@ -20,12 +20,14 @@ scrolling.
 
 ## Layout
 
-Two columns under the usual workspace header and progress row (1 Sort ✓ · 2 Findings ✓ · 3 Send).
-
-- **Left rail, max 360px:** four blocks, top to bottom (below).
-- **Right, the rest:** "WHAT JORDAN AND SAM GET" with an **✎ Edit the words** toggle at the right, then the Designed
-  email preview on its grey mat, in its own scroll box (max ~820px tall), so the rail stays put while the agent reads
-  the email.
+- **The header row:** the address block, then the progress row (1 Sort ✓ · 2 Findings ✓ · 3 Send) beside it, and at
+  the **top right the forward action, Mark as sent ✓ →** (decided: the right end of the row is for moving forward,
+  never for the step crumbs). This is the rule for every workspace screen: Review comps → / Findings → / Send → sit
+  top right.
+- **Below, two columns, their tops flush:** the left rail (max 360px) and the email preview panel.
+- **The preview panel** is the grey mat itself, in its own scroll box (max ~860px tall), so the rail stays put while
+  the agent reads. No header above it: its label ("EMAIL PREVIEW") and the **✎ Edit** button are **sticky in the mat's
+  top-left margin**, so they stay in reach while scrolling and never push the email down.
 
 ## The rail
 
@@ -49,16 +51,18 @@ Two columns under the usual workspace header and progress row (1 Sort ✓ · 2 F
 3. **2 · Then the text** (decided). Locked until the email is out: until the agent has used **Copy & open in Gmail** or
    **Copy only**, it shows one muted line ("A short text for after the email. It opens here once you've copied or
    opened the email."). Then the text appears as a bubble with **Copy the text**. The text is drafted as today.
-4. **3 · Mark as sent ✓** (decided). Always available; marks the report sent and goes to **Done**.
+Mark as sent isn't in the rail: it's the top-right forward action (Layout, above). Always available; it marks the
+report sent and goes to **Done**.
 
 ## Editing the words in place (decided, NW-079 b)
 
-**✎ Edit the words** turns the preview into the editor: every piece of the agent's words gets a dashed deep-lavender
-outline (`#3c3654`) and can be clicked and typed in, right in the email: the greeting and lead-in, the overview
-paragraph, each comp's paragraph, each listing's note (its 200-character limit shows as a count while typing), Things
-to consider, and the sign-off. A line above the preview says: "Click any outlined words to change them, right in the
-email. Prices, sizes and dates come from the report; change those on Sort." Figures, addresses and photos are never
-editable here. **Done editing** turns it off.
+**Clicking any of the agent's words in the preview starts editing it**, right in the email: the greeting and lead-in,
+the overview paragraph, each comp's paragraph, each listing's note (its 200-character limit shows as a count while
+typing), Things to consider, and the sign-off. Figures, addresses and photos are never editable here. The sticky
+**✎ Edit** button turns on outlines for all of them at once (dashed deep lavender, `#3c3654`), for an agent looking for
+what can change; it reads **✓ Done** while on. Hovering **✎ Edit** shows a small hint card: "Click any words you wrote
+to change them, right in the email. Prices, sizes and dates come from the report; change those on Sort." No banner
+above the preview.
 
 Edits in place save to the same fields the client's words modal writes (`send.headline`, `send.chosen`, each comp's
 client line, …), so the modal and the preview are two views of one text: the modal stays for writing from scratch and
