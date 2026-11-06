@@ -21,3 +21,7 @@ one screen's build. Each needs its own pass or decision, later.
    the canvas's Photos off tweak shows that state. The pasted email has no plain-text alternative, so the plain email
    isn't sent automatically in its place; it stays something the agent can choose to send. Worth checking in Outlook
    before 11-13.
+5. **Object Sans in the email** (Kimani, 2026-11-06: later, not in the restyle). Add an `@font-face` to the Designed
+   email's `<style>` that loads the hosted `assets/fonts/ObjectSans-Heavy.woff2` (check that the path is public and
+   the font's licence allows web embedding), with Helvetica Bold as the fallback. Apple Mail and iOS Mail will show
+   Object Sans for the main headers; Gmail and Outlook keep Helvetica.

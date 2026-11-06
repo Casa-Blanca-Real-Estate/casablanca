@@ -17,7 +17,7 @@ Kimani's calls are marked **decided**; the rest is **open** (a decision for Kima
 
 1. **Header** (decided, unchanged). Black bar, the white wordmark image (`assets/brand/casa-blanca-wordmark-white.png`),
    the lavender "COMP REPORT" eyebrow.
-2. **Hero: the text on the photo** (decided as a design; **open on rule 7**, see "Decisions" below). A 340px photo of
+2. **Hero: the text on the photo** (decided; rule 7 relaxed for it, see "Decided" below). A 340px photo of
    the home; at its foot, over a gradient from clear to about 90% ink: "PREPARED FOR JORDAN AND SAM · NOV 2026" (10px,
    white), the address (36px, Object Sans Heavy, white), "3 bd, 3 ba · 2,000 SF" (13px, light grey). With the overlay
    off, the old layout: the photo, then the same text dark on white.
@@ -70,25 +70,25 @@ TO CONSIDER" all share one style: 10px, weight 600, 0.24em tracking, ink.
 
 **Helvetica Neue, Helvetica, Arial** for everything, except the main headers in **Object Sans Heavy**: the hero
 address, the range, and each comp's address (closest match, nearby, on the market). Prices other than the range,
-labels, body text and the signature stay Helvetica: cleaner at small sizes. See "Decisions" for how Object Sans reaches
-a mail client at all.
+labels, body text and the signature stay Helvetica: cleaner at small sizes. For this build, Helvetica Bold stands in for Object Sans in the email (see "Decided").
 
-## Decisions for Kimani before the build
+## Decided (Kimani, 2026-11-06)
 
-1. **Text over photos (rule 7).** The hero, the closest match and the nearby cards put text on a photo, which in email
-   means the photo as a cell background, and rule 7 bans background images because some clients strip them. The
-   proposal: allow it, with the cell's `bgcolor` set to ink, so a stripped or blocked photo leaves white text on black
-   (the canvas's Photos off tweak shows exactly that). The alternative keeps rule 7: photos as `<img>`, text below.
-2. **Object Sans in the email.** Mail clients that load web fonts (Apple Mail, iOS Mail) would show Object Sans from an
-   `@font-face` in the email's `<style>`, pointing at the hosted `assets/fonts/ObjectSans-Heavy.woff2`; Gmail and
-   Outlook ignore it and show Helvetica Bold, which the design already tolerates. That's a web font in the email, which
-   rule 7 also rules out today, and it needs the font's licence to allow web embedding. Without it, every client shows
-   Helvetica Bold for those headers.
+1. **Text over photos: rule 7 relaxed for it.** The hero, the closest match and the nearby cards use the photo as the
+   cell's background with the text on it, and every such cell carries `bgcolor="#0f0f0f"`, so a stripped or blocked
+   photo leaves white text on black (the canvas's Photos off tweak shows it). Rule 7 otherwise stands.
+2. **Object Sans: not in this build.** Build with Helvetica Bold where the canvas shows Object Sans Heavy; every
+   client shows Helvetica today anyway. Loading the hosted font from the email (`@font-face` to
+   `assets/fonts/ObjectSans-Heavy.woff2`, Apple Mail and iOS only) is a later change: `follow-ups.md`, item 5.
+3. **Co-op:** no $/SF anywhere. The range line shows the range alone (the parenthetical drops), and each card shows
+   its price alone. Nothing replaces it.
+4. **Not needed:** a dark-mode design, a new place for Plan the offer (it stays where it is), a designed look for the
+   text message (the agent sends their own text). Kimani checks the look with real photos on the platform once this
+   is built.
 
 ## Not designed yet
 
-The co-op version (no $/SF: the range line and cards drop it), a comp with no paragraph, dark mode in Gmail and Apple
-Mail, the CTA's target, the Text's look. Real sample photos on the canvas before calling it final.
+A comp with no paragraph: the card closes up under the status line.
 
 Cross-cutting follow-ups (the repeated-component audit, the font mix in the tool, blocked images): `follow-ups.md`
 beside this file.
