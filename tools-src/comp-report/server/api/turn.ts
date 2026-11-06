@@ -22,7 +22,7 @@
 // CR-4 recommendation.
 import Anthropic from '@comp-report/anthropic-sdk';
 import {
-  ASSISTANT, buildMessages, pendingToolUses, promptFor, runTool, usageTotals,
+  ASSISTANT, buildMessages, pendingToolUses, promptFor, runTool, usageTotals, withdrawnSeqs,
   type StoredMessage,
 } from '../assistant.ts';
 import { withActor, type PoolLike, type Queryable } from '../db.ts';
@@ -46,6 +46,8 @@ export interface TurnDeps extends AuthDeps {
   deadlineMs?: number;
   heartbeatMs?: number;
   inFlightSeconds?: number;
+  /** How often a reply checks whether the agent stopped it (Stop). */
+  stopCheckMs?: number;
 }
 
 export function productionAnthropic(user?: SessionUser): Anthropic {
@@ -79,10 +81,13 @@ async function prepare(
 
     const stored: (StoredMessage & { answering?: boolean })[] = (await tx.query<StoredMessage & { answering: boolean }>(
       `select seq, role, content, stop_reason, in_context, prompt_version,
-              role = 'user' and created_at > now() - make_interval(secs => $2) as answering
+              role = 'user' and in_context and created_at > now() - make_interval(secs => $2) as answering
          from comp_report.messages where report_id = $1 order by seq`,
       [reportId, inFlightSeconds],
     )).rows;
+    // Messages the agent took back with Stop are left out, with everything Hubert did after them.
+    const withdrawn = withdrawnSeqs(stored);
+    for (const m of stored) if (withdrawn.has(m.seq)) m.in_context = false;
     if (stored.at(-1)?.answering) {
       throw new HttpError(409, 'turn_in_progress', 'This report is already answering. Wait for it to finish.');
     }
@@ -202,6 +207,18 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
         const keepAlive = setInterval(() => {
           if (Date.now() - lastWrite >= heartbeat - 50) write(': keep-alive\n\n');
         }, Math.min(heartbeat, 5_000));
+        // Stop (2026-11-06): the agent took the message back, which appends a row where this reply would go.
+        // Checked every couple of seconds, so a stopped reply stops costing too.
+        let stopped = false;
+        const stopCheck = setInterval(() => {
+          void withActor(pool, asUser(user), (tx) => tx.query('select 1 from comp_report.messages where report_id = $1 and seq >= $2 limit 1', [reportId, prepared.nextSeq]))
+            .then((r) => {
+              if (r.rowCount && !aborter.signal.aborted) {
+                stopped = true;
+                aborter.abort();
+              }
+            }, () => undefined);
+        }, deps.stopCheckMs ?? 2_000);
 
         const stream = client.beta.messages.stream(
           {
@@ -223,14 +240,16 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
         const record = async (m: Anthropic.Beta.BetaMessage | undefined, outcome: 'complete' | 'refused' | 'interrupted') => {
           const content = m?.content ?? [];
           const totals = m ? usageTotals(m.model, m.usage as Parameters<typeof usageTotals>[1]) : null;
-          await withActor(pool, asUser(user), async (tx) => {
-            await insertMessage(tx, reportId, prepared.nextSeq, 'assistant', content, {
-              model: m?.model ?? ASSISTANT.model,
-              stopReason: outcome === 'interrupted' ? 'interrupted' : m?.stop_reason ?? null,
-              requestId: stream.request_id ?? null,
-              inContext: outcome === 'complete',
-              promptVersion: prepared.prompt.id,
-            });
+          const write = (withMessage: boolean) => withActor(pool, asUser(user), async (tx) => {
+            if (withMessage) {
+              await insertMessage(tx, reportId, prepared.nextSeq, 'assistant', content, {
+                model: m?.model ?? ASSISTANT.model,
+                stopReason: outcome === 'interrupted' ? 'interrupted' : m?.stop_reason ?? null,
+                requestId: stream.request_id ?? null,
+                inContext: outcome === 'complete',
+                promptVersion: prepared.prompt.id,
+              });
+            }
             if (totals) {
               await tx.query(
                 `insert into comp_report.usage (user_email, report_id, provider, model, purpose, request_id,
@@ -242,6 +261,14 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
               );
             }
           });
+          try {
+            await write(true);
+          } catch (error) {
+            // Its place was taken: the agent stopped it (Stop's marker is there). The reply isn't kept; the spend is.
+            if ((error as { code?: string }).code !== '23505') throw error;
+            stopped = true;
+            await write(false);
+          }
           return totals;
         };
 
@@ -269,7 +296,10 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
           }
         } catch (error) {
           const partial = stream.currentMessage;
-          if (timedOut || aborter.signal.aborted) {
+          if (stopped) {
+            await record(partial, 'interrupted').catch((e) => console.error('comp-report turn: record failed', e));
+            emit({ type: 'withdrawn' });
+          } else if (timedOut || aborter.signal.aborted) {
             await record(partial, 'interrupted').catch((e) => console.error('comp-report turn: record failed', e));
             emit({ type: 'interrupted', reason: 'time_limit', ms: Date.now() - started });
           } else {
@@ -281,6 +311,7 @@ export function handleTurn(req: Request, deps: TurnDeps): Promise<Response> {
         } finally {
           clearTimeout(timer);
           clearInterval(keepAlive);
+          clearInterval(stopCheck);
           if (!clientGone) {
             try {
               controller.close();

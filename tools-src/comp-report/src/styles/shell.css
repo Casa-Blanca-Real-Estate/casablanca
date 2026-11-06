@@ -382,6 +382,11 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 }
 .sh-step.todo .sh-step-n { background: transparent; color: #6f6d68; border-color: var(--cb-border); }
 .sh-step-line { width: 28px; height: 1px; background: var(--cb-border); flex: none; }
+/* The step the agent is on stands out from the ones done (Kimani's walkthrough, 2026-11-06). */
+.sh-step.done { color: var(--cb-mid); }
+.sh-step.done .sh-step-n { background: transparent; color: var(--cb-black); border-color: var(--cb-black); }
+.sh-step.current { font-size: 14px; background: var(--cb-lavender); color: var(--cb-deep); padding: 6px 12px 6px 6px; }
+.sh-step.current .sh-step-n { width: 22px; height: 22px; background: var(--cb-deep); border-color: var(--cb-deep); color: #fff; font-size: 12px; }
 .sh-step-line.on { background: var(--cb-black); }
 .sh-cta { margin-left: 18px; display: flex; align-items: center; gap: 12px; }
 .sh-cta .btn:disabled { cursor: not-allowed; }

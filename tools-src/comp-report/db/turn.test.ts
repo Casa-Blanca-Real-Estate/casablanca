@@ -238,4 +238,45 @@ describe('the streamed assistant turn', { skip: skipWithoutDatabase }, () => {
     assert.ok(rows.every((r) => r.model === 'claude-opus-5-5' && r.purpose === 'assistant'));
     assert.deepEqual(rows.map((r) => r.output_tokens).sort((a, b) => a - b), [1, 300, 300, 300, 300, 300, 300, 300, 300]);
   });
+
+  test('Stop takes the message back: the reply stops, nothing of it is replayed or shown, and the next message goes through', async () => {
+    const stop = (text: string) => handleMessages(new Request('https://site/api/comp-report/messages', {
+      method: 'POST', headers: { authorization: 'Bearer tok-ana-000000000' }, body: JSON.stringify({ reportId, stop: true, text }),
+    }), deps);
+    // Nothing of Ben's to stop, and not the message Ana means: nothing is taken back.
+    assert.equal((await handleMessages(new Request('https://site/api/comp-report/messages', {
+      method: 'POST', headers: { authorization: 'Bearer tok-ben-000000000' }, body: JSON.stringify({ reportId, stop: true, text: 'x' }),
+    }), deps)).status, 404);
+    scripts.push({ content: [{ type: 'text', text: 'A long answer that comes in slowly, piece by piece, while the agent changes their mind.' }], stopReason: 'end_turn', delayMs: 150 });
+    const running = turn('What is the engine and how do', 'tok-ana-000000000', { stopCheckMs: 100 });
+    // Once the message is in: Stop.
+    let stopped: Response | null = null;
+    for (let i = 0; i < 40 && !stopped; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      const res = await stop('What is the engine and how do');
+      if (res.status === 200) stopped = res;
+    }
+    assert.ok(stopped, 'the stop was taken');
+    assert.equal((await stopped!.json()).text, 'What is the engine and how do');
+    const { events } = await running;
+    assert.equal(events.at(-1).type, 'withdrawn');
+    const rows = await stored();
+    const marker = rows.at(-1)!;
+    assert.equal(marker.role, 'user');
+    assert.equal(marker.in_context, false);
+    assert.equal(marker.content[0]!.type, 'withdraw');
+    assert.ok(!rows.some((r) => r.role === 'assistant' && JSON.stringify(r.content).includes('piece by piece')), 'the stopped reply isn\'t kept');
+
+    // The next message isn't held up, and the model never sees the one taken back.
+    scripts.push({ content: [{ type: 'text', text: 'The calculator does the math.' }], stopReason: 'end_turn' });
+    const next = await turn('What is the engine?');
+    assert.equal(next.res.status, 200);
+    const sent = JSON.stringify(requests.at(-1)!.body.messages);
+    assert.ok(!sent.includes('how do'), 'the withdrawn message isn\'t replayed');
+    const shown = await (await handleMessages(new Request(`https://site/api/comp-report/messages?report=${reportId}`, {
+      headers: { authorization: 'Bearer tok-ana-000000000' },
+    }), deps)).json();
+    assert.ok(!shown.messages.some((m: { text: string }) => m.text.includes('how do')), 'and the chat doesn\'t show it');
+    assert.equal(shown.messages.at(-1).text, 'The calculator does the math.');
+  });
 });
