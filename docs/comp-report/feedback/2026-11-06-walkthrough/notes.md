@@ -37,7 +37,7 @@ What we know (2026-11-06, 20:35 UTC):
 
 Not confirmed: the exact error on his report's read row. The inspection API would show it
 (`view=workspace&report=…`), but `CR_INSPECT_KEY` isn't in the Casa cloud environment, so no session can
-call it. **Check**: Kimani adds `CR_INSPECT_KEY` to the Casa environment (it's set in Netlify per
+call it. **Check**: Kimani adds `CR_INSPECT_KEY` to the Casa environment (TD-23 on the Answer Sheet) (it's set in Netlify per
 `docs/comp-report/inspect-api.md`), or reads the report's activity log in Reports → Access.
 
 Follow-up worth considering (not built): when a read fails as `blocked`, retry it once by itself after a
@@ -48,7 +48,7 @@ minute before showing the failure. Today the agent has to press Try again.
 | # | What Kimani said | Where it went |
 |---|---|---|
 | H1 | Hubert is dry, cut, flat. "sup!" got a flat list of what he can't do. Match the agent's energy, a step above. Only the chat: what he writes into fields and the email reads fine. | **Built**: prompt `hb-voice-2026-11-06` |
-| H2 | He said "the engine" without saying what it is; a new agent won't know. Asked, he explained it too long. Give it a simple definition, maybe a better name, short unless asked. | **Built**: "the calculator", with a two-line definition. Name is an **Ask** (DP-21) |
+| H2 | He said "the engine" without saying what it is; a new agent won't know. Asked, he explained it too long. Give it a simple definition, maybe a better name, short unless asked. | **Built**: "the calculator", with a two-line definition. Name is an **Ask** (DP-23) |
 | H3 | Searched listings show as plain links. Show cards: a thumbnail, the address, clickable. Top three, the rest as text links. | **Built** |
 | H4 | Animations showing he's thinking or searching, not a static box. | **Built**: moving dots on Thinking / Searching the web / Checking |
 | H5 | A way to stop a message sent by mistake (Enter hit mid-sentence) before he answers, and take it back. | **Built**: Stop |
