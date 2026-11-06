@@ -1387,9 +1387,11 @@
         "DP-17",
         "DP-18",
         "DP-19",
-        "DP-20"
+        "DP-20",
+        "DP-21",
+        "DP-22"
       ],
-      "html": "The overnight build's before and after screenshots, at 1440 and 2400 wide (project files: <code>design-pass-2-before/</code> and <code>design-pass-2-after/</code>), and the <a href=\"https://claude.ai/artifact/XnksprsS99rBRX8AZkgiYa\">morning briefing</a>."
+      "html": "The overnight build's before and after screenshots, at 1440 and 2400 wide (project files: <code>design-pass-2-before/</code> and <code>design-pass-2-after/</code>), the wiring PR #143's screens (<code>comp-tool-wiring/screens/</code>), and the <a href=\"https://claude.ai/artifact/XnksprsS99rBRX8AZkgiYa\">morning briefing</a>."
     },
     {
       "id": "RL-12",
