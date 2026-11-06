@@ -869,7 +869,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
     var left=el('div','row-l'), tr=el('div','titlerow');
     tr.innerHTML=ICON[t.icon]||'';
     var nm=el('div','rowtitle'); nm.textContent=t.name; tr.appendChild(nm);
-    if(t.badge){var b=el('span','badge');b.textContent=t.badge;tr.appendChild(b);}
+    var bt=badgeOf(key); if(bt){var b=el('span','badge');b.textContent=bt;tr.appendChild(b);}
     left.appendChild(tr);
     var bl=el('div','blurb'); bl.textContent=t.blurb; left.appendChild(bl);
     var mr=el('div','motifrow');
@@ -883,8 +883,20 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
 
   /* ================= list + tabs + search ================= */
   var searchInput=$('toolSearch');
-  /* Signed out, Team-badged tools are not rendered at all — not disabled, not teased. */
-  function granted(k){return !TOOLS[k].team||authed();}
+  /* Signed out, Team-badged tools are not rendered at all — not disabled, not teased.
+     An admin sets who each tool is for in the comp report's Access panel (/api/studio/tools:
+     everyone, mentor, team or admin; Kimani, 2026-11-06); until that answers, or if it can't, TOOLS'
+     own team flag stands. */
+  var LEVELS=null;
+  function levelOf(k){return (LEVELS&&LEVELS[k])||(TOOLS[k].team?'team':'everyone');}
+  function granted(k){var l=levelOf(k);return l==='everyone'||(l==='team'?authed():CBStudio.mayUse(l));}
+  function badgeOf(k){
+    var l=levelOf(k), b=TOOLS[k].badge;
+    if(l==='admin')return 'Admin only';
+    if(l==='mentor')return 'Mentors';
+    if(l==='team')return b&&b!=='Team'&&b!=='Admin only'?b:(b||'Team');
+    return b==='Team'?null:b;
+  }
 
   function renderList(){
     var q=(searchInput.value||'').trim().toLowerCase();
@@ -986,7 +998,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
     $('dnCard').hidden=!dev;
     showBuild(dev);
     /* Every tool in this tab is team-only — signed out it would render an empty tab. */
-    $('webTab').hidden=!on;
+    $('webTab').hidden=!tabOpen('web');
     /* Sign out while it's open: showTab moves the aria-current highlight too, but it also
        renders, so during boot leave it — boot's own showTab call does one render and gates. */
     if(booted && !tabOpen(state.tab)) showTab('home');
@@ -1173,6 +1185,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   renderWorkshop();
   applyAuth();          /* sets the account chip + gating before the first render */
   CBStudio.ready.then(applyAuth);   /* and again once the server has said who this is */
+  CBStudio.tools().then(function(m){ if(!m)return; LEVELS=m; CBStudio.ready.then(applyAuth); });
   renderChangelog();
   showTab(location.hash.slice(1));
   booted=true;

@@ -69,7 +69,7 @@ async function request<T>(path: string, init: { method?: string; body?: unknown 
 export type Role = 'agent' | 'mentor' | 'admin' | 'external';
 
 export interface Me {
-  user: { email: string; name: string | null; role: Role; capability: 'practice' | 'full'; persisted: boolean; guest?: boolean };
+  user: { email: string; name: string | null; role: Role; capability: 'practice' | 'full'; persisted: boolean; guest?: boolean; team?: boolean };
   database: 'ready' | 'not_configured';
 }
 
@@ -108,6 +108,8 @@ export interface AllowlistEntry {
   email: string;
   role: Role;
   note: string | null;
+  studioTeam: boolean;
+  admin: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;

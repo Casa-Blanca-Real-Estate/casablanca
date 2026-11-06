@@ -325,6 +325,9 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 .sh-access-who { font-size: 14px; font-weight: 800; }
 .sh-access-entry p { margin: 2px 0 0; }
 .sh-access-confirm { display: flex; align-items: center; gap: 10px; }
+/* The Studio team and Admin ticks: a plain sentence beside its box, not a form label. */
+.sh-access-form label.sh-access-check { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; align-self: flex-start; text-align: left; gap: 10px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--cb-black); }
+.sh-access-form label.sh-access-check input { width: auto; flex: none; margin: 0; }
 
 /* ─── The workspace: page, header, progress row ─────────────────────────────── */
 .sh-page {

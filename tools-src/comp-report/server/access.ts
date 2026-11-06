@@ -2,9 +2,10 @@
 // Identity event functions at sign-up and log-in, and by every API request,
 // whatever Identity decided.
 //
-//   1. an email in CR_ADMIN_EMAILS            → admin (the only way to be one)
-//   2. an unrevoked allowlist entry           → that entry's role: agent,
-//                                               mentor or external, never admin
+//   1. an email in CR_ADMIN_EMAILS            → admin (the root list)
+//   2. an unrevoked allowlist entry           → admin if an admin ticked Admin on it
+//                                               (allowlist.admin, from 2026-11-06), else
+//                                               that entry's role: agent, mentor or external
 //   3. an email on one of Casa's domains      → agent
 //   4. anything else                          → refused
 //
@@ -23,6 +24,20 @@
 import type { Role } from './db.ts';
 
 export const DEFAULT_DOMAINS = ['casa-blanca.com'];
+
+/**
+ * The Studio's team, built in: the old dev sign-in's list (keep in step with TEAM in
+ * assets/studio-auth.js). Anyone else joins the team by a grant in the Access panel
+ * (comp_report.allowlist.studio_team), which needs no PR.
+ */
+export const STUDIO_TEAM: readonly string[] = [
+  'creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com',
+];
+
+/** On the Studio's team: an admin, a preview's guest, the built-in list, or a team grant. */
+export function isStudioTeam(user: { email: string; role: string; guest?: boolean }, granted = false): boolean {
+  return user.role === 'admin' || Boolean(user.guest) || granted || STUDIO_TEAM.includes(user.email.trim().toLowerCase());
+}
 
 /** The roles an allowlist grant can give. Admin comes from CR_ADMIN_EMAILS only. */
 export const GRANTABLE_ROLES: readonly Role[] = ['external', 'mentor', 'agent'];
@@ -73,9 +88,11 @@ export function isCasaEmail(email: string, config: AccessConfig): boolean {
 export const TEST_DOMAIN = 'test.invalid';
 export const isTestAddress = (email: string) => emailDomain(email) === TEST_DOMAIN;
 
-export function decide(email: string, config: AccessConfig, allowlistRole: Role | null): AccessDecision {
+export function decide(email: string, config: AccessConfig, allowlistRole: Role | null, allowlistAdmin = false): AccessDecision {
   if (isTestAddress(email)) return { allowed: false, role: null, via: null };
   if (config.adminEmails.includes(email)) return { allowed: true, role: 'admin', via: 'admin' };
+  // An admin grant rides on a valid grant: an old row that says role admin still grants nothing.
+  if (allowlistAdmin && allowlistRole && GRANTABLE_ROLES.includes(allowlistRole)) return { allowed: true, role: 'admin', via: 'allowlist' };
   if (allowlistRole && GRANTABLE_ROLES.includes(allowlistRole)) return { allowed: true, role: allowlistRole, via: 'allowlist' };
   if (isCasaEmail(email, config)) return { allowed: true, role: 'agent', via: 'domain' };
   return { allowed: false, role: null, via: null };
