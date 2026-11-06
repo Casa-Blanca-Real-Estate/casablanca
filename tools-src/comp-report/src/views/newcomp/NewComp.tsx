@@ -27,8 +27,14 @@ export type StartScreen = 'home' | 'details' | 'comps';
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Step 1, before the report exists: makes it, and hands over to the workspace on step 2. */
-export function NewCompStart({ me, onCreated, onClose }: { me: Me; onCreated: (id: string) => void; onClose: () => void }) {
-  const [text, setText] = useState('');
+export function NewCompStart({ me, onCreated, onClose, initialText = '' }: {
+  me: Me;
+  onCreated: (id: string) => void;
+  onClose: () => void;
+  /** What the agent pasted into Reports' "Start with Hubert" (a StreetEasy link or an address): the window opens with it. */
+  initialText?: string;
+}) {
+  const [text, setText] = useState(initialText);
   const [side, setSide] = useState<Audience>('buyer');
   const [client, setClient] = useState('');
   const [type, setType] = useState<PropertyType>('coop');

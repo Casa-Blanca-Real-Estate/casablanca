@@ -95,6 +95,13 @@ export interface Report {
   side?: 'buyer' | 'seller' | null;
   stage?: 'sort' | 'findings' | 'send' | 'sent';
   unsorted?: number;
+  /** The reports list (the design pass, 2026-11-06): comps on the report, its range once revealed, when it was sent, the home's photo, the owner's level. */
+  comps?: number;
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
+  sentAt?: string | null;
+  photo?: string | null;
+  ownerLevel?: 'practice' | 'full' | null;
 }
 
 export interface AllowlistEntry {

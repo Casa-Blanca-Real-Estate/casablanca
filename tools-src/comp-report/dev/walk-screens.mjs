@@ -11,6 +11,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
+// WALK_WIDTH sets the viewport width (default 1440): the design pass shoots at 1440 and 2400.
+const W = Number(process.env.WALK_WIDTH) || 1440;
 const [base = 'http://localhost:5173', out = join(here, 'out'), side = 'buyer', type = 'coop', email = 'kimani@casa-blanca.com'] = process.argv.slice(2);
 mkdirSync(out, { recursive: true });
 const seed = (stage) => execFileSync('node', [join(here, 'seed-report.mjs'), base, stage, side, type, email], { encoding: 'utf8' }).trim().split('\n').at(-1);
@@ -20,7 +22,7 @@ const log = [];
 
 const browser = await chromium.launch({ executablePath: chromePath() });
 async function context(signedIn = true, asNewAgent = false) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
+  const ctx = await browser.newContext({ viewport: { width: W, height: W > 2000 ? 1300 : 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
   if (signedIn) await ctx.addInitScript((e) => sessionStorage.setItem('cr-dev-session', e), email);
   // Dev tools stay off: the walk is what an agent sees. The Gate is shot as a new agent sees it too.
   await ctx.addInitScript((asNew) => { try { localStorage.removeItem('cr-build-notes'); localStorage.setItem('cr-view-as-new-agent', asNew ? '1' : '0'); } catch {} }, asNewAgent);
@@ -45,7 +47,7 @@ async function shot(p, name) {
   log.push(file);
 }
 // A modal is fixed to the viewport: a tall one shows the whole card in the shot.
-const tall = async (p) => { await p.setViewportSize({ width: 1440, height: 2400 }); await p.waitForTimeout(400); };
+const tall = async (p) => { await p.setViewportSize({ width: W, height: 2400 }); await p.waitForTimeout(400); };
 const settle = async (p) => { await p.waitForLoadState('networkidle').catch(() => {}); await p.waitForTimeout(600); };
 const url = (id, q) => `${base}/tools/comp-report/?report=${id}&${q}`;
 
@@ -158,6 +160,16 @@ const ctx = await context(true);
   await p.goto(url(id, 'step=done'));
   await settle(p);
   await shot(p, '11-done');
+  await p.close();
+}
+// 12 Reports again, with every report the walk made (the list as a busy agent sees it), and Hubert open on it
+{
+  const p = await page(ctx, '12');
+  await p.goto(`${base}/tools/comp-report/`);
+  await settle(p);
+  await shot(p, '12-reports-full');
+  await openHubert(p);
+  await shot(p, '13-reports-hubert');
   await p.close();
 }
 await ctx.close();

@@ -222,6 +222,23 @@ export function verdictLine(output: EngineOutput, kind: ResultKind): string | nu
   return `Your guess ${POSITION[a.position]}${gap ? `, by about ${clientPrice(gap.value)}` : ''}.`;
 }
 
+const POSITION_SHORT: Record<AgentNumberPosition, string> = {
+  below: 'Below the range',
+  within: 'Inside the range',
+  above: 'Above the range',
+  overlaps_low: 'Starts below the range',
+  overlaps_high: 'Runs above the range',
+  spans: 'Wider than the range',
+};
+
+/** Under the agent's number beside the range (the design pass): "Inside the range"; "Below the range, by about $25.4K". */
+export function positionLine(output: EngineOutput, kind: ResultKind): string | null {
+  const a = output.headline_facts[kind].agent_number;
+  if (!a?.position || !output.results[kind].range) return null;
+  const gap = a.facts.find((f) => f.id === 'agent.below_range_by' || f.id === 'agent.above_range_by');
+  return `${POSITION_SHORT[a.position]}${gap ? `, by about ${clientPrice(gap.value)}` : ''}`;
+}
+
 export interface StatusTile {
   status: EvidenceClass;
   name: string;
