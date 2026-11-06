@@ -81,6 +81,8 @@ export async function logViewed(pool: PoolLike | null, user: SessionUser, report
 /** What the server writes for what it did; the browser can't send these. */
 export const ACTION_NAMES = [
   'import.read', 'comp.added', 'comp.tiered', 'comp.removed', 'comp.restored', 'call.given', 'narrative.copied', 'report.sent',
+  // Done's What's next ticked or unticked (20261106120000): { item: 'follow-up' | 'plan-offer', on }.
+  'report.next_ticked',
 ] as const;
 export type ActionName = (typeof ACTION_NAMES)[number];
 

@@ -14,6 +14,7 @@ import { useSendEmail } from '../send/useSendEmail.ts';
 import '../../styles/send.css';
 import { entry } from './bits.tsx';
 import type { StepProps } from './model.ts';
+import { WHATS_NEXT } from '../../../workspace/next-steps.ts';
 
 function Amount({ id, label, hint, value, onChange, today, disabled }: {
   id: string;
@@ -60,11 +61,6 @@ function Amount({ id, label, hint, value, onChange, today, disabled }: {
   );
 }
 
-/** What's next after the email (the design pass): the text moved to Send, so two remain. */
-export const WHATS_NEXT: { key: string; text: string }[] = [
-  { key: 'follow-up', text: 'Follow up in two days if you haven’t heard' },
-  { key: 'plan-offer', text: 'Plan the offer together' },
-];
 
 /** "Jordan and Sam have the comps for 17L."; "Dana has …"; without a client, "The comps for 17L are out." */
 export function doneHeadline(client: string | undefined, home: string): string {

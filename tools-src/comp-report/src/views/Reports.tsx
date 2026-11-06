@@ -12,10 +12,11 @@ import { clientPrice } from '../../workspace/format.ts';
 import { trackScreen } from '../activity.ts';
 import { Access } from './Access.tsx';
 import { MenteePicker, loadMentees, type MenteesState } from './Mentees.tsx';
-import { NewCompStart } from './newcomp/NewComp.tsx';
+import { NewCompStart, startReport } from './newcomp/NewComp.tsx';
+import { noteOf, readStartWords, startNoteKey, startsOnDetails, type StartWords } from './newcomp/start-words.ts';
 import { Center, StateLine } from './shell/Pieces.tsx';
 import {
-  COLUMNS, DEFAULT_SORT, PAGE_SIZE, STAGE_SQUARE, compsLabel, listStats, matchesSearch, nextSort, pickUp, rangeLabel, screenFor, shortDate,
+  COLUMNS, DEFAULT_SORT, PAGE_SIZE, followUpDue, followUpIsDue, followUpLine, thumbWords, whenOf, workedAt, STAGE_SQUARE, compsLabel, listStats, matchesSearch, nextSort, pickUp, rangeLabel, screenFor, shortDate,
   sortReports, stageLabel, stageOf, updatedLabel, type SortState,
 } from './shell/reports-list.ts';
 import { InBar } from './shell/slots.tsx';
@@ -24,7 +25,16 @@ import type { ScreenId } from './workspace/screens.ts';
 
 const SAMPLE_TITLE = 'Sample data was used in this report. Nothing in it is for clients.';
 
-function Hero({ pick, onPick, onStart }: { pick: Report | null; onPick: (r: Report) => void; onStart: ((text: string) => void) | null }) {
+function Hero({ pick, onPick, onStart, starting = null, startError = null, followUp = null }: {
+  pick: Report | null;
+  onPick: (r: Report) => void;
+  onStart: ((text: string) => void) | null;
+  /** Start with Hubert is making the report: what it's doing. */
+  starting?: string | null;
+  startError?: string | null;
+  /** Hubert's follow-up reminder: a sent report whose What's next follow-up is due and not ticked. */
+  followUp?: { report: Report; line: string } | null;
+}) {
   const [text, setText] = useState('');
   const [tip, setTip] = useState(false);
   return (
@@ -36,6 +46,22 @@ function Hero({ pick, onPick, onStart }: { pick: Report | null; onPick: (r: Repo
         </div>
         {(pick || onStart) && (
           <div className="sh-hero-side">
+            {followUp && (
+              <a
+                className="sh-pick sh-follow"
+                href={hrefFor(followUp.report)}
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onPick(followUp.report);
+                }}
+              >
+                <span className="sh-pick-eyebrow"><span aria-hidden="true">✦ </span>Hubert · time to follow up</span>
+                <span className="sh-pick-addr">{followUp.report.title}</span>
+                <span className="sh-pick-stage">{followUp.line}</span>
+                <span className="sh-pick-go">Open Done →</span>
+              </a>
+            )}
             {pick && (
               <a
                 className="sh-pick"
@@ -57,7 +83,7 @@ function Hero({ pick, onPick, onStart }: { pick: Report | null; onPick: (r: Repo
                 className="sh-start"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  onStart(text.trim());
+                  if (!starting) onStart(text.trim());
                 }}
               >
                 <div className="sh-start-head">
@@ -73,7 +99,7 @@ function Hero({ pick, onPick, onStart }: { pick: Report | null; onPick: (r: Repo
                     onFocus={() => setTip(true)}
                     onBlur={() => setTip(false)}
                   >?</button>
-                  {tip && <span id="sh-start-tip" role="tooltip" className="sh-tip-card">Hubert reads the listing and fills in the home. You check it, then add comps.</span>}
+                  {tip && <span id="sh-start-tip" role="tooltip" className="sh-tip-card">Paste the listing and say who it’s for (“buyer, Jordan and Sam”). Hubert reads the listing, fills in the home and opens beside it. You check it, then add comps.</span>}
                 </div>
                 <div className="sh-start-row">
                   <input
@@ -81,10 +107,13 @@ function Hero({ pick, onPick, onStart }: { pick: Report | null; onPick: (r: Repo
                     className="sh-start-input"
                     placeholder="Paste a StreetEasy link, or type the address"
                     value={text}
+                    disabled={Boolean(starting)}
                     onChange={(e) => setText(e.target.value)}
                   />
-                  <button type="submit" className="sh-start-go">Start →</button>
+                  <button type="submit" className="sh-start-go" disabled={Boolean(starting)}>Start →</button>
                 </div>
+                {starting && <p className="sh-start-busy" aria-live="polite">{starting}</p>}
+                {startError && <p className="sh-start-err" role="alert">{startError}</p>}
               </form>
             )}
           </div>
@@ -105,11 +134,27 @@ const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg>
 );
 
-/** The home's photo from its StreetEasy page, linked; the hatched block when there isn't one or it won't load. */
-function Thumb({ src }: { src: string | null | undefined }) {
+const PHOTO_FROM: Record<'sample' | 'building', string> = { sample: 'Sample photo', building: 'Same building' };
+
+/**
+ * The home's photo from its StreetEasy page, linked. A sample's comes from the sample's stored photos; a home
+ * with no read of its own, from another unit in the same building, marked so. With none, or one that won't load,
+ * the address set in type.
+ */
+function Thumb({ r }: { r: Report }) {
   const [broken, setBroken] = useState(false);
-  if (!src || broken) return <span className="sh-thumb" aria-hidden="true" />;
-  return <img className="sh-thumb" src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />;
+  if (!r.photo || broken) {
+    const w = thumbWords(r.title);
+    return (
+      <span className="sh-thumb sh-thumb-type" aria-hidden="true">
+        {w.number && <b>{w.number}</b>}
+        <span>{w.street}</span>
+      </span>
+    );
+  }
+  const from = r.photoFrom === 'sample' || r.photoFrom === 'building' ? PHOTO_FROM[r.photoFrom] : null;
+  const img = <img className="sh-thumb" src={r.photo} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />;
+  return from ? <span className="sh-thumb-wrap" title={from === 'Same building' ? 'No photo of this home yet: this one is of another unit in its building.' : undefined}>{img}<span className="sh-thumb-from">{from}</span></span> : img;
 }
 
 type Action = 'archive' | 'restore' | 'delete';
@@ -187,7 +232,36 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   const [own, setOwn] = useState<Report[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The New report window: open, and what Start with Hubert handed it.
-  const [starting, setStarting] = useState<{ text: string } | null>(null);
+  const [starting, setStarting] = useState<({ text: string } & Partial<Omit<StartWords, 'home'>>) | null>(null);
+  const [startBusy, setStartBusy] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  // Start with Hubert (DP-20, the fuller version): the words are read first. With a home it can use,
+  // the report is made from them and opens on step 2, the details, with Hubert beside it saying what
+  // he filled in; without one, the New report window opens with what he did read.
+  const startWithHubert = useCallback(async (raw: string) => {
+    const w = readStartWords(raw);
+    setStartError(null);
+    if (!startsOnDetails(w) || !w.home || w.home.kind === 'bad-link') {
+      setStarting({ text: w.home?.kind === 'bad-link' ? w.home.text : raw, side: w.side, client: w.client, type: w.type, price: w.price });
+      return;
+    }
+    setStartBusy(w.home.kind === 'link' ? 'Hubert is starting the report and reading the listing…' : 'Hubert is starting the report…');
+    try {
+      const id = await startReport({
+        home: w.home, side: w.side ?? 'buyer', client: w.client ?? '', type: w.type ?? 'coop', typePicked: Boolean(w.type), price: w.price,
+      });
+      try {
+        sessionStorage.setItem(startNoteKey(id), JSON.stringify(noteOf(w)));
+      } catch {
+        // Private mode: Hubert opens without his note.
+      }
+      onOpen(id, 'details');
+    } catch (e) {
+      setStartError(`${e instanceof Error ? e.message : String(e)} Try again, or use + New comp.`);
+      setStartBusy(null);
+    }
+  }, [onOpen]);
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [all, setAll] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -284,6 +358,8 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
     ? [[stats.reports, 'Reports'], [mentees?.mentees.length ?? 0, 'Mentees'], [stats.sentThisMonth, 'Sent this month']]
     : [[stats.reports, 'Reports'], [stats.open, 'Open'], [stats.sentThisMonth, 'Sent this month']];
   const pick = own ? pickUp(own) : null;
+  const due = own ? followUpDue(own) : null;
+  const followUp = due ? { report: due, line: followUpLine(due) } : null;
 
   return (
     <>
@@ -291,7 +367,10 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
       <Hero
         pick={pick}
         onPick={(r) => onOpen(r.id, undefined, screenFor(r))}
-        onStart={(text) => setStarting({ text })}
+        onStart={(text) => void startWithHubert(text)}
+        starting={startBusy}
+        startError={startError}
+        followUp={followUp}
       />
       <main className="sh-reports">
         <div className="sh-reports-head">
@@ -377,7 +456,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
             onClose={() => setPicking(false)}
           />
         )}
-        {starting && <NewCompStart me={me} initialText={starting.text} onCreated={(id) => onOpen(id, 'details')} onClose={() => setStarting(null)} />}
+        {starting && <NewCompStart me={me} initial={starting} onCreated={(id) => onOpen(id, 'details')} onClose={() => setStarting(null)} />}
         {error && <p className="sh-note error" role="alert">{error}</p>}
         {reports === null && !error && <StateLine>Loading…</StateLine>}
 
@@ -433,7 +512,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                       onOpen(r.id, undefined, screenFor(r));
                     }}
                   >
-                    <Thumb src={r.photo} />
+                    <Thumb r={r} />
                     <span className="sh-home">
                       <span className="sh-addr">
                         {r.title}
@@ -453,7 +532,8 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
                         <span className={`sq ${STAGE_SQUARE[stageOf(r)]}`} aria-hidden="true" />
                         {stageLabel(r)}
                       </span>
-                      <span className="sh-updated" title={updatedLabel(r.updatedAt)}>{shortDate(stageOf(r) === 'sent' && r.sentAt ? r.sentAt : r.updatedAt)}</span>
+                      <span className="sh-updated" title={`Last worked on ${updatedLabel(workedAt(r))}`}>{shortDate(whenOf(r))}</span>
+                      {mine(r) && followUpIsDue(r) && <span className="sh-followup" title={followUpLine(r)}>Follow up</span>}
                     </span>
                   </a>
                   {mine(r) && (

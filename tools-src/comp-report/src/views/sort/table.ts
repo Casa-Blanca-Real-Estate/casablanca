@@ -78,10 +78,14 @@ function sortValue(r: Sortable, key: SortKey): number | null {
   }
 }
 
-/** Sorted within a group; a missing value goes last either way. Ties keep the list order. */
+/**
+ * Sorted within a group; a missing value goes last either way. Ties keep the list order. With no header
+ * sort, newest first (the audit, 2026-11-06): the export's own order isn't by date (Hannah's sold rows run
+ * Aug 27, Aug 24, Sep 17, Sep 15, Sep 2), and comps added from links landed last whatever their date.
+ */
 export function sortRows<T extends Sortable>(rows: T[], s: SortState): T[] {
-  if (!s.key) return rows;
-  const key = s.key;
+  const key = s.key ?? 'date';
+  if (!s.key) return sortRows(rows, { key, dir: -1 });
   const missing = (v: number | null) => v === null || Number.isNaN(v);
   return rows
     .map((r, i) => ({ r, i, v: sortValue(r, key) }))

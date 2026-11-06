@@ -24,6 +24,7 @@ import {
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
 import { StartFlow, type StartScreen } from '../newcomp/NewComp.tsx';
+import { readStartNote, startNoteKey, type StartNote } from '../newcomp/start-words.ts';
 import type { StepId } from './About.tsx';
 import { BuildNotesContext, useBuildNotesSwitch } from './buildNotes.tsx';
 import { Done } from './Done.tsx';
@@ -175,7 +176,18 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   useEffect(() => {
     trackScreen(start === 'home' ? 'new-report' : start ? (`new-report-${start}` as const) : screen, reportId);
   }, [start, screen, reportId]);
-  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
+  // Start with Hubert (Reports' hero) hands over his note: what he took from the agent's words. He opens beside step 2 with it.
+  const [startNote] = useState<StartNote | null>(() => {
+    try {
+      const key = startNoteKey(reportId);
+      const note = readStartNote(sessionStorage.getItem(key));
+      sessionStorage.removeItem(key);
+      return note;
+    } catch {
+      return null;
+    }
+  });
+  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work' || Boolean(startNote));
   // The drawer stays mounted for its slide out (shell.css), then goes (Kimani's notebook, 2026-10-27).
   const [drawerShown, setDrawerShown] = useState(drawerOpen);
   useEffect(() => {
@@ -666,6 +678,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     suggestions,
     removed,
     starting: Boolean(start),
+    startNote,
     drawerOpen,
     setDrawerOpen,
     reloadComps,

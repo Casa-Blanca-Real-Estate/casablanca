@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Report } from '../../api.ts';
-import { compsLabel, DEFAULT_SORT, listStats, matchesSearch, nextSort, pickUp, screenFor, sortReports, stageLabel, updatedLabel } from './reports-list.ts';
+import { compsLabel, DEFAULT_SORT, followUpDue, followUpIsDue, followUpLine, listStats, matchesSearch, nextSort, pickUp, screenFor, sortReports, stageLabel, updatedLabel } from './reports-list.ts';
 
 const base = { propertyType: 'condo', status: 'active', ownerEmail: 'a@casa-blanca.com', sampleData: false, createdAt: '2026-01-01T00:00:00Z' } as const;
 const r = (title: string, extra: Partial<Report>): Report => ({ ...base, id: title, title, updatedAt: '2026-10-01T12:00:00Z', ...extra });
@@ -30,10 +30,43 @@ test('the default order is newest first', () => {
   ]);
 });
 
-test('Home sorts A to Z by plain comparison, so a space sorts below a digit', () => {
+test('Home sorts as people read numbers: 1, 15, 100, 443 (the audit, 2026-11-06), case aside', () => {
   assert.deepEqual(titles(sortReports(reports, { key: 'home', dir: 1 })), [
-    '1 Wall St #2104', '100 Barclay Street #17L', '15 Hudson Yards #52C', '443 Greenwich St #5F',
+    '1 Wall St #2104', '15 Hudson Yards #52C', '100 Barclay Street #17L', '443 Greenwich St #5F',
   ]);
+  assert.deepEqual(titles(sortReports([r('b street', {}), r('A Street', {})], { key: 'home', dir: 1 })), ['A Street', 'b street']);
+});
+
+test('Stage · updated sorts by the date it shows: a sent one by when it was sent, others by when they were last worked on', () => {
+  const list = [
+    // Sent Nov 1, its outcome typed in on Nov 5: it shows "Sent · Nov 1", so it sorts there.
+    r('sent', { stage: 'sent', sentAt: '2026-11-01T12:00:00Z', updatedAt: '2026-11-05T12:00:00Z' }),
+    // Its comps were tiered on Nov 4; the report row itself last changed Oct 30.
+    r('sorting', { stage: 'sort', updatedAt: '2026-10-30T12:00:00Z', workedAt: '2026-11-04T12:00:00Z' }),
+    r('older', { stage: 'findings', updatedAt: '2026-11-02T12:00:00Z' }),
+  ];
+  assert.deepEqual(titles(sortReports(list, DEFAULT_SORT)), ['sorting', 'older', 'sent']);
+  assert.deepEqual(titles(sortReports(list, { key: 'when', dir: 1 })), ['sent', 'older', 'sorting']);
+});
+
+test('Range ties on the low end go by the high end', () => {
+  const list = [r('wide', { rangeLow: 1_000_000, rangeHigh: 1_500_000 }), r('narrow', { rangeLow: 1_000_000, rangeHigh: 1_100_000 })];
+  assert.deepEqual(titles(sortReports(list, { key: 'range', dir: 1 })), ['narrow', 'wide']);
+  assert.deepEqual(titles(sortReports(list, { key: 'range', dir: -1 })), ['wide', 'narrow']);
+});
+
+test('Hubert’s follow-up: due two days after sending, until ticked or a month has gone', () => {
+  const now = new Date('2026-11-06T12:00:00Z');
+  const sent = (sentAt: string, extra: Partial<Report> = {}) => r(sentAt, { stage: 'sent', sentAt, client: 'Jordan and Sam', ...extra });
+  assert.equal(followUpIsDue(sent('2026-11-05T12:00:00Z'), now), false);
+  assert.equal(followUpIsDue(sent('2026-11-04T12:00:00Z'), now), true);
+  assert.equal(followUpIsDue(sent('2026-11-03T12:00:00Z', { doneChecks: ['follow-up'] }), now), false);
+  assert.equal(followUpIsDue(sent('2026-11-03T12:00:00Z', { doneChecks: ['plan-offer'] }), now), true);
+  assert.equal(followUpIsDue(sent('2026-09-01T12:00:00Z'), now), false);
+  assert.equal(followUpIsDue(r('open', { stage: 'send' }), now), false);
+  const list = [sent('2026-11-03T12:00:00Z'), sent('2026-11-01T12:00:00Z'), sent('2026-11-05T12:00:00Z')];
+  assert.equal(followUpDue(list, now)?.sentAt, '2026-11-01T12:00:00Z');
+  assert.equal(followUpLine(list[1]!, now), 'Sent to Jordan and Sam on Nov 1. Heard back? Tick it on Done.');
 });
 
 test('Side ties keep the list order; Range sorts by its low end with the ones without a range last', () => {
