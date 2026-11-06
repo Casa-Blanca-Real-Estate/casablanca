@@ -5,6 +5,7 @@
 //   GET  ?scope=all[&owner=<email>]  admins and mentors: everyone's (NW-088 a); ignored for anyone else
 //   GET  ?scope=all&mentees=1        a mentor: only their mentees' (api/mentees.ts)
 //   POST {title, propertyType?}  create a report
+//   POST {duplicateOf, carryChat?}  copy the owner's own report: comps, tiers, details, reads; the chat only with carryChat (duplicate.ts)
 //   PATCH {id, action: 'archive' | 'restore' | 'delete'}  the owner's own report only;
 //                    delete is for sample reports (Kimani, 2026-10-22), and is final
 //
@@ -17,6 +18,7 @@ import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { logAccess, logViewed } from '../logs.ts';
 import { readsEveryReport, reportFor } from './workspace.ts';
 import { cleanPhotoUrls } from '../../engine/index.ts';
+import { duplicateReport } from './duplicate.ts';
 
 export interface ReportSummary {
   id: string;
@@ -190,6 +192,14 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
 
     const body = await readJsonObject(req);
     if (req.method === 'PATCH') return json(await changeStatus(pool, user, body));
+    if ('duplicateOf' in body) {
+      const copy = await withActor(pool, asUser(user), async (tx) => {
+        const id = await duplicateReport(tx, user, body.duplicateOf, body.carryChat === true);
+        return (await tx.query<ReportRow>(`select ${COLUMNS} from comp_report.reports where id = $1`, [id])).rows[0];
+      });
+      if (!copy) throw new HttpError(500, 'not_created');
+      return json({ report: summary(copy) }, 201);
+    }
     const title = typeof body.title === 'string' ? body.title.trim() : '';
     if (title.length < 1 || title.length > 200) {
       throw new HttpError(400, 'bad_title', 'Give the report a title of up to 200 characters.');

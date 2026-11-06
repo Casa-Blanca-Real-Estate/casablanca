@@ -5,6 +5,7 @@
 // header always answered "not the team": the box never showed on the comp report
 // (Kimani's notebook, 2026-10-29). Here the answer comes from /me instead.
 import type { Me } from './api.ts';
+import { NOTEBOOK_OFF } from './dev-settings.ts';
 
 // The old dev sign-in's list, as studio-auth.js keeps it.
 const TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
@@ -24,7 +25,10 @@ function hasSession(): boolean {
 }
 
 function loadBox(): void {
-  if (document.querySelector('script[data-cb-dev-notebook]')) return;
+  const old = document.querySelector('script[data-cb-dev-notebook]');
+  // A script that loaded while the box was off stopped at once: it goes, so this one runs.
+  if (old && !(window as { CBDevNotebook?: unknown }).CBDevNotebook) old.remove();
+  else if (old) return;
   const s = document.createElement('script');
   s.src = '/assets/dev-notebook.js';
   s.defer = true;
@@ -58,7 +62,8 @@ export function offerDevNotebook(me: Me, identityToken?: () => Promise<string | 
     // dev-notebook.js and the CMS read this mark (studio-auth.js keeps it the same way).
     if (team) localStorage.setItem('cb_auth', me.user.email.toLowerCase());
     else localStorage.removeItem('cb_auth');
-    if (!team || document.querySelector('script[data-cb-dev-notebook]')) return;
+    // Turned off in Settings: nothing loads, and no new session is asked for.
+    if (!team || localStorage.getItem(NOTEBOOK_OFF) === '1' || document.querySelector('script[data-cb-dev-notebook]')) return;
     if (hasSession()) return loadBox();
     const refused = Number(localStorage.getItem(REFUSED) || 0);
     if (!identityToken || Date.now() - refused < 86_400_000) return;
@@ -67,5 +72,26 @@ export function offerDevNotebook(me: Me, identityToken?: () => Promise<string | 
       .then((ok) => ok && loadBox(), () => undefined);
   } catch {
     /* storage blocked: no notebook */
+  }
+}
+
+/** Settings turned the box back on: it shows now if this browser has (or can renew) a notebook session. */
+export function notebookBackOn(me: Me, identityToken?: () => Promise<string | null>): void {
+  try {
+    if ((window as { CBDevNotebook?: unknown }).CBDevNotebook) return; // already loaded: it shows itself again
+    document.querySelector('script[data-cb-dev-notebook]')?.remove();
+    localStorage.removeItem(REFUSED);
+  } catch {
+    /* fine */
+  }
+  offerDevNotebook(me, identityToken);
+}
+
+/** Whether this browser holds a notebook session (for Settings to say so). */
+export function notebookSignedIn(): boolean {
+  try {
+    return hasSession();
+  } catch {
+    return false;
   }
 }

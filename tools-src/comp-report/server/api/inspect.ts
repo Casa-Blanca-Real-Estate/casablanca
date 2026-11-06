@@ -16,7 +16,8 @@
 //                                           single-report views only: logged first,
 //                                           20 an hour and 100 a day, fails closed
 //
-// Who may call it: a request carrying CR_INSPECT_KEY as X-Inspect-Key, and no
+// Who may call it: a request carrying CR_INSPECT_KEY as X-Inspect-Key (or as
+// "Authorization: Bearer", how the cloud environment's Network secrets send it), and no
 // one else. Unset or shorter than 32 characters, the endpoint is off: every
 // call is a 401. It never calls requireUser and never falls through to
 // Identity. A failed attempt goes to the function log (time and reason, never
@@ -57,7 +58,10 @@ function logRefused(reason: string): void {
  */
 export function inspectKey(req: Request, env: Record<string, string | undefined>): string {
   const expected = usableKey(env, 'CR_INSPECT_KEY');
-  const given = req.headers.get(INSPECT_KEY_HEADER);
+  // Or as a bearer token (2026-11-06): the cloud environment's Network secrets attach a key as
+  // "Authorization: Bearer …" to a site's requests, so a session can call this without ever seeing it.
+  const bearer = /^Bearer\s+(\S+)\s*$/i.exec(req.headers.get('authorization') ?? '')?.[1] ?? null;
+  const given = req.headers.get(INSPECT_KEY_HEADER) ?? bearer;
   if (expected === null) {
     logRefused(given === null ? 'off_no_key' : 'off');
     throw new HttpError(401, 'inspect_off', 'The inspection API is off here.');

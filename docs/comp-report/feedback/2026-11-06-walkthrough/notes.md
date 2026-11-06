@@ -80,3 +80,15 @@ minute before showing the failure. Today the agent has to press Try again.
 - One way into a new report (F3), in the design pass.
 - Older conversations keep the Hubert they started with (the prompt versions rule): the new voice shows in
   reports whose chat starts after this ships. The 60 Collister report keeps the old voice.
+
+## 5. Round two (Kimani, 2026-11-06 21:23)
+
+- **Inspection key**: the Casa environment's Network secrets take a Bearer token per domain. The inspection API
+  now accepts the key as `Authorization: Bearer`, so the key goes there and sessions never see it
+  (`docs/comp-report/inspect-api.md`). TD-23 closes once it's set and released.
+- **Dev notebook sign-in**: no 30-day end any more; it lasts until you sign out or turn the notebook off.
+- **Settings** (built): a gear in the name menu. You (name, email, access, the roster card) and, for the Studio team,
+  the dev switches per browser: the dev notebook's box, the dashboard's build marker, and for admins Dev tools in
+  reports and the Gate as a new agent, with "Turn all off".
+- **Fresh chat (HB-12)**: dropped for **Duplicate report** (built): a row's copy icon on Reports makes a new report
+  with the home, details, comps, tiers and finished reads. "Carry over the chat with Hubert" is off by default.
