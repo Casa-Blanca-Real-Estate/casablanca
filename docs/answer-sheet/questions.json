@@ -1247,7 +1247,8 @@
               "Done"
             ]
           ],
-          "source": "Kimani, 2026-11-06"
+          "source": "Kimani, 2026-11-06",
+          "needsYou": true
         }
       ],
       "settled": [
@@ -1338,7 +1339,7 @@
         "DP-19",
         "DP-20"
       ],
-      "html": "The overnight build's before and after screenshots, at 1440 and 2400 wide (project files: <code>design-pass-2-before/</code> and <code>design-pass-2-after/</code>), and the morning briefing."
+      "html": "The overnight build's before and after screenshots, at 1440 and 2400 wide (project files: <code>design-pass-2-before/</code> and <code>design-pass-2-after/</code>), and the <a href=\"https://claude.ai/artifact/XnksprsS99rBRX8AZkgiYa\">morning briefing</a>."
     },
     {
       "id": "RL-12",
