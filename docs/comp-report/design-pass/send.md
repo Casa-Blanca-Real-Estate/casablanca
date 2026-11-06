@@ -21,7 +21,7 @@ scrolling.
 ## Layout
 
 - **The header row:** the address block at the left; at the right the progress row (1 Sort ✓ · 2 Findings ✓ · 3 Send),
-  then **the forward action, Mark as sent ✓ →**, last, as the step after Send (decided: the right end of the row is for moving forward,
+  then **the step button** (below), last, as the step after Send (decided: the right end of the row is for moving forward,
   never for the step crumbs). This is the rule for every workspace screen: Review comps → / Findings → / Send → sit
   top right.
 - **36px** between the header row and the columns (was 20: it read cramped). The same spacing on every workspace
@@ -33,33 +33,42 @@ scrolling.
 
 ## The rail
 
-1. **Before you send** (decided: rail list *and* marks on the preview). Two kinds of row:
-   - **Issues**, numbered, from the issues panel. Each has two small text links (10px, regular, underlined, grey,
-     darker on hover): **Hide in the email** / **Show in the email** (the marks on the preview: a yellow number badge
-     and the highlight `#fbf0c4` on the words it's about), and, where the words are the fix, **Fix in place**, which
-     turns on editing and becomes **Done: mark it fixed**. A fixed issue leaves the list.
-   - **Read the whole email**: ticks itself when the agent scrolls the preview to its end (like terms you must scroll
-     through). No other manual checks: "every comp has a photo" is gone (a missing photo shows as the black cell).
-   - **Empty state:** when nothing's left, one ticked row: "All good. Ready to send."
-2. **1 · The email** (decided).
-   - **Subject**: an editable text field, underlined so it reads as one (darker on hover, deep lavender when focused),
-     with **Copy**. The Gmail link uses whatever it says.
-   - **Copy & open in Gmail** (primary). One click: copies the Designed email as HTML (as **Copy** does today) and
-     opens a new tab on Gmail's compose window with the subject filled in: `https://mail.google.com/mail/?view=cm&fs=1&su=…`
-     (the property sign tool's **Open in Gmail** builds the same link). A Gmail link can't carry a formatted body, so the
-     agent pastes (⌘V). Under it, one line: "Then paste it into the message (⌘V)." with a **?** that shows the rest on
-     hover or focus. When the report has the client's email (no field yet; 7.3 client fields), it goes in `to=`.
-   - **Copy only** (secondary), for agents who send from somewhere else.
-   - **Gmail draft · soon**: a disabled placeholder beside Copy only. Its hover card says what it will be: the finished
-     email straight into the agent's Gmail drafts, formatted and addressed, nothing to paste (NW-102, Gmail's API, once
-     Casa's Google sign-in is set up; after 11-13). That's the difference from Copy & open: no paste step.
+1. **Before you send** (decided: rail list *and* marks on the preview). The issues, numbered, from the issues panel.
+   Each has two small text links (10px, regular, underlined, grey, darker on hover): **Hide in the email** / **Show in
+   the email** (the marks on the preview: a yellow number badge and the highlight `#fbf0c4` on the words it's about),
+   and, where the words are the fix, **Fix in place**, which turns on editing and becomes **Done: mark it fixed**. A
+   fixed issue leaves the list. No manual checks (no "read the client's words", no "every comp has a photo"): reading
+   is the step button's gate. **Empty state:** "All good. Ready to send." with a tick.
+2. **1 · Email subject** (decided; Kimani's heading).
+   - The subject itself, no separate label: an editable field that **wraps** (two lines, more as needed), underlined
+     so it reads as one (darker on hover, deep lavender when focused), with a **copy icon** button (two overlapping
+     squares; `aria-label` "Copy the subject"). The Gmail link uses whatever it says.
+   - **Copy & open in Gmail** (primary) with a **copy icon** button beside it for copying the email alone ("Copy the
+     email only"): the icons replace the Copy and Copy only text buttons. Copy & open copies the Designed email as HTML
+     and opens Gmail's compose window with the subject filled in: `https://mail.google.com/mail/?view=cm&fs=1&su=…`
+     (as the property sign tool's **Open in Gmail** does). A Gmail link can't carry a formatted body, so the agent
+     pastes (⌘V). Under it, one line: "Then paste it into the message (⌘V)." with a **?** that shows the rest on hover
+     or focus. When the report has the client's email (no field yet; 7.3 client fields), it goes in `to=`.
+   - **Gmail draft · soon**: a disabled placeholder. Its hover card says what it will be: the finished email straight
+     into the agent's Gmail drafts, formatted and addressed, nothing to paste (NW-102, Gmail's API, once Casa's Google
+     sign-in is set up; after 11-13). That's the difference from Copy & open: no paste step.
    - **Plain text (Full · Short)**: a small text link that opens **Copy full** and **Copy short**.
-3. **2 · Then the text** (decided). Locked until the email is out: until the agent has used **Copy & open in Gmail** or
+3. **2 · Text msg** (decided; Kimani's heading). Locked until the email is out: until the agent has used **Copy & open in Gmail** or
    **Copy only**, it shows one muted line ("A short text for after the email. It opens here once you've copied or
    opened the email."). Then the text appears as a bubble with **Copy the text**. The text is drafted as today.
-Mark as sent isn't in the rail: it's the top-right forward action (Layout, above), **repeated at the bottom right of
-the page** for a short screen where the top one has scrolled away. Always available; it marks the report sent and
-goes to **Done**.
+## The step button: read, then copy, then mark as sent (decided)
+
+One button with three states, built as **one component** shown in two places: at the top right of the header row,
+and **sticky at the bottom right of the preview panel** (inside the scroll box, with a soft shadow), so it's always in
+reach without the page itself scrolling. Nothing below the panel.
+
+1. **Read the full email ↓**: greyed (`#dddbd5` on `#555550`), not clickable, until the agent has scrolled the preview
+   to its end. No line anywhere explains the unlock; the button's label is the instruction.
+2. **Copy & open in Gmail**: once read. Same action as the email card's button.
+3. **Mark as sent ✓ →**: once the email has been copied or opened (from here or the email card). Marks the report sent
+   and goes to **Done**.
+
+Reading is the gate: copying from the email card first doesn't skip it; the step button still asks for the full read.
 
 ## Editing the words in place (decided, NW-079 b)
 
