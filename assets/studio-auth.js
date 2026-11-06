@@ -48,7 +48,7 @@
     return;
   }
 
-  var TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
+  var TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
   var SIGN_IN = '/sign-in/';
   var ME_KEY = 'cb.studio.me';
   var ME_MS = 10 * 60 * 1000;
