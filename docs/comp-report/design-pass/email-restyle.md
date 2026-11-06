@@ -34,16 +34,17 @@ Kimani's design calls on the canvas, 2026-11-05/06. Each is marked **decided** o
    Co-ops without sizes: the $/SF cell drops out. Check the fit at 536px in Helvetica.
 5. **The agent's paragraph** (decided). 28px under the range, 14px, three or four lines: how the comps were chosen,
    which one carries the most weight, the size caveat, what the listings below are for.
-6. **The closest match: text on the photo** (decided, Kimani 2026-11-06). 2px ink border, the photo full width of the
-   card at 330px. Over its top, under a gradient from about 88% ink to clear: "THE CLOSEST MATCH" (10px, light grey),
-   the yellow ★ (#e8b923, 28px) at the right, the address (22px bold, white). Over its foot, under the mirror gradient:
-   the price (26px bold, white) and "$2,112 / SF" at the right. Off the photo, below it: the grey status line
+6. **The closest match: the address and the price on the photo** (decided, Kimani 2026-11-06). 2px ink border.
+   Inside it, on white above the photo: "THE CLOSEST MATCH" (10px) with the yellow ★ (#e8b923, 28px) at the right.
+   Then the photo, full width of the card, 330px: the address (22px bold, white) over its top, the price (26px bold)
+   and "$2,112 / SF" over its foot, each on a **tight** gradient, only a little taller than its text (about 64px:
+   88% ink, 70% at the middle, clear), strong enough to read. Off the photo, below it: the grey status line
    ("Sold Aug 2026 · Floor 10 · 2,201 sq ft") and the client paragraph, 18px side padding. Like the hero, this puts
-   text over a background photo, so it shares the hero's rule 7 question and its fallback (`bgcolor` ink on the cell).
-   No photo: the same text, dark, on white above the status line.
-7. **Also sold nearby: two-up, the closest match's style at half size** (decided, Kimani 2026-11-06). 1px ink border,
-   190px photo; the address (15px bold, white) over its top gradient, the price (18px bold) and $/SF (12px) over its
-   foot; below the photo the status line (11px) and the paragraph (13px). No photo: the same text, dark, on white.
+   text over a background photo, so it shares the hero's rule 7 question and its fallback: the cell's `bgcolor` is
+   ink, so a blocked or missing photo leaves white text on black (the canvas's Photos off tweak shows it).
+7. **Also sold nearby: the same card at half size** (decided, Kimani 2026-11-06). Built from one repeating pattern.
+   1px ink border, 190px photo, the address (15px bold, white) over its top and the price (18px bold) with $/SF (12px)
+   over its foot, gradients about 46px; below the photo the status line (11px) and the paragraph (13px).
 8. **On the market now · asking, not sold: a compact list** (proposed, not yet reviewed). 96×72 thumb, address, ask,
    status line, one paragraph each. Keeps the long tail of in-contract and active comps short.
 9. **Things to consider, sign-off, footer** (unchanged in substance). The footer wordmark is centred.
@@ -59,3 +60,6 @@ keeps Object Sans.
 
 Co-op version (no $/SF anywhere), missing-photo and missing-paragraph states beyond the hero, dark mode in Gmail and
 Apple Mail, the CTA's target, the Text's look.
+
+Cross-cutting follow-ups (the repeated-component audit, the font mix, real sample photos, blocked images):
+`follow-ups.md` beside this file.
