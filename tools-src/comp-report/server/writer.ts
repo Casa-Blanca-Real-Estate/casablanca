@@ -39,11 +39,14 @@ export interface WriterPrompt {
 /**
  * The system prompt. `rev` picks the field brief: cr5-2026-10-29 (CR-3, from
  * the real eval) keeps things to consider to the agent's own points and a
- * headline off a single price for the home. The shipped one stays as it was.
+ * headline off a single price for the home; cr5-2026-11-06 keeps those and
+ * swaps the carrying-costs cap for relevance (Kimani: guidelines, not caps).
+ * The shipped ones stay as they were.
  */
-function system(voiceId: string, rev: '2026-10-14' | '2026-10-29'): string {
+function system(voiceId: string, rev: '2026-10-14' | '2026-10-29' | '2026-11-06'): string {
   const voice = HOUSE_VOICES[voiceId]!;
   const later = rev !== '2026-10-14';
+  const relevant = rev === '2026-11-06';
   return [
     'You draft the client email for a Casa Blanca comparative market analysis. A licensed New York City real estate agent sends it to their client; you draft, and the agent picks, edits and sends. Casa Blanca is a residential brokerage.',
     'The report comes as JSON: the home; whether the client is buying or selling; the client\'s first name; the length; the headline facts, which are the only figures a headline may cite; the comps that count, each with its figures, how it differs from the home and the agent\'s own note on it; the price table; and any lines the agent wrote for this email, marked agent_stated.',
@@ -52,7 +55,9 @@ function system(voiceId: string, rev: '2026-10-14' | '2026-10-29'): string {
       '- headlines: two or three, each one sentence on what the comps show, citing only the headline facts. For example: "The three closest sales put #517 at $880–$925 a square foot — about $640K–$670K." Vary them: the range, the closest comp, how the sales closed against their asks.'
         + (later ? ' Only the range puts a price on the home: a headline on the closest comp says what it sold for, never what that would make the home.' : ''),
       '- chosen: one line on how the comps were chosen, from the agent\'s sorting (the tiers and their notes) and their own line if they wrote one. For example: "I focused on lower floors and homes close in size."',
-      '- comps: for each comp given, its id and one to three short lines on it. The email already leads each comp with its address, link, price and price per square foot, so don\'t repeat those.',
+      relevant
+        ? '- comps: for each comp given, its id and one to three short lines on what matters about it against the home, drawn from the agent\'s note first. The email already leads each comp with its address, link, price and price per square foot, so don\'t repeat those.'
+        : '- comps: for each comp given, its id and one to three short lines on it. The email already leads each comp with its address, link, price and price per square foot, so don\'t repeat those.',
       later
         ? '- consider: things to consider, only the points in agent_stated.things_to_consider, a point each, tightened. Never add a point of your own. If the agent wrote none, leave it empty.'
         : '- consider: things to consider, a point each: buildings that trade higher or lower, carrying costs, recent activity in the building. Only what the report supports.',
@@ -61,7 +66,9 @@ function system(voiceId: string, rev: '2026-10-14' | '2026-10-29'): string {
     'The email adds the greeting, the price table, the sign-off and the disclaimer itself: never write them. If the result uses the agent\'s estimates, the email already says so.',
     'By length. full: every field. short: headlines, one line for each comp given, and next_step; chosen empty and consider empty. text: a text message, so headlines and a one- or two-sentence next_step; comps, chosen and consider empty.',
     'For a seller, the next step is about pricing and listing, not an offer.',
-    ...(later ? ['Carrying costs come up once in the email at most, where they matter most. Don\'t close every comp with the same kind of line.'] : []),
+    ...(relevant
+      ? ['Bring a fact up where it matters to how a comp compares, not because it\'s in the data: that keeps the email from reading like a form.']
+      : later ? ['Carrying costs come up once in the email at most, where they matter most. Don\'t close every comp with the same kind of line.'] : []),
     'Leave a field empty (an empty string or list) when there\'s nothing true and useful to put in it.',
     voice.text,
   ].join('\n\n');
@@ -74,9 +81,10 @@ function system(voiceId: string, rev: '2026-10-14' | '2026-10-29'): string {
 export const WRITER_PROMPTS: Record<string, WriterPrompt> = {
   'cr5-2026-10-14': { id: 'cr5-2026-10-14', voice: 'house-2026-10-14', system: system('house-2026-10-14', '2026-10-14') },
   'cr5-2026-10-29': { id: 'cr5-2026-10-29', voice: 'house-2026-10-29', system: system('house-2026-10-29', '2026-10-29') },
+  'cr5-2026-11-06': { id: 'cr5-2026-11-06', voice: 'house-2026-11-06', system: system('house-2026-11-06', '2026-11-06') },
 };
 
-export const CURRENT_WRITER_PROMPT = WRITER_PROMPTS['cr5-2026-10-29']!;
+export const CURRENT_WRITER_PROMPT = WRITER_PROMPTS['cr5-2026-11-06']!;
 if (CURRENT_WRITER_PROMPT.voice !== CURRENT_HOUSE_VOICE.id) throw new Error('writer: the current prompt must carry the current house voice');
 
 /** The draft's shape, enforced by the API (structured output). Counts are checked in code. */

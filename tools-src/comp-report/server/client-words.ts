@@ -4,8 +4,10 @@
 //
 //   feedback — on the agent's overview or one comp's paragraph: what works,
 //              what's unclear, what the facts don't support, and what's off
-//              the house voice. No rewrite: the words stay the agent's. The
-//              fair-housing list is checked in code and added to it.
+//              the house voice; and, where the agent's points are thin, a
+//              question or two asking for more of their thinking (never the
+//              points themselves). No rewrite: the words stay the agent's.
+//              The fair-housing list is checked in code and added to it.
 //   draft    — the writer's version of one comp's paragraph, in the house
 //              voice, from the comp's facts, how it differs from the home, the
 //              agent's Sort note and tags, and Hubert's take on Sort. A full
@@ -75,6 +77,26 @@ export const CLIENT_WORDS_PROMPTS: Record<string, ClientWordsPrompt> = {
       CURRENT_HOUSE_VOICE.text,
     ].join('\n\n'),
   },
+  // Kimani, 2026-11-06: Hubert executes the agent's thinking and never supplies
+  // it, so when the overview's points are thin he asks for more of theirs.
+  'client-feedback-2026-11-06': {
+    id: 'client-feedback-2026-11-06',
+    job: 'feedback',
+    system: [
+      ...SHARED,
+      'You get, as JSON, either the agent\'s overview (agent_overview: their headline, how they chose the comps, things to consider and the next step, with the headline facts and the comps it rests on) or one comp with the paragraph the agent wrote for the client about it (agent_paragraph), with the comp\'s facts, how it differs from the home, the agent\'s own note from sorting it, and your take on it from sorting (hubert_take_on_sort).',
+      [
+        'Give the agent feedback on their words, the way a mentor reviews a trainee\'s draft. Speak to the agent as "you". One short sentence a point.',
+        '- works: what reads well for the client and is supported by the facts. At most two.',
+        '- unclear: what a client who isn\'t in real estate would trip on: jargon, a vague claim, a point that needs one more word. At most three.',
+        '- unsupported: a claim the facts don\'t back or contradict, or a figure that isn\'t in the input. At most three.',
+        '- off_voice: where it strays from the house voice below: hype, jargon, a judgment about who should live there, an appraisal. At most three.',
+        '- more_thinking: when the agent hasn\'t said enough for the client to follow their reasoning (things to consider empty or thin, a comp with no word on why it matters), ask for their thinking: one or two open questions that point at what the comps raise, such as a building that trades higher, a long time on the market, carrying costs, without answering them. Empty when what they wrote already carries their reasoning.',
+      ].join('\n'),
+      'Don\'t rewrite their words, don\'t write a version for them, and don\'t supply the points yourself: the thinking is theirs. If they wrote nothing, ask what they\'d want the client to know first.',
+      CURRENT_HOUSE_VOICE.text,
+    ].join('\n\n'),
+  },
   'client-draft-2026-10-27': {
     id: 'client-draft-2026-10-27',
     job: 'draft',
@@ -89,7 +111,7 @@ export const CLIENT_WORDS_PROMPTS: Record<string, ClientWordsPrompt> = {
 };
 
 export const CURRENT_CLIENT_WORDS_PROMPT: Record<ClientRoundKind, ClientWordsPrompt> = {
-  feedback: CLIENT_WORDS_PROMPTS['client-feedback-2026-10-27']!,
+  feedback: CLIENT_WORDS_PROMPTS['client-feedback-2026-11-06']!,
   draft: CLIENT_WORDS_PROMPTS['client-draft-2026-10-27']!,
 };
 
@@ -99,8 +121,8 @@ export const CLIENT_WORDS_SCHEMAS = {
   feedback: {
     type: 'object',
     additionalProperties: false,
-    required: ['works', 'unclear', 'unsupported', 'off_voice'],
-    properties: { works: list, unclear: list, unsupported: list, off_voice: list },
+    required: ['works', 'unclear', 'unsupported', 'off_voice', 'more_thinking'],
+    properties: { works: list, unclear: list, unsupported: list, off_voice: list, more_thinking: list },
   },
   draft: {
     type: 'object',
@@ -217,6 +239,7 @@ export function parseClientWords(text: string, w: ClientWordsInput): ClientWords
   section('What’s unclear:', points(raw.unclear, 3));
   section('Not supported:', points(raw.unsupported, 3));
   section('Off-voice:', points(raw.off_voice, 3));
+  section('Tell me more:', points(raw.more_thinking, 2));
   section('Fair housing:', fairHousingPoints(agentWords(w)));
   return parts.length ? { text: parts.join('\n'), dropped } : null;
 }
