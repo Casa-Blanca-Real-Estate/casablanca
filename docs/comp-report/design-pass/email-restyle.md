@@ -12,15 +12,15 @@ Kimani's design calls on the canvas, 2026-11-05/06. Each is marked **decided** o
 
 1. **Header** (decided). Black bar, the white wordmark image (`assets/brand/casa-blanca-wordmark-white.png`), the
    lavender "COMP REPORT" eyebrow. Unchanged from today.
-2. **Hero with the text over the photo** (open: needs Kimani's sign-off on rule 7). The "Prepared for … · Nov 2026"
+2. **Hero with the text over the photo** (Kimani likes it; open only on rule 7, the same question as items 6 and 7). The "Prepared for … · Nov 2026"
    line, the address and the beds/baths/size line sit at the foot of a 340px photo, in white over a gradient from clear
    to about 90% ink. In an email that needs the photo as a cell background, which rule 7 bans because some clients strip
    it. If allowed: the cell carries `bgcolor="#0f0f0f"` so a stripped photo leaves white text on black, never white on
    white. Without a photo, the old layout: text on white below where the photo would be.
-3. **The headline is a lead-in to the range** (decided, Kimani 2026-11-06). There's no eyebrow. The agent's headline
-   opens with the greeting and runs one or two full lines that end where the number starts:
-   "Hi Jordan and Sam, I looked at the closest recent sales to see where 17L stands. The three most like it put it at"
-   then the range. 17px bold, line-height 1.4, 12px above the range.
+3. **The headline is a lead-in to the range** (decided, Kimani 2026-11-06). There's no eyebrow. The greeting
+   ("Hi Jordan and Sam,") on its own line, a blank line, then the agent's lead-in, which ends where the number starts:
+   "I looked at the closest recent sales to see where 17L stands. The three most like it put it at:" then the range.
+   Both 14px regular, line-height 1.4 (Kimani's sizing on the canvas), 12px above the range.
    - The headline has **no numbers**; the range line supplies them. `headlineDrafts` (`workspace/email.ts`) trims each
      draft to end before its figures ("…put 17L at"); the agent writes a lead-in, not a sentence.
    - The greeting moves into the lead-in, so the email doesn't open with a separate "Hi Jordan and Sam," line.
@@ -29,17 +29,21 @@ Kimani's design calls on the canvas, 2026-11-05/06. Each is marked **decided** o
    - D-21 (a headline is required) and the numbers check stand; a lead-in with no figures passes the numbers check
      trivially.
 4. **The range, on white** (decided). The black range block is gone. "$4.23M – $4.92M" in ink, 44px heavy, the first
-   big black text in the email. "$2,112 – $2,457 / SF" small (13px, grey) at the right end of the same line, baseline
+   big black text in the email. "($2,112 – $2,457 / SF)" small (13px, grey, in parentheses) at the right end of the same line, baseline
    aligned; neither wraps (both `white-space:nowrap`; in a table, two cells of one row). No "from 3 sales close by".
    Co-ops without sizes: the $/SF cell drops out. Check the fit at 536px in Helvetica.
 5. **The agent's paragraph** (decided). 28px under the range, 14px, three or four lines: how the comps were chosen,
    which one carries the most weight, the size caveat, what the listings below are for.
-6. **The closest match** (decided: today's box, kept). 2px ink border; inside it "THE CLOSEST MATCH" eyebrow with the
-   yellow ★ (#e8b923, 34px) on the same line, then the address (22px bold), the photo at **330px**, price (22px bold)
-   with $/SF at the right ("$2,112 / SF"), a grey status line ("Sold Aug 2026 · Floor 10 · 2,201 sq ft"), the
-   client paragraph.
-7. **Also sold nearby: two-up boxes** (proposed, not yet reviewed). 1px ink border, address, 150px photo, price and
-   $/SF, status line, paragraph.
+6. **The closest match: text on the photo** (decided, Kimani 2026-11-06). 2px ink border, the photo full width of the
+   card at 330px. Over its top, under a gradient from about 88% ink to clear: "THE CLOSEST MATCH" (10px, light grey),
+   the yellow ★ (#e8b923, 28px) at the right, the address (22px bold, white). Over its foot, under the mirror gradient:
+   the price (26px bold, white) and "$2,112 / SF" at the right. Off the photo, below it: the grey status line
+   ("Sold Aug 2026 · Floor 10 · 2,201 sq ft") and the client paragraph, 18px side padding. Like the hero, this puts
+   text over a background photo, so it shares the hero's rule 7 question and its fallback (`bgcolor` ink on the cell).
+   No photo: the same text, dark, on white above the status line.
+7. **Also sold nearby: two-up, the closest match's style at half size** (decided, Kimani 2026-11-06). 1px ink border,
+   190px photo; the address (15px bold, white) over its top gradient, the price (18px bold) and $/SF (12px) over its
+   foot; below the photo the status line (11px) and the paragraph (13px). No photo: the same text, dark, on white.
 8. **On the market now · asking, not sold: a compact list** (proposed, not yet reviewed). 96×72 thumb, address, ask,
    status line, one paragraph each. Keeps the long tail of in-contract and active comps short.
 9. **Things to consider, sign-off, footer** (unchanged in substance). The footer wordmark is centred.
