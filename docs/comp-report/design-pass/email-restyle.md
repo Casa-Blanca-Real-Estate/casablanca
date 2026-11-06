@@ -45,9 +45,15 @@ Kimani's design calls on the canvas, 2026-11-05/06. Each is marked **decided** o
 7. **Also sold nearby: the same card at half size** (decided, Kimani 2026-11-06). Built from one repeating pattern.
    1px ink border, 190px photo, the address (15px bold, white) over its top and the price (18px bold) with $/SF (12px)
    over its foot, gradients about 46px; below the photo the status line (11px) and the paragraph (13px).
-8. **On the market now · asking, not sold: a compact list** (proposed, not yet reviewed). 96×72 thumb, address, ask,
-   status line, one paragraph each. Keeps the long tail of in-contract and active comps short.
-9. **Things to consider, sign-off, footer** (unchanged in substance). The footer wordmark is centred.
+8. **On the market now · asking, not sold: one row per listing** (decided, Kimani 2026-11-06). A 96×96 square photo
+   at the left; beside it, a column exactly as tall as the photo: the address and the ask on top, the status line
+   below them (lavender square for in contract, white for active), and the agent's one-line note anchored to the
+   **bottom** of the photo, so a short note sits on the photo's baseline and a longer one grows upward. The note is
+   **two lines at most: a 120-character limit** on the client's-words step for listings (about 65 characters a line
+   at 13px in the 426px column). In the email that's a fixed-height cell with the note bottom-aligned
+   (`valign="bottom"`), not a line clamp, which mail clients don't support.
+9. **Things to consider, sign-off, footer** (unchanged in substance). Every section header (Also sold nearby, On
+   the market now, Things to consider) matches "THE CLOSEST MATCH": 10px, weight 600, 0.24em tracking, ink. The footer wordmark is centred.
 
 ## Type
 
