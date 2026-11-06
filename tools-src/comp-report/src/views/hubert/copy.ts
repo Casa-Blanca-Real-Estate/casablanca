@@ -19,12 +19,12 @@ export function greeting(firstName: string | null | undefined): string {
 
 export function intro(side: 'buyer' | 'seller'): string {
   return side === 'buyer'
-    ? 'The tiers, notes and tags are yours to fill in. Ask me anything about these listings, and I’ll point out sales you haven’t added yet. For a buyer I’ll also flag days on market and price cuts, since that’s where the leverage is. I run my own numbers after you’ve given yours at the gate.'
-    : 'The tiers, notes and tags are yours to fill in. Ask me anything about these listings, and I’ll point out sales you haven’t added yet. I run my own numbers after you’ve given yours at the gate.';
+    ? 'The tiers, notes and tags are yours to fill in. Ask me anything about these listings, and I’ll point out sales you haven’t added yet. For a buyer I’ll also flag days on market and price cuts, since that’s where the leverage is. I run my own numbers after you’ve given yours, just before Findings.'
+    : 'The tiers, notes and tags are yours to fill in. Ask me anything about these listings, and I’ll point out sales you haven’t added yet. I run my own numbers after you’ve given yours, just before Findings.';
 }
 
-/** Said once, on Sort: where "sales you haven't added yet" come from in this version. */
-export const SUGGESTIONS_LATER = 'For now, the sales I can point to are ones from your export that you took out. Suggestions from market data come in a later version.';
+/** Said once, on Sort: where "sales you haven't added yet" come from (HB-8: the web, as a card the agent checks). */
+export const SUGGESTIONS_LATER = 'Sales I point to are ones you took out, or ones I find on the web. A sale I find comes to you as a card with its StreetEasy link: you check it, and only then is it added.';
 
 export type Chip = { label: string; kind: 'ask' } | { label: string; kind: 'reopen' };
 

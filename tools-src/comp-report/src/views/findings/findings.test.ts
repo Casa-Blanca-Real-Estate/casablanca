@@ -72,7 +72,7 @@ test('the page’s names win over the engine’s; nothing is named that isn’t 
 test('no size: no sizes and no $/sq ft — and with no range, why not, from the engine', () => {
   const text = take(run(NO_SIZE), { sf: false });
   assert.doesNotMatch(text, /sq ft/);
-  assert.match(text, /^I couldn’t make a range yet: no implied values without the subject's interior area\. Your closest sales so far: /);
+  assert.match(text, /^I couldn’t make a range yet: there’s no known square footage for the home\. Your closest sales so far: /);
 });
 
 test('a co-op: the range from the sales’ prices, no size anywhere', () => {

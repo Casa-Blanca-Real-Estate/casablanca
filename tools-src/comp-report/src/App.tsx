@@ -13,6 +13,7 @@ import { Center, StateLine } from './views/shell/Pieces.tsx';
 import { Shell } from './views/shell/TopBar.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
 import { STUDIO_SIGN_IN, studioSignInUrl } from './studio-sign-in.ts';
+import { offerDevNotebook } from './dev-notebook.ts';
 
 function currentReportId(): string | null {
   return new URLSearchParams(location.search).get('report');
@@ -68,6 +69,7 @@ export function App() {
     const id = currentReportId();
     prefetch(id ? `/api/comp-report/workspace?report=${id}` : '/api/comp-report/reports');
     api<Me>('/api/comp-report/me').then((m) => {
+      offerDevNotebook(m);
       const next = takeNext();
       if (next) location.replace(next);
       else if (STUDIO_SIGN_IN) location.replace('/'); // signed in at the Studio's sign-in page: on to the dashboard

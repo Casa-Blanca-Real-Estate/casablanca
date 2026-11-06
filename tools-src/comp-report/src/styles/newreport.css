@@ -181,7 +181,7 @@
   padding: 8px 0; border-top: 1px solid var(--cb-line); font-size: 13px;
 }
 .nr-row.nosf { grid-template-columns: 52px minmax(0, 1fr) 110px 90px 20px; }
-.nr-row.nr-read { grid-template-columns: 52px minmax(0, 1fr) auto auto; }
+.nr-row.nr-read { grid-template-columns: 52px minmax(0, 1fr) repeat(3, auto); }
 .nr-row.muted { color: var(--cb-mid); }
 .nr-thumb { width: 52px; height: 38px; background: repeating-linear-gradient(135deg, var(--cb-line-2) 0 6px, var(--cb-line) 6px 12px); }
 .nr-thumb.has { background: var(--cb-line); overflow: hidden; }

@@ -206,7 +206,7 @@ export function HomeFields({ line, side, onSide, client, onClient, type, onType,
             inputMode="decimal"
             value={target}
             disabled={disabled}
-            placeholder="$0"
+            placeholder="e.g. $4.25M"
             aria-invalid={targetBad || undefined}
             onChange={(e) => onTarget(e.target.value)}
             onBlur={onTargetBlur}
