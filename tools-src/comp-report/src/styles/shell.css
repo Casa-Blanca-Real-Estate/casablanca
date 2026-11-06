@@ -214,9 +214,14 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 
 /* ─── The workspace: page, header, progress row ─────────────────────────────── */
 .sh-page {
+  /* Nearly edge to edge on a big screen (the design pass): up to 1840px, side margins that follow the window. */
+  --pad-left: clamp(16px, 2.6vw, 40px); --pad-right: clamp(16px, 2.6vw, 40px);
   position: relative; display: flex; flex-direction: column; gap: 28px;
   min-height: calc(100vh - var(--sh-bar-h)); padding: var(--pad-top) var(--pad-right) var(--pad-bottom) var(--pad-left);
 }
+.sh-page > :not(.sh-hubert-tab) { width: 100%; max-width: 1840px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+/* 36px between the header row and the screen (was 28): it read cramped. */
+.sh-page > .sh-screen { margin-top: 8px; }
 .sh-page.with-drawer { margin-right: var(--sh-drawer-w); }
 .sh-screen { min-width: 0; }
 .sh-aux { display: flex; flex-direction: column; gap: 12px; margin-top: -8px; }

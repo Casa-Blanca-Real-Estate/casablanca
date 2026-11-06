@@ -193,6 +193,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
   const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
+  const [hubertQuestion, setHubertQuestion] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ at: string | null } | null>(null);
   const [focus, setFocus] = useState<{ reportCompId: string; field: string; n: number; at: number } | null>(null);
   // What the agent has open, for Hubert's get_view: refs, so a turn already under way reads it as it is now.
@@ -538,6 +539,20 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     setBrief: (next) => {
       setBriefState(next);
       save.queue('brief', next);
+      // The side changed on a report holding the sample's email lines: they follow the side, so a buyer's
+      // report never keeps a seller's "List in October…" (the design pass's bug, 2026-11-06). The agent's
+      // own lines stay as they are.
+      const side = next.audience?.value;
+      const lines = stateRef.current.send ?? {};
+      const sampled = (['chosen', 'consider', 'nextStep'] as const).filter((k) => lines[k]?.sample);
+      if (side && side !== brief.audience?.value && sampled.length && canSample) {
+        void workspaceApi.sample(propertyType, side).then((sample) => {
+          const now = stateRef.current.send ?? {};
+          const swap = { ...now };
+          for (const k of sampled) if (now[k]?.sample && sample.send[k]) swap[k] = sample.send[k];
+          setState({ ...stateRef.current, send: swap });
+        }).catch(() => undefined);
+      }
     },
     intake,
     setIntake: (next) => setState({ ...stateRef.current, intake: next }),
@@ -658,6 +673,11 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     },
     view: () => viewRef.current(),
     hubertEdits,
+    hubertQuestion,
+    askHubert: (question: string | null) => {
+      setHubertQuestion(question);
+      if (question) setDrawerOpen(true);
+    },
     queueHubertEdit: (edit) => setHubertEdits((list) => [...list, edit]),
     takeHubertEdits: (n) => setHubertEdits((list) => list.slice(n)),
     // From the state as it stands, so two edits in a row both land; the autosave writes it like the agent's typing.

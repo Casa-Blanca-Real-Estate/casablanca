@@ -154,6 +154,9 @@ export interface Workspace {
   /** Sort's rows top to bottom, as they show now (its filter and order): "comp 2" is the second. */
   sortOrder: (reportCompIds: string[]) => void;
   view: () => HubertView;
+  /** A question for Hubert from the screen (Send's "Ask Hubert to review"): his drawer opens and asks it. Null: taken. */
+  hubertQuestion: string | null;
+  askHubert: (question: string | null) => void;
   /** Hubert's edits to the email, waiting for Send to apply them (server/hubert-email.ts). */
   hubertEdits: HubertEmailEdit[];
   queueHubertEdit: (edit: HubertEmailEdit) => void;

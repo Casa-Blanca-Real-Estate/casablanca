@@ -82,7 +82,10 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 2px s
 }
 .btn:hover { background: var(--cb-bg); }
 .btn.primary { background: var(--cb-black); color: #fff; border-color: var(--cb-black); padding: 12px 22px; /* 13px in the handoff, less the 1px border */ }
-.btn.primary:hover { background: #2a2a28; }
+/* Hover states everywhere (the design pass): ink buttons go deep lavender, outlined ones tint lavender. */
+.btn:hover:not(:disabled) { background: #f1effa; }
+.btn.primary:hover:not(:disabled) { background: var(--cb-deep); border-color: var(--cb-deep); color: #fff; }
+.link:hover { color: var(--cb-deep); }
 .btn:disabled, .btn.primary:disabled { opacity: .35; cursor: default; }
 .link { font: inherit; background: none; border: none; padding: 0; color: var(--cb-black); cursor: pointer; border-bottom: 1px solid var(--cb-lavender); }
 

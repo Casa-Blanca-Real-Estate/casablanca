@@ -249,6 +249,8 @@ export interface SendState {
   length?: 'full' | 'short' | 'text';
   clientName?: Entry<string>;
   signOff?: Entry<string>;
+  /** The closing word before the sign-off (the design pass, 2026-11-06): "Best," unless the agent picks another. */
+  closing?: Entry<string>;
   /**
    * The subject line, the agent's (NW-083 a): one for every length, kept apart
    * from the body so editing it freezes no draft. Unset, it's the old draft's
