@@ -291,7 +291,8 @@ function HomeScreen({ ws, onScreen, onClose }: { ws: Workspace; onScreen: (s: St
 
   const i = ws.intake;
   const meta = home && (home.status === 'queued' || home.status === 'running')
-    ? `${TYPE_LABEL[ws.propertyType]} · reading its StreetEasy page…`
+    // Not the type until the page says it (Kimani's walkthrough, 2026-11-06): before the read it's only the default.
+    ? 'Reading its StreetEasy page…'
     : [TYPE_LABEL[ws.propertyType], i.neighborhood?.value, i.beds && `${i.beds.value} bd`, i.baths && `${i.baths.value} ba`, i.floor && `Fl ${i.floor.value}`].filter(Boolean).join(' · ');
 
   return (

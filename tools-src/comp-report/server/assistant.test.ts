@@ -36,7 +36,7 @@ test('hb-voice (2026-11-06): hb-home with the chat voice, the step call-out and 
   assert.equal(CURRENT_PROMPT.id, voice.id);
   assert.deepEqual(voice.tools, home.tools);
   assert.ok(voice.system.startsWith(home.system.split('Be concise and plain-spoken')[0]!), 'everything before the old last line is kept');
-  for (const part of ['Your voice in the chat.', "Meet the agent's energy", 'Where the agent is.', 'The calculator.', 'never call it one']) {
+  for (const part of ['Your voice in the chat.', "Meet the agent's energy", 'Where the agent is.', 'The calculator.', 'Building the comps together', 'never call it one']) {
     assert.ok(voice.system.includes(part), part);
   }
   assert.ok(!voice.system.includes('Be concise and plain-spoken'), 'the flat line is replaced');

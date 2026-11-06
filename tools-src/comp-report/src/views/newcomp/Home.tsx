@@ -108,7 +108,7 @@ export function HomeLineInput({ text, onText, type, disabled }: {
       {v.kind === 'link' && v.check.ok && (
         <Matched
           name={titleFromLink(v.check.url) ?? 'The StreetEasy listing'}
-          meta={`${TYPE_LABEL[type]} · its details are read from StreetEasy next`}
+          meta="Its details, Co-op or Condo too, are read from StreetEasy next"
           onClear={disabled ? undefined : () => onText('')}
         />
       )}

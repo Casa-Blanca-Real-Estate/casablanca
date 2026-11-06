@@ -48,13 +48,13 @@ minute before showing the failure. Today the agent has to press Try again.
 | # | What Kimani said | Where it went |
 |---|---|---|
 | H1 | Hubert is dry, cut, flat. "sup!" got a flat list of what he can't do. Match the agent's energy, a step above. Only the chat: what he writes into fields and the email reads fine. | **Built**: prompt `hb-voice-2026-11-06` |
-| H2 | He said "the engine" without saying what it is; a new agent won't know. Asked, he explained it too long. Give it a simple definition, maybe a better name, short unless asked. | **Built**: "the calculator", with a two-line definition. Name is an **Ask** (DP-23) |
+| H2 | He said "the engine" without saying what it is; a new agent won't know. Asked, he explained it too long. Give it a simple definition, maybe a better name, short unless asked. | **Built**: "the calculator", with a two-line definition. Name **decided** (Kimani, 21:08): "the calculator" for now ("pricing calculator" and "pricing model" also fine) |
 | H3 | Searched listings show as plain links. Show cards: a thumbnail, the address, clickable. Top three, the rest as text links. | **Built** |
 | H4 | Animations showing he's thinking or searching, not a static box. | **Built**: moving dots on Thinking / Searching the web / Checking |
 | H5 | A way to stop a message sent by mistake (Enter hit mid-sentence) before he answers, and take it back. | **Built**: Stop |
 | H6 | Make the current step more prominent, with Hubert calling out where the agent is. | **Built**: the step row's current step stands out; a "You're on" band at the top of his panel; he says the step when greeted or asked what's next |
-| H7 | Maybe the step flashes over the whole Hubert panel in large text, then fades as they start working. | **Ask** (HB-9). The built band flashes lavender for a moment when the step changes, as a smaller version |
-| H8 | "For like": for newer agents, Hubert matches the number of comps they added (they add 3, he proposes 3 more), so they keep learning and he doesn't do all the work. | **Ask** (HB-10) |
+| H7 | Maybe the step flashes over the whole Hubert panel in large text, then fades as they start working. | **Decided** (Kimani, 21:08): keep the small band for now; he'll design the big flash himself in Claude Design |
+| H8 | "For like": for newer agents, Hubert matches the number of comps they added (they add 3, he proposes 3 more), so they keep learning and he doesn't do all the work. | **Built** (Kimani, 21:08: yes): asked to find comps, Hubert matches the agent's own one for one, up to 5 at a time, without announcing it. With none added, he asks them to add one first ("we'll build it together"); unsure, he says what to search for from the home's details |
 | H9 | Hubert's panel slides in well on a first New report, but its intro text is small. | **Built** (a little: hint text 12 → 13px, guides 14px); the rest is **Design pass** |
 | H10 | The step guides ("check the details, the listing…") should be larger, so the guidance is obvious. | **Built**: guide text 14px, its heading darker |
 
@@ -62,10 +62,10 @@ minute before showing the failure. Today the agent has to press Try again.
 
 | # | What came up | Where it goes |
 |---|---|---|
-| F1 | The New report window shows "Co-op" (the type) before the link has been read: it reads as if it found that, and it's wrong for a condo. "Turn off that label until it fills." | **Design pass** (or a quick fix on request): hide the type label until the read lands |
+| F1 | The New report window shows "Co-op" (the type) before the link has been read: it reads as if it found that, and it's wrong for a condo. "Turn off that label until it fills." | **Built**: the type isn't shown until the page has been read |
 | F2 | The client's name ("optional"): where does it show? It should show somewhere the agent can identify the report by it. | **Design pass**: show it on the report row and header |
 | F3 | Two ways in, the New report button and the "Start with Hubert" box, open the same window. Pick one place: "get rid of the field and just move the button there." Kimani agreed. | **Design pass** (decision made: one entry, the button moved up) |
-| F4 | His dev notes / dev log didn't show while signed in as admin, though it did before. | **Check**: the notebook's capture box turns on per browser with a key (`docs/dev-notebook/README.md`); likely the office machine's browser never had it. If it's on and still missing, it's a bug |
+| F4 | His dev notes / dev log didn't show while signed in as admin, though it did before. | **Built**: the cause was the notebook's 30-day session (his first sign-in was 09-29; his notes stop on 10-29), which ran out silently. The comp report now renews it from the Studio sign-in for a dev email, so the box comes back without visiting the notebook page |
 | F5 | The colleague asked what the client's target number is for. Kimani: a visual marker, so the agent can see where the client's number falls against the range and justify going up or down. | Decision stands (target stays, display only) |
 | F6 | The details step went well dictated out loud ("you can talk it out"): outdoor space (terrace vs balcony), views, exposure, fireplace, building features, year built. | No change. A note for training: dictating to Hubert works here |
 | F7 | Some agents (Noble) do their research themselves rather than from a StreetEasy export. | Context for H8 and for training |
