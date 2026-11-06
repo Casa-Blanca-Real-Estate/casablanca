@@ -125,11 +125,11 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
           onChange={(e) => setNote(e.target.value)}
           maxLength={500}
         />
-        <label className="sh-help">
+        <label className="sh-access-check">
           <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} /> Studio team: the
           CMS, profile pics and the team tools
         </label>
-        <label className="sh-help">
+        <label className="sh-access-check">
           <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} /> Admin: everything,
           including everyone's reports and this panel
         </label>
@@ -196,10 +196,11 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
 
 // Who each Studio tool is for (server/api/studio-tools.ts): the dashboard and each tool page follow it.
 // "Admins only" is how a tool under construction is kept from everyone else.
-type ToolLevel = 'everyone' | 'team' | 'admin';
+type ToolLevel = 'everyone' | 'mentor' | 'team' | 'admin';
 interface ToolRow { key: string; name: string; level: ToolLevel; default: ToolLevel; floor: ToolLevel; changedBy: string | null }
 const TOOL_LEVELS: { value: ToolLevel; label: string }[] = [
   { value: 'everyone', label: 'Everyone' },
+  { value: 'mentor', label: 'Mentors' },
   { value: 'team', label: 'Studio team' },
   { value: 'admin', label: 'Admins only' },
 ];
@@ -233,10 +234,10 @@ function ToolLevels() {
   }
 
   return (
-    <details className="sh-access-tools">
-      <summary>Studio tools · who sees each</summary>
+    <section className="sh-log sh-access-tools">
+      <h3 className="sh-log-title">Studio tools: who sees each</h3>
       <p className="sh-help">
-        Each tool on the Studio dashboard, and who it's open to. Set one to Admins only while it's
+        Each tool on the Studio dashboard, and who it's open to. Mentors includes the team and the admins. Set one to Admins only while it's
         being built or reworked. Changes apply on the next page load.
       </p>
       {error && <p className="sh-note error" role="alert">{error}</p>}
@@ -264,6 +265,6 @@ function ToolLevels() {
           </li>
         ))}
       </ul>
-    </details>
+    </section>
   );
 }

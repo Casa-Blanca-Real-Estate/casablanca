@@ -5,7 +5,8 @@
 //                         it says only which tools are open to whom, which the dashboard shows anyway
 //   PUT {key, level}      an admin sets one tool's level; level null puts it back to its default
 //
-// The levels, widest first: everyone (signed out too, while the Studio is OPEN), team, admin.
+// The levels, widest first: everyone (signed out too, while the Studio is OPEN), mentor (the comp
+// report's mentors, with the team and the admins; Kimani, 2026-11-06), team, admin.
 // "admin" is how a tool under construction is hidden from everyone else. A tool's floor is the
 // widest it may go: the CMS and the roster hand out their tokens to the team only, so they never
 // open to everyone. The dashboard (index.html) and each tool page (assets/studio-auth.js,
@@ -14,7 +15,7 @@
 import { allowMethods, HttpError, json, readJsonObject, respond } from '../http.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
 
-export const LEVELS = ['everyone', 'team', 'admin'] as const;
+export const LEVELS = ['everyone', 'mentor', 'team', 'admin'] as const;
 export type Level = (typeof LEVELS)[number];
 const rank = (l: Level) => LEVELS.indexOf(l);
 
@@ -44,7 +45,7 @@ export interface ToolBlobs {
   setJSON(key: string, value: unknown): Promise<unknown>;
 }
 
-export interface ToolDeps extends AuthDeps { store: ToolBlobs }
+export interface ToolDeps extends AuthDeps { toolStore: ToolBlobs }
 
 interface Saved { levels: Record<string, Level>; by?: Record<string, { email: string; at: string }> }
 
@@ -71,7 +72,7 @@ export function handleStudioTools(req: Request, deps: ToolDeps): Promise<Respons
   return respond(async () => {
     allowMethods(req, 'GET', 'PUT');
     if (req.method === 'GET') {
-      return json({ tools: listing(await readSaved(deps.store)) });
+      return json({ tools: listing(await readSaved(deps.toolStore)) });
     }
     const user = await requireUser(req, deps);
     if (user.role !== 'admin') throw new HttpError(403, 'admins_only', 'Only admins choose who sees each tool.');
@@ -79,17 +80,17 @@ export function handleStudioTools(req: Request, deps: ToolDeps): Promise<Respons
     const tool = STUDIO_TOOLS.find((t) => t.key === body.key);
     if (!tool) throw new HttpError(400, 'bad_tool', 'Which tool?');
     if (body.level !== null && !(LEVELS as readonly unknown[]).includes(body.level)) {
-      throw new HttpError(400, 'bad_level', 'The level is everyone, team or admin.');
+      throw new HttpError(400, 'bad_level', 'The level is everyone, mentor, team or admin.');
     }
     if (body.level !== null && rank(body.level as Level) < rank(tool.floor)) {
       throw new HttpError(400, 'below_floor', `${tool.name} can't open wider than ${tool.floor}: it needs the team's sign-in.`);
     }
-    const saved = await readSaved(deps.store);
+    const saved = await readSaved(deps.toolStore);
     const levels = { ...saved.levels };
     if (body.level === null) delete levels[tool.key];
     else levels[tool.key] = body.level as Level;
     const by = { ...(saved.by ?? {}), [tool.key]: { email: user.email, at: new Date().toISOString() } };
-    await deps.store.setJSON(KEY, { levels, by });
+    await deps.toolStore.setJSON(KEY, { levels, by });
     return json({ tools: listing({ levels, by }) });
   });
 }

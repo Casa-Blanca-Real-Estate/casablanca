@@ -29,7 +29,7 @@ function deps() {
     access: accessConfig({ CR_ADMIN_EMAILS: 'kimani@casa-blanca.com' }),
     pool: null,
   };
-  return { ...auth, store };
+  return { ...auth, toolStore: store };
 }
 
 const req = (method: string, token?: string, body?: unknown) =>
@@ -69,6 +69,8 @@ describe('the Studio tools levels', () => {
     assert.equal((await below.json()).error, 'below_floor');
     assert.equal((await handleStudioTools(req('PUT', 'token-admin-00000', { key: 'nope', level: 'team' }), d)).status, 400);
     assert.equal((await handleStudioTools(req('PUT', 'token-admin-00000', { key: 'closed', level: 'owner' }), d)).status, 400);
+    assert.equal((await handleStudioTools(req('PUT', 'token-admin-00000', { key: 'agentcms', level: 'mentor' }), d)).status, 400);
+    assert.equal((await handleStudioTools(req('PUT', 'token-admin-00000', { key: 'closed', level: 'mentor' }), d)).status, 200);
   });
 
   test('an agent or the signed-out can\'t change it', async () => {

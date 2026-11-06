@@ -38,7 +38,7 @@
    the team, keys() hands the page its token, so a new device never asks for one (Kimani, 2026-11-06).
 
    A tool page also names itself, data-tool="<key>" (the dashboard's key for it), and is held to the
-   level an admin set for it in the Access panel (/api/studio/tools: everyone, team or admin; Kimani,
+   level an admin set for it in the Access panel (/api/studio/tools: everyone, mentor, team or admin; Kimani,
    2026-11-06, for tools under construction): signed out on a tool that isn't for everyone, the visit
    goes to sign in; signed in below its level, to the dashboard. If the levels can't be read, the
    page opens as it would without them.
@@ -140,6 +140,7 @@
   // u.team is the server's answer (/api/comp-report/me), which counts a team grant from the Access panel.
   function isTeamUser(u) { return u.team === true || u.role === 'admin' || u.guest || TEAM.indexOf(String(u.email).toLowerCase()) !== -1; }
   function meets(level, u) {
+    if (level === 'mentor') return Boolean(u && (u.role === 'mentor' || isTeamUser(u)));
     if (level === 'team') return Boolean(u && isTeamUser(u));
     if (level === 'admin') return Boolean(u && (u.role === 'admin' || u.guest));
     return true; // everyone, or a level this script doesn't know yet

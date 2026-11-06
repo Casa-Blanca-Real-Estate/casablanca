@@ -885,7 +885,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   var searchInput=$('toolSearch');
   /* Signed out, Team-badged tools are not rendered at all — not disabled, not teased.
      An admin sets who each tool is for in the comp report's Access panel (/api/studio/tools:
-     everyone, team or admin; Kimani, 2026-11-06); until that answers, or if it can't, TOOLS'
+     everyone, mentor, team or admin; Kimani, 2026-11-06); until that answers, or if it can't, TOOLS'
      own team flag stands. */
   var LEVELS=null;
   function levelOf(k){return (LEVELS&&LEVELS[k])||(TOOLS[k].team?'team':'everyone');}
@@ -893,6 +893,7 @@ try{var dn=JSON.parse(localStorage.getItem('cb.devNotebook')||'null');if(localSt
   function badgeOf(k){
     var l=levelOf(k), b=TOOLS[k].badge;
     if(l==='admin')return 'Admin only';
+    if(l==='mentor')return 'Mentors';
     if(l==='team')return b&&b!=='Team'&&b!=='Admin only'?b:(b||'Team');
     return b==='Team'?null:b;
   }

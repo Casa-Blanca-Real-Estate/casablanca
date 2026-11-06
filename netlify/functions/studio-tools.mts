@@ -7,7 +7,7 @@ export default (req: Request) =>
   handleStudioTools(req, {
     ...productionAuthDeps(req),
     // Strong: an admin's change is read straight back by the panel and the next page load.
-    store: getStore({ name: TOOLS_STORE, consistency: 'strong' }) as unknown as ToolBlobs,
+    toolStore: getStore({ name: TOOLS_STORE, consistency: 'strong' }) as unknown as ToolBlobs,
   });
 
 export const config = { path: '/api/studio/tools' };
