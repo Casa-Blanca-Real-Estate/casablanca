@@ -37,6 +37,8 @@ export interface ClientLine {
 
 /** The longest paragraph an agent or Hubert may save for one comp's box in the email (Kimani's notebook, 2026-10-27). */
 export const MAX_CLIENT_LINE = 500;
+/** A listing's note in the designed email: four lines at most beside its photo (the design pass, 2026-11-06). */
+export const MAX_LISTING_LINE = 200;
 /** What a stored paragraph may be when read: ones saved before the 500 cap (up to 1,200) still show, so they can be cut down. */
 const MAX_STORED_CLIENT_LINE = 1200;
 const BY: readonly ClientLineBy[] = ['agent', 'writer', 'both'];

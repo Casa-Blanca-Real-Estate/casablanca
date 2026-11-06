@@ -160,6 +160,8 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onCompsChanged={ws.reloadComps}
         guides={reachedGuides(ws.stepsAt, ws.side)}
         view={ws.view}
+        queued={ws.hubertQuestion}
+        onQueuedTaken={() => ws.askHubert(null)}
         undo={{
           // The comps and the home as the screen has them: Undo shows while the field still reads as he left it.
           can: (entry) => entry.kind === 'home'

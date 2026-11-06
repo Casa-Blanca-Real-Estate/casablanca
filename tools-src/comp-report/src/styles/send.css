@@ -262,3 +262,99 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
   .cw-body { grid-template-columns: minmax(0, 1fr); }
   .cw-email { padding: 12px; }
 }
+
+/* ─── Send, the design pass (2026-11-06, design-pass/send.md) ────────────────
+   A rail beside the email's preview; the preview fills the window and scrolls inside. */
+.se2 { min-width: 0; }
+.se2-cols { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.se2-rail { flex: 1 1 300px; max-width: 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.se2-card { background: var(--cb-surface); border: 1px solid var(--cb-border); padding: 18px; display: flex; flex-direction: column; gap: 12px; position: relative; }
+.se2-head { font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #6f6d68; }
+.se2-head.muted { color: var(--cb-mid); }
+.se2-good { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.se2-tick { flex: none; width: 18px; height: 18px; background: var(--cb-black); color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; }
+.se2-issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.se2-issue { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.4; }
+.se2-issue-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.se2-n { flex: none; width: 18px; height: 18px; background: var(--cb-yellow); color: var(--cb-black); font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.se2-n.note { background: var(--cb-highlight); box-shadow: inset 0 0 0 1px var(--cb-yellow); }
+.se2-n.words { background: var(--cb-lavender); color: var(--cb-deep); }
+.se2-links { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+/* The rail's small text links: 10px, regular, underlined, grey, darker on hover. */
+.lk { font: inherit; background: none; border: 0; padding: 4px 0; font-size: 10px; font-weight: 400; text-decoration: underline; color: #6f6d68; cursor: pointer; text-align: left; }
+.lk:hover { color: var(--cb-black); }
+.lk:disabled { cursor: default; text-decoration: none; color: var(--cb-mid); }
+.se2-hubert, .se2-fixall, .se2-plain-link { align-self: flex-start; }
+.se2-note { margin: 0; font-size: 12px; line-height: 1.5; color: #6f6d68; }
+.se2-note.error { color: var(--cb-red); }
+
+.se2-subject-row { display: flex; gap: 10px; align-items: flex-end; }
+.se2-subject {
+  flex: 1; min-width: 0; resize: none; font: inherit; font-size: 13px; line-height: 1.4; color: var(--cb-black);
+  border: 0; border-bottom: 1px solid var(--cb-mid); padding: 4px 0; background: transparent; outline: none; box-shadow: none;
+}
+.se2-subject:hover { border-bottom-color: var(--cb-black); }
+.se2-subject:focus { border-bottom: 2px solid var(--cb-deep); padding-bottom: 3px; }
+/* Copy icons: bare, the same 36px square, a lavender tint on hover. */
+.se2-ic { flex: none; align-self: center; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; color: var(--cb-black); cursor: pointer; }
+.se2-ic:hover { background: #f1effa; }
+.se2-ic.off { color: var(--cb-mid); cursor: not-allowed; }
+.se2-ic.off:hover { background: none; }
+.se2-copy-row { display: flex; gap: 8px; align-items: stretch; }
+.btn.se2-open { flex: 1; padding: 14px 16px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.btn.se2-lock, .btn.primary.se2-lock, .btn.se2-lock:hover { background: #dddbd5; color: #555550; border-color: #dddbd5; cursor: not-allowed; opacity: 1; }
+.se2-help { display: flex; align-items: center; gap: 8px; position: relative; font-size: 11px; color: #6f6d68; }
+.se2-tip { flex: none; width: 18px; height: 18px; padding: 0; border: 1px solid var(--cb-mid); border-radius: 50%; background: none; font: inherit; font-size: 10px; color: #6f6d68; cursor: help; }
+.se2-tip:hover, .se2-tip:focus-visible { border-color: var(--cb-black); color: var(--cb-black); }
+.se2-tipcard { position: absolute; top: 26px; left: 0; right: 0; z-index: 6; background: var(--cb-black); color: #fff; padding: 10px 12px; font-size: 12px; line-height: 1.5; font-weight: 400; }
+.se2-tipcard.static { position: static; width: 220px; }
+.se2-soon { flex: 1 1 120px; background: var(--cb-surface); border: 1px dashed var(--cb-mid); color: #6f6d68; padding: 12px 10px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; cursor: default; }
+.se2-plain { display: flex; gap: 8px; }
+.se2-plain .btn { flex: 1; }
+.se2-writer { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--cb-line); }
+.se2-writer-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 11px; color: #6f6d68; }
+.se2-mini { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.se2-bubble {
+  align-self: stretch; resize: vertical; font: inherit; font-size: 13px; line-height: 1.45; color: var(--cb-black);
+  background: var(--cb-outer); border: 0; border-radius: 14px; padding: 10px 14px;
+}
+.se2-bubble:focus { outline: 2px solid var(--cb-deep); outline-offset: 1px; }
+
+/* The preview: it fills the window's height and scrolls inside, so the rail stays put while the agent reads. */
+.se2-preview {
+  flex: 999 1 560px; min-width: 0; position: relative; overflow: auto;
+  height: calc(100vh - 224px); min-height: 520px; border: 1px solid var(--cb-border); background: var(--cb-outer);
+}
+.se2-sticky-top { position: sticky; top: 0; height: 0; z-index: 5; }
+.se2-tools { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.se2-preview-label { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; width: 86px; line-height: 1.4; }
+.btn.se2-edit { width: 86px; min-height: 36px; padding: 9px 12px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.se2-email { display: flex; justify-content: center; padding: 40px 0; }
+.se2-email > table { width: 600px !important; max-width: 600px; flex: none; box-shadow: 0 1px 0 var(--cb-border); }
+.se2-sticky-foot { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: flex-end; padding: 14px 18px; pointer-events: none; }
+.se2-sticky-foot > * { pointer-events: auto; box-shadow: 0 4px 16px rgba(15, 15, 15, .18); }
+.btn.se2-step { padding: 15px 20px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+
+/* The agent's words, editable in place: outlined with Edit on, tinted on hover, a ring when focused. */
+.se2-email .se2-ed { cursor: text; outline-offset: 3px; border-radius: 1px; min-height: 1em; }
+.se2-email.outlined .se2-ed { outline: 1px dashed var(--cb-deep); }
+.se2-email .se2-ed:hover { background: #f1effa !important; outline: 1px solid var(--cb-deep); }
+.se2-email .se2-ed:focus { background: #ffffff !important; outline: 2px solid var(--cb-deep); box-shadow: 0 0 0 5px rgba(170, 163, 207, .45); }
+/* On a photo's gradient the tint would hide white text: keep it dark there. */
+.se2-email [data-max]::after { content: attr(data-count); display: none; font-size: 10px; color: var(--cb-mid); }
+.se2-email [data-max]:focus::after { display: block; text-align: right; }
+.se2-email [data-edit='comp']:empty::before { content: 'Add a line for the client'; color: var(--cb-mid); font-style: italic; }
+/* QA's marks on the preview: the highlight on the words, the number before the first. */
+.se2-mark { background: var(--cb-highlight); color: inherit; padding: 0 1px; }
+.se2-mark.note { background: #fdf7df; }
+.se2-badge {
+  display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center; margin-right: 6px; vertical-align: 1px;
+  background: var(--cb-yellow); color: var(--cb-black); font-size: 10px; font-weight: 800; font-style: normal; user-select: none;
+}
+
+/* Narrow windows (rudimentary): one column, the preview at 72% of the window. Phones come later. */
+@media (max-width: 760px) {
+  .se2-rail { max-width: none; flex: 1 1 100%; }
+  .se2-preview { height: 72vh; min-height: 420px; }
+  .se2-email { justify-content: flex-start; padding: 64px 0 24px; }
+}

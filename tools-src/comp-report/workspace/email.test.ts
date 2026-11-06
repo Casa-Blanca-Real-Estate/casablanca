@@ -10,7 +10,7 @@ import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
 import { SAMPLE_INTAKE, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
 import {
   countedComps, hasHomeSize,
-  buildEmail, DISCLAIMER, HEADLINE_PLACEHOLDER, headlineDrafts, SAMPLE_BANNER,
+  buildEmail, DISCLAIMER, HEADLINE_PLACEHOLDER, headlineDrafts, leadIn, SAMPLE_BANNER,
   type EmailInput,
 } from './email.ts';
 import { engineInput, workspaceComps } from './engine-input.ts';
@@ -99,11 +99,19 @@ test('headline drafts cite only the headline facts and their names, never the ag
   const withCall = compute(engineInput({ asOf: '2026-09-29', intake: SAMPLE_INTAKE, comps, prices: [{ id: 'call_low', kind: 'call', label: 'Your number, low', price: 3_400_000 }, { id: 'call_high', kind: 'call', label: 'Your number, high', price: 4_200_000 }] }));
   const h = withCall.headline_facts.with_estimates;
   const drafts = headlineDrafts(h);
-  assert.equal(drafts[0], HEADLINE, 'the first is the neutral reading');
-  assert.ok(drafts.some((d) => d.includes('three most similar homes')));
-  assert.ok(drafts.some((d) => d.includes(`closing a median ${againstAsk(fact(h, 'sold.median_sale_to_ask')!.value, 'their')}.`)));
-  assert.ok(drafts.some((d) => d.startsWith('The closest comp, 200 Chambers Street #10A, sold at $2,112 a sq ft')), 'the anchor, by its name');
+  // With a range, every draft is a lead-in (the design pass, 2026-11-06): no figures, a colon where the range starts.
+  assert.equal(drafts[0], 'I looked at the closest recent sales to see where 17L stands. The three most like it put it at:');
+  assert.ok(drafts.every((d) => d.endsWith(':') && !d.includes('$')), 'no figures in a lead-in');
+  assert.ok(drafts.some((d) => d.includes('200 Chambers Street #10A')), 'the anchor, by its name');
   for (const d of drafts) assert.deepEqual(numbersNotInFacts(d, h), [], `every number traces to a fact: ${d}`);
+  // The plain text and the text message join the lead-in and the range into one sentence.
+  const sms = buildEmail({ ...base, headline: drafts[0], length: 'text' }).text;
+  assert.ok(sms.startsWith(`${drafts[0]!.slice(0, -1)} $`) && sms.split('\n')[0]!.includes('.'), sms);
+  assert.equal(emailChecks({ text: buildEmail({ ...base, headline: drafts[1] }).text, headline: drafts[1] }).find((c) => c.id === 'numbers')?.state, 'pass');
+  // The writer's headlines, cut to lead-ins; one on a comp's own price drops out.
+  assert.equal(leadIn('The closest sales put 17L at about $4.23M–$4.92M, closing a median 2% under their asks.'), 'The closest sales put 17L at:');
+  assert.equal(leadIn('The closest comp, 200 Chambers Street #10A, sold at $2,112 a sq ft.'), null);
+  assert.equal(leadIn('No figure here.'), null);
   assert.equal(drafts.some((d) => d.includes('$3.4M') || d.includes('$4.2M')), false, 'the agent’s number is in none');
   const noRange = withCall.headline_facts.on_facts; // the size is the agent's estimate: no range on the facts
   assert.deepEqual(headlineDrafts(noRange), ['The three closest sales have a median of $2,269 a sq ft.'], 'without a range, what the sales say per foot');

@@ -165,7 +165,7 @@ function GuideNote({ guide }: { guide: Guide }) {
   );
 }
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onHomeEdit, onCompsChanged, onJump, undo, finds, view, guides = [] }: {
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onHomeEdit, onCompsChanged, onJump, undo, finds, view, guides = [], queued, onQueuedTaken }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -193,6 +193,9 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   view?: () => HubertView;
   /** The step guides reached, oldest first: each sits among the messages at the time the agent reached its step. */
   guides?: (Guide & { at: string })[];
+  /** A question another screen asked him (Send's "Ask Hubert to review"): asked once he's free, then taken. */
+  queued?: string | null;
+  onQueuedTaken?: () => void;
 }) {
   const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -282,6 +285,13 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
       await load().catch(() => undefined);
     }
   }
+
+  // A question asked from the screen: once nothing else is under way, it goes as if typed.
+  useEffect(() => {
+    if (!queued || live || waiting || readOnly) return;
+    onQueuedTaken?.();
+    void ask(queued);
+  }, [queued, live, waiting]);
 
   function submit(e: FormEvent) {
     e.preventDefault();

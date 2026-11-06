@@ -101,6 +101,8 @@ export function ProgressRow({ ws }: { ws: Workspace }) {
         </Fragment>
       ))}
       <StepCta ws={ws} />
+      {/* Send's step button lands here (workspace/SendStep.tsx): read, copy and open, mark as sent. */}
+      {ws.screen === 'send' && <span id="sh-step-slot" className="sh-cta" />}
     </nav>
   );
 }

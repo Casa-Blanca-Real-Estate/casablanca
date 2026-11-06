@@ -90,7 +90,7 @@ export function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
     }
   }
 
-  const setText = (key: LineKey | 'signOff') => (v: Entry<string> | undefined) => {
+  const setText = (key: LineKey | 'signOff' | 'closing') => (v: Entry<string> | undefined) => {
     const next = { ...m.send };
     if (v) next[key] = v;
     else delete next[key];
@@ -207,6 +207,10 @@ export function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
         <label className="se-field">
           <span className="fh">Signed</span>
           <TextInput label="Signed" value={m.send.signOff} onChange={setText('signOff')} today={ws.today} disabled={locked} placeholder={ws.agentName || 'Your name'} />
+        </label>
+        <label className="se-field">
+          <span className="fh">Closing</span>
+          <TextInput label="Closing" value={m.send.closing} onChange={setText('closing')} today={ws.today} disabled={locked} placeholder="Best," />
         </label>
       </div>
       {line('chosen', 'e.g. I focused on lower floors and homes close in size.', 2)}

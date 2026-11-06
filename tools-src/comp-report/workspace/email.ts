@@ -25,7 +25,7 @@ import type { WorkspaceComp } from './engine-input.ts';
 import { againstAsk, clientPrice, countWord, estimateWords, psf, usd } from './format.ts';
 import { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER } from './frame.ts';
 import { noteOf } from './state.ts';
-import { fact, homeName, readingFromFacts } from './reading.ts';
+import { fact, homeName } from './reading.ts';
 
 export { DISCLAIMER, HEADLINE_PLACEHOLDER, SAMPLE_BANNER };
 
@@ -48,6 +48,8 @@ export interface EmailInput {
   consider?: string | undefined;
   /** The next step: the offer advice for a buyer, the pricing advice for a seller. */
   nextStep?: string | undefined;
+  /** The closing word before the agent's name (the design pass, 2026-11-06): "Best," unless the agent picks another. */
+  closing?: string | undefined;
   length: EmailLength;
   sample: boolean;
   /** The writer's sections (CR-5). Without them, the agent's own lines and notes fill the email. */
@@ -148,14 +150,14 @@ function blocks(input: EmailInput): Block[] {
     // A text, not an email in a bubble (CR-3): no greeting or layout, one
     // message and the agent's name. The disclaimer still goes (D-13, QA).
     if (input.sample) p(SAMPLE_BANNER);
-    const message = [input.headline?.trim() || HEADLINE_PLACEHOLDER, estimates, nextStep?.trim()].filter(Boolean).join(' ');
+    const message = [withRange(input.headline?.trim() || HEADLINE_PLACEHOLDER, input.output, input.result), estimates, nextStep?.trim()].filter(Boolean).join(' ');
     p(`${message}\n– ${input.agentName || '[your name]'}`);
     p(DISCLAIMER);
     return out;
   }
   if (input.sample) p(SAMPLE_BANNER);
   p(`Hi ${input.clientName?.trim() || '[client name]'},`);
-  p(input.headline?.trim() || HEADLINE_PLACEHOLDER);
+  p(withRange(input.headline?.trim() || HEADLINE_PLACEHOLDER, input.output, input.result));
   p(estimates);
   if (input.length === 'full') p(chosen);
 
@@ -192,9 +194,58 @@ function blocks(input: EmailInput): Block[] {
     out.push({ kind: 'rows', rows: table.rows.map((row) => `${psf(row.per_sqft.value)} - ${clientPrice(row.price.value)}`) });
   }
   p(nextStep);
-  p(input.agentName || '[your name]');
+  p(`${closingWord(input.closing)}\n${input.agentName || '[your name]'}`);
   p(DISCLAIMER);
   return out;
+}
+
+/** The closing word, as the agent set it: "Best," by default, with its comma. */
+export function closingWord(closing: string | undefined): string {
+  const c = closing?.trim() || 'Best';
+  return /[,.!]$/.test(c) ? c : `${c},`;
+}
+
+/** "Kimani" from "Kimani Calliste": the sign-off is the first name (the design pass). */
+export function firstName(name: string | undefined): string {
+  return name?.trim().split(/\s+/)[0] ?? '';
+}
+
+/** A lead-in: the headline that ends where the range starts (the design pass, 2026-11-06). */
+export const isLeadIn = (headline: string) => headline.trim().endsWith(':');
+
+/** The range in the client's words, "$4.23M – $4.92M", or null without one. */
+export function rangeWords(output: EngineOutput, result: ResultKind): string | null {
+  const r = output.results[result].range;
+  if (!r) return null;
+  return r.low.value === r.high.value ? clientPrice(r.low.value) : `${clientPrice(r.low.value)} – ${clientPrice(r.high.value)}`;
+}
+
+/**
+ * The plain text and the text message join a lead-in and the range into one
+ * sentence ("…put it at $4.23M – $4.92M."); a headline with its own figures
+ * stays as written. Without a range, the lead-in loses its colon.
+ */
+export function withRange(headline: string, output: EngineOutput, result: ResultKind): string {
+  if (!isLeadIn(headline)) return headline;
+  const core = headline.trim().slice(0, -1).trimEnd();
+  const range = rangeWords(output, result);
+  return range ? `${core} ${range}.` : `${core}.`;
+}
+
+/**
+ * A headline with figures, cut to end where its first figure starts: "The
+ * closest sales put 17L at about $4.2M–$4.9M, …" → "The closest sales put 17L
+ * at:". Null when what's left doesn't lead into a price (the writer's
+ * headlines, picked from on Send).
+ */
+export function leadIn(headline: string): string | null {
+  const t = headline.trim();
+  if (isLeadIn(t)) return t;
+  const m = /(?:\s+(?:about|around|roughly|near|close to))?\s*\$\d/.exec(t);
+  if (!m) return null;
+  const head = t.slice(0, m.index).replace(/[\s,;:—–-]+$/, '');
+  if (/\bsold\s+(?:at|for)$/i.test(head)) return null;
+  return head.length >= 12 && /\b(?:at|puts?|supports?|places?|between)$/i.test(head) ? `${head}:` : null;
 }
 
 export function buildEmail(input: EmailInput): EmailDraft {
@@ -237,41 +288,33 @@ export function hasHomeSize(output: EngineOutput): boolean {
   return output.meta.property_type !== 'coop' && Boolean(output.subject.facts.with_estimates.area_sqft);
 }
 
-/** `sized`: the home has a size (hasHomeSize); without one, no draft quotes a per-SF figure. */
+/**
+ * `sized`: the home has a size (hasHomeSize); without one, no draft quotes a per-SF figure.
+ *
+ * With a range, every draft is a lead-in (the design pass, 2026-11-06): it ends
+ * where the number starts, with a colon, and the range follows it (big, on
+ * Designed; joined into the sentence in the plain text and the text message,
+ * withRange). Without a range, the one draft says what the sales say per foot.
+ */
 export function headlineDrafts(h: HeadlineFacts, sized = true): string[] {
   const home = named(h, 'subject') ?? 'the home';
   const drafts: string[] = [];
-  const reading = readingFromFacts(h, home);
-  if (reading) drafts.push(reading);
   const low = fact(h, 'range.low');
   const high = fact(h, 'range.high');
   const n = fact(h, 'range.comps');
-  const prices = low && high ? `about ${clientPrice(low.value)}–${clientPrice(high.value)}` : null;
-  const toAsk = fact(h, 'sold.median_sale_to_ask');
-  if (prices && toAsk) {
-    const median = Math.round(toAsk.value * 10) / 10;
-    const closing = median === 0 ? 'closing at their last ask, at the median' : `closing a median ${againstAsk(median, 'their')}`;
-    drafts.push(`The closest sales put ${home} at ${prices}, ${closing}.`);
+  if (low && high) {
+    const most = n ? (n.value === 1 ? 'The one most like it puts' : `The ${countWord(n.value)} most like it put`) : 'The ones most like it put';
+    drafts.push(`I looked at the closest recent sales to see where ${home} stands. ${most} it at:`);
+    drafts.push(n && n.value === 1 ? `The closest sale puts ${home} at:` : `The ${n ? `${countWord(n.value)} ` : ''}closest sales put ${home} at:`);
+    const anchorRate = fact(h, 'anchor.per_sqft');
+    const anchor = named(h, anchorRate?.comp_ids[0]);
+    if (anchor) drafts.push(`I weighed ${anchor} most, as the closest match. With the other sales, it puts ${home} at:`);
+    if (n && n.value > 1) drafts.push(`Recent sales of the ${countWord(n.value)} homes most like ${home} support:`);
+    return [...new Set(drafts)].slice(0, 4);
   }
-  const anchorRate = fact(h, 'anchor.per_sqft');
-  const anchorImplied = fact(h, 'anchor.implied');
-  const anchor = named(h, anchorRate?.comp_ids[0]);
-  if (anchorRate && anchorImplied && anchor) {
-    drafts.push(`The closest comp, ${anchor}, sold at ${psf(anchorRate.value)} a sq ft — about ${clientPrice(anchorImplied.value)} for ${home}.`);
-  }
-  const ceiling = fact(h, 'off_market.lowest_per_sqft');
-  if (prices && ceiling && sized) {
-    drafts.push(`The sales support ${prices} for ${home}, and a listing that didn’t sell at ${psf(ceiling.value)} a sq ft marks the ceiling.`);
-  }
-  // The plainest restatement of the reading, kept only while there's room.
-  if (prices && n) {
-    drafts.push(`Recent sales of the ${n.value === 1 ? 'most similar home' : `${countWord(n.value)} most similar homes`} support ${prices} for ${home}.`);
-  }
-  if (!drafts.length) {
-    const median = fact(h, 'sold.median_per_sqft');
-    const sold = fact(h, 'sold.count');
-    // No range yet: what the sales say per foot.
-    if (median && sold && sized) drafts.push(`The ${sold.value === 1 ? 'closest sale came in at' : `${countWord(sold.value)} closest sales have a median of`} ${psf(median.value)} a sq ft.`);
-  }
-  return [...new Set(drafts)].slice(0, 4);
+  const median = fact(h, 'sold.median_per_sqft');
+  const sold = fact(h, 'sold.count');
+  // No range yet: what the sales say per foot.
+  if (median && sold && sized) drafts.push(`The ${sold.value === 1 ? 'closest sale came in at' : `${countWord(sold.value)} closest sales have a median of`} ${psf(median.value)} a sq ft.`);
+  return drafts;
 }
