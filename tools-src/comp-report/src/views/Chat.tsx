@@ -3,10 +3,11 @@
 // endpoint: one model call per request, the server owns the transcript (§8.3
 // rule 6). The conversation is the report's, the same on every screen.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { api, ApiError, streamTurn, type HubertEmailEdit, type HubertHomeEdit, type HubertView, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
+import { api, ApiError, chatApi, streamTurn, type HubertEmailEdit, type HubertHomeEdit, type HubertView, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
 import type { Guide } from './hubert/guides.ts';
 import { HubertNote, HubertText } from './hubert/markdown.tsx';
+import { CARDS_PER_SEARCH, isListingPage } from '../../server/web-search.ts';
 
 interface Live {
   text: string;
@@ -24,6 +25,73 @@ const TOOL_WORDS: Record<string, string> = {
   get_numbers: 'the numbers', get_view: 'your screen', get_report: 'the report', get_email: 'the email', web_search: 'the web', read_page: 'a web page',
 };
 const CHANGES = new Set(['edit_email', 'edit_comp', 'set_home_fact', 'show_comp_link']);
+
+/** What he's doing, in words, while he does it, with the dots moving (Kimani, 2026-11-06: not a static box). */
+function Working({ text }: { text: string }) {
+  return (
+    <p className="hb-progress hb-working">
+      {text}
+      <span className="hb-dots" aria-hidden="true"><i /><i /><i /></span>
+    </p>
+  );
+}
+
+/** "60 Collister Street #4A in Tribeca, Manhattan | StreetEasy" → the address, and where. */
+export function cardWords(title: string, url: string): { address: string; where: string | null } {
+  const plain = title.replace(/\s*[|·–-]\s*StreetEasy\s*$/i, '').trim();
+  const m = /^(.+?)\s+in\s+(.+)$/i.exec(plain);
+  if (m) return { address: m[1]!, where: m[2]! };
+  if (plain && !/^https?:/i.test(plain)) return { address: plain, where: null };
+  const parts = new URL(url).pathname.split('/').filter(Boolean).slice(1);
+  return { address: parts.map((p) => p.replace(/-new_york$/, '').replace(/-/g, ' ')).join(' #').replace(/\b\w/g, (c) => c.toUpperCase()), where: null };
+}
+
+const thumbKey = (url: string) => `cr-thumb:${url}`;
+
+/** A listing card: its photo (fetched once, then kept in this browser), the address, and the link. */
+function ListingCard({ reportId, source }: { reportId: string; source: TrailSource }) {
+  const cached = (() => {
+    try {
+      return localStorage.getItem(thumbKey(source.url));
+    } catch {
+      return null;
+    }
+  })();
+  const [image, setImage] = useState<string | null | undefined>(cached === null ? undefined : cached || null);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    if (image !== undefined) return;
+    let live = true;
+    chatApi.thumb(reportId, source.url).then(
+      (r) => {
+        if (!live) return;
+        setImage(r.image);
+        try {
+          localStorage.setItem(thumbKey(source.url), r.image ?? '');
+        } catch {
+          /* private mode: fetched again next time */
+        }
+      },
+      () => live && setImage(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [reportId, source.url]);
+  const { address, where } = cardWords(source.title, source.url);
+  return (
+    <a className="hb-card" href={source.url} target="_blank" rel="noopener noreferrer nofollow">
+      <span className={`hb-card-img${image === undefined ? ' loading' : ''}`}>
+        {image && !broken ? <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} /> : image !== undefined && <span className="hb-card-none" aria-hidden="true">⌂</span>}
+      </span>
+      <span className="hb-card-text">
+        <span className="hb-card-addr">{address}</span>
+        {where && <span className="hb-card-where">{where}</span>}
+        <span className="hb-card-go">StreetEasy ↗</span>
+      </span>
+    </a>
+  );
+}
 const looked = (tools: string[]) => [...new Set(tools.filter((t) => !CHANGES.has(t)).map((t) => TOOL_WORDS[t] ?? t))].join(' and ');
 
 /** Undo on a comp or home entry of the trail: whether it still applies, and doing it (the agent's own edit). */
@@ -104,8 +172,11 @@ function UndoButton({ entry, undo }: { entry: TrailEntry; undo: TrailUndo }) {
  * with "Show" to the field: a comp's row on Sort, the email on Send, or the
  * home's details; and, on a comp's or the home's change, Undo while it still stands.
  */
-function Trail({ changes, sources, onJump, undo, finds }: { changes: TrailEntry[]; sources: TrailSource[]; onJump?: (entry: TrailEntry) => void; undo?: TrailUndo; finds?: TrailFinds }) {
+function Trail({ reportId, changes, sources, onJump, undo, finds }: { reportId: string; changes: TrailEntry[]; sources: TrailSource[]; onJump?: (entry: TrailEntry) => void; undo?: TrailUndo; finds?: TrailFinds }) {
   if (!changes.length && !sources.length) return null;
+  // A search's StreetEasy listings: the first three as cards (Kimani, 2026-11-06), the rest as links.
+  const cards = sources.filter((s) => s.kind === 'search' && isListingPage(s.url)).slice(0, CARDS_PER_SEARCH);
+  const links = sources.filter((s) => !cards.includes(s));
   return (
     <>
       {changes.length > 0 && (
@@ -138,10 +209,16 @@ function Trail({ changes, sources, onJump, undo, finds }: { changes: TrailEntry[
           ))}
         </ul>
       )}
-      {sources.length > 0 && (
+      {cards.length > 0 && (
+        <div className="hb-cards">
+          {cards.map((s) => <ListingCard key={s.url} reportId={reportId} source={s} />)}
+          <p className="hb-cards-check">From the web: open each one and check it on StreetEasy before you use it.</p>
+        </div>
+      )}
+      {links.length > 0 && (
         <p className="hb-sources">
-          From the web:{' '}
-          {sources.map((s, i) => (
+          {cards.length ? 'More from the web:' : 'From the web:'}{' '}
+          {links.map((s, i) => (
             <span key={s.url}>
               {i > 0 && ' · '}
               <a className="hb-md-link" href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.title}</a>
@@ -154,6 +231,18 @@ function Trail({ changes, sources, onJump, undo, finds }: { changes: TrailEntry[
 }
 
 const MAX_INPUT_PX = 120;
+
+/**
+ * "Failed to fetch" (Chrome), "Load failed" (Safari), "NetworkError…" (Firefox): the browser never reached
+ * the site at all, which is the connection, not Hubert (the 2026-11-06 walkthrough, on the office Wi-Fi).
+ */
+export function friendlyError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : '';
+  if (err instanceof TypeError || /failed to fetch|load failed|networkerror|network error/i.test(raw)) {
+    return 'Couldn’t reach Hubert: the connection dropped before the message got through. Check your internet and send it again.';
+  }
+  return raw || 'Hubert couldn’t be reached.';
+}
 
 /** A step guide (hubert/guides.ts): a new section of the chat, with Hubert's preset note for the step. */
 function GuideNote({ guide }: { guide: Guide }) {
@@ -208,6 +297,9 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   // A reply still being written — sent from another tab, or before a reload. The server
   // refuses a new message until it lands (server/api/turn.ts), so this waits for it.
   const [waiting, setWaiting] = useState(false);
+  // Stop (Kimani, 2026-11-06): the request in flight, so a message sent by mistake can be taken back.
+  const inFlight = useRef<{ text: string; abort: AbortController } | null>(null);
+  const [stopping, setStopping] = useState(false);
 
   async function load() {
     const m = await api<{ messages: ShownMessage[] }>(`/api/comp-report/messages?report=${reportId}`);
@@ -251,13 +343,16 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
     setMessages((prev) => [...prev, { seq: -1, role: 'user', text, progress: [], tools: [], toolResultsOnly: false, stopReason: null, inContext: true, createdAt: new Date().toISOString() }]);
     let message: string | undefined = text;
     let lastNote: string | null = null;
+    const abort = new AbortController();
+    inFlight.current = { text, abort };
     try {
       for (let round = 0; round < 6; round++) {
         let current: Live = { ...empty };
         setLive(current);
         let again = false;
         await beforeAsk?.().catch(() => undefined);
-        for await (const ev of streamTurn(reportId, message, view?.())) {
+        if (abort.signal.aborted) break;
+        for await (const ev of streamTurn(reportId, message, view?.(), abort.signal)) {
           if (ev.type === 'email_edit') onEmailEdit?.(ev.edit);
           else if (ev.type === 'home_edit') onHomeEdit?.(ev.edit);
           else if (ev.type === 'change') current = { ...current, changes: [...current.changes, ev.entry] };
@@ -273,16 +368,57 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         }
         if (current.note) lastNote = current.note;
         message = undefined;
-        if (!again) break;
+        if (!again || abort.signal.aborted) break;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Hubert couldn’t be reached.');
+      if (abort.signal.aborted) return;
+      setError(friendlyError(err));
+      // It never got through: keep what they typed, so sending again is one tap.
+      if (err instanceof TypeError && message !== undefined) setDraft(text);
       // Refused before it started (another reply still being written): keep what they typed.
       if (err instanceof ApiError && err.code === 'turn_in_progress' && message !== undefined) setDraft(text);
     } finally {
-      setLive(null);
-      setNotice(lastNote);
-      await load().catch(() => undefined);
+      if (inFlight.current?.abort === abort) inFlight.current = null;
+      if (!abort.signal.aborted) {
+        setLive(null);
+        setNotice(lastNote);
+        await load().catch(() => undefined);
+      }
+    }
+  }
+
+  // Stop: the reply stops here at once; the message is taken back on the server (Hubert's reply, if it
+  // was still being written, stops there too) and comes back to the box to fix and send again.
+  async function stop() {
+    const now = inFlight.current;
+    if (!now) return;
+    inFlight.current = null;
+    now.abort.abort();
+    setStopping(true);
+    setLive(null);
+    let taken = false;
+    // Pressed as it was sent, the message may not be in yet: a few tries.
+    for (let i = 0; i < 4 && !taken; i++) {
+      try {
+        await chatApi.stop(reportId, now.text);
+        taken = true;
+      } catch (e) {
+        if (!(e instanceof ApiError) || (e.code !== 'nothing_to_stop' && e.code !== 'busy')) break;
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+    }
+    await load().catch(() => undefined);
+    setStopping(false);
+    setWaiting(false);
+    if (taken) {
+      setDraft(now.text);
+      setNotice('Stopped. Your message is back in the box to edit.');
+      requestAnimationFrame(() => {
+        fit(input.current);
+        input.current?.focus();
+      });
+    } else {
+      setNotice('Couldn’t take that one back: Hubert’s reply will still come in.');
     }
   }
 
@@ -304,7 +440,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
       {m.progress.map((p, i) => <HubertNote key={i} text={p} />)}
       {m.role === 'assistant' && looked(m.tools) && <p className="hb-progress">Checked {looked(m.tools)}.</p>}
       {m.role === 'assistant' && m.tools.includes('edit_email') && !m.changes?.length && <p className="hb-progress">Changed the email on Send.</p>}
-      {m.role === 'assistant' && <Trail changes={m.changes ?? []} sources={m.sources ?? []} onJump={onJump} undo={readOnly ? undefined : undo} finds={readOnly ? undefined : finds} />}
+      {m.role === 'assistant' && <Trail reportId={reportId} changes={m.changes ?? []} sources={m.sources ?? []} onJump={onJump} undo={readOnly ? undefined : undo} finds={readOnly ? undefined : finds} />}
       {m.text && (m.role === 'assistant' ? <HubertText text={m.text} /> : <p className="hb-text">{m.text}</p>)}
       {!m.inContext && m.role === 'assistant' && (
         <p className="hb-progress">{m.stopReason === 'refusal' ? 'Declined: not part of the conversation.' : 'Stopped before it finished: not part of the conversation.'}</p>
@@ -338,16 +474,18 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
         {live && (
           <div className="hb-msg assistant" aria-live="polite">
             {live.progress.map((p, i) => <HubertNote key={i} text={p} />)}
-            {looked(live.tools) && <p className="hb-progress">Checking {looked(live.tools)}…</p>}
+            {live.tools.includes('web_search') && !live.text && <Working text="Searching the web" />}
+            {looked(live.tools.filter((t) => t !== 'web_search')) && !live.text && <Working text={`Checking ${looked(live.tools.filter((t) => t !== 'web_search'))}`} />}
             {live.tools.includes('edit_email') && <p className="hb-progress">Changing the email…</p>}
             {live.tools.includes('edit_comp') && <p className="hb-progress">Changing the comp…</p>}
             {live.tools.includes('show_comp_link') && <p className="hb-progress">Adding the comp from StreetEasy…</p>}
-            <Trail changes={live.changes} sources={[]} onJump={onJump} undo={readOnly ? undefined : undo} finds={readOnly ? undefined : finds} />
-            {live.text ? <HubertText text={live.text} /> : !live.note && <p className="hb-progress">Thinking…</p>}
+            <Trail reportId={reportId} changes={live.changes} sources={[]} onJump={onJump} undo={readOnly ? undefined : undo} finds={readOnly ? undefined : finds} />
+            {live.text ? <HubertText text={live.text} /> : !live.note && !live.tools.length && <Working text="Thinking" />}
             {live.note && <p className="hb-text">{live.note}</p>}
           </div>
         )}
-        {waiting && !live && <p className="hb-hint" aria-live="polite">Still answering the last message…</p>}
+        {stopping && <Working text="Stopping" />}
+        {waiting && !live && !stopping && <p className="hb-hint" aria-live="polite">Still answering the last message…</p>}
         {notice && <p className="hb-notice">{notice}</p>}
       </div>
 
@@ -385,7 +523,13 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
               }
             }}
           />
-          <button type="submit" className="hb-send" aria-label="Send" disabled={busy || !draft.trim()}>→</button>
+          {live && inFlight.current ? (
+            <button type="button" className="hb-send hb-stop" aria-label="Stop and take the message back" title="Stop, and take the message back to edit" onClick={() => void stop()}>
+              <span className="hb-stop-sq" aria-hidden="true" />
+            </button>
+          ) : (
+            <button type="submit" className="hb-send" aria-label="Send" disabled={busy || stopping || !draft.trim()}>→</button>
+          )}
         </form>
       )}
     </>

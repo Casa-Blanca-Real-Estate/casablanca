@@ -154,14 +154,16 @@ export type TurnEvent =
   | { type: 'done'; stopReason: string; model: string; ms: number }
   | { type: 'refused'; category: string | null }
   | { type: 'interrupted'; reason: string; ms: number }
-  | { type: 'error'; code: string; status: number | null };
+  | { type: 'error'; code: string; status: number | null }
+  | { type: 'withdrawn' };
 
 /** One assistant turn, as a stream of events (server/api/turn.ts). */
-export async function* streamTurn(reportId: string, message?: string, view?: HubertView | null): AsyncGenerator<TurnEvent> {
+export async function* streamTurn(reportId: string, message?: string, view?: HubertView | null, signal?: AbortSignal): AsyncGenerator<TurnEvent> {
   const res = await fetch('/api/comp-report/turn', {
     method: 'POST',
     headers: await headers(),
     body: JSON.stringify({ reportId, message, ...(view ? { view } : {}) }),
+    signal,
   });
   if (!res.ok || !res.body) await fail(res);
   const reader = res.body!.getReader();
@@ -179,6 +181,16 @@ export async function* streamTurn(reportId: string, message?: string, view?: Hub
     }
   }
 }
+
+/** Hubert's chat beyond the turn (2026-11-06): Stop, and a listing card's photo. */
+export const chatApi = {
+  /** Takes the agent's last message back; the reply still being written stops. */
+  stop: (reportId: string, text: string) =>
+    api<{ stopped: number; text: string }>('/api/comp-report/messages', { method: 'POST', body: { reportId, stop: true, text } }),
+  /** A StreetEasy result's preview photo, or null. */
+  thumb: (reportId: string, url: string) =>
+    api<{ image: string | null }>(`/api/comp-report/messages?report=${reportId}&thumb=${encodeURIComponent(url)}`),
+};
 
 // ─── The walkthrough (CR-3a) ────────────────────────────────────────────────
 

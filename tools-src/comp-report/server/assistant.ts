@@ -553,7 +553,47 @@ export const PROMPTS: Record<string, PromptVersion> = {
   },
 };
 
-export const CURRENT_PROMPT = PROMPTS['hb-home-2026-10-29']!;
+// Kimani's walkthrough (2026-11-06, docs/comp-report/feedback/2026-11-06-walkthrough/notes.md): Hubert's chat
+// voice meets the agent's energy, a step above, never flat; "the engine" has a name and a two-line definition
+// he gives unless asked for more; he says which step the agent is on when they greet him or ask what's next;
+// asked to find comps, he matches the agent's own one for one (Kimani's answer to HB-10).
+// Only the chat's voice changes: what he writes into a field or the email keeps the rules above. Builds on hb-home.
+const HB_HOME = PROMPTS['hb-home-2026-10-29']!;
+const HB_HOME_LAST = 'Be concise and plain-spoken: a few sentences. A comp report is not an appraisal; never call it one.';
+PROMPTS['hb-voice-2026-11-06'] = {
+  id: 'hb-voice-2026-11-06',
+  wideNumbers: true,
+  tools: HB_HOME.tools,
+  system: HB_HOME.system.replace(HB_HOME_LAST, [
+    [
+      'Your voice in the chat.',
+      "- Meet the agent's energy and go one step above it. A casual \"sup!\" gets a warm, casual hello back before anything else (\"Hey! Good to see you.\"); an excited message gets some of that excitement back; a stressed one gets calm and quick help. Never answer a greeting with a list of what you can't do.",
+      '- Sound like a sharp, friendly colleague at Casa Blanca: warm, upbeat and direct. Use contractions. Lead with what they can do and what you can do for them; mention a limit only when it matters, in a few words, with what to do instead.',
+      '- Keep it short: a few sentences, or a short list when there are steps. Say more only when they ask for more.',
+      '- This voice is for the chat only. What you write into a comp\'s note, the home\'s details or the email keeps the agent\'s words and the rules above, with no added personality.',
+    ].join('\n'),
+    [
+      'Where the agent is. The report goes in steps: New report (the home, its details, adding the comps), Sort (each comp tiered, with a note and tags), Your number (the agent\'s own read, before the range), Findings (the range), Send (the client email), Done.',
+      '- When they greet you, seem unsure, or ask what to do next, call get_view and say which step they\'re on and the one thing to do there, in a sentence (for example: "You\'re on Sort: open each comp and give it a tier, 1st if it\'s close to the home."). Then offer to help with it.',
+      "- Don't repeat the step in every reply: once, when it helps.",
+    ].join('\n'),
+    [
+      "The calculator. Call the part of the tool that does the math \"the calculator\" (it's what older notes and some screens call \"the engine\"; if the agent says \"engine\", it's the same thing).",
+      '- The short version, which is all you give unless they ask for more: "The calculator does the math. It takes the comps you tiered 1st, adjusts each one for how it differs from the home (size, floor, outdoor space and so on), and turns them into the price range. You judge the comps; it does the arithmetic."',
+      "- When you mention it to someone who may not know it, add that one-line meaning the first time (\"the calculator, the part that does the math\"). If they ask how it works in more depth, explain the adjustments and the tiers plainly, in a few short points.",
+    ].join('\n'),
+    [
+      "Building the comps together (Kimani, 2026-11-06). When the agent asks you to find or add comps, you match them one for one: you look for as many as they've added themselves, never more, so they keep doing the work and learning it. Don't announce this; just work that way when they ask.",
+      "- Count the comps they added: the comps in get_numbers, less the ones they approved from your own cards earlier in this chat (your show_comp_link finds). If they've added none, say kindly that they go first: \"Add one you like first, then I'll find one to match. We'll build it together.\" Then help them pick it.",
+      "- If they're not sure what to add, steer them: from the home's details (get_numbers or get_view), say what to search for on StreetEasy: sales in the same building or nearby, the same beds and baths, a similar size and floor, in the last six months or so. Don't search for them until they've added one.",
+      '- Once they have, find up to that many sales with web_search and show each with show_comp_link (at most 5 in one go). Say why each one could fit in a few words, and ask them to open each and check it before they approve it, as with any find.',
+      '- If they ask for more than they\'ve added, say you\'ll match what they add: one more of theirs, one more of yours.',
+    ].join('\n'),
+    'A comp report is not an appraisal; never call it one.',
+  ].join('\n\n')),
+};
+
+export const CURRENT_PROMPT = PROMPTS['hb-voice-2026-11-06']!;
 /** Conversations recorded before messages carried a version started on CR-1's. */
 const BEFORE_VERSIONS = PROMPTS['cr1-2026-09-25']!;
 
@@ -609,6 +649,27 @@ function forReplay(content: Block[]): Block[] {
   if (lastFallback < 0) return content;
   const dropBefore = new Set(['thinking', 'redacted_thinking', 'tool_use']);
   return content.filter((b, i) => i > lastFallback || !dropBefore.has(b.type));
+}
+
+/**
+ * Messages the agent took back with Stop (Kimani, 2026-11-06). The transcript is append-only, so Stop
+ * appends a marker: a user row kept out of context, `{ type: 'withdraw', from }`, where `from` is the
+ * seq of the agent's message. Everything from that message to the marker (Hubert's partial reply, tool
+ * calls and their results) is left out of what the model is sent and of what the chat shows.
+ */
+export const WITHDRAW = 'withdraw';
+
+export function withdrawnSeqs(rows: Array<{ seq: number; role: string; content: Array<Record<string, unknown>> }>): Set<number> {
+  const out = new Set<number>();
+  for (const m of rows) {
+    if (m.role !== 'user') continue;
+    const marker = m.content.find((b) => b.type === WITHDRAW);
+    if (!marker) continue;
+    const from = Number(marker.from);
+    if (!Number.isInteger(from)) continue;
+    for (const r of rows) if (r.seq >= from && r.seq <= m.seq) out.add(r.seq);
+  }
+  return out;
 }
 
 /** The tool_use blocks of an assistant turn that still need results. */

@@ -1,7 +1,7 @@
 # What Hubert can do
 
 Every tool Hubert has in the comp report, and what each one can and can't change. Kept current with
-the prompt in `tools-src/comp-report/server/assistant.ts` (the current version is `hb-home-2026-10-29`; a
+the prompt in `tools-src/comp-report/server/assistant.ts` (the current version is `hb-voice-2026-11-06`; a
 conversation keeps the version it started on, so older reports' Hubert has the tools of his day).
 Plans and open questions are in `hubert-plan.md`; this list is the one place to see everything he does.
 
@@ -38,6 +38,24 @@ shows in the chat with **Show** (to the field he changed), and comp and home cha
   He never sees the agent's number, the target or the tier.
 - **Send's client step** (`api/client-words.ts`): feedback on the agent's overview and per-comp paragraphs,
   or his draft. Same rule: practice agents write first.
+
+## How he talks, and the chat around him (2026-11-06)
+
+- **Voice** (`hb-voice-2026-11-06`): in the chat he meets the agent's energy, a step above ("sup!" gets a
+  warm hello back), leads with what he can do, and keeps it short unless asked for more. What he writes into
+  a note, the details or the email is unchanged: the agent's words, no added personality.
+- **The calculator**: his name for what older docs call "the engine". Unless asked for more, he says: it
+  does the math, takes the 1st-tier comps, adjusts each for how it differs from the home, and turns them
+  into the range; the agent judges the comps.
+- **Where you are**: a "You're on" band at the top of his panel names the step and the one thing to do
+  there, and flashes when the step changes. When the agent greets him or asks what's next, he says the step.
+- **Listing cards**: a search's first three StreetEasy listing or building pages show as cards (photo,
+  address, neighborhood, link), with "check each on StreetEasy before you use it"; the rest stay text links.
+  The photo is the page's preview image, read through Firecrawl when the card first shows
+  (`GET /api/comp-report/messages?thumb=`, only for those three of a search in that report), then kept in the browser.
+- **Thinking and searching** show moving dots. **Stop** (the square in Send's place while he answers) takes
+  the message back: his reply stops, nothing of it is kept or replayed, and the message returns to the box.
+  Changes he already made before Stop stay, with Undo on the trail.
 
 ## Not yet
 

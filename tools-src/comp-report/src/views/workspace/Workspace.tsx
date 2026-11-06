@@ -670,6 +670,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     setDrawerOpen,
     reloadComps,
     stepsAt: state.stepsAt ?? {},
+    guideStep,
     focus,
     showComp: (reportCompId, field) => {
       // The row shows whatever Sort's filter was, and Sort opens if another screen was showing.
