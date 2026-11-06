@@ -31,6 +31,12 @@
                    nobody pastes them; null when this visit isn't signed in as the team
      signOut()     ends the session everywhere in this browser and goes to sign in
 
+   An admin page (the agent CMS, the profile-pic roster) loads it as
+     <script src="/assets/studio-auth.js" data-require="team"></script>
+   and is gated even while OPEN lets the creative tools in signed out: a signed-out visit goes to
+   sign in and comes back, and anyone signed in who isn't the team goes to the dashboard. Signed in as
+   the team, keys() hands the page its token, so a new device never asks for one (Kimani, 2026-11-06).
+
    For the scripts written before it, a team member's email is also kept in
    localStorage "cb_auth" (dev-notebook.js, the CMS's edit log); anyone else's is
    removed. */
@@ -48,6 +54,8 @@
   var ME_MS = 10 * 60 * 1000;
   var MARGIN_S = 60;
   var GUEST_KEY = 'cr-guest-key';
+  var me = document.currentScript;
+  var REQUIRE_TEAM = Boolean(me && me.getAttribute('data-require') === 'team');
 
   // Hidden until the server answers, so nobody sees a page they'll be sent away from.
   var root = document.documentElement;
@@ -182,6 +190,11 @@
   };
 
   function admit(user, local) {
+    if (REQUIRE_TEAM && !isTeamUser(user)) {
+      if (!local) keepTeam(user);
+      location.replace('/');
+      return new Promise(function () {}); // the page is leaving
+    }
     api.user = user;
     if (!local) keepTeam(user);
     root.classList.remove('cb-gate');
@@ -206,6 +219,7 @@
   // pages open without a sign-in. Signed out, refused, or the check failing: the page shows as before #116, with
   // no user and no team tools. Set back to false to require the sign-in again.
   var OPEN = true;
+  var LET_IN = OPEN && !REQUIRE_TEAM; // an admin page never opens signed out
   function admitOpen() {
     set(local, 'cb_auth', null);
     api.user = null;
@@ -223,7 +237,7 @@
   function check() {
     return token().then(function (t) {
       if (!t) {
-        if (OPEN) return admitOpen();
+        if (LET_IN) return admitOpen();
         if (!LOCAL) return toSignIn();
         return fetch('/.netlify/identity/settings').then(function (r) {
           return r.ok ? toSignIn() : localUser();
@@ -240,7 +254,7 @@
         if (r.status === 401 || r.status === 403) {
           // A guest key the server won't take (production, or out of date) is forgotten, as the comp report does.
           set(local, GUEST_KEY, null);
-          return OPEN ? admitOpen() : toSignIn();
+          return LET_IN ? admitOpen() : toSignIn();
         }
         if (!r.ok) throw new Error('me ' + r.status);
         return r.json();
@@ -252,7 +266,7 @@
         return admit(user);
       });
     }).catch(function () {
-      if (OPEN) return admitOpen();
+      if (LET_IN) return admitOpen();
       return new Promise(function (resolve) { trouble(function () { resolve(check()); }); });
     });
   }
