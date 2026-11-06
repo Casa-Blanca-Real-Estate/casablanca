@@ -20,16 +20,19 @@ scrolling.
 
 ## Layout
 
+- **Width (every workspace screen):** the page runs nearly edge to edge, as the live tool does on a big screen:
+  content up to 1840px wide, side margins `clamp(16px, 2.6vw, 40px)`. No 1200px column with dead space either side.
 - **The header row:** the address block at the left; at the right the progress row (1 Sort ✓ · 2 Findings ✓ · 3 Send),
-  then **the step button** (below), last, as the step after Send (decided: the right end of the row is for moving forward,
-  never for the step crumbs). This is the rule for every workspace screen: Review comps → / Findings → / Send → sit
-  top right.
-- **36px** between the header row and the columns (was 20: it read cramped). The same spacing on every workspace
-  screen.
-- **Below, two columns, their tops flush:** the left rail (max 360px) and the email preview panel.
-- **The preview panel** is the grey mat itself, in its own scroll box (max ~860px tall), so the rail stays put while
-  the agent reads. No header above it: its label ("EMAIL PREVIEW") and the **✎ Edit** button are **sticky in the mat's
-  top-left margin**, so they stay in reach while scrolling and never push the email down.
+  then **the step button** (below), last, as the step after Send. 36px between it and the columns (was 20: it read
+  cramped); the same on every workspace screen.
+- **Two columns, their tops flush:** the left rail (300–380px) and the email preview panel, which takes the rest.
+- **The preview panel fills the window's height** (`calc(100vh - 224px)`, at least 520px) and scrolls inside, so it
+  reaches near the bottom of the screen instead of stopping short, and the rail stays put while the agent reads. Its
+  label ("EMAIL PREVIEW") and **✎ Edit** are sticky in the mat's top-left margin; the step button is sticky at its
+  bottom right.
+- **Narrow windows (rudimentary, under 760px):** everything stacks in one column: the header row (the step button full
+  width), then the rail cards full width, then the preview at 72% of the window's height. The 600px email scrolls
+  sideways inside the panel at the narrowest; a real phone layout comes later (phones aren't in this pass).
 
 ## The rail
 
@@ -37,13 +40,18 @@ scrolling.
    Each has two small text links (10px, regular, underlined, grey, darker on hover): **Hide in the email** / **Show in
    the email** (the marks on the preview: a yellow number badge and the highlight `#fbf0c4` on the words it's about),
    and, where the words are the fix, **Fix in place**, which turns on editing and becomes **Done: mark it fixed**. A
-   fixed issue leaves the list. No manual checks (no "read the client's words", no "every comp has a photo"): reading
+   fixed issue leaves the list. Last in the card, a small link: **✦ Ask Hubert to review**. Hubert reads the email
+   ("✦ Hubert is reading the email…" while he does) and his findings arrive in the same list: new issues numbered and
+   marked like the rest, suggestions as a row with a lavender ✦ and a **Dismiss** link. No other Hubert control on
+   Send: the Hubert drawer and the top-bar pill cover the rest. No manual checks (no "read the client's words", no "every comp has a photo"): reading
    is the step button's gate. **Empty state:** "All good. Ready to send." with a tick.
 2. **1 · Email subject** (decided; Kimani's heading).
    - The subject itself, no separate label: an editable field that **wraps** (two lines, more as needed), underlined
      so it reads as one (darker on hover, deep lavender when focused), with a **copy icon** button (two overlapping
-     squares; `aria-label` "Copy the subject"). The Gmail link uses whatever it says.
-   - **Copy & open in Gmail** (primary) with a **copy icon** button beside it for copying the email alone ("Copy the
+     squares; `aria-label` "Copy the subject"). Copy icons are bare: no border, the same 36px square for both, a
+     lavender tint on hover. The Gmail link uses whatever it says.
+   - **Copy & open in Gmail** (primary), **locked like the step button until the full email has been read** (greyed,
+     "Read the full email first" on hover; the copy icon beside it is greyed too). With a **copy icon** button beside it for copying the email alone ("Copy the
      email only"): the icons replace the Copy and Copy only text buttons. Copy & open copies the Designed email as HTML
      and opens Gmail's compose window with the subject filled in: `https://mail.google.com/mail/?view=cm&fs=1&su=…`
      (as the property sign tool's **Open in Gmail** does). A Gmail link can't carry a formatted body, so the agent
