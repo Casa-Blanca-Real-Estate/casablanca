@@ -128,7 +128,8 @@
   }
 
   // A guest is only ever on a preview (server/guest.ts) and walks it as the team, as the comp report gives it the samples.
-  function isTeamUser(u) { return u.role === 'admin' || u.guest || TEAM.indexOf(String(u.email).toLowerCase()) !== -1; }
+  // u.team is the server's answer (/api/comp-report/me), which counts a team grant from the Access panel.
+  function isTeamUser(u) { return u.team === true || u.role === 'admin' || u.guest || TEAM.indexOf(String(u.email).toLowerCase()) !== -1; }
   function keepTeam(user) {
     var team = Boolean(user && isTeamUser(user));
     set(local, 'cb_auth', team ? String(user.email).toLowerCase() : null);
@@ -261,7 +262,7 @@
       }).then(function (body) {
         if (!body || !body.user) throw new Error('me: no user');
         var u = body.user;
-        var user = { email: u.email, name: u.name || null, role: u.role, guest: Boolean(u.guest) };
+        var user = { email: u.email, name: u.name || null, role: u.role, guest: Boolean(u.guest), team: Boolean(u.team) };
         set(session, ME_KEY, JSON.stringify({ who: who, at: Date.now(), user: user }));
         return admit(user);
       });

@@ -2,15 +2,18 @@
 // the comp report, and with which role (design §13). Admins only. A grant is
 // agent, mentor or external: admin comes from CR_ADMIN_EMAILS alone.
 //   GET                           every entry, current ones first
-//   POST {email, role?, note?}    grant access or change a grant; granting a
-//                                 removed entry again restores it
+//   POST {email, role?, note?, studioTeam?}
+//                                 grant access or change a grant; granting a
+//                                 removed entry again restores it. studioTeam
+//                                 puts the person on the Studio's team (the
+//                                 CMS, the roster, the team tools); it's never admin
 //   DELETE ?email=<address>       remove a grant, effective on that person's
 //                                 next request
 //
 // Inviting someone from outside Casa takes two steps: the grant here, then the
 // invitation from Netlify → Identity → Invite users. The sign-up gate and the
 // per-request check both read this table.
-import { GRANTABLE_ROLES, isTestAddress, normalizeEmail } from '../access.ts';
+import { GRANTABLE_ROLES, isTestAddress, normalizeEmail, STUDIO_TEAM } from '../access.ts';
 import { withActor, type Role } from '../db.ts';
 import { allowMethods, HttpError, json, readJsonObject, respond } from '../http.ts';
 import { requireUser, type AuthDeps } from '../session.ts';
@@ -22,6 +25,7 @@ export interface AllowlistEntry {
   email: string;
   role: Role;
   note: string | null;
+  studioTeam: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -34,6 +38,7 @@ interface EntryRow {
   email: string;
   role: Role;
   note: string | null;
+  studio_team: boolean;
   created_at: Date;
   created_by: string;
   updated_at: Date;
@@ -42,13 +47,14 @@ interface EntryRow {
   revoked_by: string | null;
 }
 
-const COLUMNS = 'email, role, note, created_at, created_by, updated_at, updated_by, revoked_at, revoked_by';
+const COLUMNS = 'email, role, note, studio_team, created_at, created_by, updated_at, updated_by, revoked_at, revoked_by';
 
 function entry(r: EntryRow): AllowlistEntry {
   return {
     email: r.email,
     role: r.role,
     note: r.note,
+    studioTeam: r.studio_team === true,
     createdAt: new Date(r.created_at).toISOString(),
     createdBy: r.created_by,
     updatedAt: new Date(r.updated_at).toISOString(),
@@ -71,7 +77,7 @@ export function handleAllowlist(req: Request, deps: AuthDeps): Promise<Response>
           `select ${COLUMNS} from comp_report.allowlist
             order by revoked_at is not null, updated_at desc limit 500`,
         )).rows);
-      return json({ entries: rows.map(entry) });
+      return json({ entries: rows.map(entry), builtInTeam: STUDIO_TEAM });
     }
 
     if (req.method === 'DELETE') {
@@ -103,15 +109,20 @@ export function handleAllowlist(req: Request, deps: AuthDeps): Promise<Response>
       throw new HttpError(400, 'bad_note', 'The note is text.');
     }
     const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null;
+    if (body.studioTeam !== undefined && typeof body.studioTeam !== 'boolean') {
+      throw new HttpError(400, 'bad_team', 'studioTeam is true or false.');
+    }
+    const studioTeam = body.studioTeam === true;
     if (note && note.length > MAX_NOTE) throw new HttpError(400, 'bad_note', `Keep the note under ${MAX_NOTE} characters.`);
 
     const row = await withActor(pool, asUser(user), async (tx) =>
       (await tx.query<EntryRow>(
-        `insert into comp_report.allowlist (email, role, note) values ($1, $2, $3)
+        `insert into comp_report.allowlist (email, role, note, studio_team) values ($1, $2, $3, $4)
          on conflict (email) do update
-           set role = excluded.role, note = excluded.note, revoked_at = null, revoked_by = null
+           set role = excluded.role, note = excluded.note, studio_team = excluded.studio_team,
+               revoked_at = null, revoked_by = null
          returning ${COLUMNS}`,
-        [email, role, note],
+        [email, role, note, studioTeam],
       )).rows[0]);
     if (!row) throw new HttpError(500, 'not_saved');
     return json({ entry: entry(row) });

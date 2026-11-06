@@ -11,7 +11,7 @@ const TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.pres
 
 /** Admins, a preview's guest, and the old team list: who studio-auth.js calls the team. */
 export function isStudioTeam(me: Me): boolean {
-  return me.user.role === 'admin' || Boolean(me.user.guest) || TEAM.includes(me.user.email.toLowerCase());
+  return Boolean(me.user.team) || me.user.role === 'admin' || Boolean(me.user.guest) || TEAM.includes(me.user.email.toLowerCase());
 }
 
 /** Keeps the Studio's team mark in step with /me, and loads the capture box in a browser signed in to the notebook. */

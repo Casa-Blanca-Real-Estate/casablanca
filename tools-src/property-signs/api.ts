@@ -25,9 +25,10 @@ export const SIGNS_STORE = 'cb-property-signs';
 /** The old dev sign-in's list, as assets/studio-auth.js keeps it. */
 export const TEAM_EMAILS = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
 
-export interface SignUser { email: string; role: string; guest: boolean }
+export interface SignUser { email: string; role: string; guest: boolean; team?: boolean }
 
-export const isTeam = (u: SignUser) => u.role === 'admin' || u.guest || TEAM_EMAILS.includes(u.email.trim().toLowerCase());
+/** team: the comp report's answer (a team grant from the Access panel counts); the rest for older callers. */
+export const isTeam = (u: SignUser) => u.team === true || u.role === 'admin' || u.guest || TEAM_EMAILS.includes(u.email.trim().toLowerCase());
 
 /** What this reads of the roster: the same shape as the comp report's (server/agent-card.ts). */
 export interface Roster {

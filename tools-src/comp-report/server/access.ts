@@ -24,6 +24,20 @@ import type { Role } from './db.ts';
 
 export const DEFAULT_DOMAINS = ['casa-blanca.com'];
 
+/**
+ * The Studio's team, built in: the old dev sign-in's list (keep in step with TEAM in
+ * assets/studio-auth.js). Anyone else joins the team by a grant in the Access panel
+ * (comp_report.allowlist.studio_team), which needs no PR.
+ */
+export const STUDIO_TEAM: readonly string[] = [
+  'creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com',
+];
+
+/** On the Studio's team: an admin, a preview's guest, the built-in list, or a team grant. */
+export function isStudioTeam(user: { email: string; role: string; guest?: boolean }, granted = false): boolean {
+  return user.role === 'admin' || Boolean(user.guest) || granted || STUDIO_TEAM.includes(user.email.trim().toLowerCase());
+}
+
 /** The roles an allowlist grant can give. Admin comes from CR_ADMIN_EMAILS only. */
 export const GRANTABLE_ROLES: readonly Role[] = ['external', 'mentor', 'agent'];
 
