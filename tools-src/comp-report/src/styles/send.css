@@ -358,3 +358,30 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
   .se2-preview { height: 72vh; min-height: 420px; }
   .se2-email { justify-content: flex-start; padding: 64px 0 24px; }
 }
+
+/* Done (the design pass, "6 · Done", 2026-11-06): centred, 760px; the black block, What's next, the actions,
+   then How did it go? and the quieter links. */
+.se-done2 { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 0 48px; }
+.se-done2 > * { width: 100%; max-width: 760px; box-sizing: border-box; }
+.se-done-block { background: var(--cb-black); color: #fff; padding: 40px; display: flex; flex-direction: column; gap: 12px; }
+.se-done-eyebrow { color: var(--cb-lavender); font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+.se-done-title { margin: 0; font-size: 40px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.se-done-summary { margin: 0; font-size: 14px; line-height: 1.55; color: var(--cb-sand); }
+.se-done-meta { font-size: 12px; color: #888680; }
+.se-next { background: var(--cb-surface); border: 1px solid var(--cb-border); padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
+.se-next-title { font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #6f6d68; }
+.se-next-item {
+  display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 6px 0; text-align: left;
+  font: inherit; font-size: 14px; color: var(--cb-black); background: none; border: 0; cursor: pointer;
+}
+.se-next-item:hover:not(:disabled) { color: var(--cb-deep); }
+.se-next-item:disabled { cursor: default; }
+.se-next-box {
+  flex-shrink: 0; width: 18px; height: 18px; border: 1px solid var(--cb-black); background: #fff; color: #fff;
+  font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
+}
+.se-next-box.on { background: var(--cb-black); }
+.se-done2 .se-done-actions { justify-content: center; flex-wrap: wrap; gap: 12px; }
+.se-done-card { background: var(--cb-surface); border: 1px solid var(--cb-border); padding: 24px 28px; }
+.se-done-more { display: flex; justify-content: center; gap: 24px; font-size: 12px; }
+.se-done-more .link:disabled { opacity: .4; cursor: default; }

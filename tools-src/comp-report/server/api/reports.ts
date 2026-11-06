@@ -16,6 +16,7 @@ import { normalizeEmail } from '../access.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { logAccess, logViewed } from '../logs.ts';
 import { readsEveryReport, reportFor } from './workspace.ts';
+import { cleanPhotoUrls } from '../../engine/index.ts';
 
 export interface ReportSummary {
   id: string;
@@ -36,6 +37,17 @@ export interface ReportSummary {
   stage?: ReportStage;
   /** Comps still without a tier, while the report is on Sort. */
   unsorted?: number;
+  /** The reports list (the design pass, 2026-11-06): the comps on the report, not taken out. */
+  comps?: number;
+  /** The range as the report last showed it (state.range, written by the browser once revealed), else the reveal's pin. */
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
+  /** When it was marked as sent. */
+  sentAt?: string | null;
+  /** The home's photo, from its StreetEasy page (linked, never copied: NW-020 a). */
+  photo?: string | null;
+  /** The owner's level, on Everyone's reports: practice or full. */
+  ownerLevel?: 'practice' | 'full' | null;
 }
 
 export type ReportStage = 'sort' | 'findings' | 'send' | 'sent';
@@ -55,7 +67,19 @@ export interface ReportRow {
   stage?: ReportStage;
   unsorted?: number | string;
   owner_name?: string | null;
+  comps?: number | string;
+  range_low?: number | string | null;
+  range_high?: number | string | null;
+  sent_at?: string | null;
+  photo?: string | null;
+  owner_level?: 'practice' | 'full' | null;
 }
+
+const num = (v: number | string | null | undefined): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 
 export const COLUMNS = 'id, title, property_type, mode, status, owner_email, sample_data, created_at, updated_at';
 
@@ -72,6 +96,14 @@ export function summary(r: ReportRow): ReportSummary {
     updatedAt: new Date(r.updated_at).toISOString(),
     ...(r.owner_name !== undefined ? { ownerName: r.owner_name } : {}),
     ...(r.stage ? { client: r.client ?? null, side: r.side ?? null, stage: r.stage, unsorted: Number(r.unsorted ?? 0) } : {}),
+    ...(r.comps !== undefined ? {
+      comps: Number(r.comps ?? 0),
+      rangeLow: num(r.range_low),
+      rangeHigh: num(r.range_high),
+      sentAt: r.sent_at && !Number.isNaN(Date.parse(r.sent_at)) ? new Date(r.sent_at).toISOString() : null,
+      photo: cleanPhotoUrls([r.photo])[0] ?? null,
+    } : {}),
+    ...(r.owner_level !== undefined ? { ownerLevel: r.owner_level } : {}),
   };
 }
 
@@ -129,7 +161,17 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
                   end as stage,
                   (select nullif(btrim(u.name), '') from comp_report.users u where u.email = r.owner_email) as owner_name,
                   (select count(*) from comp_report.report_comps rc
-                    where rc.report_id = r.id and rc.removed_at is null and rc.tier is null) as unsorted
+                    where rc.report_id = r.id and rc.removed_at is null and rc.tier is null) as unsorted,
+                  (select count(*) from comp_report.report_comps rc
+                    where rc.report_id = r.id and rc.removed_at is null) as comps,
+                  -- The range the report last showed, else the reveal's pin; never before the agent's call.
+                  case when r.agent_call is not null then coalesce(r.state->'range'->>'low', r.state->'reveal'->>'low') end as range_low,
+                  case when r.agent_call is not null then coalesce(r.state->'range'->>'high', r.state->'reveal'->>'high') end as range_high,
+                  r.state->'send'->>'sentAt' as sent_at,
+                  (select coalesce(lr.extract->>'heroImageUrl', lr.extract->'photos'->>0) from comp_report.link_reads lr
+                    where lr.report_id = r.id and lr.purpose = 'subject' and lr.status = 'done'
+                    order by lr.seq desc limit 1) as photo,
+                  (select u.capability from comp_report.users u where u.email = r.owner_email) as owner_level
              from comp_report.reports r
             where ($3 or r.owner_email = $1) and ($4::text is null or r.owner_email = $4) and r.status = $2
               and (not $5 or r.owner_email in (select m.agent_email from comp_report.mentees m

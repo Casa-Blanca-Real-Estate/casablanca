@@ -3,47 +3,103 @@
 import type { Report } from '../../api.ts';
 import type { ScreenId } from '../workspace/screens.ts';
 
-export type SortKey = 'home' | 'side' | 'stage' | 'updated';
+export type SortKey = 'home' | 'side' | 'range' | 'comps' | 'when';
 export interface SortState { key: SortKey; dir: 1 | -1 }
 
-/** The columns after the thumbnail, in order. The handoff calls the Side column "Client"; it holds Buyer or Seller. */
-export const COLUMNS: { key: SortKey; label: string; align: 'left' | 'right' }[] = [
-  { key: 'home', label: 'Home', align: 'left' },
-  { key: 'side', label: 'Side', align: 'left' },
-  { key: 'stage', label: 'Stage', align: 'left' },
-  { key: 'updated', label: 'Updated', align: 'right' },
+/**
+ * The columns after the photo, in order (the design pass, 2026-11-06). Every one sorts. "Stage · updated"
+ * sorts by recency: the stage shows beside the date it was last changed.
+ */
+export const COLUMNS: { key: SortKey; label: string; wide: boolean }[] = [
+  { key: 'home', label: 'Home', wide: false },
+  { key: 'side', label: 'Side', wide: true },
+  { key: 'range', label: 'Range', wide: true },
+  { key: 'comps', label: 'Comps', wide: true },
+  { key: 'when', label: 'Stage · updated', wide: true },
 ];
 
-export const DEFAULT_SORT: SortState = { key: 'updated', dir: -1 };
+/** Newest first. */
+export const DEFAULT_SORT: SortState = { key: 'when', dir: -1 };
 
-/** A header click: the same column flips its direction; another starts ascending, except Updated, which starts newest first. */
+/**
+ * A header click: another column starts ascending (↑), the same one then goes descending (↓), and a third click
+ * clears it back to newest first. "Stage · updated" is the default, so it only flips.
+ */
 export function nextSort(current: SortState, key: SortKey): SortState {
-  if (current.key === key) return { key, dir: current.dir === 1 ? -1 : 1 };
-  return { key, dir: key === 'updated' ? -1 : 1 };
+  if (key === 'when') return current.key === 'when' ? { key, dir: current.dir === 1 ? -1 : 1 } : { key, dir: -1 };
+  if (current.key !== key) return { key, dir: 1 };
+  return current.dir === 1 ? { key, dir: -1 } : DEFAULT_SORT;
 }
 
 type Stage = NonNullable<Report['stage']>;
-const STAGE_ORDER: Record<Stage, number> = { sort: 1, findings: 2, send: 3, sent: 4 };
 export const stageOf = (r: Report): Stage => r.stage ?? 'sort';
 
-function sortValue(r: Report, key: SortKey): string | number {
-  if (key === 'home') return r.title;
-  if (key === 'side') return r.side ?? '';
-  if (key === 'stage') return STAGE_ORDER[stageOf(r)];
+/** A report's sort value; null sorts last whichever way the column runs. */
+function sortValue(r: Report, key: SortKey): string | number | null {
+  if (key === 'home') return r.title.toLowerCase();
+  if (key === 'side') return r.side ?? null;
+  if (key === 'range') return r.rangeLow ?? null;
+  if (key === 'comps') return r.comps ?? null;
   return r.updatedAt;
 }
 
-/** The list in the header's order. Plain comparison, as the prototype does it; ties keep the server's order. */
+/** The list in the header's order. Plain comparison; empty values last; ties keep the server's order. */
 export function sortReports(reports: Report[], sort: SortState): Report[] {
   return reports
     .map((r, i) => ({ r, i }))
     .sort((a, b) => {
       const x = sortValue(a.r, sort.key);
       const y = sortValue(b.r, sort.key);
+      if (x === null || y === null) return x === y ? a.i - b.i : x === null ? 1 : -1;
       const cmp = (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
       return cmp || a.i - b.i;
     })
     .map(({ r }) => r);
+}
+
+/** The search box: address, client, or the agent's name or email, as typed. */
+export function matchesSearch(r: Report, q: string): boolean {
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = [r.title, r.client, r.ownerName, r.ownerEmail].filter(Boolean).join(' ').toLowerCase();
+  return words.every((w) => hay.includes(w));
+}
+
+/** "6 comps · 3 untiered"; "1 comp"; "No comps". */
+export function compsLabel(r: Report): string {
+  const n = r.comps ?? 0;
+  if (!n) return 'No comps';
+  const u = r.unsorted ?? 0;
+  return `${n} comp${n === 1 ? '' : 's'}${u ? ` · ${u} untiered` : ''}`;
+}
+
+/** "$4.23M – $4.92M", or "—" before Findings has one. */
+export function rangeLabel(r: Report, price: (n: number) => string): string {
+  return r.rangeLow != null && r.rangeHigh != null ? `${price(r.rangeLow)} – ${price(r.rangeHigh)}` : '—';
+}
+
+/** The numbers row: how many reports, how many still open, how many sent this month. */
+export function listStats(reports: Report[], now: Date = new Date()): { reports: number; open: number; sentThisMonth: number } {
+  const sentThisMonth = reports.filter((r) => {
+    if (!r.sentAt) return false;
+    const d = new Date(r.sentAt);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }).length;
+  return { reports: reports.length, open: reports.filter((r) => stageOf(r) !== 'sent').length, sentThisMonth };
+}
+
+/** Pick up where you left off: the most recently changed report that isn't sent yet. */
+export function pickUp(reports: Report[]): Report | null {
+  return reports.filter((r) => stageOf(r) !== 'sent' && r.status === 'active').sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))[0] ?? null;
+}
+
+/** "Nov 4"; the year instead when it isn't this one. */
+export function shortDate(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.getFullYear() === now.getFullYear()
+    ? d.toLocaleString('en-US', { month: 'short', day: 'numeric' })
+    : d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export const STAGE_LABEL: Record<Stage, string> = { sort: 'Sort', findings: 'Findings', send: 'Send', sent: 'Sent' };

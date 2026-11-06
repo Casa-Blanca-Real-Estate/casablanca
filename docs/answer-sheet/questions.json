@@ -1,10 +1,13 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
-    "TD-25",
-    "TD-26",
-    "QW-2"
+    "DP-16",
+    "DP-17",
+    "DP-18",
+    "DP-19",
+    "DP-20",
+    "TD-27"
   ],
   "topics": [
     {
@@ -438,9 +441,9 @@
       "num": "03",
       "title": "The design pass",
       "prefix": "DP",
-      "url": "https://github.com/Casa-Blanca-Real-Estate/casablanca/blob/claude/project-thread-ihvlok/docs/comp-report/design-pass/README.md",
+      "url": "{repo}/docs/comp-report/design-pass/README.md",
       "linkLabel": "Open the design pass brief",
-      "intro": "<p>The brief for your Claude Design pass (#117) covers every surface and what's still open on each. Five questions from it change what gets designed (DP-11 to DP-15). DP-9 and DP-10 are left over from the design port (#77).</p>",
+      "intro": "<p>Your Claude Design pass. Built and released: the Designed email and Send (#139, 2026-11-06), then Reports, the shared top bar, Done and a light pass on Sort, the Gate and Findings (the overnight build, 2026-11-06). The questions below are what that build left open. DP-9 and DP-10 are left over from the design port (#77).</p>",
       "questions": [
         {
           "id": "DP-9",
@@ -538,6 +541,115 @@
             ]
           ],
           "source": "The design pass brief, section 10 · #117"
+        },
+        {
+          "id": "DP-16",
+          "q": "An admin's second tab on Reports: \"Mentee reports\", or a name of its own?",
+          "short": "Admin's tab name",
+          "quick": true,
+          "context": "<p>The canvas names the tabs <strong>Your reports · Mentee reports</strong> for mentors and admins, and that's what's built. An admin has no mentees: their tab shows every agent's reports. A mentor's still filters to their mentees, with All agents beside it.</p>",
+          "options": [
+            [
+              "A",
+              "\"Mentee reports\" for both, as built",
+              "",
+              true
+            ],
+            [
+              "B",
+              "\"Agent reports\" for admins, \"Mentee reports\" for mentors",
+              "recommended"
+            ],
+            [
+              "C",
+              "\"Everyone's\" for admins, as before"
+            ]
+          ],
+          "source": "The overnight build, 2026-11-06"
+        },
+        {
+          "id": "DP-17",
+          "q": "Sort's compact comp card from the canvas: build it before Nov 13, or after?",
+          "short": "Sort's compact card",
+          "quick": true,
+          "context": "<p>The canvas's \"2 · Sort\" opens a comp into a shorter card: your note and actions on one line, the photo beside status, floor, distance and subway, then tags and features as chips. Tonight's build gave Sort the new top bar and header row but kept today's open card, which holds the feature pickers, tags, notes, photos, checks and the per-comp review: the brief said Sort hasn't had its full review with you yet. Rebuilding the card is a day's work and touches the most-used screen just before training.</p>",
+          "options": [
+            [
+              "A",
+              "After Nov 13, with its design review",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Before Nov 13: design it with me this week, then build"
+            ]
+          ],
+          "source": "The overnight build, 2026-11-06"
+        },
+        {
+          "id": "DP-18",
+          "q": "The Gate: one number, or a low and a high?",
+          "short": "One number at the Gate",
+          "quick": true,
+          "context": "<p>The canvas asks for <strong>Your number</strong>, one figure. The tool asks for a low and a high, and the engine, Findings' bar, Hubert's take and the Access log all use both. Tonight's build kept low and high (now \"Your low\" and \"Your high\") and took the canvas's wording: the question names the home, one line under it, and the button reads \"Lock it in · Show the range →\". One number is a small engine and Findings change, after Nov 13.</p>",
+          "options": [
+            [
+              "A",
+              "Keep a low and a high",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "One number, after Nov 13"
+            ],
+            [
+              "C",
+              "One number, before Nov 13"
+            ]
+          ],
+          "source": "The overnight build, 2026-11-06"
+        },
+        {
+          "id": "DP-19",
+          "q": "Done: its own screen, or Send's sent state?",
+          "short": "Done or Send's sent state",
+          "quick": true,
+          "context": "<p>Built as its own screen from the canvas: the black block (sent, to whom, the range, your number), What's next (Follow up in two days, Plan the offer together: ticks are saved on the report), Back to reports and Open the report. Kept below it: How did it go? (list price, contract, sale), Copy the email again and Reopen to edit. The brief left open whether Done folds into Send once it's marked sent (design pass §6.14).</p>",
+          "options": [
+            [
+              "A",
+              "Its own screen, as built",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Fold it into Send's sent state"
+            ]
+          ],
+          "source": "The design pass brief, §6.14 · the overnight build"
+        },
+        {
+          "id": "DP-20",
+          "q": "Start with Hubert on Reports: is opening the New report window with the link filled in enough for Nov 13?",
+          "short": "Start with Hubert",
+          "quick": true,
+          "context": "<p>The hero's <strong>Start with Hubert</strong> works today: paste a StreetEasy link or type an address, press Start, and the New report window opens with it filled in. The agent still picks Buyer or Seller and presses Next; the listing is read and fills the details on step 2. The canvas's fuller version (Hubert reads it first and fills the window, with him beside it) waits on the New report window's design (§7.1), which isn't drawn yet. A follow-up thread is wiring what this pass needs beyond design.</p>",
+          "options": [
+            [
+              "A",
+              "Enough for Nov 13; the fuller one after §7.1 is designed",
+              "recommended",
+              true
+            ],
+            [
+              "B",
+              "Wire the fuller one before Nov 13"
+            ]
+          ],
+          "source": "The overnight build, 2026-11-06"
         }
       ],
       "settled": [
@@ -1122,6 +1234,20 @@
             ]
           ],
           "source": "#127"
+        },
+        {
+          "id": "TD-27",
+          "q": "Design onboarding and the full first-use flow (next week)",
+          "short": "Onboarding design",
+          "quick": true,
+          "context": "<p>From your note on 2026-11-06: the first-run orientation and the whole flow from sign-in to a sent report, for practice agents before Nov 13. DP-13 (tour, checklist or video) feeds it. The design pass brief lists what's still undesigned: Review comps and the client's words as one pattern, Hubert's drawer, the New report window with Hubert, Edit details.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
+          "source": "Kimani, 2026-11-06"
         }
       ],
       "settled": [
@@ -1202,6 +1328,18 @@
     }
   ],
   "reading": [
+    {
+      "id": "RL-13",
+      "date": "2026-11-06",
+      "qids": [
+        "DP-16",
+        "DP-17",
+        "DP-18",
+        "DP-19",
+        "DP-20"
+      ],
+      "html": "The overnight build's before and after screenshots, at 1440 and 2400 wide (project files: <code>design-pass-2-before/</code> and <code>design-pass-2-after/</code>), and the morning briefing."
+    },
     {
       "id": "RL-12",
       "date": "2026-10-29",

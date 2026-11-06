@@ -4,10 +4,14 @@
 /* ─── The Gate ───────────────────────────────────────────────────────────── */
 .gt-root { display: flex; flex-direction: column; align-items: center; padding: 24px 0; }
 .gt-card {
-  width: 640px; max-width: 100%; background: var(--cb-surface); padding: 40px; margin: 0;
+  width: 760px; max-width: 100%; background: var(--cb-surface); border: 1px solid var(--cb-border); padding: 40px; margin: 0;
   display: flex; flex-direction: column; gap: 28px;
 }
-.gt-title { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+/* The design pass: the question, then one line under it; no eyebrow. */
+.gt-head { display: flex; flex-direction: column; gap: 12px; }
+.gt-title { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+.gt-lead { margin: 0; font-size: 14px; line-height: 1.55; color: #555550; }
+.gt-actions { border-top: 1px solid var(--cb-line); padding-top: 20px; }
 .gt-range { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); gap: 12px; align-items: end; }
 label.gt-field, .gt-label {
   display: flex; flex-direction: column; gap: 6px;
@@ -221,3 +225,11 @@ label.fi-target-whose { max-width: 520px; }
 .fi-terms { border-top: 1px solid var(--cb-line); padding-top: 14px; }
 .fi-terms-head { display: flex; align-items: center; gap: 14px; font-size: 13px; }
 .fi-select { padding: 6px 10px; font-size: 13px; }
+
+/* The design pass (2026-11-06): the range and the agent's number side by side; the accordion headers tint on hover. */
+.fi-headline { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 40px; }
+.fi-yournum { display: flex; flex-direction: column; gap: 6px; border-left: 1px solid var(--cb-border); padding-left: 24px; }
+.fi-yournum-v { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.fi-yournum-where { font-size: 13px; color: var(--cb-mid); }
+.fi-acc-row:hover { background: #faf9f7; }
+.sh-cta.fi-bottom-cta { margin-left: 0;  display: flex; justify-content: flex-end; }

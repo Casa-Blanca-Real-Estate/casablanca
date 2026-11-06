@@ -17,6 +17,7 @@ import { homeFeatures } from '../../../workspace/features.ts';
 import { applyHomeSet } from '../../../workspace/home-edit.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
+import { answerResult } from '../../../workspace/reading.ts';
 import {
   isRevealed, type Brief, type CallState, type DealTermsState, type GuideStep, type Intake, type Outcomes, type Reached, type RevealPin, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
@@ -450,6 +451,18 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     });
   }, [settled, reportId, setState]);
 
+  // The range as the report shows it, kept on the report for the reports list (the design pass): after the
+  // reveal only, the owner's only, and only when it changes.
+  const revealedNow = isRevealed(call);
+  useEffect(() => {
+    if (!data || readOnlyRef.current || !revealedNow || !output) return;
+    const r = output.results[answerResult(output)].range;
+    const next = r ? { low: Math.round(r.low.value), high: Math.round(r.high.value) } : null;
+    const was = stateRef.current.range ?? null;
+    if ((was?.low ?? null) === (next?.low ?? null) && (was?.high ?? null) === (next?.high ?? null) && stateRef.current.range !== undefined) return;
+    setState({ ...stateRef.current, range: next });
+  }, [data, revealedNow, output, setState]);
+
   // The furthest screen reached, for the reports list's Stage.
   const reached: Reached = state.reached ?? 'sort';
   const goTo = useCallback((next: ScreenId) => {
@@ -623,6 +636,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     homeFeatures: features,
     level,
     isAdmin: me.user.role === 'admin',
+    viewerRole: me.user.role,
     isGuest: Boolean(me.user.guest),
     viewAsNewAgent,
     setViewAsNewAgent: (on) => {
@@ -687,6 +701,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     },
     outcomes: state.outcomes ?? {},
     setOutcomes: (next: Outcomes) => setState({ ...stateRef.current, outcomes: next }),
+    doneChecks: state.doneChecks ?? {},
+    setDoneChecks: (next: Record<string, boolean>) => setState({ ...stateRef.current, doneChecks: next }),
     reached,
     toast,
     back: onBack,
@@ -800,8 +816,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
           ws={ws}
           onBack={onBack}
           saveLine={readOnly ? null : <SaveLine status={save.status} onRetry={() => void save.flush()} />}
+          steps={<ProgressRow ws={ws} />}
         />
-        <ProgressRow ws={ws} />
 
         {(busy || actionError || ws.canSample || ws.devTools) && (
           <div className="sh-aux">

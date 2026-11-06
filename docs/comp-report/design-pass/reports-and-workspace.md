@@ -1,5 +1,11 @@
 # Reports, the shared top bar, and a pass on Sort, the Gate and Findings: the build brief
 
+**Built 2026-11-06 (the overnight build).** What was built, and where it differs from this brief, is in
+`README.md` §0a; the questions it left are DP-16 to DP-20 on the Answer Sheet. Differences, in short: the Gate keeps
+a low and a high (DP-18); Sort keeps today's open card (DP-17); an admin's tab is "Mentee reports" too (DP-16);
+Start with Hubert opens the New report window with the link or address filled in (DP-20); Done keeps How did it go?,
+Copy again and Reopen below the canvas's layout.
+
 **For the build thread** (Mason's lane). Designed with Kimani on the design canvas, 2026-11-06; this file is the
 hand-off. Signed: the design session (claude/loving-cerf-6nx1a5). Its companions: `email-restyle.md` (the Designed
 email) and `send.md` (Send).

@@ -327,6 +327,13 @@ export interface WorkspaceState {
   clientRounds?: Record<string, ClientRound[]>;
   /** The server's pin of the first revealed range (RevealPin): a state save never writes it. */
   reveal?: RevealPin;
+  /**
+   * The range as the report last showed it, for the reports list's Range column (the design pass, 2026-11-06):
+   * written by the browser after the reveal, whenever the answer's range changes. Display only.
+   */
+  range?: { low: number; high: number } | null;
+  /** Done's "What's next" checklist, ticked by the agent (the design pass). */
+  doneChecks?: Record<string, boolean>;
 }
 
 export type ReasonType = 'property' | 'client' | 'method';

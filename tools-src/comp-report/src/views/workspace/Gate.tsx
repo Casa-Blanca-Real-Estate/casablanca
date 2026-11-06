@@ -8,6 +8,8 @@
 import { useState } from 'react';
 import { MoneyInput } from '../findings/MoneyInput.tsx';
 import type { StepProps } from './model.ts';
+import { homeName } from './screens.ts';
+import { countWord } from '../../../workspace/format.ts';
 import '../../styles/findings.css';
 
 /** The why a new agent writes, at least (server/api/workspace.ts, PRACTICE_WHY_MIN). */
@@ -26,6 +28,12 @@ export function Gate({ ws }: StepProps) {
   const rangeOk = low !== null && high !== null && low <= high;
   const ok = rangeOk && whyOk;
   const off = ws.readOnly;
+  // The design pass: the question names the home, and one line says what the number is for.
+  const home = homeName(ws.intake, ws.report.title);
+  const firsts = ws.comps.filter((c) => c.judgment?.tier === 'primary').length;
+  const lead = firsts
+    ? `Commit a number before you see what your ${countWord(firsts)} first-tier comp${firsts === 1 ? '' : 's'} say${firsts === 1 ? 's' : ''}.`
+    : 'Commit a number before you see what your comps say.';
 
   const show = () => {
     if (!ok || off) return;
@@ -61,22 +69,25 @@ export function Gate({ ws }: StepProps) {
   return (
     <div className="gt-root">
       <form className="gt-card" onSubmit={(e) => { e.preventDefault(); show(); }} noValidate>
-        <h2 className="gt-title">What do you think it’s worth?</h2>
+        <div className="gt-head">
+          <h2 className="gt-title">What do you think {home} is worth?</h2>
+          <p className="gt-lead">{lead}</p>
+        </div>
         {call?.skipped && !off && <p className="gt-quiet">You skipped this. Give your number now, or go on to the comps.</p>}
         <div className="gt-range">
           <label className="gt-field" htmlFor="gt-low">
-            <span className="gt-label">Low</span>
+            <span className="gt-label">Your low</span>
             <MoneyInput id="gt-low" className="gt-money" value={low} onChange={setLow} placeholder="$" disabled={off} />
           </label>
           <span className="gt-dash" aria-hidden="true">–</span>
           <label className="gt-field" htmlFor="gt-high">
-            <span className="gt-label">High</span>
+            <span className="gt-label">Your high</span>
             <MoneyInput id="gt-high" className="gt-money" value={high} onChange={setHigh} placeholder="$" disabled={off} />
           </label>
         </div>
         {low !== null && high !== null && low > high && <p className="gt-error" role="alert">The low is above the high.</p>}
         <div className="gt-why">
-          <label className="gt-label" htmlFor="gt-why-text">{practice ? 'Why' : 'Why · optional'}</label>
+          <label className="gt-label" htmlFor="gt-why-text">{practice ? 'Why: which comps, and how you weighed them' : 'Why · optional'}</label>
           <textarea
             id="gt-why-text"
             className="gt-textarea"
@@ -85,7 +96,7 @@ export function Gate({ ws }: StepProps) {
             value={why}
             disabled={off}
             onChange={(e) => setWhy(e.target.value)}
-            placeholder="What in the home or the market puts it there?"
+            placeholder="I leaned on … because … I discounted … because …"
           />
           {practice && (
             <div className={`gt-count${whyLen >= WHY_MIN ? ' gt-count-done' : ''}`} aria-live="polite">
@@ -105,7 +116,7 @@ export function Gate({ ws }: StepProps) {
             {!practice && !off && <button type="button" className="gt-skip" onClick={skip}>Skip</button>}
             {off
               ? <button type="button" className="btn primary" onClick={() => ws.go('findings')}>Show the comps</button>
-              : <button type="submit" className="btn primary" disabled={!ok}>Show the comps</button>}
+              : <button type="submit" className="btn primary" disabled={!ok}>Lock it in · Show the range →</button>}
           </div>
         </div>
       </form>

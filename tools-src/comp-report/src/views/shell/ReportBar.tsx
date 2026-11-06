@@ -3,6 +3,7 @@
 // default) and viewing the Gate as a new agent.
 import type { Workspace } from '../workspace/model.ts';
 import { InBar } from './slots.tsx';
+import { roleBadge } from './TopBar.tsx';
 
 function Switch({ on, onChange, label, hint }: { on: boolean; onChange: (next: boolean) => void; label: string; hint: string }) {
   return (
@@ -20,10 +21,11 @@ export function ReportBar({ ws, setDevTools }: { ws: Workspace; setDevTools: (on
   return (
     <>
       <InBar where="pills">
+        {ws.readOnly && roleBadge(ws.viewerRole) && <span className="sh-role-badge">{roleBadge(ws.viewerRole)}</span>}
         {ws.report.sampleData && (
           <span className="badge-sample sh-bar-sample" title="Sample data was used in this report. Nothing in it is for clients.">Sample</span>
         )}
-        <button type="button" className="sh-pill" aria-pressed={ws.drawerOpen} onClick={() => ws.setDrawerOpen(!ws.drawerOpen)}>
+        <button type="button" className="sh-pill sh-hub" aria-pressed={ws.drawerOpen} onClick={() => ws.setDrawerOpen(!ws.drawerOpen)}>
           <span className="sh-spark" aria-hidden="true">✦</span>Hubert
         </button>
       </InBar>

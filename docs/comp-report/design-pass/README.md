@@ -11,14 +11,16 @@ This file is meant to be enough on its own. Where it points elsewhere, it's for 
 **Read the code from `claude/main`, never `release`.** `claude/main` is where every PR merges; `release` is
 only what's live on production, and it runs behind. Anything this brief calls "built" is on `claude/main`.
 
-**Updated 2026-11-05: what landed after this was written** is in [section 0](#0-since-this-was-written-2026-11-05).
-Everything else below still describes the tool as built; where a line has changed, it's marked.
+**Updated 2026-11-06: what the design pass has built so far** is in [section 0a](#0a-built-from-the-design-canvas-2026-11-06),
+and what landed before that in [section 0](#0-since-this-was-written-2026-11-05). Sections 1 to 12 still describe the
+tool as of #110; where 0a says a surface was rebuilt, 0a wins.
 
 **Design for laptop and tablet widths only (Kimani, 2026-10-29).** Agents won't use the tool on phones for
 now; phone layouts get their own design later. Don't design phone breakpoints, and skip the phone screenshots.
 
 ## Contents
 
+0a. [Built from the design canvas (2026-11-06)](#0a-built-from-the-design-canvas-2026-11-06)
 0. [Since this was written (2026-11-05)](#0-since-this-was-written-2026-11-05)
 1. [What the tool is, in one minute](#1-what-the-tool-is-in-one-minute)
 2. [How to use this file](#2-how-to-use-this-file)
@@ -35,6 +37,69 @@ now; phone layouts get their own design later. Don't design phone breakpoints, a
 10. [Open questions for Kimani](#10-open-questions-for-kimani)
 11. [Not in this pass](#11-not-in-this-pass)
 12. [Screenshots](#12-screenshots)
+
+---
+
+## 0a. Built from the design canvas (2026-11-06)
+
+Kimani's design canvas (https://claude.ai/artifact/1zFam3mkm1orxhCrLmhx8W) has been handed off in three build
+briefs beside this file, and all three are built and released:
+
+| Brief | What | Built in |
+|---|---|---|
+| `email-restyle.md` | The Designed email: hero text on the photo, lead-in headlines, the range on white, photo cards, market rows, "Best," and the square headshot | #139 |
+| `send.md` | Send: full width, the preview filling the window with edit in place, the rail, the one step button (Read → Copy & open in Gmail → Mark as sent), Ask Hubert to review | #139 |
+| `reports-and-workspace.md` | Reports, the shared top bar, Done, and a light pass on Sort, the Gate and Findings | the overnight build of 2026-11-06 (this round) |
+
+**What this round changed, surface by surface** (before and after screenshots at 1440 and 2400 wide are in
+Kimani's project files, `design-pass-2-before/` and `design-pass-2-after/`):
+
+- **The top bar** (`src/views/shell/TopBar.tsx`, `styles/shell.css`): one bar on every screen. The wordmark,
+  **‹ Studio** in lavender text (the bar draws it; the studio chrome's fixed button is hidden on this page), a dot
+  and **COMP REPORT** (left out on Reports, whose hero says it), then at the right: **Admin view** / **Mentor view**
+  (on Reports, and on another agent's report), **Sample** in yellow, **✦ Hubert** filled lavender (opens his
+  drawer), the account pill, and **Feedback** (the chrome's right dock, moved into the bar). The edge tab stays
+  (DP-14 is still open).
+- **Reports** (`src/views/Reports.tsx`, `shell/reports-list.ts`): the hero has **Pick up where you left off** (the
+  newest report not yet sent) and **Start with Hubert** (a link or an address: it opens the New report window
+  with it filled in; the read fills step 2 as before). The header row has "Your reports" or the tabs **Your
+  reports · Mentee reports**, the numbers (**reports · open · sent this month**; a mentor's Mentee reports: reports
+  · mentees · sent this month), **Edit mentees** on the numbers' line, the **search** button (address, client or
+  agent, as you type), and **+ New comp**. The table: the home's **photo** (206 × 150, from its StreetEasy read,
+  linked), Home (Sample badge, client; on others' reports the agent, their PRACTICE / FULL tag and "Read only"),
+  Side, **Range** (the true estimate as the report last showed it, "—" before the Gate), **Comps** ("6 comps · 3
+  untiered"), and **Stage · updated** ("Sent · Nov 4"). Every header sorts: ↑, ↓, then cleared. Archive and
+  Delete (samples only) are icons in the margin on hover. **Archived (N)** and Access stay below.
+- **The workspace header** (`shell/WorkspaceHeader.tsx`): one row on every screen: "← Reports", the address and ✎,
+  the sub line with the save status; then the step crumbs (compact, not stretched across the page); then the
+  forward action at the right (**Review comps (N) →** while comps wait for review, with Findings → as a quiet link
+  beside it; **Findings →**; **Send →**; or Send's step button). The page keeps clear of Hubert's edge tab.
+- **Sort:** the bar and the header row above. Its open comp card is today's (DP-17: the canvas's compact card
+  waits for Sort's full review).
+- **The Gate** (`workspace/Gate.tsx`): no eyebrow; "What do you think 17L is worth?" and one line under it,
+  "Commit a number before you see what your three first-tier comps say."; **Your low** and **Your high** (DP-18:
+  the canvas has one number); a practice agent's why is "Why: which comps, and how you weighed them"; the button
+  is **Lock it in · Show the range →**. A 760px card.
+- **Findings** (`workspace/Findings.tsx`): the range's sub-line is "$2,112 – $2,457 / SF · 3 sales"; **Your number**
+  sits beside it with where it lands ("Inside the range"; "Below the range, by about $25.4K"), replacing the
+  verdict line; the legend says "Your number"; the accordion headers tint on hover; **Send →** at the bottom too.
+- **Done** (`workspace/Done.tsx`): the canvas's screen. A black block ("Sent · Today", "Jordan and Sam have the
+  comps for 17L.", the range, your number, "saved, and locked as sent"), **What's next** (Follow up in two days ·
+  Plan the offer together; the ticks are saved on the report as `state.doneChecks`), **Back to reports** and
+  **Open the report**. Kept below: How did it go?, Copy the email again, Reopen to edit (DP-19: whether Done folds
+  into Send's sent state).
+
+**New data behind Reports** (`server/api/reports.ts`): each row now carries its comp count, the range
+(`state.range`, written by the browser after the reveal whenever the answer's range changes; older reports fall
+back to the reveal's pin), when it was sent, the home's photo (its latest StreetEasy read, through
+`cleanPhotoUrls`) and the owner's level. No migration.
+
+**Still not designed** (next, with Kimani; the canvas's versions are placeholders): Review comps and the client's
+words as one pattern (6.8, 6.12, 8.1), Hubert's drawer (6.15), the New report window with Hubert in it (6.5, 7.1),
+Edit details, Sort's compact card, and **onboarding and the full first-use flow** (7.2; Kimani designs it the week
+of 11-09). Those screens keep working exactly as before until then.
+
+Open questions from this round are on the Answer Sheet: DP-16 (an admin's tab name) to DP-20 (Start with Hubert).
 
 ---
 

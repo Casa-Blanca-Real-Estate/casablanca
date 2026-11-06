@@ -2,7 +2,7 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, HubertHomeEdit, HubertView, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
+import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, HubertHomeEdit, HubertView, LinkReadView, LinksState, ReviewReply, WorkspaceData, Role } from '../../api.ts';
 import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
@@ -97,6 +97,8 @@ export interface Workspace {
   /** The agent's level for the Gate: practice (new) or full (graduated). An admin can view it as a new agent. */
   level: 'practice' | 'full';
   isAdmin: boolean;
+  /** The viewer's role, for the bar's team-view badge on another agent's report. */
+  viewerRole: Role;
   /** Signed in through guest mode: an agent, with dev tools and the sample data. */
   isGuest: boolean;
   viewAsNewAgent: boolean;
@@ -165,6 +167,9 @@ export interface Workspace {
   applyHomeSet: (set: HubertHomeEdit['set']) => void;
   outcomes: Outcomes;
   setOutcomes: (next: Outcomes) => void;
+  /** Done's "What's next" ticks (the design pass). */
+  doneChecks: Record<string, boolean>;
+  setDoneChecks: (next: Record<string, boolean>) => void;
   reached: Reached;
   /** A short confirmation at the bottom of the screen: "Copied. Paste into Gmail." An action (Undo) shows beside it. */
   toast: (message: string, action?: ToastAction) => void;

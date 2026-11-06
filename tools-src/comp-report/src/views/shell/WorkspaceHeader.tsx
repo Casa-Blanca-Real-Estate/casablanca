@@ -1,5 +1,7 @@
-// The workspace header on every screen (the handoff, screens 6–11): "← Reports", the address, the ✎ that
-// opens the details, the sub line and the save status; then the 3-step progress row with its CTA.
+// The workspace header on every screen (the design pass, 2026-11-06; first the handoff, screens 6–11): one
+// row. At the left "← Reports", the address, the ✎ that opens the details, and the sub line with the save
+// status; then the step crumbs (Sort, Findings, Send), and the forward action at the right after them
+// (Review comps →, Findings →, Send →, or Send's step button).
 import { Fragment, type ReactNode } from 'react';
 import { readinessLine } from '../workspace/screens.ts';
 import type { Workspace } from '../workspace/model.ts';
@@ -7,7 +9,7 @@ import { progressSteps, rowCta } from './progress.ts';
 import { homeSubLine } from './subline.ts';
 import { stepDone } from '../../../workspace/review.ts';
 
-export function WorkspaceHeader({ ws, onBack, saveLine }: { ws: Workspace; onBack: () => void; saveLine: ReactNode }) {
+export function WorkspaceHeader({ ws, onBack, saveLine, steps }: { ws: Workspace; onBack: () => void; saveLine: ReactNode; steps?: ReactNode }) {
   const sub = homeSubLine({ side: ws.side, brief: ws.brief, send: ws.send, intake: ws.intake, sf: ws.sf });
   return (
     <div className="sh-head">
@@ -30,14 +32,15 @@ export function WorkspaceHeader({ ws, onBack, saveLine }: { ws: Workspace; onBac
             <span className="sh-edit-text" aria-hidden="true">Edit</span>
           </button>
         </div>
-        <div className="sh-sub">{sub}</div>
+        <div className="sh-sub">
+          <span>{sub}</span>
+          {ws.readOnly && (
+            <span className="sh-readonly" title={`${ws.report.ownerEmail}’s report. Admins and mentors can read it; only its owner can change it.`}>Read only</span>
+          )}
+          {saveLine}
+        </div>
       </div>
-      <div className="sh-head-side">
-        {ws.readOnly && (
-          <span className="sh-readonly" title={`${ws.report.ownerEmail}’s report. Admins and mentors can read it; only its owner can change it.`}>Read only</span>
-        )}
-        {saveLine}
-      </div>
+      {steps}
     </div>
   );
 }
@@ -70,9 +73,10 @@ export function StepCta({ ws, className = 'sh-cta' }: { ws: Workspace; className
           : <span className="sh-helper plain">{helper}</span>
       )}
       {toReview > 0 && (
-        <button type="button" className="btn primary sh-review" onClick={() => ws.openReview()}>Review comps ({toReview})</button>
+        <button type="button" className="btn primary sh-review" onClick={() => ws.openReview()}>Review comps ({toReview}) →</button>
       )}
-      <button type="button" className={`btn${toReview > 0 ? '' : ' primary'}`} disabled={cta.disabled} onClick={() => ws.go(cta.target)}>{cta.label}</button>
+      {/* While comps wait for review, Review comps is the forward action and Findings stays in reach as a quiet link. */}
+      <button type="button" className={toReview > 0 ? 'link sh-cta-quiet' : 'btn primary'} disabled={cta.disabled} onClick={() => ws.go(cta.target)}>{cta.label}</button>
     </span>
   );
 }

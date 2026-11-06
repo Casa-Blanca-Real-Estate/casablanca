@@ -65,22 +65,64 @@ function AccountMenu({ account, onSignOut, menuRef }: { account: Account; onSign
   );
 }
 
+/** The Studio's home: the dashboard at the site's root. */
+const STUDIO_HOME = '/';
+
+/**
+ * The studio chrome's right dock (assets/studio-header.js, with Feedback from feedback.js) moves into the bar,
+ * at its right end (the design pass, "Component · Top bar"): Feedback sits last, after the account. The dock is
+ * made by a deferred script, so this waits for it. Its own "signed in" chip stays hidden: the account menu here
+ * has the real sign-out.
+ */
+function useStudioDock(slot: HTMLSpanElement | null) {
+  useEffect(() => {
+    if (!slot) return undefined;
+    const adopt = () => {
+      const dock = document.getElementById('cb-chrome-r');
+      if (!dock) return false;
+      if (dock.parentElement !== slot) slot.appendChild(dock);
+      dock.classList.add('sh-dock');
+      return true;
+    };
+    if (adopt()) return undefined;
+    const watch = new MutationObserver(() => {
+      if (adopt()) watch.disconnect();
+    });
+    watch.observe(document.body, { childList: true });
+    return () => watch.disconnect();
+  }, [slot]);
+}
+
 export function TopBar({ account, onSignOut, pillsRef, menuRef }: {
   account: Account | null;
   onSignOut: () => void;
   pillsRef: (el: HTMLSpanElement | null) => void;
   menuRef: (el: HTMLDivElement | null) => void;
 }) {
+  const [dock, setDock] = useState<HTMLSpanElement | null>(null);
+  useStudioDock(dock);
   return (
-    // The studio chrome pads the page's first <header> to clear its Studio button, so this is the only <header>.
+    // The studio chrome pads the page's first <header> to clear its Studio button, so this is the only <header>;
+    // the bar draws its own Studio link (the chrome's fixed one is hidden on this page, shell.css).
     <header className="bar sh-bar">
       <img src="/assets/brand/casa-blanca-wordmark-white.png" alt="Casa Blanca" />
-      <span className="bar-label">{STUDIO_SIGN_IN ? 'Studio' : 'Comp report'}</span>
+      <a className="sh-studio" href={STUDIO_HOME}>‹ Studio</a>
+      {/* Reports leaves the label out: its hero already says it (shell.css). */}
+      <span className="sh-bar-tool">
+        <span className="sh-bar-dot" aria-hidden="true" />
+        <span className="bar-label">{STUDIO_SIGN_IN ? 'Studio' : 'Comp report'}</span>
+      </span>
       <span className="sh-bar-spacer" />
       <span className="sh-bar-pills" ref={pillsRef} />
       {account && <AccountMenu account={account} onSignOut={onSignOut} menuRef={menuRef} />}
+      <span className="sh-bar-dock" ref={setDock} />
     </header>
   );
+}
+
+/** A team view's badge in the bar ("Mentor view", "Admin view"): shown where the person reads as a mentor or an admin. */
+export function roleBadge(role: Role | undefined): string | null {
+  return role === 'admin' ? 'Admin view' : role === 'mentor' ? 'Mentor view' : null;
 }
 
 /** The bar and its slots, around everything the app shows. */
