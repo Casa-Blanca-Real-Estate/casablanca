@@ -79,10 +79,12 @@ test('the request: Opus 5.5, adaptive thinking, effort set, structured output, s
   assert.equal(r.fallbacks, 'default');
   assert.deepEqual(r.betas, ['server-side-fallback-2026-07-01']);
   assert.ok(r.system[0]!.text.includes("Casa Blanca's house voice"), 'the house voice is in the system prompt');
-  assert.equal(CURRENT_WRITER_PROMPT.id, 'cr5-2026-10-29');
-  assert.equal(CURRENT_WRITER_PROMPT.voice, 'house-2026-10-29');
+  assert.equal(CURRENT_WRITER_PROMPT.id, 'cr5-2026-11-06');
+  assert.equal(CURRENT_WRITER_PROMPT.voice, 'house-2026-11-06');
   assert.ok(r.system[0]!.text.includes('Never add a point of your own'), 'things to consider are the agent’s (CR-3)');
-  assert.ok(r.system[0]!.text.includes('Carrying costs come up once'), 'carrying costs once (CR-3)');
+  assert.ok(r.system[0]!.text.includes('where it matters to how a comp compares'), 'relevance, not a carrying-costs cap (Kimani, 2026-11-06)');
+  assert.ok(!r.system[0]!.text.includes('Carrying costs come up once'), 'the cap is gone from the current prompt');
+  assert.ok(WRITER_PROMPTS['cr5-2026-10-29']!.system.includes('Carrying costs come up once'), 'cr5-2026-10-29 never changes');
   assert.ok(WRITER_PROMPTS['cr5-2026-10-14']!.system.includes('buildings that trade higher or lower, carrying costs'), 'a shipped prompt never changes');
   assert.equal(WRITER.maxTokens, 16_000);
 });

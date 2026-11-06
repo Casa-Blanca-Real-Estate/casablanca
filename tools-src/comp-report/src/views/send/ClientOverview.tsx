@@ -227,7 +227,7 @@ export function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
           <button type="button" className={`btn small-btn${practice ? ' primary' : ''}`} disabled={locked || asking} onClick={() => void feedback()}>
             {asking ? 'Reading…' : latestRound(rounds, 'feedback') ? 'Feedback again' : 'Get Hubert’s feedback'}
           </button>
-          <span className="cw-quiet">{practice && !draftOpen ? 'What’s unclear, unsupported or off-voice. Draft from notes opens after it.' : 'What’s unclear, unsupported or off-voice, for the client.'}</span>
+          <span className="cw-quiet">{practice && !draftOpen ? 'What’s unclear, unsupported or off-voice, and where he’d like more of your thinking. Draft from notes opens after it.' : 'What’s unclear, unsupported or off-voice, and where he’d like more of your thinking.'}</span>
         </div>
       )}
       {problem && <p className="rv-err" role="alert">{problem}</p>}
