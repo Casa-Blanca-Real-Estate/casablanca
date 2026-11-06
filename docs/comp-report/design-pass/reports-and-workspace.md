@@ -81,3 +81,18 @@ Kimani's direction for the whole tool: **consolidate, less loud, fewer lines of 
 
 Sort, the Gate and Findings haven't had a full design review with Kimani yet; they're ahead of today's screens and
 can be built as they stand, with a later pass expected.
+
+## 4. Done, as the sixth screen (decided)
+
+**"6 · Done"** (`project/Done.dc.html`) is part of this hand-off: the shared top bar, the full-width layout, a black
+block ("Sent · today", "Jordan and Sam have the comps for 17L.", the range, the agent's number, "saved and locked as
+sent"), a **What's next** checklist (Follow up in two days · Plan the offer together; the text moved to Send), and
+**Back to reports** / **Open the report**. Whether Done stays a screen of its own or folds into Send's sent state
+(design-pass §6.14) is still open; build it as it stands.
+
+## Not designed yet (next, with Kimani)
+
+The modals and panels: **Review comps** and **the client's words** as one pattern (design-pass §6.8, §6.12, §8.1),
+**Hubert's drawer** (§6.15), the **New report window** with Hubert in it (§6.5, §7.1), **Edit details**, and first-run
+orientation (§7.2). The canvas's versions of Review comps and the drawer (inside "2 · Sort") are placeholders until
+then.
