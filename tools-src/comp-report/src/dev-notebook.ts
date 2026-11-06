@@ -7,7 +7,7 @@
 import type { Me } from './api.ts';
 
 // The old dev sign-in's list, as studio-auth.js keeps it.
-const TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
+const TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
 
 /** Admins, a preview's guest, and the old team list: who studio-auth.js calls the team. */
 export function isStudioTeam(me: Me): boolean {

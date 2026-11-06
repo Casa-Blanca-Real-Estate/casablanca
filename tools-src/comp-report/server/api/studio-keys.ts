@@ -13,7 +13,7 @@ import { requireUser, type AuthDeps } from '../session.ts';
 
 /** The Studio's team by email: keep in step with TEAM in assets/studio-auth.js. */
 export const STUDIO_TEAM: readonly string[] = [
-  'creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com',
+  'creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com',
 ];
 
 export function handleStudioKeys(req: Request, deps: AuthDeps): Promise<Response> {
