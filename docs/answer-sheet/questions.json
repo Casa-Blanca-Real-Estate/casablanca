@@ -1,13 +1,11 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-11-06, evening (your walkthrough, #147):</strong> <strong>New:</strong> HB-9 (how Hubert shows the step), HB-10 (Hubert offers N more comps), DP-23 (what to call the engine). TD-23 now matters: the Casa cloud environment needs <code>CR_INSPECT_KEY</code> to read why a report failed. <strong>Updated 2026-11-06, morning (wiring):</strong> DP-20 now asks about the fuller Start with Hubert, wired and in review. <strong>New:</strong> DP-21 (the top bar for the Studio's other tools) and DP-22 (Sort's default order, newest first). <strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-11-06, night:</strong> HB-9, HB-10 and DP-23 recorded from your chat answers. <strong>New:</strong> HB-11 (photos on Hubert's listing cards), HB-12 (a fresh-chat button for older reports), CR-10 (retry a refused StreetEasy read). TD-23 now says how to add the key without anyone seeing it. <strong>Updated 2026-11-06, evening (your walkthrough, #147):</strong> <strong>New:</strong> HB-9 (how Hubert shows the step), HB-10 (Hubert offers N more comps), DP-23 (what to call the engine). TD-23 now matters: the Casa cloud environment needs <code>CR_INSPECT_KEY</code> to read why a report failed. <strong>Updated 2026-11-06, morning (wiring):</strong> DP-20 now asks about the fuller Start with Hubert, wired and in review. <strong>New:</strong> DP-21 (the top bar for the Studio's other tools) and DP-22 (Sort's default order, newest first). <strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
-    "HB-9",
-    "HB-10",
-    "DP-23",
-    "TD-23",
-    "DP-21",
-    "DP-22"
+    "HB-11",
+    "HB-12",
+    "CR-10",
+    "TD-23"
   ],
   "topics": [
     {
@@ -19,52 +17,47 @@
       "intro": "<p>From #109 (merged 2026-10-29). You answered HB-1 to HB-7 in chat on 2026-10-29; they're in the settled list below. One follow-up from your question about the web.</p>",
       "questions": [
         {
-          "id": "HB-9",
-          "q": "Should the step flash over the whole Hubert panel in large text, then fade?",
-          "short": "How Hubert shows the step",
+          "id": "HB-11",
+          "q": "Listing cards in Hubert's chat: keep their photos?",
+          "short": "Photos on Hubert's listing cards",
           "quick": true,
-          "context": "<p>#147 puts a <strong>\"You're on: &lt;step&gt;, what to do\"</strong> band at the top of Hubert's panel. It flashes lavender for a moment when the step changes and stays small. A full-panel takeover would cover the chat and the input every time the step changes, and agents move between steps a lot.</p>",
+          "context": "<p>Each card's photo costs one Firecrawl read the first time it shows (at most 3 per search). After that the browser keeps it. That's the same credit the link reads use, and searches are already capped at 60 a day per person.</p>",
           "options": [
             [
               "A",
-              "Keep the band",
-              "as built in #147",
+              "Keep the photos",
+              "",
               true
             ],
             [
               "B",
-              "Take over the full panel for about 2 seconds",
-              "the first time on each step only"
-            ],
-            [
-              "C",
-              "Take over the full panel on every change",
-              ""
+              "Show cards without photos",
+              "saves the reads"
             ]
           ],
           "source": "#147 · the Nov 6 walkthrough"
         },
         {
-          "id": "HB-10",
-          "q": "When an agent has added N comps, should Hubert offer to find N more?",
-          "short": "Hubert finds N more comps",
+          "id": "HB-12",
+          "q": "A \"Start a fresh chat\" button so an existing report gets the new Hubert?",
+          "short": "Fresh chat for older reports",
           "quick": true,
-          "context": "<p>Your \"for like\" idea from the Nov 6 walkthrough. As built it would be an offer, made only after the agent has added and tiered their own comps. Hubert searches for up to N sales (at most 5) and shows each as an approve card, so the agent still checks and tiers every one (and per HB-8, checks its StreetEasy link).</p>",
+          "context": "<p>Older reports keep the Hubert they started with, so the 60 Collister chat keeps the flat voice. A button would clear that report's chat and start it on the new Hubert. Until then, the new voice comes with new reports.</p>",
           "options": [
             [
               "A",
-              "Yes, practice agents only",
-              ""
-            ],
-            [
-              "B",
-              "Yes, every agent, offered once per report",
+              "Yes, after Nov 13",
               "",
               true
             ],
             [
+              "B",
+              "Yes, before Nov 13",
+              ""
+            ],
+            [
               "C",
-              "Not before Nov 13",
+              "No, new reports only",
               ""
             ]
           ],
@@ -79,7 +72,9 @@
         "<strong>HB-5 · Undo on comp edits</strong>: A, yes, recorded 2026-10-29 (in chat).",
         "<strong>HB-6 · Dispatch 24's items 1–2</strong>: A, <code>get_view</code> and the wider read now (\"Hubert needs to know where the user is\"); the target after the reveal later, recorded 2026-10-29 (in chat).",
         "<strong>HB-7 · Hubert across the Studio</strong>: A, plan it after the build, recorded 2026-10-29 (in chat).",
-        "<strong>HB-8 · Web listings into the report</strong>: A, through its StreetEasy link, and Hubert asks the agent to check the link and what he pulled from it (right unit, a sale and not an ask, not stale) before it counts as a comp, recorded 2026-10-29 (in chat)."
+        "<strong>HB-8 · Web listings into the report</strong>: A, through its StreetEasy link, and Hubert asks the agent to check the link and what he pulled from it (right unit, a sale and not an ask, not stale) before it counts as a comp, recorded 2026-10-29 (in chat).",
+        "<strong>HB-9 · How Hubert shows the step</strong>: A for now, keep the small band; you'll design the big flash in Claude Design, recorded 2026-11-06 (in chat).",
+        "<strong>HB-10 · Hubert finds N more comps</strong>: yes, built on #147, recorded 2026-11-06 (in chat)."
       ]
     },
     {
@@ -756,32 +751,6 @@
             ]
           ],
           "source": "The wiring thread, 2026-11-06"
-        },
-        {
-          "id": "DP-23",
-          "q": "What should \"the engine\" be called on screen and by Hubert?",
-          "short": "The engine's name",
-          "quick": true,
-          "context": "<p>From your Nov 6 walkthrough (#147, <code>docs/comp-report/feedback/2026-11-06-walkthrough/notes.md</code>). Hubert now calls it <strong>the calculator</strong>. A few error lines on screen still say \"engine\"; whichever name you pick, they change to match.</p>",
-          "options": [
-            [
-              "A",
-              "The calculator",
-              "what Hubert says now",
-              true
-            ],
-            [
-              "B",
-              "The comp math",
-              ""
-            ],
-            [
-              "C",
-              "Casa's pricing model",
-              ""
-            ]
-          ],
-          "source": "#147 · the Nov 6 walkthrough"
         }
       ],
       "settled": [
@@ -795,7 +764,8 @@
         "<strong>DP-8 · The assistant's name</strong>: recorded 2026-10-15.",
         "<strong>DP-11 · A buyer's offer range</strong>: the true estimate never moves. Show the client-adjusted view as its own layer beside the true estimate, the agent's number and the target (perhaps separate or stacked bars); designed in the Claude Design pass, a mockup from any track welcome, recorded 2026-10-29 (in chat).",
         "<strong>DP-12 · Phone layouts</strong>: none. Laptop and tablet only; phones get their own design later, recorded 2026-10-29 (in chat).",
-        "<strong>DP-15 · The tool's name on its screens</strong>: A, \"Comp report\" under \"Casa Blanca Studio\", recorded 2026-11-05 in the design brief (#131)."
+        "<strong>DP-15 · The tool's name on its screens</strong>: A, \"Comp report\" under \"Casa Blanca Studio\", recorded 2026-11-05 in the design brief (#131).",
+        "<strong>DP-23 · The engine's name</strong>: A, \"the calculator\", recorded 2026-11-06 (in chat)."
       ]
     },
     {
@@ -980,6 +950,27 @@
             ]
           ],
           "source": "#116"
+        },
+        {
+          "id": "CR-10",
+          "q": "When StreetEasy turns a link read away (\"verify you're human\"), try once more by itself a minute later?",
+          "short": "Retry a refused StreetEasy read",
+          "quick": true,
+          "context": "<p>Today the agent has to press Try again. On Nov 6 the same link worked a few minutes later. An automatic retry costs at most one extra Firecrawl read per failure, and the failure still shows if the second try fails too.</p>",
+          "options": [
+            [
+              "A",
+              "Yes, one automatic retry about a minute later",
+              "",
+              true
+            ],
+            [
+              "B",
+              "No, the agent presses Try again",
+              ""
+            ]
+          ],
+          "source": "#147 · the Nov 6 walkthrough"
         }
       ],
       "settled": [
@@ -1297,7 +1288,7 @@
           "q": "After the release: set the inspection API's four variables in Netlify",
           "short": "The inspection API's keys",
           "quick": true,
-          "context": "<p>Once #115 (sessions read production safely) is merged and released: in Netlify, <strong>Production context only</strong>, set <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> (each at least 32 characters, different from each other), <code>CR_TEST_USER_EMAIL</code> (an <code>@test.invalid</code> address) and <code>CR_EVAL_ANTHROPIC_API_KEY</code>. Then put the first two in the Casa cloud environment. Until then the endpoint refuses every request. Never paste a key into a chat.</p><p><strong>Now needed (2026-11-06):</strong> today's failed StreetEasy read on 60 Collister couldn't be confirmed because the Casa cloud environment has no <code>CR_INSPECT_KEY</code>. Add it there (Project settings → Cloud environment) so sessions can read a report's failure reason.</p>",
+          "context": "<p>Once #115 (sessions read production safely) is merged and released: in Netlify, <strong>Production context only</strong>, set <code>CR_INSPECT_KEY</code> and <code>CR_TEST_KEY</code> (each at least 32 characters, different from each other), <code>CR_TEST_USER_EMAIL</code> (an <code>@test.invalid</code> address) and <code>CR_EVAL_ANTHROPIC_API_KEY</code>. Then put the first two in the Casa cloud environment. Until then the endpoint refuses every request. Never paste a key into a chat.</p><p><strong>Now needed (2026-11-06):</strong> today's failed StreetEasy read on 60 Collister couldn't be confirmed because the Casa cloud environment has no <code>CR_INSPECT_KEY</code>. Add it there (Project settings → Cloud environment) so sessions can read a report's failure reason.</p><p><strong>How (recommended):</strong> store the key as a <em>network secret</em> in the Casa cloud environment, so sessions can call the inspection API without ever seeing the value. It's read-only, redacted and audited, so it doesn't need rotating afterwards.</p>",
           "options": [
             [
               "A",
