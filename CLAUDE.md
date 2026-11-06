@@ -94,6 +94,7 @@ file points you there by section when you need it.
 | `docs/parked/` | Work paused for a priority change, with the state it was left in and how to resume |
 | `docs/dev-notebook/` | The dev notebook: Kimani's in-app notes for Claude Code sessions — `README.md` (setup, the CLI, the rules), and the handoff it was built from |
 | `tools/property-sign/` | The Property Sign builder (24 × 36 For Sale lawn sign, team only). Its backend, `/api/property-signs` (roster search, saved signs, the shared order-email message), is in `tools-src/property-signs/` |
+| `tools-src/agent-pics/drive-import/` | The Drive photo import, and how a session adds, edits or archives agents in the CMS from the cloud env's tokens (`README.md`) |
 | `tools/dev-notebook/`, `assets/dev-notebook.js` | The notebook page (sign-in, notes, keys, the only delete) and the capture box it turns on across the studio; the API and CLI are in `tools-src/dev-notebook/` |
 
 ## Session roles
