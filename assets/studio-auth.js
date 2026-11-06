@@ -37,6 +37,14 @@
    sign in and comes back, and anyone signed in who isn't the team goes to the dashboard. Signed in as
    the team, keys() hands the page its token, so a new device never asks for one (Kimani, 2026-11-06).
 
+   A tool page also names itself, data-tool="<key>" (the dashboard's key for it), and is held to the
+   level an admin set for it in the Access panel (/api/studio/tools: everyone, team or admin; Kimani,
+   2026-11-06, for tools under construction): signed out on a tool that isn't for everyone, the visit
+   goes to sign in; signed in below its level, to the dashboard. If the levels can't be read, the
+   page opens as it would without them.
+     tools()       Promise of {key: level} for every tool, or null when it couldn't be read
+     mayUse(level) whether this visit (CBStudio.user, or nobody) meets a level
+
    For the scripts written before it, a team member's email is also kept in
    localStorage "cb_auth" (dev-notebook.js, the CMS's edit log); anyone else's is
    removed. */
@@ -56,6 +64,7 @@
   var GUEST_KEY = 'cr-guest-key';
   var me = document.currentScript;
   var REQUIRE_TEAM = Boolean(me && me.getAttribute('data-require') === 'team');
+  var TOOL = (me && me.getAttribute('data-tool')) || null;
 
   // Hidden until the server answers, so nobody sees a page they'll be sent away from.
   var root = document.documentElement;
@@ -130,6 +139,39 @@
   // A guest is only ever on a preview (server/guest.ts) and walks it as the team, as the comp report gives it the samples.
   // u.team is the server's answer (/api/comp-report/me), which counts a team grant from the Access panel.
   function isTeamUser(u) { return u.team === true || u.role === 'admin' || u.guest || TEAM.indexOf(String(u.email).toLowerCase()) !== -1; }
+  function meets(level, u) {
+    if (level === 'team') return Boolean(u && isTeamUser(u));
+    if (level === 'admin') return Boolean(u && (u.role === 'admin' || u.guest));
+    return true; // everyone, or a level this script doesn't know yet
+  }
+  var toolsAsked = null;
+  function tools() {
+    toolsAsked = toolsAsked || fetch('/api/studio/tools', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (b) {
+        if (!b || !b.tools) return null;
+        var out = {};
+        b.tools.forEach(function (t) { out[t.key] = t.level; });
+        return out;
+      }, function () { return null; })
+      .then(function (m) { if (!m) toolsAsked = null; return m; });
+    return toolsAsked;
+  }
+  // This page's tool, held to its level before the page shows. null: let it in.
+  function toolGate(user) {
+    if (!TOOL) return Promise.resolve(null);
+    return tools().then(function (m) {
+      var level = m && m[TOOL];
+      if (!level || meets(level, user)) return null;
+      return user ? 'dashboard' : 'sign-in';
+    });
+  }
+  function leave(where) {
+    if (where === 'sign-in') return toSignIn();
+    location.replace('/');
+    return new Promise(function () {}); // the page is leaving
+  }
+
   function keepTeam(user) {
     var team = Boolean(user && isTeamUser(user));
     set(local, 'cb_auth', team ? String(user.email).toLowerCase() : null);
@@ -141,6 +183,8 @@
     ready: null,
     token: token,
     signInUrl: signInUrl,
+    tools: tools,
+    mayUse: function (level) { return meets(level, api.user); },
     isTeam: function () {
       if (api.user) return isTeamUser(api.user);
       return Boolean(get(local, 'cb_auth')); // before the answer: what this browser was last told
@@ -196,8 +240,14 @@
       location.replace('/');
       return new Promise(function () {}); // the page is leaving
     }
-    api.user = user;
     if (!local) keepTeam(user);
+    return toolGate(user).then(function (where) {
+      if (where) return leave(where);
+      return reveal(user);
+    });
+  }
+  function reveal(user) {
+    api.user = user;
     root.classList.remove('cb-gate');
     try { document.dispatchEvent(new CustomEvent('cb-studio-ready', { detail: user })); } catch (e) { /* old browser */ }
     return user;
@@ -223,10 +273,10 @@
   var LET_IN = OPEN && !REQUIRE_TEAM; // an admin page never opens signed out
   function admitOpen() {
     set(local, 'cb_auth', null);
-    api.user = null;
-    root.classList.remove('cb-gate');
-    try { document.dispatchEvent(new CustomEvent('cb-studio-ready', { detail: null })); } catch (e) { /* old browser */ }
-    return null;
+    return toolGate(null).then(function (where) {
+      if (where) return leave(where);
+      return reveal(null);
+    });
   }
 
   var LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);

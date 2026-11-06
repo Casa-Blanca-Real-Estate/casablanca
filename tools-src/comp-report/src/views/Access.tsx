@@ -185,10 +185,85 @@ export function Access({ me, reports = [] }: { me: Me; reports?: Report[] }) {
         </p>
       )}
 
+      <ToolLevels />
       <Levels me={me} />
       <SignInLog />
       <Timeline reports={reports} />
       <AuditLog />
     </section>
+  );
+}
+
+// Who each Studio tool is for (server/api/studio-tools.ts): the dashboard and each tool page follow it.
+// "Admins only" is how a tool under construction is kept from everyone else.
+type ToolLevel = 'everyone' | 'team' | 'admin';
+interface ToolRow { key: string; name: string; level: ToolLevel; default: ToolLevel; floor: ToolLevel; changedBy: string | null }
+const TOOL_LEVELS: { value: ToolLevel; label: string }[] = [
+  { value: 'everyone', label: 'Everyone' },
+  { value: 'team', label: 'Studio team' },
+  { value: 'admin', label: 'Admins only' },
+];
+const levelRank = (l: ToolLevel) => TOOL_LEVELS.findIndex((x) => x.value === l);
+
+function ToolLevels() {
+  const [tools, setTools] = useState<ToolRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<{ tools: ToolRow[] }>('/api/studio/tools')
+      .then((r) => setTools(r.tools))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Could not load the tools.'));
+  }, []);
+
+  async function choose(t: ToolRow, level: ToolLevel) {
+    setBusy(t.key);
+    setError(null);
+    try {
+      const r = await api<{ tools: ToolRow[] }>('/api/studio/tools', {
+        method: 'PUT',
+        body: { key: t.key, level: level === t.default ? null : level },
+      });
+      setTools(r.tools);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save that.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <details className="sh-access-tools">
+      <summary>Studio tools · who sees each</summary>
+      <p className="sh-help">
+        Each tool on the Studio dashboard, and who it's open to. Set one to Admins only while it's
+        being built or reworked. Changes apply on the next page load.
+      </p>
+      {error && <p className="sh-note error" role="alert">{error}</p>}
+      {tools === null && !error && <p className="sh-help">Loading…</p>}
+      <ul className="sh-access-list">
+        {tools?.map((t) => (
+          <li key={t.key} className="sh-access-entry">
+            <div>
+              <span className="sh-access-who">{t.name}</span>
+              <p className="sh-help">
+                {t.level === t.default ? 'As it ships' : `Changed${t.changedBy ? ` by ${t.changedBy}` : ''}`}
+                {t.floor !== 'everyone' ? ' · needs the team\'s sign-in, so never everyone' : ''}
+              </p>
+            </div>
+            <select
+              aria-label={`Who sees ${t.name}`}
+              value={t.level}
+              disabled={busy === t.key}
+              onChange={(e) => choose(t, e.target.value as ToolLevel)}
+            >
+              {TOOL_LEVELS.map((l) => (
+                <option key={l.value} value={l.value} disabled={levelRank(l.value) < levelRank(t.floor)}>{l.label}</option>
+              ))}
+            </select>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
