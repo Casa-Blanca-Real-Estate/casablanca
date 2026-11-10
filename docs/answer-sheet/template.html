@@ -160,7 +160,13 @@ article.q.st-default { border-left: 4px solid color-mix(in srgb, var(--accent) 4
 .p-type { background: var(--surface-2); color: var(--muted); }
 .p-flag { background: var(--flag-soft); color: var(--flag); }
 .p-new { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
-.since { margin: 10px 0 0; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; max-width: 72ch; }
+.since-btn { margin: 12px 0 0; }
+.since-d { color: var(--muted); margin-left: 6px; }
+#changesDlg { max-height: min(80vh, 720px); overflow: auto; }
+.ch-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+#changesBody h3 { font: 700 14px/1.3 var(--body); margin: 14px 0 4px; }
+#changesBody ul { margin: 0; padding-left: 18px; font-size: 14px; }
+#changesBody li { margin-bottom: 4px; }
 .p-status { margin-left: auto; font-weight: 500; }
 .st-answered .p-status { background: var(--ok-soft); color: var(--ok); }
 .st-needs .p-status { background: var(--warn-soft); color: var(--warn); }
@@ -321,7 +327,7 @@ details.donegrp .ri { margin-bottom: 10px; }
   <p class="eyebrow">Casa Blanca Studio</p>
   <h1 id="pageTitle">Your open questions</h1>
   <p class="lede" id="lede">Pick an answer and it saves as you go. A question you leave alone keeps its default. When you're done, tell me in chat and I'll read your answers back and record them.</p>
-  <p class="since" id="since" hidden></p>
+  <button type="button" class="btn since-btn" id="since" hidden aria-haspopup="dialog">What's changed<span class="since-d" id="sinceD"></span></button>
 </header>
 
 <div class="bar">
@@ -361,6 +367,10 @@ details.donegrp .ri { margin-bottom: 10px; }
 <section class="design todo gutter" id="todoView" hidden aria-label="To-do"></section>
 <section class="design gutter" id="designView" hidden aria-label="Design pass"></section>
 
+<dialog id="changesDlg" aria-labelledby="changesH">
+  <div class="ch-head"><strong id="changesH">What's changed</strong><button type="button" class="btn" id="changesClose">Close</button></div>
+  <div id="changesBody"></div>
+</dialog>
 <dialog id="copyDlg">
   <strong>Your answers, as text</strong>
   <p style="margin:6px 0 10px;font-size:13px;color:var(--muted)">Copy this and paste it into chat if you'd rather send it that way.</p>
@@ -1197,7 +1207,7 @@ details.donegrp .ri { margin-bottom: 10px; }
     $("#readingView").hidden = !reading;
     $("#designView").hidden = !design;
     $("#todoView").hidden = !todo;
-    $("#since").hidden = other || !DATA.sinceHtml;
+    $("#since").hidden = other || !DATA.changes.length;
     $("#pageTitle").textContent = LEDES[tab].title;
     $("#lede").innerHTML = LEDES[tab].lede;
     for (const b of $("#tabs").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
@@ -1213,7 +1223,13 @@ details.donegrp .ri { margin-bottom: 10px; }
   }, true);
 
   // ---------- boot ----------
-  if (DATA.sinceHtml) { $("#since").innerHTML = DATA.sinceHtml; $("#since").hidden = false; }
+  if (DATA.changes.length) {
+    $("#sinceD").textContent = "· " + DATA.changes[0].label;
+    $("#changesBody").innerHTML = DATA.changes.map((c) => `<h3>${c.label}</h3><ul>${c.items.map((i) => `<li>${i}</li>`).join("")}</ul>`).join("");
+    $("#since").hidden = false;
+    $("#since").addEventListener("click", () => { const d = $("#changesDlg"); if (d.showModal) d.showModal(); else d.setAttribute("open", ""); });
+    $("#changesClose").addEventListener("click", () => { const d = $("#changesDlg"); if (d.close) d.close(); else d.removeAttribute("open"); });
+  }
   renderAll();
   buildTodo();
   const hashTab = { "#reading": "reading", "#design": "design", "#todo": "todo" }[location.hash];

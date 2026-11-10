@@ -1,6 +1,5 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-11-10, Design pass tab:</strong> the design-pass checklist is now its own tab on this sheet, nested by page so you can tick a whole page at once. It replaces the separate checklist (RL-14 retired). <strong>Updated 2026-11-10, done sweep:</strong> 15 items that were already built, released or done are now in the settled lists: HB-11, NB-18, NB-19, NB-22, NB-30, NB-31, DP-13, DP-16, DP-19, DP-20, DP-22, CR-7, TD-19, TD-20 and TD-28. Anything built \"as the default\" can still change; say so and it reopens. <strong>Updated 2026-11-10, late:</strong> the design-pass checklist is on the reading list (RL-14). QW-3, the first-run pointing tour, is being built rough for you to design over. <strong>Updated 2026-11-10, night:</strong> CR-12 and CR-13 recorded from your chat. <strong>New:</strong> QW-3 (a first-run pointing tour, for later). <strong>Updated 2026-11-10, evening:</strong> TD-23 done, sessions can now read why a report failed. <strong>Updated 2026-11-10, later:</strong> <strong>New:</strong> CR-14 (trainees in Practice for Noble's training) and TD-29 (Noble and the dry-run agent on the roster), from the Friday handoff prep (#154). <strong>Updated 2026-11-10:</strong> <strong>New:</strong> CR-12 (agents in training load the sample) and CR-13 (Noble signs off the glossary), from the starter onboarding flow (#152). <strong>Updated 2026-11-06, late:</strong> HB-12 closed (Duplicate report replaces it, #150). <strong>New:</strong> TD-28 (one release for #147 and #150), CR-11 (agents editing their own profile in Settings). TD-23 now has the exact network-secret step. <strong>Updated 2026-11-06, night:</strong> HB-9, HB-10 and DP-23 recorded from your chat answers. <strong>New:</strong> HB-11 (photos on Hubert's listing cards), HB-12 (a fresh-chat button for older reports), CR-10 (retry a refused StreetEasy read). TD-23 now says how to add the key without anyone seeing it. <strong>Updated 2026-11-06, evening (your walkthrough, #147):</strong> <strong>New:</strong> HB-9 (how Hubert shows the step), HB-10 (Hubert offers N more comps), DP-23 (what to call the engine). TD-23 now matters: the Casa cloud environment needs <code>CR_INSPECT_KEY</code> to read why a report failed. <strong>Updated 2026-11-06, morning (wiring):</strong> DP-20 now asks about the fuller Start with Hubert, wired and in review. <strong>New:</strong> DP-21 (the top bar for the Studio's other tools) and DP-22 (Sort's default order, newest first). <strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
     "CR-14",
     "TD-29"
@@ -1361,6 +1360,46 @@
         "CR-4"
       ],
       "html": "<a href=\"https://github.com/kjcamron/casablanca/pull/56\" target=\"_blank\" rel=\"noopener\">Jev's seven questions (#56)</a>: the wording is at the end of the description."
+    }
+  ],
+  "changes": [
+    {
+      "date": "2026-11-10",
+      "label": "Mon Nov 10",
+      "items": [
+        "New <strong>To-do</strong> tab: every to-do nested under the job it belongs to (#164).",
+        "New <strong>Design pass</strong> tab: every page with what opens from it nested underneath, so you can tick a whole page (#162). It replaces the separate checklist.",
+        "15 items that were already built, released or done moved to the settled lists: HB-11, NB-18, NB-19, NB-22, NB-30, NB-31, DP-13, DP-16, DP-19, DP-20, DP-22, CR-7, TD-19, TD-20, TD-28. Say so and any of them reopens.",
+        "Answered from your chat: CR-12 (same data for everyone), CR-13 (Noble approves the glossary and guide).",
+        "TD-23 done: sessions can read why a report failed.",
+        "New: CR-14 (trainees in Practice), TD-29 (Noble and the dry-run agent on the roster), QW-3 (first-run pointing tour, now being built rough)."
+      ]
+    },
+    {
+      "date": "2026-11-06",
+      "label": "Thu Nov 6",
+      "items": [
+        "Answered from your chat: HB-9, HB-10, DP-23 (\"the calculator\"). HB-12 dropped for Duplicate report (#150).",
+        "New: HB-11 (photos on Hubert's cards), CR-10 (retry a refused StreetEasy read), CR-11 (agents edit their own profile), DP-21 (one top bar), DP-23.",
+        "Design pass round 2 built and released; DP-16 to DP-20 are what it left open. TD-27: onboarding design.",
+        "TD-28 (release #147 and #150) done the same day."
+      ]
+    },
+    {
+      "date": "2026-11-05",
+      "label": "Wed Nov 5",
+      "items": [
+        "Recorded: AC-7 (turn off the GitHub Pages copy), DP-15, TD-8, NB-25, NB-27, DP-12 (no phones).",
+        "New: TD-25 (design the In contract builder), TD-26 (one deal carousel builder, later), QW-2 (sign shop email)."
+      ]
+    },
+    {
+      "date": "2026-10-29",
+      "label": "Oct 28–29",
+      "items": [
+        "Your 10-28 answers and the Hubert answers (HB-1 to HB-8) recorded.",
+        "New then: NB-29 to NB-33 (client fields), DP-11 to DP-15 (the design pass brief), CR-8, CR-9, TD-19 to TD-24."
+      ]
     }
   ]
 }
