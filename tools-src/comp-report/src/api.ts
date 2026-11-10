@@ -281,7 +281,7 @@ export const workspaceApi = {
   editComp: (reportId: string, reportCompId: string, edit: CompEdit) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, ...edit } }),
   /** Several comps' tags at once: the tags the data settles (NB-9 C). */
-  setTags: (reportId: string, tagEdits: { reportCompId: string; tags: string[] }[]) =>
+  setTags: (reportId: string, tagEdits: { reportCompId: string; tags: string[]; from?: string[] }[]) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, tagEdits } }),
 };
 
