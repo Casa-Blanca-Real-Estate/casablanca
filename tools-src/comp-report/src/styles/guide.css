@@ -168,3 +168,36 @@ span.gd-badge-step { cursor: default; }
   .gd-group dl { display: block; columns: 2; column-gap: 36px; }
   .gd-term { padding: 8px 0; }
 }
+
+/* ─── The pointing tour (Tour.tsx): a ring on the thing to click, a card beside it ─ */
+.gd-tour {
+  font: inherit; font-size: 13px; font-weight: 800; background: var(--cb-lavender); color: var(--cb-black);
+  border: 1px solid var(--cb-lavender); padding: 7px 12px; margin-right: 14px; cursor: pointer;
+}
+.gd-tour:hover { background: var(--cb-black); color: #fff; border-color: var(--cb-black); }
+.tr-ring {
+  position: fixed; z-index: 66; pointer-events: none; box-sizing: border-box;
+  border: 3px solid var(--cb-lavender); box-shadow: 0 0 0 4px rgba(170, 163, 207, .35);
+  animation: tr-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tr-pulse { 50% { box-shadow: 0 0 0 10px rgba(170, 163, 207, .12); } }
+.tr-card {
+  position: fixed; z-index: 66; box-sizing: border-box; padding: 16px 18px 14px;
+  background: var(--cb-black); color: #fff; box-shadow: 0 14px 44px rgba(0, 0, 0, .3);
+}
+.tr-card::before {
+  content: ""; position: absolute; left: calc(var(--tr-arrow, 50%) - 8px); width: 0; height: 0;
+  border-left: 8px solid transparent; border-right: 8px solid transparent;
+}
+.tr-card.below::before { top: -8px; border-bottom: 8px solid var(--cb-black); }
+.tr-card.above::before { bottom: -8px; border-top: 8px solid var(--cb-black); }
+.tr-k { margin: 0 0 6px; font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--cb-lavender); }
+.tr-title { margin: 0 0 4px; font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.tr-body { margin: 0 0 14px; font-size: 14px; line-height: 1.45; color: #e6e5e1; }
+.tr-row { display: flex; align-items: center; gap: 16px; }
+.tr-card .btn.primary { background: var(--cb-lavender); color: var(--cb-black); border-color: var(--cb-lavender); }
+.tr-card .btn.primary:hover:not(:disabled) { background: #fff; border-color: #fff; color: var(--cb-black); }
+.tr-link { font: inherit; font-size: 13px; background: none; border: none; padding: 0; color: #fff; text-decoration: underline; cursor: pointer; }
+.tr-count { margin-left: auto; font-size: 12px; color: #9a988f; }
+@media (prefers-reduced-motion: reduce) { .tr-ring { animation: none; } }
+@media print { .tr-ring, .tr-card { display: none !important; } }
