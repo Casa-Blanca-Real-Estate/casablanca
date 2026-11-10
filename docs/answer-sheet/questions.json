@@ -1,7 +1,9 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
-  "since": "<strong>Updated 2026-11-10:</strong> <strong>New:</strong> CR-12 (agents in training load the sample) and CR-13 (Noble signs off the glossary), from the starter onboarding flow (#152). <strong>Updated 2026-11-06, late:</strong> HB-12 closed (Duplicate report replaces it, #150). <strong>New:</strong> TD-28 (one release for #147 and #150), CR-11 (agents editing their own profile in Settings). TD-23 now has the exact network-secret step. <strong>Updated 2026-11-06, night:</strong> HB-9, HB-10 and DP-23 recorded from your chat answers. <strong>New:</strong> HB-11 (photos on Hubert's listing cards), HB-12 (a fresh-chat button for older reports), CR-10 (retry a refused StreetEasy read). TD-23 now says how to add the key without anyone seeing it. <strong>Updated 2026-11-06, evening (your walkthrough, #147):</strong> <strong>New:</strong> HB-9 (how Hubert shows the step), HB-10 (Hubert offers N more comps), DP-23 (what to call the engine). TD-23 now matters: the Casa cloud environment needs <code>CR_INSPECT_KEY</code> to read why a report failed. <strong>Updated 2026-11-06, morning (wiring):</strong> DP-20 now asks about the fuller Start with Hubert, wired and in review. <strong>New:</strong> DP-21 (the top bar for the Studio's other tools) and DP-22 (Sort's default order, newest first). <strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
+  "since": "<strong>Updated 2026-11-10, later:</strong> <strong>New:</strong> CR-14 (trainees in Practice for Noble's training) and TD-29 (Noble and the dry-run agent on the roster), from the Friday handoff prep (#154). <strong>Updated 2026-11-10:</strong> <strong>New:</strong> CR-12 (agents in training load the sample) and CR-13 (Noble signs off the glossary), from the starter onboarding flow (#152). <strong>Updated 2026-11-06, late:</strong> HB-12 closed (Duplicate report replaces it, #150). <strong>New:</strong> TD-28 (one release for #147 and #150), CR-11 (agents editing their own profile in Settings). TD-23 now has the exact network-secret step. <strong>Updated 2026-11-06, night:</strong> HB-9, HB-10 and DP-23 recorded from your chat answers. <strong>New:</strong> HB-11 (photos on Hubert's listing cards), HB-12 (a fresh-chat button for older reports), CR-10 (retry a refused StreetEasy read). TD-23 now says how to add the key without anyone seeing it. <strong>Updated 2026-11-06, evening (your walkthrough, #147):</strong> <strong>New:</strong> HB-9 (how Hubert shows the step), HB-10 (Hubert offers N more comps), DP-23 (what to call the engine). TD-23 now matters: the Casa cloud environment needs <code>CR_INSPECT_KEY</code> to read why a report failed. <strong>Updated 2026-11-06, morning (wiring):</strong> DP-20 now asks about the fuller Start with Hubert, wired and in review. <strong>New:</strong> DP-21 (the top bar for the Studio's other tools) and DP-22 (Sort's default order, newest first). <strong>Updated 2026-11-06, overnight:</strong> the design pass's second round is built and released (Reports, the shared top bar, Done, a light pass on Sort, the Gate and Findings). <strong>New:</strong> DP-16 to DP-20, what that build left open, and TD-27 (onboarding design, next week). Before and after screenshots are on the reading list. <strong>Updated 2026-11-05:</strong> AC-7, DP-15 and TD-8 recorded, plus NB-25 and NB-27 from your 10-29 answers and DP-12 (no phones). <strong>New:</strong> TD-25 (your Claude Design pass on the In contract builder), TD-26 (one deal carousel builder, a note for after Nov 13), QW-2 (the sign shop's email as a setting). <strong>Updated 2026-10-29, sign-in:</strong> CR-8, CR-9 and TD-24, from the Studio-wide sign-in (#116). <strong>Updated 2026-10-29, later:</strong> HB-8, NB-29 and DP-11 answered in chat (settled lists). The AI track is <strong>Collister</strong> (60 Collister St), not Calliste. <strong>Updated 2026-10-29, design pass:</strong> DP-11 to DP-15, from the design pass brief (on the reading list). <strong>Updated 2026-10-29, client fields:</strong> NB-29 is built as its default (how soon is a field, context only; it moves no number). <strong>New:</strong> NB-30 (what the pre-approval amount means), NB-31 (client facts to Hubert), NB-32 (credit and income), NB-33 (where agents keep clients). <strong>Updated 2026-10-29, afternoon:</strong> Your chat answers are recorded: HB-1 to HB-7, NB-14 and NB-15 (settled lists). <strong>New:</strong> HB-8 (web listings into the report, from your question), NB-29 (buyer urgency), TD-23 (the inspection API's keys), and CR-3 now has the writer's eval drafts. Earlier today: your 21 answers from 2026-10-28 recorded; TD-19 to TD-22 added. Still open from before: NB-11 to NB-28 (bar NB-14, NB-15, NB-23, NB-26), PP-3, FB-6, AC-7.",
   "newIds": [
+    "CR-14",
+    "TD-29",
     "CR-12",
     "CR-13"
   ],
@@ -1007,6 +1009,32 @@
             ]
           ],
           "source": "#152"
+        },
+        {
+          "id": "CR-14",
+          "q": "Noble's trainees: put them in Practice for the training?",
+          "short": "Trainees in Practice",
+          "quick": true,
+          "context": "<p>From the Friday handoff prep (#154, on top of #143). New sign-ups start as Full, the database default. D-11 says new agents work in Practice until their fifth closing.</p>",
+          "options": [
+            [
+              "A",
+              "Noble or you set each trainee to Practice in the Access panel before the session",
+              "no build; revisit the default before the wider rollout",
+              true
+            ],
+            [
+              "B",
+              "New sign-ups default to Practice now",
+              "small change; experienced agents then need a grant to Full"
+            ],
+            [
+              "C",
+              "Everyone stays on Full for the training",
+              ""
+            ]
+          ],
+          "source": "#154 · D-11"
         }
       ],
       "settled": [
@@ -1430,6 +1458,21 @@
             ]
           ],
           "source": "#147 · #150"
+        },
+        {
+          "id": "TD-29",
+          "q": "Put Noble and the dry-run agent on the roster with a name, phone and headshot",
+          "short": "Roster for the training accounts",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>From #154. The email sign-off comes from the roster. Anyone who isn't on it gets \"[your name]\". Your own test account isn't on the roster, so check Noble and the dry-run agent in the CMS before Friday.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
+          "source": "#154"
         }
       ],
       "settled": [
