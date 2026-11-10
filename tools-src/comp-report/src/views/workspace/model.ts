@@ -148,6 +148,8 @@ export interface Workspace {
   reloadComps: () => void;
   /** When the agent first reached each step, for Hubert's step guides (hubert/guides.ts). */
   stepsAt: Partial<Record<GuideStep, string>>;
+  /** The step the agent is on now, as Hubert's guides name it: the New report window's, or the screen's. */
+  guideStep: GuideStep;
   /** A trail entry's "Show" (Kimani, 2026-10-28): Sort opens on that comp's row, at the field he changed. `n` changes on each ask. */
   focus: { reportCompId: string; field: string; n: number; at: number } | null;
   showComp: (reportCompId: string, field: string) => void;

@@ -23,6 +23,32 @@ export type WebOutcome = { ok: true; results: WebResult[] } | { ok: false; error
 export interface WebSearcher {
   search(query: string): Promise<WebOutcome>;
   read(url: string): Promise<WebOutcome>;
+  /** A page's preview photo (its og:image), for a listing card in the chat; null when it has none or can't be read. */
+  thumb?(url: string): Promise<string | null>;
+}
+
+/**
+ * A search result the chat shows as a listing card (Kimani, 2026-11-06): a StreetEasy listing or building page.
+ * The first three of a search get a card with a photo; the rest stay text links.
+ */
+export function isListingPage(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return (host === 'streeteasy.com' || host.endsWith('.streeteasy.com')) && /^\/(building|sale|rental)\/[^/]+/.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+export const CARDS_PER_SEARCH = 3;
+
+/** A preview photo's address, kept only when it's a public https image link. */
+export function cleanThumb(raw: unknown): string | null {
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof s !== 'string') return null;
+  const url = readableUrl(s.trim());
+  return url && url.length <= 1000 ? url : null;
 }
 
 /** Searches and page reads per person over any 24 hours. */
@@ -59,6 +85,8 @@ const PAGE_TEXT = 8_000;
 /** Both well inside the turn's 50 s: the model call still needs its time after. */
 const SEARCH_MS = 12_000;
 const READ_MS = 20_000;
+/** A card's photo is fetched after the reply, while the agent reads it: StreetEasy can take a while. */
+const THUMB_MS = 25_000;
 
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
@@ -125,6 +153,24 @@ export function firecrawlSearcher(opts: { apiKey: string | undefined; baseUrl?: 
       } catch {
         return { ok: false, error: 'That page took too long to read. Say so, and use what the search showed.' };
       }
+    },
+    async thumb(url) {
+      if (!opts.apiKey) return null;
+      // StreetEasy turns plain visits away at times: the stealth proxy, as the link reads use when refused.
+      for (const stealth of [false, true]) {
+        try {
+          const { status, body } = await post('/v1/scrape', {
+            url, formats: ['markdown'], onlyMainContent: true, timeout: THUMB_MS - 3_000, ...(stealth ? { proxy: 'stealth', blockAds: true } : {}),
+          }, THUMB_MS);
+          const meta = ((body?.data ?? {}) as { metadata?: Record<string, unknown> }).metadata ?? {};
+          const image = cleanThumb(meta.ogImage ?? meta['og:image'] ?? meta.twitterImage ?? meta['twitter:image']);
+          if (image) return image;
+          if (status < 400 && Number(meta.statusCode ?? 200) < 400) return null;
+        } catch {
+          return null;
+        }
+      }
+      return null;
     },
   };
 }

@@ -300,6 +300,10 @@ function echo(body: Block): Script {
     stopReason: 'tool_use',
     delayMs: 15,
   });
+  // A slow reply (2026-11-06), for Stop: "slow …" streams its echo over several seconds.
+  if (/^\s*slow\b/i.test(said)) {
+    return { content: [{ type: 'thinking', thinking: 'Taking my time (fake API).', signature: 'fake-signature' }, { type: 'text', text: `You said: “${said}”. A slow reply from the local fake Messages API.` }], stopReason: 'end_turn', delayMs: 400 };
+  }
   const star = /^\s*star (.+?)\.?$/i.exec(said);
   if (star) return tool('edit_comp', { comp: star[1]!.trim(), changes: { star: true } }, 'Starring the comp the agent named (fake API).');
   const takeOut = /^\s*take (.+?) out\.?$/i.exec(said);

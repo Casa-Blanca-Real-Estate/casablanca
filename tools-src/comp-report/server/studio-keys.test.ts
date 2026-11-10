@@ -38,6 +38,14 @@ describe('the Studio keys', () => {
     }
   });
 
+  test('the built-in list includes Derek\'s Google sign-in', async () => {
+    const res = await handleStudioKeys(new Request('https://site/api/studio/keys', { headers: { 'x-studio-token': 'token-derek-00000' } }), {
+      ...deps,
+      verifier: { ...deps.verifier, verify: async () => ({ id: 'd', email: 'd.prestly@casa-blanca.com', confirmed: true, provider: 'google', name: null }) as IdentityUser },
+    });
+    assert.equal(res.status, 200);
+  });
+
   test('an agent, a stranger and the signed-out are refused', async () => {
     assert.equal((await call('token-agent-00000')).status, 403);
     assert.equal((await call('token-nobody-0000')).status, 401);

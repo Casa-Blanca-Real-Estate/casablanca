@@ -39,7 +39,7 @@ npm run -s notebook -- --feedback            # the team Feedback list, no emails
    there). The notebook signs in through the site's Identity, and Identity only lets in addresses
    the comp report admits. Then **Deploys → Trigger deploy**: a variable applies from the next deploy.
 2. On production, open **`/tools/dev-notebook/`** and **Sign in with Google** with either address.
-   That browser now has the capture box on every studio page, for 30 days, while it's also signed in
+   That browser now has the capture box on every studio page, until it is turned off in Settings or signed out, while it's also signed in
    to the studio (the dashboard's Sign in). Sign in once per browser you use. Signing out of the
    studio (the account menu, or the chip on a tool) ends the notebook session in that browser too.
 3. **Keys → Make a key → Copy.** In a Claude Code session, open the cloud environment menu in the
@@ -67,7 +67,7 @@ on production.
 
 **Who gets in.** Sign-in exchanges a Google sign-in (the site's Netlify Identity, verified with
 Identity itself, fail-closed) for a notebook session, if the address is one of the notebook's —
-`DEV_NOTEBOOK_EMAILS`, defaulting to Kimani's two. Sessions last 30 days; "sign out everywhere" ends
+`DEV_NOTEBOOK_EMAILS`, defaulting to Kimani's two. Sessions last until signed out (ten years in the store); "sign out everywhere" ends
 them all. Keys are for sessions. Making one needs a sign-in from the last 15 minutes, because a key
 outlives the session that made it. Only hashes are stored, never a token. Every route is in one table
 and every request is authenticated before its route runs, so a route added later can't ship

@@ -54,8 +54,14 @@ checks the Studio's Identity session the way every comp report call does, and ha
 and `CB_PICS_TOKEN` to a comp report admin (`CR_ADMIN_EMAILS`) or one of the four old team emails,
 and to nobody else: never a guest, the test user or an agent. Kimani asked for it ("I do not want to
 put in a CMS token every single time"). It widens who can hold the tokens from "whoever was told
-them" to "whoever can sign in as an admin", which is the same set of people. Signed out, the CMS
-still asks for the token, and the corner offers to forget it behind a confirm (it used to lock on
+them" to "whoever can sign in as an admin", which is the same set of people. **Since 2026-11-06 the CMS
+and the profile-pic roster are admin pages** (`data-require="team"` on their `studio-auth.js` tag): even
+while the creative tools open signed out, a signed-out visit goes to the Studio sign-in and back, and a
+signed-in non-team visit goes to the dashboard, so a new device never shows the token box (Kimani, for
+Derek). The box stays only as a fallback, when the server has no token to hand. **Since 2026-11-06 an admin adds anyone to the team from the comp report's Access panel** (Reports →
+Access · admins only → "Studio team", stored as `comp_report.allowlist.studio_team`), with no PR; the
+built-in list (`STUDIO_TEAM` in `tools-src/comp-report/server/access.ts`) stays. The team is never admin. Admin is grantable there too (the Admin tick, `allowlist.admin`), on top of the root list
+`CR_ADMIN_EMAILS`, which the panel can't change. The corner offers to forget it behind a confirm (it used to lock on
 one click, which read as the sign-in button). It is never in the URL and never in the committed HTML. (Until 2026-10-28 it lived in
 `sessionStorage` and died with the tab. Kimani asked for it to stay — "this ain't Guantanamo Bay" —
 since he is the one user and was re-pasting it in every tab. The cost is that the token now sits on

@@ -8,7 +8,7 @@
 // never sees the agent's number or the target (D-4): nothing here shows them.
 //
 // The shell places the drawer (fixed, 380px, on the right); this fills it.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CompJudgment } from '../../workspace/state.ts';
 import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
@@ -17,7 +17,8 @@ import { undoStands } from '../../workspace/trail-undo.ts';
 import { linksApi, type CompEdit, type HubertHomeEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
 import { greeting, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_LATER, type Chip } from './hubert/copy.ts';
-import { reachedGuides } from './hubert/guides.ts';
+import { reachedGuides, STEP_NOW } from './hubert/guides.ts';
+import type { GuideStep } from '../../workspace/state.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
 import type { Workspace } from './workspace/model.ts';
@@ -131,6 +132,34 @@ function FollowUpBubble({ ws }: { ws: Workspace }) {
   );
 }
 
+/**
+ * Where the agent is (Kimani, 2026-11-06): the step's name, large, and the one thing to do there, at the
+ * top of Hubert's panel. When the step changes it flashes once, so the move is noticed.
+ */
+function StepNow({ step }: { step: GuideStep }) {
+  const now = STEP_NOW[step];
+  const [flash, setFlash] = useState(false);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    setFlash(true);
+    const t = window.setTimeout(() => setFlash(false), 1600);
+    return () => {
+      window.clearTimeout(t);
+    };
+  }, [step]);
+  return (
+    <div className={`hb-now${flash ? ' flash' : ''}`} aria-live="polite">
+      <span className="hb-now-label">You’re on</span>
+      <span className="hb-now-name">{now.name}</span>
+      <span className="hb-now-todo">{now.todo}</span>
+    </div>
+  );
+}
+
 const PRICE_WORDS = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}M` : `$${Math.round(n / 1e3)}K`);
 
 /**
@@ -232,6 +261,7 @@ export function Hubert({ ws }: { ws: Workspace }) {
         <span className="hb-name">Hubert</span>
         <button type="button" className="hb-close" aria-label="Close Hubert" title="Close" onClick={() => ws.setDrawerOpen(false)}>›</button>
       </div>
+      {!ws.readOnly && <StepNow step={ws.guideStep} />}
       <Chat
         reportId={ws.reportId}
         readOnly={ws.readOnly}

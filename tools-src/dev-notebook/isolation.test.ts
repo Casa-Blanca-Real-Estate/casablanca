@@ -73,5 +73,12 @@ test('the capture box loads only in a browser signed in to the notebook', () => 
     assert.ok(/localStorage\.getItem\('cb\.devNotebook'\)/.test(text), `${f} checks for a notebook session`);
     assert.ok(/Date\.parse\(dn\.expiresAt\) > Date\.now\(\)|Date\.parse\(dn\.expiresAt\)>Date\.now\(\)/.test(text), `${f} checks it hasn't expired`);
   }
-  assert.ok(/if \(!session\(\)\) return;/.test(read('assets/dev-notebook.js')), 'the box itself bows out without a session');
+  assert.ok(/if \(!session\(\) \|\| isOff\(\)\) return;/.test(read('assets/dev-notebook.js')), 'the box itself bows out without a session, or turned off');
+});
+
+test('Settings turns the box off everywhere: the loaders and the box itself read cb.devNotebook.off', () => {
+  for (const f of ['assets/studio-header.js', 'index.html', 'assets/dev-notebook.js']) {
+    assert.ok(read(f).includes('cb.devNotebook.off'), `${f} honours the off switch`);
+  }
+  assert.ok(read('tools-src/comp-report/src/dev-notebook.ts').includes('NOTEBOOK_OFF'), 'the comp report honours it too');
 });

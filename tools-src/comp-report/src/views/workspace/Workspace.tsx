@@ -8,6 +8,7 @@
 // workspace; then three screens: Sort, Findings, Send (`02-screens.md`). Free
 // movement: the rail goes anywhere. The assistant is a drawer on all three.
 // Admins can switch on the build's own notes; agents never see them.
+import { DEV_EVENT } from '../../dev-settings.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
 import { agentCardApi, ApiError, clientWordsApi, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type HubertView, type LinkReadView, type LinksState, type AgentCard, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
@@ -200,6 +201,15 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   }, [drawerOpen]);
   const [propertyType, setPropertyTypeState] = useState<'condo' | 'coop'>('condo');
   const [viewAsNewAgent, setViewAsNewAgentState] = useState(readViewAsNew);
+  // Settings (the name menu) flips it from outside the report.
+  useEffect(() => {
+    const onSetting = (e: Event) => {
+      const d = (e as CustomEvent<{ key: string; on: boolean }>).detail;
+      if (d?.key === VIEW_AS_NEW_KEY) setViewAsNewAgentState(d.on);
+    };
+    addEventListener(DEV_EVENT, onSetting);
+    return () => removeEventListener(DEV_EVENT, onSetting);
+  }, []);
   const [sortFilter, setSortFilter] = useState<{ incomplete: boolean; tags: string[] }>({ incomplete: false, tags: [] });
   const [toastText, setToastText] = useState<{ text: string; action?: ToastAction } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -683,6 +693,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     setDrawerOpen,
     reloadComps,
     stepsAt: state.stepsAt ?? {},
+    guideStep,
     focus,
     showComp: (reportCompId, field) => {
       // The row shows whatever Sort's filter was, and Sort opens if another screen was showing.

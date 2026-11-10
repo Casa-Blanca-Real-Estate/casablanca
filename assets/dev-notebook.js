@@ -8,9 +8,12 @@
 (function () {
   'use strict';
   if (window.__cbDevNotebookLoaded) return;
-  window.__cbDevNotebookLoaded = true;
 
   var KEY = 'cb.devNotebook';
+  // Turned off in Settings (the gear in the comp report's name menu, 2026-11-06): no box, no ✎, no Ctrl+.
+  // The sign-in stays; turning it back on brings the box back without signing in again.
+  var OFF = 'cb.devNotebook.off';
+  function isOff() { try { return localStorage.getItem(OFF) === '1'; } catch (e) { return false; } }
   var DRAFT = 'cb.devNotebook.draft';
   var API = '/api/dev/notebook';
   var NOTEBOOK = '/tools/dev-notebook/';
@@ -28,7 +31,8 @@
     } catch (e) { /* storage blocked: not signed in */ }
     return null;
   }
-  if (!session()) return;
+  if (!session() || isOff()) return;
+  window.__cbDevNotebookLoaded = true;
 
   // ── What's on screen ─────────────────────────────────────────────────────────
   function clip(s, n) { s = String(s).trim(); return s.length > n ? s.slice(0, n) : s; }
@@ -328,6 +332,7 @@
 
   // The chord works everywhere, text fields included: the field you're in is often the thing to note.
   window.addEventListener('keydown', function (e) {
+    if (isOff()) return;
     if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === '.' || e.code === 'Period')) {
       e.preventDefault(); e.stopPropagation();
       if (panel.hidden) open(); else close();
@@ -336,6 +341,13 @@
 
   function mount() { if (!host.isConnected) document.body.appendChild(host); }
   if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+
+  // Settings turns it off or on in this tab (an event) or in another one (storage).
+  function apply() {
+    if (isOff()) { close(); host.style.display = 'none'; } else host.style.display = '';
+  }
+  window.addEventListener('cb-dev-setting', apply);
+  window.addEventListener('storage', function (e) { if (e.key === OFF) apply(); });
 
   // For the notebook page and tests: open the box programmatically.
   window.CBDevNotebook = { open: open, close: close };

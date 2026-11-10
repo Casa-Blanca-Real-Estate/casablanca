@@ -2,7 +2,7 @@
 // Firecrawl's answers read in either shape, cut to fit.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { firecrawlSearcher, readableUrl } from './web-search.ts';
+import { cleanThumb, firecrawlSearcher, isListingPage, readableUrl } from './web-search.ts';
 
 test('only a public https page can be read', () => {
   assert.equal(readableUrl('https://www.nyc.gov/site/x.page'), 'https://www.nyc.gov/site/x.page');
@@ -41,4 +41,35 @@ test('the comp tool leans toward StreetEasy, the city and the MTA, keeping five'
     r('https://streeteasy.com/building/100-barclay'), r('https://d.com/4'), r('https://new.mta.info/y'), r('https://notnyc.gov.evil.com/z'),
   ]);
   assert.deepEqual(got.map((x) => new URL(x.url).hostname), ['www.nyc.gov', 'streeteasy.com', 'new.mta.info', 'a.com', 'b.com']);
+});
+
+test('listing cards (2026-11-06): StreetEasy listing and building pages only', () => {
+  assert.ok(isListingPage('https://streeteasy.com/building/60-collister-street-new_york/4a'));
+  assert.ok(isListingPage('https://www.streeteasy.com/sale/1234567'));
+  assert.ok(!isListingPage('https://streeteasy.com/for-sale/tribeca'));
+  assert.ok(!isListingPage('https://example.com/building/x'));
+  assert.ok(!isListingPage('not a url'));
+});
+
+test('a card photo: the page’s og:image, only a public https link; stealth when a plain visit is refused', async () => {
+  assert.equal(cleanThumb('https://photos.zillowstatic.com/fp/a.webp'), 'https://photos.zillowstatic.com/fp/a.webp');
+  assert.equal(cleanThumb(['https://x.example/a.jpg']), 'https://x.example/a.jpg');
+  assert.equal(cleanThumb('http://x.example/a.jpg'), null);
+  assert.equal(cleanThumb('javascript:alert(1)'), null);
+  const bodies: Array<Record<string, unknown>> = [];
+  const replies = [
+    { success: true, data: { metadata: { statusCode: 403 } } },
+    { success: true, data: { metadata: { statusCode: 200, ogImage: 'https://photos.zillowstatic.com/fp/b.webp' } } },
+  ];
+  const web = firecrawlSearcher({
+    apiKey: 'k',
+    fetch: (async (_u: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify(replies.shift()), { status: 200 });
+    }) as typeof fetch,
+  });
+  assert.equal(await web.thumb!('https://streeteasy.com/building/x/1a'), 'https://photos.zillowstatic.com/fp/b.webp');
+  assert.equal(bodies[0]!.proxy, undefined);
+  assert.equal(bodies[1]!.proxy, 'stealth');
+  assert.equal(await firecrawlSearcher({ apiKey: undefined }).thumb!('https://streeteasy.com/building/x/1a'), null);
 });

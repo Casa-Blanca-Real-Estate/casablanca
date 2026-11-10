@@ -8,7 +8,7 @@ writes there as a test user, without ever connecting to the production database.
 
 | Variable | What it opens |
 |---|---|
-| `CR_INSPECT_KEY` | `/api/comp-report/inspect`, sent as `X-Inspect-Key`. At least 32 characters; unset or shorter, the endpoint answers 401 to everything |
+| `CR_INSPECT_KEY` | `/api/comp-report/inspect`, sent as `X-Inspect-Key` or as `Authorization: Bearer <key>`. At least 32 characters; unset or shorter, the endpoint answers 401 to everything |
 | `CR_TEST_KEY` | the test user, sent as `X-Test-Key` on any comp report endpoint. Same rules |
 | `CR_TEST_USER_EMAIL` | the test user's address. Must end in `@test.invalid` |
 | `CR_EVAL_ANTHROPIC_API_KEY` | the test user's Hubert and writer calls. Unset, they're refused (503 `eval_key_not_set`); `ANTHROPIC_API_KEY` is never used for it |
@@ -19,6 +19,17 @@ carries one of them gets 503 until they differ.
 
 **Kill switch:** unset `CR_INSPECT_KEY` (or `CR_TEST_KEY`) in Netlify, then Deploys → Trigger deploy. A changed
 variable reaches a function only on the next deploy, so the old key keeps working until that deploy is live.
+
+**From a Claude cloud session, without the key in the session (2026-11-06).** In the Casa cloud
+environment's settings, Network → secrets, add a **Bearer** secret: domain `casa-blanca-creative-studio.netlify.app`,
+token = the `CR_INSPECT_KEY` value from Netlify. The environment's proxy adds the `Authorization` header to
+requests to that domain, so a session calls the views with no header of its own and never sees the value:
+
+```sh
+curl -s 'https://casa-blanca-creative-studio.netlify.app/api/comp-report/inspect?view=reports'
+```
+
+The bearer form needs the release that carries it (the PR after #147). The header form keeps working.
 
 ## The views
 

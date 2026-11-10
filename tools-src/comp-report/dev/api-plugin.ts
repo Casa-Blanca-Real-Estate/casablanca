@@ -45,6 +45,7 @@ const ROUTES: Record<string, { module: string; handler: string }> = {
   '/api/comp-report/capability': { module: '/server/api/capability.ts', handler: 'handleCapability' },
   '/api/comp-report/signin-error': { module: '/server/api/signin-error.ts', handler: 'handleSignInError' },
   '/api/comp-report/agent-card': { module: '/server/api/agent-card.ts', handler: 'handleAgentCard' },
+  '/api/studio/tools': { module: '/server/api/studio-tools.ts', handler: 'handleStudioTools' },
 };
 
 /** Background functions: Netlify answers 202 at once and runs them on; so does this. */
@@ -81,6 +82,7 @@ async function send(res: ServerResponse, response: Response) {
 
 let devSamplePhotos: unknown;
 let devEmailPhotos: unknown;
+let devToolLevels: unknown;
 
 async function deps(server: ViteDevServer) {
   const load = (m: string) => server.ssrLoadModule(m);
@@ -92,6 +94,11 @@ async function deps(server: ViteDevServer) {
   devSamplePhotos ??= memorySamplePhotoStore();
   const { memoryEmailPhotoStore, fetchListingPhoto } = await load('/server/email-photos.ts');
   devEmailPhotos ??= memoryEmailPhotoStore();
+  // Who sees each Studio tool (/api/studio/tools): in memory, like the photos.
+  devToolLevels ??= (() => {
+    const data = new Map<string, unknown>();
+    return { async get(k: string) { return data.get(k) ?? null; }, async setJSON(k: string, v: unknown) { data.set(k, v); } };
+  })();
   const { firecrawlReader } = await load('/server/links.ts');
   const { firecrawlSearcher } = await load('/server/web-search.ts');
   const { nycGeoSearch } = await load('/server/geocode.ts');
@@ -104,6 +111,7 @@ async function deps(server: ViteDevServer) {
     guest: guestConfig(process.env, 'dev'), // CR_GUEST_KEY, to try guest mode locally
     samplePhotos: devSamplePhotos, // in memory: kept until the dev server restarts
     emailPhotos: devEmailPhotos, // the email's copied photos, in memory too
+    toolStore: devToolLevels,
     roster: process.env.CR_DEV_ROSTER_FILE ? await (await load('/dev/dev-roster.ts')).devRoster(process.env.CR_DEV_ROSTER_FILE) : null,
     // CR_DEV_PHOTO_FILE: serve this local image for every photo, for a walk with no network (StreetEasy's images).
     fetchPhoto: process.env.CR_DEV_PHOTO_FILE

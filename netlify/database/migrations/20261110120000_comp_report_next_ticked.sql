@@ -1,4 +1,6 @@
 -- Done's What's next, in the activity log (the wiring pass, 2026-11-06).
+-- Renamed from 20261106120000 on 2026-11-10: that version was taken by the allowlist migration on
+-- claude/main, and production had already applied 20261106130000, so the old name would land out of order.
 --
 -- Done saves its two ticks (Follow up in two days, Plan the offer together) on
 -- the report as state.doneChecks. The server now logs each tick and untick as

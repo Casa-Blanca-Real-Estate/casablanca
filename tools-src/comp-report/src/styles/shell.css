@@ -344,6 +344,9 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 .sh-access-who { font-size: 14px; font-weight: 800; }
 .sh-access-entry p { margin: 2px 0 0; }
 .sh-access-confirm { display: flex; align-items: center; gap: 10px; }
+/* The Studio team and Admin ticks: a plain sentence beside its box, not a form label. */
+.sh-access-form label.sh-access-check { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; align-self: flex-start; text-align: left; gap: 10px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--cb-black); }
+.sh-access-form label.sh-access-check input { width: auto; flex: none; margin: 0; }
 
 /* ─── The workspace: page, header, progress row ─────────────────────────────── */
 .sh-page {
@@ -398,6 +401,11 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 }
 .sh-step.todo .sh-step-n { background: transparent; color: #6f6d68; border-color: var(--cb-border); }
 .sh-step-line { width: 28px; height: 1px; background: var(--cb-border); flex: none; }
+/* The step the agent is on stands out from the ones done (Kimani's walkthrough, 2026-11-06). */
+.sh-step.done { color: var(--cb-mid); }
+.sh-step.done .sh-step-n { background: transparent; color: var(--cb-black); border-color: var(--cb-black); }
+.sh-step.current { font-size: 14px; background: var(--cb-lavender); color: var(--cb-deep); padding: 6px 12px 6px 6px; }
+.sh-step.current .sh-step-n { width: 22px; height: 22px; background: var(--cb-deep); border-color: var(--cb-deep); color: #fff; font-size: 12px; }
 .sh-step-line.on { background: var(--cb-black); }
 .sh-cta { margin-left: 18px; display: flex; align-items: center; gap: 12px; }
 .sh-cta .btn:disabled { cursor: not-allowed; }
@@ -499,3 +507,39 @@ body:has(.hubert-drawer.resizing) .sh-page { transition: none; }
 /* Hubert's edge tab is fixed at the window's right edge: with his drawer closed, the page keeps clear of it,
    so the header row's crumbs and action never sit under it. */
 .sh-page:not(.with-drawer) { --pad-right: calc(clamp(16px, 2.6vw, 40px) + 38px); }
+
+/* A small dialog (Duplicate report, Settings; 2026-11-06), on the same scrim as New report. */
+.sh-dlg-scrim {
+  position: fixed; inset: 0; z-index: 58; overflow: auto; background: rgba(15, 15, 15, .55);
+  padding: 32px 16px; display: flex; justify-content: center; align-items: flex-start; box-sizing: border-box;
+}
+.sh-dlg {
+  width: 520px; max-width: 100%; margin: 8vh auto auto; background: var(--cb-surface, #fff); color: var(--cb-black);
+  display: flex; flex-direction: column; text-align: left;
+}
+.sh-dlg.wide { width: 640px; }
+.sh-dlg:focus, .sh-dlg:focus-visible { outline: none; }
+.sh-dlg-head { display: flex; align-items: center; gap: 16px; padding: 24px 32px 0; }
+.sh-dlg-title { flex: 1; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.sh-dlg-x { background: none; border: 0; font-size: 16px; cursor: pointer; color: #555550; padding: 6px; }
+.sh-dlg-x:hover { color: var(--cb-black); }
+.sh-dlg-body { padding: 16px 32px 8px; display: flex; flex-direction: column; gap: 12px; }
+.sh-dlg-lead { margin: 0; font-size: 15px; font-weight: 800; }
+.sh-dlg-foot { display: flex; justify-content: flex-end; align-items: center; gap: 20px; padding: 16px 32px 24px; }
+.sh-dlg-section { border-top: 1px solid var(--cb-line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.sh-dlg-section h3 { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #555550; }
+label.sh-switch-row {
+  display: flex; flex-direction: row; gap: 12px; align-items: flex-start; cursor: pointer; padding: 12px 14px; background: var(--cb-bg);
+  font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--cb-black);
+}
+.sh-switch-row input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--cb-black); flex: none; }
+.sh-switch-row > span { display: flex; flex-direction: column; gap: 3px; }
+.sh-switch-label { font-size: 14px; font-weight: 800; }
+.sh-switch-row .sh-help { margin: 0; }
+.sh-profile { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; }
+.sh-profile img, .sh-profile .sh-profile-ph { width: 64px; height: 64px; object-fit: cover; background: var(--cb-bg); display: block; }
+.sh-profile dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 13px; }
+.sh-profile dt { color: #555550; }
+.sh-profile dd { margin: 0; overflow-wrap: anywhere; }
+.sh-dlg-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sh-menu-gear { display: inline-flex; align-items: center; gap: 8px; }

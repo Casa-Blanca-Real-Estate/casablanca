@@ -18,9 +18,12 @@ describe('the access rule', () => {
     assert.equal(decide('someone@gmail.com', casa, null).allowed, false);
   });
 
-  test('admin comes from CR_ADMIN_EMAILS alone: an allowlist row saying admin grants nothing', () => {
+  test('an allowlist row saying role admin grants nothing; only the admin flag on a valid grant does', () => {
     assert.deepEqual(decide('hannah@casa-blanca.com', casa, 'admin'), { allowed: true, role: 'agent', via: 'domain' });
     assert.deepEqual(decide('hannah@partner.com', casa, 'admin'), { allowed: false, role: null, via: null });
+    assert.deepEqual(decide('hannah@partner.com', casa, 'admin', true), { allowed: false, role: null, via: null });
+    assert.deepEqual(decide('hannah@partner.com', casa, 'mentor', true), { allowed: true, role: 'admin', via: 'allowlist' });
+    assert.deepEqual(decide('hannah@casa-blanca.com', casa, null, true), { allowed: true, role: 'agent', via: 'domain' });
   });
 
   test('domains match exactly — a subdomain or a lookalike is not Casa', () => {

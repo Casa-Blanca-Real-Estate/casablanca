@@ -69,7 +69,7 @@ export function App() {
     const id = currentReportId();
     prefetch(id ? `/api/comp-report/workspace?report=${id}` : '/api/comp-report/reports');
     api<Me>('/api/comp-report/me').then((m) => {
-      offerDevNotebook(m);
+      offerDevNotebook(m, session.guest ? undefined : () => session.token());
       const next = takeNext();
       if (next) location.replace(next);
       else if (STUDIO_SIGN_IN) location.replace('/'); // signed in at the Studio's sign-in page: on to the dashboard
@@ -139,7 +139,9 @@ export function App() {
     body = <Reports me={me} onOpen={open} />;
   }
 
-  const account = state.status === 'signed-in' ? { email: state.email, role: me?.user.role, dev: session.dev, guest: session.guest } : null;
+  const account = state.status === 'signed-in'
+    ? { email: state.email, role: me?.user.role, dev: session.dev, guest: session.guest, me, identityToken: session.guest ? undefined : () => session.token() }
+    : null;
 
   return (
     <Shell account={account} onSignOut={() => void signOut()}>

@@ -39,6 +39,8 @@ export interface TrailEntry {
 export interface TrailSource {
   title: string;
   url: string;
+  /** web_search's results or read_page's page. A search's StreetEasy listings show as cards (Kimani, 2026-11-06). */
+  kind?: 'search' | 'page';
 }
 
 const EMAIL_LABEL: Record<string, string> = {
@@ -81,7 +83,11 @@ export function trailOf(name: string, result: Record<string, unknown>): { change
   if ((name === 'web_search' || name === 'read_page') && Array.isArray(parsed.results)) {
     const sources = (parsed.results as Array<Record<string, unknown>>)
       .filter((r) => typeof r.url === 'string' && /^https:\/\//.test(r.url as string))
-      .map((r) => ({ title: typeof r.title === 'string' && r.title ? short(r.title, 90) : (r.url as string), url: r.url as string }));
+      .map((r) => ({
+        title: typeof r.title === 'string' && r.title ? short(r.title, 90) : (r.url as string),
+        url: r.url as string,
+        kind: name === 'web_search' ? 'search' as const : 'page' as const,
+      }));
     return { changes: [], sources };
   }
   return none;

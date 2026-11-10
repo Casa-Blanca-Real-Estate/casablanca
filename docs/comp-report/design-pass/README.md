@@ -117,7 +117,7 @@ Open questions from this round are on the Answer Sheet: DP-16 (an admin's tab na
   by the date it shows (a sent report by when it was sent); Home sorts 1, 15, 100; Range ties go by the high end.
   Sort lists each status group **newest first** (DP-22): the export's own order wasn't by date.
 - **What's next's ticks** feed Hubert's follow-up reminder (Reports' hero and a Follow up tag on the row two days
-  after sending, his note on Done) and the Access timeline (`report.next_ticked`, migration `20261106120000`).
+  after sending, his note on Done) and the Access timeline (`report.next_ticked`, migration `20261110120000`).
 
 Left for Kimani: DP-16 to DP-18, DP-21 (the other Studio tools' top bar), DP-22.
 

@@ -278,7 +278,7 @@ describe('the dev notebook API', () => {
     assert.equal((await call('DELETE', `/keys/${made.body.key.id}`, fresh)).status, 200);
   });
 
-  test('sessions end — one, all, or after 30 days — and revoked keys stop working', async () => {
+  test('sessions end — one, all, or after SESSION_DAYS — and revoked keys stop working', async () => {
     const other = (await call('POST', '/session', 'identity-kimani-work0')).body.token;
     assert.equal((await call('DELETE', '/session', other)).status, 200);
     assert.equal((await call('GET', '/me', other)).status, 401);
