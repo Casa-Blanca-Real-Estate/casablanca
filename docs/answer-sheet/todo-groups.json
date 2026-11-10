@@ -1,0 +1,75 @@
+{
+  "note": "The To-do tab (Kimani, 2026-11-10): every to-do grouped under the bigger job it belongs to. A group holds question cards (by id, moved here from the Questions tab, answers still save to \"answers\") and plain items (ticks and notes save to the sheet's db, collection \"todo\", one doc per id). An item with \"done\" was recorded done by a thread. Every TD question must sit in a group.",
+  "asOf": "2026-11-10",
+  "groups": [
+    {
+      "id": "noble-run",
+      "name": "Run the full flow with Noble",
+      "sub": "the dry run, Thu Nov 12, then the handoff Fri Nov 13",
+      "desc": "One sitting with Noble and the dry-run agent, from sign-in to a sent report, and everything it needs before and after.",
+      "items": [
+        { "id": "noble-agent-pick", "phase": "Before", "name": "Pick the dry-run agent and invite them", "desc": "A real agent who hasn't seen the tool. Invite their address from Access in the comp report; TD-16 below checks the invite works end to end." },
+        { "q": "TD-16", "phase": "Before" },
+        { "q": "TD-29", "phase": "Before" },
+        { "q": "CR-14", "phase": "Before" },
+        { "id": "noble-glossary", "phase": "Before", "name": "Noble reads and approves the glossary and the guide", "desc": "The onboarding guide and glossary (#152) are as built; Noble signs off on the words before training." },
+        { "q": "TD-17", "phase": "Before" },
+        { "q": "TD-22", "phase": "Before" },
+        { "q": "TD-13", "phase": "During" },
+        { "id": "noble-seller", "phase": "During", "name": "Run one seller report end to end", "desc": "New report, details, comps by link, Sort and review, Findings, Send with the Designed email, Done." },
+        { "id": "noble-buyer", "phase": "During", "name": "Run one buyer report as a Practice agent", "desc": "Same flow on the buyer side, signed in as the trainee, so Hubert's feedback and the client's budget show." },
+        { "id": "noble-paste", "phase": "During", "name": "Paste the Designed email into Gmail and Apple Mail", "desc": "Check the photos, the range and the sign-off (name, phone, headshot from the roster) arrive intact." },
+        { "id": "noble-notes", "phase": "During", "name": "Leave a dev note at every hiccup", "desc": "Ctrl+. (⌘.) on the page, so each one lands with its screen and context." },
+        { "id": "noble-debrief", "phase": "After", "name": "Bring it back to chat for the debrief", "desc": "Share the recording or transcript (feedback folder) and say what went wrong; a thread turns the notes and the recording into a fix list." },
+        { "id": "noble-fixes", "phase": "After", "name": "Approve the fix list, then one merge and release", "desc": "The debrief's fixes merged and released before Friday morning." },
+        { "id": "noble-handoff", "phase": "After", "name": "Hand the tool to Noble for agent training", "desc": "Fri Nov 13. Existing agents get it later, after the Tuesday-meeting rundown." }
+      ]
+    },
+    {
+      "id": "production",
+      "name": "Check production and its settings",
+      "sub": "Netlify, sign-in and the live site",
+      "desc": "Errands on the live site and in Netlify that no session can do.",
+      "items": [
+        { "q": "TD-5" },
+        { "id": "lead-accept-env", "name": "Add the StreetEasy automation's two variables in Netlify", "desc": "SE_AUTOMATION_URL and SE_AUTOMATION_SECRET, for the lead auto-accept page (#160).", "done": "Kimani added them, 2026-11-10" },
+        { "id": "lead-accept-live", "name": "Open Lead auto-accept after the next release and check it connects", "desc": "Netlify hands functions new variables on the next deploy, so the page still says it isn't configured until then. Signed in, it should list the service's state, not ask for SE_AUTOMATION_URL." },
+        { "q": "TD-24" },
+        { "q": "TD-6" },
+        { "q": "TD-21" },
+        { "q": "TD-10" }
+      ]
+    },
+    {
+      "id": "data",
+      "name": "Feed the engine real data",
+      "sub": "samples and calibration",
+      "desc": "Real exports and labels the engine and the samples are waiting on.",
+      "items": [
+        { "q": "TD-15" },
+        { "q": "TD-4" }
+      ]
+    },
+    {
+      "id": "design",
+      "name": "Finish the design pass",
+      "sub": "your Claude Design work",
+      "desc": "The design work that's yours. The page-by-page checklist is the Design pass tab.",
+      "items": [
+        { "id": "design-tab", "name": "Work through the Design pass tab", "desc": "Every page and what opens from it, with what's designed and what isn't.", "link": "#design" },
+        { "q": "TD-27" },
+        { "q": "TD-25" }
+      ]
+    },
+    {
+      "id": "later",
+      "name": "After Nov 13",
+      "sub": "kept so it isn't lost",
+      "desc": "Nothing to do before the handoff.",
+      "items": [
+        { "q": "TD-26" },
+        { "id": "later-auth", "name": "Move sign-in off Netlify Identity and re-gate the creative tools", "desc": "Netlify Identity is deprecated; scoped as its own work. The creative tools are open signed out until then, and #120 (X-Studio-Token) waits for it." }
+      ]
+    }
+  ]
+}

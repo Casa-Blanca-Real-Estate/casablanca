@@ -301,6 +301,13 @@ details.donegrp .ri { margin-bottom: 10px; }
 .dcount { font: 500 12px/1.4 var(--mono); color: var(--muted); white-space: nowrap; }
 .dnote { grid-column: 2 / -1; width: 100%; font: inherit; font-size: 13px; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--ink); padding: 6px 8px; min-height: 32px; resize: vertical; }
 .dtog { font: inherit; font-size: 13px; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+/* The To-do tab (2026-11-10): each to-do under the job it belongs to; question cards move in from Questions. */
+.todo .tphase { font: 600 11.5px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 12px 16px 4px 44px; border-top: 1px solid var(--rule); }
+.todo .dkids > .tphase:first-child { border-top: 0; }
+.todo .dkids > article.q { margin: 8px 16px 8px 44px; }
+.todo .tlink { font-size: 13px; }
+.todo .tdone { font-size: 12.5px; color: var(--ok); }
+@media (max-width: 640px) { .todo .dkids > article.q { margin: 8px 12px; } .todo .tphase { padding-left: 16px; } }
 @media (max-width: 640px) { .drow { grid-template-columns: 24px minmax(0, 1fr); } .drow .dside { grid-column: 2; align-items: flex-start; flex-direction: row; } .dkids .drow { padding-left: 24px; } }
 </style>
 
@@ -308,6 +315,7 @@ details.donegrp .ri { margin-bottom: 10px; }
   <div class="seg tabs" role="group" aria-label="View" id="tabs">
     <button type="button" data-tab="questions" aria-pressed="true">Questions</button>
     <button type="button" data-tab="reading" aria-pressed="false">Reading list<span class="tabn" id="readingN"></span></button>
+    <button type="button" data-tab="todo" aria-pressed="false">To-do<span class="tabn" id="todoN"></span></button>
     <button type="button" data-tab="design" aria-pressed="false">Design pass<span class="tabn" id="designN"></span></button>
   </div>
   <p class="eyebrow">Casa Blanca Studio</p>
@@ -350,6 +358,7 @@ details.donegrp .ri { margin-bottom: 10px; }
 </div>
 
 <section class="reading gutter" id="readingView" hidden aria-label="Reading list"></section>
+<section class="design todo gutter" id="todoView" hidden aria-label="To-do"></section>
 <section class="design gutter" id="designView" hidden aria-label="Design pass"></section>
 
 <dialog id="copyDlg">
@@ -372,6 +381,8 @@ details.donegrp .ri { margin-bottom: 10px; }
   const LS_KEY = "casa-answer-sheet-local-v1";
   const SYNTH = new Set(["default", "other", "accept-all", "accept-except"]); // keys this page adds itself
   const PREF_KEY = "casa-answer-sheet-prefs-v1";
+  const TODO = DATA.todo || { groups: [] };
+  const TODO_QS = new Set(TODO.groups.flatMap((g) => g.items.filter((it) => it.q).map((it) => it.q))); // cards shown on the To-do tab
 
   // ---------- model ----------
   const all = [];
@@ -636,12 +647,14 @@ details.donegrp .ri { margin-bottom: 10px; }
 
   function paintTotals() {
     queueMicrotask(paintReading);
+    queueMicrotask(paintTodo);
     let ans = 0, def = 0, needs = 0;
-    for (const q of all) {
+    const qall = all.filter((q) => !TODO_QS.has(q.id));
+    for (const q of qall) {
       const s = statusOf(q);
       if (s === "answered") ans++; else if (s === "default") def++; else needs++;
     }
-    const n = all.length;
+    const n = qall.length || 1;
     $("#mAns").style.width = (ans / n * 100) + "%";
     $("#mDef").style.width = (def / n * 100) + "%";
     $("#legend").innerHTML =
@@ -650,8 +663,10 @@ details.donegrp .ri { margin-bottom: 10px; }
       `<span><i class="dot" style="background:var(--warn)"></i><b>${needs}</b> <span class="long">still </span>need you</span>`;
     for (const t of DATA.topics) {
       let a = 0, nd = 0, untouchedDefaults = 0;
-      for (const q of t.questions) { const s = statusOf(q); if (s === "answered") a++; if (s === "needs") nd++; if (s === "default") untouchedDefaults++; }
-      const total = t.questions.length;
+      const tq = t.questions.filter((q) => !TODO_QS.has(q.id));
+      for (const q of tq) { const s = statusOf(q); if (s === "answered") a++; if (s === "needs") nd++; if (s === "default") untouchedDefaults++; }
+      const total = tq.length;
+      t._nav.hidden = total === 0;
       t._meta.textContent = `${a} of ${total} answered${nd ? ` · ${nd} still need you` : ""}`;
       t._nav.querySelector(".n").innerHTML = `${a}/${total}${nd ? ` · <span class="w">${nd}</span>` : ""}`;
       t._acc.disabled = readOnly || untouchedDefaults === 0;
@@ -669,6 +684,7 @@ details.donegrp .ri { margin-bottom: 10px; }
     for (const t of DATA.topics) {
       let any = false;
       for (const q of t.questions) {
+        if (TODO_QS.has(q.id)) continue; // shown on the To-do tab, unfiltered
         const s = statusOf(q);
         let ok = f === "all" || (f === "quick" && q.quick) || (f === "needs" && q.needsYou && s !== "answered") || (f === "open" && s !== "answered") || (f === "answered" && s === "answered");
         if (ok && term) ok = (q.id.toLowerCase() + " " + q.question.toLowerCase() + " " + q.short.toLowerCase()).includes(term);
@@ -688,13 +704,14 @@ details.donegrp .ri { margin-bottom: 10px; }
   $("#search").addEventListener("input", () => { clearTimeout(searchT); searchT = setTimeout(applyFilter, 120); });
   $("#compact").addEventListener("change", (e) => {
     prefs.compact = e.target.checked; saveJSON(PREF_KEY, prefs);
-    for (const c of cards.values()) c.ctx.open = !prefs.compact;
+    for (const [id, c] of cards) if (!TODO_QS.has(id)) c.ctx.open = !prefs.compact;
   });
   // An in-page link to a hidden card clears the filter first.
   document.addEventListener("click", (e) => {
     const a = e.target.closest('a[href^="#q-"]'); if (!a) return;
     const id = a.getAttribute("href").slice(3);
     const c = cards.get(id); if (!c) return;
+    if (TODO_QS.has(id)) { setTab("todo", true); return; }
     if (c.art.hidden) { prefs.filter = "all"; $("#search").value = ""; applyFilter(); }
   });
 
@@ -793,7 +810,7 @@ details.donegrp .ri { margin-bottom: 10px; }
   }
   async function acceptDefaults(t, btn) {
     if (readOnly) return;
-    const todo = t.questions.filter((q) => statusOf(q) === "default" && q.defaultOpt);
+    const todo = t.questions.filter((q) => !TODO_QS.has(q.id) && statusOf(q) === "default" && q.defaultOpt);
     if (!todo.length) return;
     btn.disabled = true;
     let done = 0;
@@ -1055,20 +1072,131 @@ details.donegrp .ri { margin-bottom: 10px; }
     if (focus) { const f = document.getElementById(focus); if (f) f.focus(); }
   }
 
+  // ---------- the to-do list ----------
+  // Each to-do under the job it belongs to. Question items are the Questions tab's own cards, moved here once, so
+  // they paint and save as before ("answers"). Plain items tick and take a note, saved to the db, collection "todo".
+  const TODO_LS = "casa-answer-sheet-todo-v1";
+  const TODO_OPEN_LS = "casa-answer-sheet-todo-open-v1";
+  const todoMarks = new Map();
+  const pendingTodo = new Map();
+  const todoShut = new Set(loadJSON(TODO_OPEN_LS) || []);
+  const todoRows = new Map(); // id -> {row, cb, item}
+  const itemDone = (it) => it.q ? statusOf(byId.get(it.q)) === "answered" : !!(it.done || (todoMarks.get(it.id) || {}).done);
+  async function saveTodo(id, patch) {
+    if (readOnly) return;
+    const next = Object.assign({}, todoMarks.get(id), patch, { at: new Date().toISOString() });
+    todoMarks.set(id, next);
+    paintTodo();
+    if (mode === "db") {
+      pendingTodo.set(id, true);
+      try { await db.collection("todo").doc(id).set(next); }
+      catch (e) { toast("That didn't save. Try again in a moment."); }
+      finally { pendingTodo.delete(id); }
+    } else saveJSON(TODO_LS, Object.fromEntries(todoMarks));
+  }
+  function todoRow(it) {
+    const row = el("div", "drow");
+    const cb = el("input"); cb.type = "checkbox"; cb.id = "td-" + it.id;
+    cb.setAttribute("aria-label", "Done: " + it.name);
+    cb.addEventListener("change", () => saveTodo(it.id, { done: cb.checked }));
+    const mid = el("div"); mid.style.minWidth = "0";
+    const name = el("label", "dn"); name.htmlFor = cb.id; name.textContent = it.name;
+    const desc = el("div", "dd"); desc.textContent = it.desc || "";
+    mid.append(name, desc);
+    if (it.done) { const d = el("div", "tdone"); d.textContent = "✓ " + it.done; mid.append(d); }
+    const side = el("div", "dside");
+    if (it.link) {
+      const a = el("a", "tlink"); a.href = it.link; a.textContent = "Open it";
+      a.addEventListener("click", (e) => { e.preventDefault(); setTab(it.link.slice(1)); window.scrollTo(0, 0); });
+      side.append(a);
+    }
+    row.append(cb, mid, side);
+    const note = el("textarea", "dnote"); note.id = "tn-" + it.id; note.rows = 1; note.placeholder = "A note (optional)";
+    note.value = (todoMarks.get(it.id) || {}).note || "";
+    let t; note.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => saveTodo(it.id, { note: note.value }), 700); });
+    const add = el("button", "dtog"); add.type = "button"; add.textContent = "Add a note";
+    add.addEventListener("click", () => { add.hidden = true; note.hidden = false; note.focus(); });
+    side.append(add);
+    row.append(note);
+    todoRows.set(it.id, { row, cb, note, add, it });
+    return row;
+  }
+  function buildTodo() {
+    const host = $("#todoView");
+    host.append(el("p", "rnote", "Every to-do, under the job it belongs to. Tick the small ones; the cards are the same questions as before, and answering one marks it done. A group counts as done when everything in it is."));
+    for (const g of TODO.groups) {
+      const card = el("article", "dpg");
+      card.id = "tg-" + g.id;
+      const head = el("div", "drow");
+      head.style.gridTemplateColumns = "minmax(0, 1fr) auto";
+      const mid = el("div"); mid.style.minWidth = "0";
+      const name = el("div", "dn", escapeText(g.name)); if (g.sub) name.append(el("span", "dk", escapeText(g.sub)));
+      mid.append(name, el("div", "dd", escapeText(g.desc)));
+      const side = el("div", "dside");
+      const n = el("span", "dcount");
+      const tog = el("button", "dtog"); tog.type = "button";
+      side.append(n, tog);
+      head.append(mid, side);
+      const kids = el("div", "dkids");
+      let phase = null;
+      for (const it of g.items) {
+        if (it.phase && it.phase !== phase) { phase = it.phase; kids.append(el("div", "tphase", escapeText(phase))); }
+        if (it.q) { const c = cards.get(it.q); if (c) { c.ctx.open = false; kids.append(c.art); } } // context folded: the list stays scannable
+        else kids.append(todoRow(it));
+      }
+      tog.addEventListener("click", () => {
+        if (kids.hidden) todoShut.delete(g.id); else todoShut.add(g.id);
+        saveJSON(TODO_OPEN_LS, [...todoShut]);
+        paintTodo();
+      });
+      card.append(head, kids);
+      host.append(card);
+      g._card = card; g._n = n; g._tog = tog; g._kids = kids;
+    }
+  }
+  function paintTodo() {
+    let open = 0;
+    for (const g of TODO.groups) {
+      if (!g._card) continue;
+      const done = g.items.filter(itemDone).length, total = g.items.length;
+      open += total - done;
+      const all = done === total;
+      g._card.classList.toggle("done", all);
+      g._n.textContent = all ? `All ${total} done` : `${done} of ${total} done`;
+      g._kids.hidden = todoShut.has(g.id);
+      g._tog.textContent = g._kids.hidden ? `Show the ${total} inside` : `Hide the ${total} inside`;
+      g._tog.setAttribute("aria-expanded", String(!g._kids.hidden));
+    }
+    for (const { row, cb, note, add, it } of todoRows.values()) {
+      const done = itemDone(it);
+      row.classList.toggle("ticked", done);
+      cb.checked = done;
+      cb.disabled = readOnly || !!it.done;
+      const v = (todoMarks.get(it.id) || {}).note || "";
+      if (document.activeElement !== note && note.value !== v) note.value = v;
+      note.disabled = readOnly;
+      note.hidden = !note.value && document.activeElement !== note;
+      add.hidden = readOnly || !note.hidden;
+    }
+    $("#todoN").textContent = open ? String(open) : "";
+  }
+
   // ---------- tabs ----------
   const LEDES = {
     questions: { title: "Your open questions", lede: document.getElementById("lede").innerHTML },
     reading: { title: "Your reading list", lede: "The documents that ask you something, newest first. Each one is read when you've answered its questions here." },
+    todo: { title: "Your to-do list", lede: "Everything that's waiting on you, grouped by the job it's part of. Answers and ticks save as you go." },
     design: { title: "The design pass", lede: "Every page of the comp report, and the Studio's new pages, with what opens from each one nested under it. Tick a whole page or the pieces inside it, and leave a note for the build." },
   };
   function setTab(tab, fromHash) {
-    if (tab !== "reading" && tab !== "design") tab = "questions";
+    if (!["reading", "design", "todo"].includes(tab)) tab = "questions";
     prefs.tab = tab; saveJSON(PREF_KEY, prefs);
-    const reading = tab === "reading", design = tab === "design", other = reading || design;
+    const reading = tab === "reading", design = tab === "design", todo = tab === "todo", other = reading || design || todo;
     document.querySelector(".bar").hidden = other;
     document.querySelector(".layout").hidden = other;
     $("#readingView").hidden = !reading;
     $("#designView").hidden = !design;
+    $("#todoView").hidden = !todo;
     $("#since").hidden = other || !DATA.sinceHtml;
     $("#pageTitle").textContent = LEDES[tab].title;
     $("#lede").innerHTML = LEDES[tab].lede;
@@ -1087,7 +1215,10 @@ details.donegrp .ri { margin-bottom: 10px; }
   // ---------- boot ----------
   if (DATA.sinceHtml) { $("#since").innerHTML = DATA.sinceHtml; $("#since").hidden = false; }
   renderAll();
-  setTab(location.hash === "#reading" ? "reading" : location.hash === "#design" ? "design" : (location.hash ? "questions" : prefs.tab || "questions"), true);
+  buildTodo();
+  const hashTab = { "#reading": "reading", "#design": "design", "#todo": "todo" }[location.hash];
+  const hashQ = location.hash.startsWith("#q-") && TODO_QS.has(location.hash.slice(3));
+  setTab(hashTab || (hashQ ? "todo" : location.hash ? "questions" : prefs.tab || "questions"), true);
   paintDesign();
   $("#compact").checked = !!prefs.compact;
   paintTotals();
@@ -1099,6 +1230,7 @@ details.donegrp .ri { margin-bottom: 10px; }
     mode = "local";
     for (const [k, v] of Object.entries(loadJSON(READ_LS) || {})) if (v && v.read) readMarks.set(k, v);
     for (const [k, v] of Object.entries(loadJSON(DESIGN_LS) || {})) if (v) designMarks.set(k, v);
+    for (const [k, v] of Object.entries(loadJSON(TODO_LS) || {})) if (v) todoMarks.set(k, v);
     paintDesign();
     const saved = loadJSON(LS_KEY) || {};
     for (const [k, v] of Object.entries(saved)) if (byId.has(k)) answers.set(k, v);
@@ -1129,6 +1261,13 @@ details.donegrp .ri { margin-bottom: 10px; }
         else if (!pendingDesign.has(ch.doc.id)) designMarks.set(ch.doc.id, ch.doc.data());
       }
       paintDesign();
+    }, () => {});
+    db.collection("todo").limit(1000).onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        if (ch.type === "removed") todoMarks.delete(ch.doc.id);
+        else if (!pendingTodo.has(ch.doc.id)) todoMarks.set(ch.doc.id, ch.doc.data());
+      }
+      paintTodo();
     }, () => {});
     db.collection("reading").limit(1000).onSnapshot((snap) => {
       for (const ch of snap.docChanges()) {
