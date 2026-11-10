@@ -1,13 +1,15 @@
 // Where the guide opens from (Kimani, 2026-11-10): the Guide button in the top bar, the ? key anywhere
 // outside a text field, and ?guide= links. An agent's first visit to the reports list offers it once, in a
-// small card at the bottom left that they can dismiss; it's never in the way of the page. Presenter mode's
-// marks mount here too.
+// small card at the bottom left that they can dismiss; it's never in the way of the page. Its first choice is
+// the pointing tour (Tour.tsx). Presenter mode's marks and the tour's mount here too.
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Me } from '../../api.ts';
 import { InBar } from '../shell/slots.tsx';
 import { Guide, PresenterMarks, guideFromUrl, type GuideView } from './Guide.tsx';
 import { presenterOn } from './presenter.ts';
+import { TourMarks } from './Tour.tsx';
+import { startTour } from './tour.ts';
 
 const OFFERED = 'cr.guide.offered';
 
@@ -67,9 +69,10 @@ export function GuideLauncher({ me, onReports }: { me: Me; onReports: boolean })
       {offer && onReports && !view && createPortal(
         <div className="gd-offer" role="region" aria-label="Getting started">
           <p className="gd-offer-k">New here?</p>
-          <p className="gd-offer-t">A two-minute look at the steps, and a glossary to keep. It’s always under Guide in the top bar.</p>
+          <p className="gd-offer-t">Make your first report with a guide pointing at each thing to click. The steps and a glossary are always under Guide in the top bar.</p>
           <div className="gd-offer-row">
-            <button type="button" className="btn primary small-btn" onClick={() => open({ tab: 'steps', step: 1 })}>Show me</button>
+            <button type="button" className="btn primary small-btn" onClick={() => { markOffered(); setOffer(false); startTour(); }}>Walk me through it</button>
+            <button type="button" className="gd-link" onClick={() => open({ tab: 'steps', step: 1 })}>Read the steps</button>
             <button type="button" className="gd-link" onClick={() => { markOffered(); setOffer(false); }}>No thanks</button>
           </div>
         </div>,
@@ -77,6 +80,7 @@ export function GuideLauncher({ me, onReports }: { me: Me; onReports: boolean })
       )}
       {view && <Guide initial={view} onClose={() => setView(null)} />}
       <PresenterMarks onOpenStep={(n) => open({ tab: 'steps', step: n })} />
+      {!view && <TourMarks />}
     </>
   );
 }

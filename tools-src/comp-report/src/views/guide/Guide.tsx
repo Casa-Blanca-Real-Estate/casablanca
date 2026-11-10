@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { STEPS, stepForScreen, type GuideStep } from './steps.ts';
 import { GLOSSARY, GROUPS, findTerm, searchGlossary } from './glossary.ts';
 import { currentScreen, onPresenter, presenterOn, setPresenter, startPointerMarks } from './presenter.ts';
+import { startTour } from './tour.ts';
 
 export type GuideView = { tab: 'steps'; step: number } | { tab: 'glossary'; q: string };
 
@@ -164,6 +165,7 @@ export function Guide({ initial, onClose }: { initial: GuideView; onClose: () =>
             <button type="button" role="tab" aria-selected={view.tab === 'glossary'} className="gd-tab" onClick={() => setView({ tab: 'glossary', q: '' })}>Glossary</button>
           </div>
           <span className="gd-head-spacer" />
+          <button type="button" className="gd-tour" onClick={() => { startTour(); onClose(); }} title="A card points at each thing to click, from the reports list to Done">Point me through it</button>
           <Switch on={presenting} onChange={setPresenter} label="Presenter mode" />
           <button type="button" className="gd-x" aria-label="Close the guide" onClick={onClose}>✕</button>
         </div>
