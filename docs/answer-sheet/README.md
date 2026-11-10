@@ -21,7 +21,7 @@ Casanova, 2026-10-14.
 2. **Record them:** fold each answer into `docs/decisions.md` (move answered decisions to **Resolved**, tick
    done to-dos), the dispatches and the ledger, as the answer asks.
 3. **Refresh the sheet:** edit `questions.json`: drop what's recorded (or move it to the topic's `settled`
-   list), add what's new, and list new ids in `newIds`. Update `since` with the date and what changed.
+   list), add what's new, and list new ids in `newIds`. Add the update to the top of `changes` (newest first: `{date, label, items}`, one short bullet per change); the sheet shows it behind a "What's changed" button.
 4. **Build and publish:**
 
    ```sh

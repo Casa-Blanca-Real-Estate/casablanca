@@ -107,7 +107,7 @@ const data = {
   reading: src.reading.map((r) => ({ id: r.id, date: r.date, qids: r.qids, settledIds: r.settledIds ?? [], html: links(r.html) })),
   prefixes: src.topics.map((t) => t.prefix),
   newIds: src.newIds ?? [],
-  sinceHtml: links(src.since),
+  changes: (src.changes ?? []).map((c) => ({ date: c.date, label: c.label, items: c.items.map(links) })),
 };
 const json = JSON.stringify(data).replace(/</g, '\\u003c');
 const page = readFileSync(join(here, 'template.html'), 'utf8').replace('__QDATA__', () => json);
