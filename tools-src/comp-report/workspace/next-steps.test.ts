@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { followUpState, nextTicks } from './next-steps.ts';
+import { followUpState, nextTicks, nextText } from './next-steps.ts';
 
 test('the follow-up waits two days after sending, then is due until ticked', () => {
   const now = new Date('2026-11-06T12:00:00Z');
@@ -19,4 +19,10 @@ test('ticks between two saves: only What’s next’s own keys, either way', () 
   assert.deepEqual(nextTicks({ 'follow-up': true }, { 'follow-up': true }), []);
   assert.deepEqual(nextTicks({}, { 'made-up': true }), []);
   assert.deepEqual(nextTicks('junk', undefined), []);
+});
+
+test('What’s next reads for the side: a seller agrees the list price, a buyer plans the offer', () => {
+  assert.equal(nextText('plan-offer', 'buyer'), 'Plan the offer together');
+  assert.equal(nextText('plan-offer', 'seller'), 'Agree the list price together');
+  assert.equal(nextText('follow-up', 'seller'), 'Follow up in two days if you haven’t heard');
 });

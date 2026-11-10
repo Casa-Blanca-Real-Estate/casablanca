@@ -37,7 +37,7 @@ const ACTIONS: Record<string, string> = {
   'report.sent': 'Marked it sent',
   'report.next_ticked': 'What’s next',
 };
-const NEXT_ITEMS: Record<string, string> = { 'follow-up': 'followed up', 'plan-offer': 'planned the offer' };
+const NEXT_ITEMS: Record<string, string> = { 'follow-up': 'followed up', 'plan-offer': 'planned the offer, or agreed the list price' };
 const TIERS: Record<string, string> = { primary: '1st', secondary: '2nd', excluded: '✕' };
 
 const who = (l: AccessLine) => l.email ?? (l.domain ? `someone at ${l.domain}` : 'someone not signed up');

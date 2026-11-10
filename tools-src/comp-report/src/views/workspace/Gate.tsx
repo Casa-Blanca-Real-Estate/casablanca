@@ -30,7 +30,10 @@ export function Gate({ ws }: StepProps) {
   const off = ws.readOnly;
   // The design pass: the question names the home, and one line says what the number is for.
   const home = homeName(ws.intake, ws.report.title);
-  const firsts = ws.comps.filter((c) => c.judgment?.tier === 'primary').length;
+  // The first-tier comps that count (the walk of 2026-11-10): not one taken out, waiting to be confirmed,
+  // unreadable, or of the other type (property_type_mismatch), which the engine keeps out of every figure.
+  const otherType = new Set((ws.output?.warnings ?? []).filter((w) => w.code === 'property_type_mismatch').flatMap((w) => w.comp_ids ?? []));
+  const firsts = ws.comps.filter((c) => c.judgment?.tier === 'primary' && !c.judgment.removedAt && !c.unconfirmed && !c.unsortable && !otherType.has(c.id)).length;
   const lead = firsts
     ? `Commit a number before you see what your ${countWord(firsts)} first-tier comp${firsts === 1 ? '' : 's'} say${firsts === 1 ? 's' : ''}.`
     : 'Commit a number before you see what your comps say.';

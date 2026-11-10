@@ -122,7 +122,7 @@ function FollowUpBubble({ ws }: { ws: Workspace }) {
   if (!f) return null;
   const client = ws.brief.clientName?.value ?? ws.send.clientName?.value;
   if (f === 'done') {
-    return <div className="hb-bubble">You’ve followed up{client ? ` with ${client}` : ''}. {ws.doneChecks['plan-offer'] ? 'And the offer’s planned.' : 'Next on the list: plan the offer together.'}</div>;
+    return <div className="hb-bubble">You’ve followed up{client ? ` with ${client}` : ''}. {ws.doneChecks['plan-offer'] ? (ws.side === 'seller' ? 'And the list price is agreed.' : 'And the offer’s planned.') : (ws.side === 'seller' ? 'Next on the list: agree the list price together.' : 'Next on the list: plan the offer together.')}</div>;
   }
   if (f === 'waiting') return <div className="hb-bubble">Sent. If you haven’t heard{client ? ` from ${client}` : ''} in two days, follow up: I’ll remind you on Reports then.</div>;
   return (
@@ -160,7 +160,7 @@ function StepNow({ step }: { step: GuideStep }) {
   );
 }
 
-const PRICE_WORDS = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}M` : `$${Math.round(n / 1e3)}K`);
+const PRICE_WORDS = (n: number) => (n >= 1e6 ? `$${(Math.round(n / 1e4) / 100).toFixed(2).replace(/\.?0+$/, '')}M` : `$${Math.round(n / 1e3)}K`);
 
 /**
  * Start with Hubert (DP-20): beside step 2, what he took from the agent's words and what's still to do.
