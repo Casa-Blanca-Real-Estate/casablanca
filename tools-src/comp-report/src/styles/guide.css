@@ -1,0 +1,170 @@
+/* The guide, the glossary and presenter mode (views/guide/). Large type on purpose: it's read over Zoom and
+   Meet screen shares, where a 13px line turns to mush. A rough look for Kimani's design pass. */
+
+/* ─── The window ───────────────────────────────────────────────────────────── */
+.gd-veil {
+  position: fixed; inset: 0; z-index: 70; overflow: auto; background: rgba(15, 15, 15, .62);
+  display: flex; align-items: flex-start; justify-content: center; padding: 6vh 32px 32px;
+}
+.gd-window {
+  width: min(1180px, 100%); background: var(--cb-surface); color: var(--cb-black); outline: none;
+  display: flex; flex-direction: column; box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
+}
+.gd-window:focus, .gd-window:focus-visible { outline: none; }
+.gd-head {
+  display: flex; align-items: center; gap: 24px; padding: 18px 28px; background: var(--cb-black); color: #fff;
+}
+.gd-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .28em; text-transform: uppercase; color: var(--cb-lavender); }
+.gd-tabs { display: inline-flex; gap: 4px; }
+.gd-tab {
+  font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+  background: transparent; color: #bbb; border: 1px solid transparent; border-radius: 6px; padding: 9px 14px;
+}
+.gd-tab:hover { color: #fff; }
+.gd-tab[aria-selected='true'] { color: #fff; border-color: var(--cb-lavender); }
+.gd-head-spacer { flex: 1; }
+.gd-x { font: inherit; font-size: 18px; background: transparent; border: none; color: #fff; cursor: pointer; padding: 4px 6px; }
+.gd-x:hover { color: var(--cb-lavender); }
+
+.gd-switch {
+  display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; background: transparent; color: #fff; border: none; cursor: pointer; padding: 0;
+}
+.gd-switch-track { width: 34px; height: 18px; border-radius: 9px; background: #555550; position: relative; transition: background .15s; }
+.gd-switch-track span { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.gd-switch.on .gd-switch-track { background: var(--cb-lavender); }
+.gd-switch.on .gd-switch-track span { transform: translateX(16px); }
+
+.gd-body { display: grid; grid-template-columns: 300px 1fr; min-height: 560px; }
+.gd-body-gl { display: block; }
+
+/* The rail: every step, numbered, so people can follow "we're on 5". */
+.gd-rail { background: var(--cb-bg); padding: 22px 0; border-right: 1px solid var(--cb-border); }
+.gd-rail ol { list-style: none; margin: 0; padding: 0; }
+.gd-rail-step {
+  width: 100%; display: flex; align-items: center; gap: 14px; text-align: left; font: inherit; font-size: 15px; cursor: pointer;
+  background: transparent; border: none; border-left: 4px solid transparent; padding: 11px 22px; color: var(--cb-black);
+}
+.gd-rail-step:hover { background: #f1effa; }
+.gd-rail-n {
+  flex: none; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; border: 1.5px solid var(--cb-black); border-radius: 50%;
+}
+.gd-rail-step.past .gd-rail-n { background: var(--cb-sand); border-color: var(--cb-sand); }
+.gd-rail-step.on { background: var(--cb-surface); border-left-color: var(--cb-lavender); font-weight: 800; }
+.gd-rail-step.on .gd-rail-n { background: var(--cb-black); color: #fff; }
+
+/* A step: big enough to read on a shared screen at a glance. */
+.gd-main { display: flex; flex-direction: column; padding: 44px 56px 28px; }
+.gd-step { flex: 1; }
+.gd-step-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 18px; }
+.gd-step-count { font-size: 13px; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; color: var(--cb-deep); }
+.gd-where { font-size: 13px; background: var(--cb-highlight); padding: 4px 10px; }
+.gd-step-title { margin: 0 0 18px; font-size: 48px; line-height: 1.05; font-weight: 800; letter-spacing: -.02em; }
+.gd-todo { margin: 0 0 22px; font-size: 24px; line-height: 1.4; max-width: 30em; }
+.gd-points { margin: 0 0 26px; padding: 0 0 0 1.1em; font-size: 18px; line-height: 1.5; max-width: 38em; color: #333; }
+.gd-points li { margin: 0 0 8px; }
+.gd-points li::marker { color: var(--cb-lavender); }
+.gd-words { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 18px; border-top: 1px solid var(--cb-line); }
+.gd-words-k { font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--cb-mid); margin-right: 4px; }
+.gd-word {
+  font: inherit; font-size: 14px; cursor: pointer; background: var(--cb-surface); color: var(--cb-black);
+  border: 1px solid var(--cb-border); border-radius: 999px; padding: 5px 12px;
+}
+.gd-word:hover { border-color: var(--cb-lavender); background: #f1effa; }
+.gd-foot { display: flex; align-items: center; gap: 16px; padding-top: 28px; }
+.gd-foot .btn { font-size: 13px; padding: 14px 22px; }
+.gd-keys { flex: 1; text-align: center; font-size: 12px; color: var(--cb-mid); }
+
+.gd-present-tip { margin: 0; padding: 12px 28px; background: #f1effa; color: var(--cb-deep); font-size: 14px; }
+
+.gd-link {
+  font: inherit; font-size: 13px; background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--cb-black); text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* ─── The glossary ─────────────────────────────────────────────────────────── */
+.gd-glossary { padding: 32px 56px 44px; }
+.gd-gl-head { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; }
+.gd-search {
+  flex: 1; max-width: 520px; font: inherit; font-size: 18px; padding: 12px 14px; border: 1px solid var(--cb-border);
+  border-radius: 0; background: var(--cb-surface); color: var(--cb-black);
+}
+.gd-search:focus { outline: 2px solid var(--cb-lavender); outline-offset: -1px; }
+.gd-gl-count { font-size: 13px; color: var(--cb-mid); }
+.gd-empty { font-size: 17px; }
+.gd-group h3 { margin: 30px 0 4px; font-size: 13px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--cb-deep); }
+.gd-group dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 48px; }
+.gd-term { padding: 14px 0; border-bottom: 1px solid var(--cb-line); break-inside: avoid; }
+.gd-term dt { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.gd-aka { font-size: 13px; font-weight: 400; color: var(--cb-mid); }
+.gd-term dd { margin: 0; font-size: 16px; line-height: 1.5; }
+.gd-not { display: block; margin-top: 6px; font-size: 14px; color: #555; }
+
+/* ─── Its button in the top bar, and the first-visit offer ─────────────────── */
+.sh-pill.gd-pill svg { flex: none; }
+.gd-offer {
+  position: fixed; left: 24px; bottom: 24px; z-index: 44; width: 320px; padding: 18px 20px;
+  background: var(--cb-black); color: #fff; box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+}
+.gd-offer-k { margin: 0 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--cb-lavender); }
+.gd-offer-t { margin: 0 0 14px; font-size: 14px; line-height: 1.45; }
+.gd-offer-row { display: flex; align-items: center; gap: 16px; }
+.gd-offer .btn.primary { background: var(--cb-lavender); color: var(--cb-black); border-color: var(--cb-lavender); }
+.gd-offer .btn.primary:hover:not(:disabled) { background: #fff; border-color: #fff; color: var(--cb-black); }
+.gd-offer .gd-link { color: #fff; }
+
+/* ─── Presenter mode ───────────────────────────────────────────────────────── */
+.gd-badge {
+  position: fixed; left: 20px; bottom: 20px; z-index: 65; display: flex; align-items: stretch;
+  background: var(--cb-black); color: #fff; box-shadow: 0 10px 34px rgba(0, 0, 0, .3);
+}
+.gd-badge-step {
+  display: flex; align-items: center; gap: 14px; font: inherit; color: inherit; background: transparent; border: none;
+  padding: 12px 16px 12px 14px; cursor: pointer; text-align: left;
+}
+span.gd-badge-step { cursor: default; }
+.gd-badge-n {
+  width: 46px; height: 46px; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--cb-lavender); color: var(--cb-black); border-radius: 50%; font-size: 24px; font-weight: 800;
+}
+.gd-badge-txt { display: flex; flex-direction: column; }
+.gd-badge-k { font-size: 11px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--cb-lavender); }
+.gd-badge-t { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.gd-badge-off {
+  font: inherit; font-size: 13px; background: transparent; color: #888; border: none; border-left: 1px solid #333;
+  padding: 0 12px; cursor: pointer;
+}
+.gd-badge-off:hover { color: #fff; }
+
+.gd-marks { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; overflow: hidden; }
+.gd-cursor {
+  position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; opacity: 0;
+  background: rgba(170, 163, 207, .28); border: 2px solid rgba(170, 163, 207, .9); transition: opacity .2s;
+}
+.gd-ripple {
+  position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  border: 3px solid var(--cb-yellow); animation: gd-ripple .65s ease-out forwards;
+}
+@keyframes gd-ripple {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(4.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd-ripple { animation-duration: .01s; }
+  .gd-switch-track, .gd-switch-track span, .gd-cursor { transition: none; }
+}
+
+
+.gd-print-title { display: none; }
+/* ─── Print: the glossary alone ────────────────────────────────────────────── */
+@media print {
+  body:has(.gd-glossary) > *:not(.gd-veil) { display: none !important; }
+  .gd-veil { position: static; background: none; padding: 0; overflow: visible; }
+  .gd-window { box-shadow: none; width: 100%; }
+  .gd-head, .gd-gl-head, .gd-present-tip, .gd-marks, .gd-badge { display: none !important; }
+  .gd-glossary { padding: 0; }
+  .gd-print-title { display: block; margin: 0 0 8px; font-size: 22px; }
+  .gd-group dl { display: block; columns: 2; column-gap: 36px; }
+  .gd-term { padding: 8px 0; }
+}
