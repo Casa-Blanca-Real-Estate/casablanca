@@ -23,6 +23,9 @@ import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
 import type { Workspace } from './workspace/model.ts';
 import { homeName } from './workspace/screens.ts';
+import { entry } from './workspace/bits.tsx';
+import { missingDetails } from './newcomp/start-words.ts';
+import { followUpState } from '../../workspace/next-steps.ts';
 import '../styles/hubert.css';
 
 function addressOf(record: CompRecord): string {
@@ -113,6 +116,22 @@ function Suggestions({ ws }: { ws: Workspace }) {
   );
 }
 
+/** On Done: Hubert's follow-up reminder, from What's next's ticks (state.doneChecks). */
+function FollowUpBubble({ ws }: { ws: Workspace }) {
+  const f = followUpState(ws.send.sentAt, ws.doneChecks);
+  if (!f) return null;
+  const client = ws.brief.clientName?.value ?? ws.send.clientName?.value;
+  if (f === 'done') {
+    return <div className="hb-bubble">You’ve followed up{client ? ` with ${client}` : ''}. {ws.doneChecks['plan-offer'] ? 'And the offer’s planned.' : 'Next on the list: plan the offer together.'}</div>;
+  }
+  if (f === 'waiting') return <div className="hb-bubble">Sent. If you haven’t heard{client ? ` from ${client}` : ''} in two days, follow up: I’ll remind you on Reports then.</div>;
+  return (
+    <div className="hb-bubble">
+      It’s been two days or more since you sent this. Have you heard{client ? ` from ${client}` : ''}? If not, follow up, then tick it under What’s next.
+    </div>
+  );
+}
+
 /**
  * Where the agent is (Kimani, 2026-11-06): the step's name, large, and the one thing to do there, at the
  * top of Hubert's panel. When the step changes it flashes once, so the move is noticed.
@@ -141,6 +160,63 @@ function StepNow({ step }: { step: GuideStep }) {
   );
 }
 
+const PRICE_WORDS = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}M` : `$${Math.round(n / 1e3)}K`);
+
+/**
+ * Start with Hubert (DP-20): beside step 2, what he took from the agent's words and what's still to do.
+ * Written here, never generated. The side he defaulted can be switched in the bubble.
+ */
+function StartNoteBubbles({ ws }: { ws: Workspace }) {
+  const note = ws.startNote;
+  if (!note || !ws.starting) return null;
+  const said = note.said;
+  const bits = [
+    said.side ? `a ${said.side} report` : null,
+    said.client ? `for ${said.client}` : null,
+    said.type ? (said.type === 'condo' ? 'a condo' : 'a co-op') : null,
+    said.price ? `${said.side === 'seller' ? 'the client’s target' : 'the client’s budget'} at ${PRICE_WORDS(said.price)}` : null,
+  ].filter(Boolean);
+  const home = ws.reads.filter((r) => r.purpose === 'subject').at(-1) ?? null;
+  const reading = note.from === 'link' && (!home || home.status === 'queued' || home.status === 'running');
+  const failed = note.from === 'link' && home?.status === 'failed';
+  const missing = missingDetails(ws.intake);
+  const them = missing?.includes(' and ') ? 'them' : 'it';
+  const off = ws.readOnly;
+  return (
+    <>
+      <div className="hb-bubble">
+        {bits.length ? `I’ve started the report from what you wrote: ${bits.join(', ')}.` : 'I’ve started the report from the listing.'}
+        {!said.side && (
+          <span className="hb-start-side">
+            {' '}You didn’t say buyer or seller, so it’s {ws.side === 'seller' ? 'a seller' : 'a buyer'} report for now:{' '}
+            {(['buyer', 'seller'] as const).map((a) => (
+              <button
+                key={a}
+                type="button"
+                className={`hb-start-pick${ws.side === a ? ' on' : ''}`}
+                aria-pressed={ws.side === a}
+                disabled={off}
+                onClick={() => ws.setBrief({ ...ws.brief, audience: entry(a, ws.today) })}
+              >{a === 'buyer' ? 'Buyer' : 'Seller'}</button>
+            ))}
+          </span>
+        )}
+        {!said.client && ' No client name yet: add it with ← Back.'}
+        {!said.type && (note.from === 'link' ? ' Co-op or Condo follows the listing once it’s read.' : ` It’s ${ws.propertyType === 'condo' ? 'a condo' : 'a co-op'} for now: change it with ← Back.`)}
+      </div>
+      <div className="hb-bubble" aria-live="polite">
+        {reading
+          ? 'I’m reading the listing now. The details fill in here as it lands, and you can carry on meanwhile.'
+          : failed
+            ? 'I couldn’t read the listing. Type the details in, or tell me them (“1,850 feet, 2 beds, floor 12”) and I’ll fill them in.'
+            : missing
+              ? `${note.from === 'link' ? 'The listing’s in. ' : ''}I don’t have ${missing} yet. Tell me (“it’s 1,850 feet, floor 12”) and I’ll fill ${them} in, or type ${them} in here.`
+              : 'The listing’s in, with the size, the rooms and the floor. Check them against what you know, then Next.'}
+      </div>
+    </>
+  );
+}
+
 export function Hubert({ ws }: { ws: Workspace }) {
   const home = homeName(ws.intake, ws.report.title);
   const sent = Boolean(ws.send.sentAt);
@@ -157,16 +233,25 @@ export function Hubert({ ws }: { ws: Workspace }) {
     ws.go('send');
   }
 
-  const opening = ws.screen === 'sort' ? (
+  // The New report window first: the workspace behind it is on Sort, but the agent is setting up the report.
+  const opening = ws.starting ? (
+    // A rough start (Kimani, 2026-10-29): Hubert beside the New report window, so the design pass has him to design against.
+    <>
+      <StartNoteBubbles ws={ws} />
+      <p className="hb-hint">{NEW_REPORT_HINT}</p>
+    </>
+  ) : ws.screen === 'sort' ? (
     <>
       <div className="hb-bubble">{greeting(ws.agentFirstName)}</div>
       <div className="hb-bubble">{intro(ws.side)}</div>
       <Suggestions ws={ws} />
       <p className="hb-hint">{SUGGESTIONS_LATER}</p>
     </>
-  ) : ws.starting ? (
-    // A rough start (Kimani, 2026-10-29): Hubert beside the New report window, so the design pass has him to design against.
-    <p className="hb-hint">{NEW_REPORT_HINT}</p>
+  ) : ws.screen === 'done' ? (
+    <>
+      <FollowUpBubble ws={ws} />
+      <p className="hb-hint">{s.hint}</p>
+    </>
   ) : <p className="hb-hint">{s.hint}</p>;
 
   return (

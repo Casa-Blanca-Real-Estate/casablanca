@@ -26,21 +26,70 @@ export type StartScreen = 'home' | 'details' | 'comps';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/**
+ * Makes the report from step 1's answers, and queues the home's page for reading: the workspace
+ * starts the read as it opens, and the details fill in when it lands. If the link can't be read
+ * (today's limit), the report is made anyway, and the details say why. Start with Hubert (Reports'
+ * hero) calls it too, with what it read from the agent's words, and lands straight on step 2.
+ */
+export async function startReport(a: {
+  home: { kind: 'link'; url: string } | { kind: 'typed'; address: string; unit: string | null; title: string } | null;
+  side: Audience;
+  client: string;
+  type: PropertyType;
+  /** The agent chose Co-op or Condo: the page doesn't change it. */
+  typePicked: boolean;
+  price: number | null;
+}): Promise<string> {
+  const url = a.home?.kind === 'link' ? a.home.url : null;
+  const title = url ? (titleFromLink(url) ?? 'A StreetEasy listing') : a.home?.kind === 'typed' ? a.home.title : 'A StreetEasy listing';
+  const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title, propertyType: a.type } });
+  const today = localToday();
+  const brief: Brief = { audience: entry(a.side, today), ...(a.client.trim() ? { clientName: entry(a.client.trim(), today) } : {}) };
+  const intake: Intake = a.home?.kind === 'typed'
+    ? { address: entry(a.home.address, today), ...(a.home.unit ? { unit: entry(a.home.unit, today) } : {}) }
+    : {};
+  await workspaceApi.save(report.id, { brief, state: { intake }, ...(a.price ? { target: { price: entry(a.price, today) } } : {}) });
+  if (url) {
+    if (!a.typePicked) {
+      try {
+        sessionStorage.setItem(typeFromPageKey(report.id), '1');
+      } catch {
+        // Private mode: step 2 offers the switch instead.
+      }
+    }
+    const added = await linksApi.add(report.id, [url], 'subject').catch(() => null);
+    const refusal = added ? added.refused[0]?.reason : 'The home’s page couldn’t be queued for reading.';
+    if (refusal) {
+      try {
+        sessionStorage.setItem(`cr-home-refused:${report.id}`, refusal);
+      } catch {
+        // Private mode: the details just don't say why.
+      }
+    }
+  }
+  markNewReport(report.id);
+  return report.id;
+}
+
 /** Step 1, before the report exists: makes it, and hands over to the workspace on step 2. */
-export function NewCompStart({ me, onCreated, onClose, initialText = '' }: {
+export function NewCompStart({ me, onCreated, onClose, initial }: {
   me: Me;
   onCreated: (id: string) => void;
   onClose: () => void;
-  /** What the agent pasted into Reports' "Start with Hubert" (a StreetEasy link or an address): the window opens with it. */
-  initialText?: string;
+  /**
+   * What Reports' "Start with Hubert" read from the agent's words, when it couldn't go straight to step 2
+   * (no home it could use): the window opens with what it did read.
+   */
+  initial?: { text: string; side?: Audience | null; client?: string | null; type?: PropertyType | null; price?: number | null };
 }) {
-  const [text, setText] = useState(initialText);
-  const [side, setSide] = useState<Audience>('buyer');
-  const [client, setClient] = useState('');
-  const [type, setType] = useState<PropertyType>('coop');
+  const [text, setText] = useState(initial?.text ?? '');
+  const [side, setSide] = useState<Audience>(initial?.side ?? 'buyer');
+  const [client, setClient] = useState(initial?.client ?? '');
+  const [type, setType] = useState<PropertyType>(initial?.type ?? 'coop');
   // Left alone, the type follows the home's page once it's read (Details' typeFromPage; Kimani's notebook, 2026-10-27).
-  const [typePicked, setTypePicked] = useState(false);
-  const [target, setTarget] = useState('');
+  const [typePicked, setTypePicked] = useState(Boolean(initial?.type));
+  const [target, setTarget] = useState(initial?.price ? targetText(initial.price) : '');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const line = readHomeLine(text);
@@ -54,36 +103,11 @@ export function NewCompStart({ me, onCreated, onClose, initialText = '' }: {
     setError(null);
     try {
       const url = line.kind === 'link' && line.check.ok ? line.check.url : null;
-      const title = url ? (titleFromLink(url) ?? 'A StreetEasy listing') : line.kind === 'typed' ? line.title : 'A StreetEasy listing';
-      const { report } = await api<{ report: Report }>('/api/comp-report/reports', { method: 'POST', body: { title, propertyType: type } });
-      const today = localToday();
-      const brief: Brief = { audience: entry(side, today), ...(client.trim() ? { clientName: entry(client.trim(), today) } : {}) };
-      const intake: Intake = line.kind === 'typed'
-        ? { address: entry(line.address, today), ...(line.unit ? { unit: entry(line.unit, today) } : {}) }
-        : {};
-      await workspaceApi.save(report.id, { brief, state: { intake }, ...(price ? { target: { price: entry(price, today) } } : {}) });
-      // The workspace starts the read as it opens, and the details fill in when it lands.
-      // If the link can't be read (today's limit), the report is made anyway, and the details say why.
-      if (url) {
-        if (!typePicked) {
-          try {
-            sessionStorage.setItem(typeFromPageKey(report.id), '1');
-          } catch {
-            // Private mode: step 2 offers the switch instead.
-          }
-        }
-        const added = await linksApi.add(report.id, [url], 'subject').catch(() => null);
-        const refusal = added ? added.refused[0]?.reason : 'The home’s page couldn’t be queued for reading.';
-        if (refusal) {
-          try {
-            sessionStorage.setItem(`cr-home-refused:${report.id}`, refusal);
-          } catch {
-            // Private mode: the details just don't say why.
-          }
-        }
-      }
-      markNewReport(report.id);
-      onCreated(report.id);
+      const id = await startReport({
+        home: url ? { kind: 'link', url } : line.kind === 'typed' ? line : null,
+        side, client, type, typePicked, price,
+      });
+      onCreated(id);
     } catch (err) {
       setError(message(err));
       setBusy(null);

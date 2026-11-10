@@ -104,6 +104,13 @@
 .hb-guide-rule::before, .hb-guide-rule::after { content: ''; flex: 1; border-top: 1px solid var(--cb-line); }
 .hb-guide-text { border-left: 3px solid var(--cb-lavender); }
 
+/* Start with Hubert's note beside step 2 (the wiring pass, 2026-11-06): the side he defaulted, switchable in place. */
+.hb-start-pick {
+  margin: 4px 4px 0 0; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 800;
+  border: 1px solid var(--cb-line-2); background: #fff; color: var(--cb-black); cursor: pointer;
+}
+.hb-start-pick.on { background: var(--cb-black); border-color: var(--cb-black); color: #fff; }
+.hb-start-pick:disabled { opacity: .5; cursor: default; }
 /* ── Kimani's walkthrough, 2026-11-06 ───────────────────────────────────── */
 
 /* Where the agent is: the step, large, at the top of the panel; it flashes once when the step changes. */
