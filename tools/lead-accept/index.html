@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. Team only. -->
+<script src="/assets/studio-auth.js" data-require="team" data-tool="leadaccept"></script>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Casa Blanca — Lead auto-accept</title>
+<!-- Lead auto-accept (docs/lead-accept/README.md): the Studio's view of the StreetEasy referral-lead
+     service on Railway. Everything here comes through /api/lead-accept, which checks the team sign-in
+     and holds the service's key. This file is public like every static page, so it names no
+     addresses, keys or webhook URLs: those live in the doc and in Netlify's environment. -->
+<style>
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-style:normal;font-display:swap}
+  :root{--ink:#0f0f0f;--paper:#f4f3f0;--line:#dddbd5;--muted:#888680;--accent:#aaa3cf;--plum:#3c3654;--sand:#c0c2b5;--surface:#fff;
+        --ok:#2f6b45;--ok-bg:#e3efe6;--warn:#7a5a12;--warn-bg:#f5ecd6;--bad:#6b1f1f;--bad-bg:#f3e1e1;--gutter:clamp(18px,4vw,48px)}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font:400 13px/1.5 'Object Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+  header{display:flex;align-items:center;gap:14px;background:var(--ink);color:#fff;padding:18px var(--gutter)}
+  header img{height:22px;width:auto;display:block}
+  header .stax{font-size:10px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
+  main{max-width:1180px;margin:0 auto;padding:24px var(--gutter) 64px}
+  h1{font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.02em;margin:6px 0 6px;text-wrap:balance}
+  h2{font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:34px 0 10px}
+  h3{font-size:14px;font-weight:800;margin:18px 0 6px}
+  p{margin:0 0 10px;max-width:72ch}
+  .muted{color:var(--muted)} .small{font-size:11px}
+  button{font:inherit;font-size:12px;font-weight:800;letter-spacing:.04em;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 12px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button:disabled{opacity:.45;cursor:default}
+  select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  select:focus,button:focus-visible,.row:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(170,163,207,.35)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .notice{background:var(--surface);border:1px solid var(--ink);border-radius:10px;padding:10px 12px;margin:10px 0}
+  .notice.bad{border-color:var(--bad);color:var(--bad)}
+  .lede{font-size:15px;max-width:68ch}
+
+  /* status strip */
+  .status{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:stretch;margin:18px 0 0}
+  @media(max-width:860px){.status{grid-template-columns:minmax(0,1fr)}}
+  .mode{display:flex;flex-direction:column;gap:10px}
+  .mode .big{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;letter-spacing:-.01em}
+  .dot{width:12px;height:12px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.live{background:var(--ok)} .dot.observe{background:var(--accent)} .dot.down{background:var(--bad)}
+  .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+  .counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
+  .count{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--paper)}
+  .count b{display:block;font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+  .count span{font-size:11px;color:var(--muted)}
+  .count.ok b{color:var(--ok)} .count.bad b{color:var(--bad)}
+  .facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12px;margin:12px 0 0}
+  .facts dt{color:var(--muted)} .facts dd{margin:0;overflow-wrap:anywhere}
+
+  /* run log */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+  .chip{font-size:11px;font-weight:800;border-radius:999px;padding:5px 10px}
+  .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .layout{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:16px;align-items:start}
+  @media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+  .runs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .row{width:100%;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-weight:400;letter-spacing:0;font-size:13px}
+  .row[aria-current="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .row .addr{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .meta{grid-column:1/-1;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pill{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);background:var(--surface);white-space:nowrap;align-self:start}
+  .pill.ok{background:var(--ok-bg);border-color:var(--ok-bg);color:var(--ok)}
+  .pill.bad{background:var(--bad-bg);border-color:var(--bad-bg);color:var(--bad)}
+  .pill.warn{background:var(--warn-bg);border-color:var(--warn-bg);color:var(--warn)}
+  .pill.observe{background:var(--accent);border-color:var(--accent);color:var(--plum)}
+  .detail{position:sticky;top:12px}
+  .detail .reason{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 12px}
+  .steps{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:11px;margin:4px 0 12px}
+  .steps span{border:1px dashed var(--line);border-radius:999px;padding:1px 7px}
+  .steps i{font-style:normal;color:var(--muted)}
+  .shots{display:flex;flex-direction:column;gap:10px}
+  .shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper)}
+  .shot figcaption{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .shot img{display:block;width:100%;height:auto;max-height:420px;object-fit:cover;object-position:top}
+  .shot a{display:block}
+  .empty{padding:18px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:11px}
+
+  /* agents */
+  .agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+  .agent{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 12px;font-size:12px}
+  .agent b{display:block;font-size:13px}
+  .agent .mono{color:var(--muted)}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;overflow-wrap:anywhere}
+
+  /* how it works */
+  .flow{list-style:none;counter-reset:step;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .flow li{counter-increment:step;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;max-width:80ch}
+  .flow li::before{content:counter(step);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:800}
+  .where{display:grid;grid-template-columns:minmax(140px,auto) minmax(0,1fr);gap:6px 16px;font-size:12px;max-width:90ch}
+  .where dt{font-weight:800} .where dd{margin:0}
+  details.card>summary{cursor:pointer;font-weight:800}
+  details.card[open]>summary{margin-bottom:8px}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#ebe9e3;border-radius:5px;padding:1px 5px}
+  ul.plain{margin:0 0 10px;padding-left:18px;max-width:80ch} ul.plain li{margin:0 0 4px}
+</style>
+</head>
+<body>
+<header>
+  <a href="../../"><img src="../../assets/brand/casa-blanca-wordmark-white.png" alt="Casa Blanca"></a>
+  <span class="stax">Lead auto-accept</span>
+</header>
+<main>
+  <h1>StreetEasy lead auto-accept</h1>
+  <p class="lede">Referral leads land in the shared inbox with about 30 minutes to respond. This service opens each one in the right agent's StreetEasy account and clicks Respond Now, so nobody has to. Derek only hears about the ones it couldn't do.</p>
+  <p id="notice" class="notice bad" role="alert" hidden></p>
+
+  <section class="status" aria-label="Status">
+    <div class="card mode">
+      <div class="big"><span class="dot" id="modeDot"></span><span id="modeText">Checking…</span></div>
+      <p class="muted" id="modeHelp" style="margin:0"></p>
+      <div><button type="button" id="modeBtn" disabled>Switch</button></div>
+      <div class="confirm" id="confirm" hidden>
+        <span id="confirmText"></span>
+        <button type="button" class="primary" id="confirmYes">Yes, switch</button>
+        <button type="button" id="confirmNo">Cancel</button>
+      </div>
+      <dl class="facts" id="facts"></dl>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0 0 10px">Last 24 hours</h3>
+        <button type="button" id="refresh">Refresh</button>
+      </div>
+      <div class="counts" id="counts"></div>
+      <p class="small muted" id="badPw" style="margin:10px 0 0" hidden></p>
+    </div>
+  </section>
+
+  <h2>Run log</h2>
+  <div class="filters" role="group" aria-label="Filter runs">
+    <button type="button" class="chip" data-f="all" aria-pressed="true">All</button>
+    <button type="button" class="chip" data-f="person" aria-pressed="false">Needed a person</button>
+    <button type="button" class="chip" data-f="done" aria-pressed="false">Accepted</button>
+    <button type="button" class="chip" data-f="expired" aria-pressed="false">Expired</button>
+    <label class="small muted" for="agentFilter" style="margin-left:6px">Agent</label>
+    <select id="agentFilter"><option value="">Everyone</option></select>
+  </div>
+  <div class="layout">
+    <ul class="runs" id="runs" aria-label="Runs"></ul>
+    <article class="detail card" id="detail" aria-live="polite">
+      <p class="muted" style="margin:0">Pick a run to see what happened at each step, with its screenshots.</p>
+    </article>
+  </div>
+
+  <h2>Referral agents</h2>
+  <p class="muted">Every agent the service has seen. New ones are added the first time a lead or sign-in code arrives for them. All use the shared StreetEasy password unless it was rejected, in which case the service signs in with a one-time email code instead.</p>
+  <div class="agents" id="agents"></div>
+
+  <h2>How it works</h2>
+  <div class="card">
+    <ol class="flow">
+      <li><div><b>A lead arrives.</b> StreetEasy emails the referral agent's alias. It lands in the shared referral inbox, and a Gmail filter there forwards anything from streeteasy.com to a Make mailhook. The inbox copy stays unread.</div></li>
+      <li><div><b>Make passes it on.</b> The scenario <i>StreetEasy Referral Lead → Auto-Accept</i> posts the email to the service on Railway within a few seconds.</div></li>
+      <li><div><b>The service sorts it.</b> A lead email is matched to an agent by the address it was sent to. A sign-in code email is held for a login that's waiting on it. Anything else is ignored. Leads past their deadline are skipped.</div></li>
+      <li><div><b>It opens the agent's account.</b> Each agent has a saved StreetEasy session on Railway's disk, so most leads need no login. When one is needed: Log in, email, shared password, then StreetEasy's verification switched from text to email, with the code read from the same inbox. "Remember this device" is ticked, so it lasts 30 days.</div></li>
+      <li><div><b>It responds.</b> On the agent's Connections list it finds the lead's card by building number and unit, clicks <b>Respond Now</b>, sends the pre-filled message, reloads, and checks the card no longer asks for a response.</div></li>
+      <li><div><b>It reports.</b> Done: an email to the tools inbox only. Anything a person must do: an <b>ACTION NEEDED by &lt;time&gt;</b> email to Derek with the property, the agent account and the link, plus a screenshot. Observe mode counts as needing a person, since it never clicks.</div></li>
+    </ol>
+  </div>
+
+  <h3>Where each piece lives</h3>
+  <dl class="where">
+    <dt>The service</dt><dd>Railway, project <i>casablanca</i>. Code in the GitHub repo <code>se-autoaccept</code>; a push to <code>main</code> redeploys it. Its disk at <code>/data</code> holds the agent list, saved sessions, the run log and screenshots (kept 14 days).</dd>
+    <dt>Make</dt><dd><i>StreetEasy Referral Lead → Auto-Accept</i> (inbox to service) and <i>StreetEasy Lead Alerts → Email</i> (service to Derek and the tools inbox).</dd>
+    <dt>Shared inbox</dt><dd>The referral inbox (named in the doc): the Gmail filter on <code>from:streeteasy.com</code> that forwards to Make. Its "forward all mail" setting goes elsewhere and isn't part of this.</dd>
+    <dt>Settings</dt><dd>Railway variables: the shared key, the StreetEasy password, the alert webhook, the service's own URL. Netlify variables for this page: <code>SE_AUTOMATION_URL</code> and <code>SE_AUTOMATION_SECRET</code>.</dd>
+    <dt>Full notes</dt><dd><code>docs/lead-accept/README.md</code> in the Studio repo, and the <code>se-autoaccept</code> README.</dd>
+  </dl>
+
+  <h3>Routine and troubleshooting</h3>
+  <details class="card" open>
+    <summary>What needs a person, and when</summary>
+    <ul class="plain">
+      <li><b>Every week:</b> the Make connection that sends alerts from creative@ expires. A scheduled reminder fires Tuesdays at 3:21 PM: Make → Connections → <i>Creative Google Restricted connection</i> → Reauthorize, then check <i>StreetEasy Lead Alerts → Email</i> is on. Until it's done, alerts queue up in Make and nobody is told.</li>
+      <li><b>Observe mode</b> (the switch above): opens each lead and reports which button it would click, but doesn't click. Use it after StreetEasy changes its pages, or while a fix is going in. It takes effect on the next lead.</li>
+      <li><b>Password changed:</b> update the StreetEasy password in Railway's variables. Agents whose old password was rejected are tried again with the new one.</li>
+      <li><b>"No agent match":</b> the lead email didn't name an agent the service could find. The alert shows who it was sent to.</li>
+      <li><b>"Failed" on the Respond step:</b> StreetEasy may have changed the button or the message pop-up. Switch to observe mode and send the run's screenshots to a Claude session.</li>
+      <li><b>Bot check:</b> the service never tries to get past one. That lead goes to Derek.</li>
+    </ul>
+  </details>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var state={runs:[],agents:[],status:null,filter:'all',agent:'',selected:null};
+  var shotUrls={};
+
+  var OUT={
+    'accepted':{label:'Accepted',cls:'ok',group:'done'},
+    'already-accepted':{label:'Already accepted',cls:'ok',group:'done'},
+    'observed':{label:'Observe only',cls:'observe',group:'person'},
+    'failed':{label:'Failed',cls:'bad',group:'person'},
+    'blocked':{label:'Bot check',cls:'bad',group:'person'},
+    'unrouted':{label:'No agent match',cls:'warn',group:'person'},
+    'expired':{label:'Expired',cls:'',group:'expired'}
+  };
+  var STEP={login:'Sign-up page','verify-method':'Text code','method-options':'Choose email','verify-code':'Email code',
+    'password-rejected':'Password rejected','agent-tools':'Connections','accept-modal':'Message pop-up','after-accept':'After sending',error:'Error'};
+
+  function api(q,init){
+    return CBStudio.token().then(function(t){
+      init=init||{};
+      init.headers=Object.assign({Authorization:'Bearer '+t},init.headers||{});
+      init.cache='no-store';
+      return fetch('/api/lead-accept'+(q||''),init);
+    });
+  }
+  function getJson(q){
+    return api(q).then(function(r){
+      return r.json().catch(function(){return {};}).then(function(b){
+        if(!r.ok) throw new Error(b.message||('The page’s server answered '+r.status+'.'));
+        return b;
+      });
+    });
+  }
+  function ny(iso,withDate){
+    if(!iso) return '—';
+    var o={timeZone:'America/New_York',hour:'numeric',minute:'2-digit'};
+    if(withDate!==false){o.month='short';o.day='numeric';}
+    return new Date(iso).toLocaleString('en-US',o);
+  }
+  function ago(iso){
+    var m=Math.round((Date.now()-Date.parse(iso))/60000);
+    if(m<1) return 'just now'; if(m<60) return m+' min ago';
+    var h=Math.round(m/60); if(h<36) return h+' hr ago';
+    return Math.round(h/24)+' days ago';
+  }
+  function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+  function showNotice(msg){var n=$('notice');n.textContent=msg||'';n.hidden=!msg;}
+
+  /* ---------- status ---------- */
+  function renderStatus(){
+    var s=state.status;
+    var dot=$('modeDot'), txt=$('modeText'), help=$('modeHelp'), btn=$('modeBtn');
+    if(!s){dot.className='dot down';txt.textContent='Not reachable';help.textContent='The page couldn’t reach the service. See the message above.';btn.disabled=true;return;}
+    dot.className='dot '+(s.observeMode?'observe':'live');
+    txt.textContent=s.observeMode?'Observe mode':'Live';
+    help.textContent=s.observeMode
+      ?'Opens each lead and reports what it would click, but doesn’t click. Derek gets every lead.'
+      :'Responds to each lead on its own. Derek only hears about the ones that need a person.';
+    btn.textContent=s.observeMode?'Go live':'Switch to observe mode';
+    btn.disabled=false;
+    var f=$('facts'); f.innerHTML='';
+    [['Last lead',s.lastRun?(ny(s.lastRun.at)+' · '+ago(s.lastRun.at)):'none yet'],
+     ['Agents known',String(s.agents)],
+     ['Running since',ny(s.runningSince)],
+     ['Version',s.version||'—']].forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
+
+    var c=s.last24h||{}, counts=$('counts'); counts.innerHTML='';
+    [['Accepted',(c.accepted||0)+(c.alreadyAccepted||0),'ok'],
+     ['Needed a person',(c.failed||0)+(c.unrouted||0)+(c.observed||0),((c.failed||0)+(c.unrouted||0))?'bad':''],
+     ['Failed',c.failed||0,c.failed?'bad':''],
+     ['Expired',c.expired||0,''],
+     ['Total',c.total||0,'']].forEach(function(x){
+      var d=el('div','count '+x[2]); d.appendChild(el('b',null,String(x[1]))); d.appendChild(el('span',null,x[0])); counts.appendChild(d);
+    });
+    var bad=s.agentsWithBadPassword||[], bp=$('badPw');
+    bp.hidden=!bad.length;
+    bp.textContent=bad.length?('Password rejected for '+bad.length+' agent'+(bad.length===1?'':'s')+' (using email codes instead): '+bad.join(', ')+'.'):'';
+  }
+
+  $('modeBtn').addEventListener('click',function(){
+    if(!state.status) return;
+    var toObserve=!state.status.observeMode;
+    $('confirmText').textContent=toObserve
+      ?'Stop clicking? Every lead will go to Derek until you go live again.'
+      :'Go live? The next lead will be responded to automatically.';
+    $('confirm').hidden=false; $('confirmYes').focus();
+  });
+  $('confirmNo').addEventListener('click',function(){$('confirm').hidden=true;});
+  $('confirmYes').addEventListener('click',function(){
+    var want=!state.status.observeMode, yes=$('confirmYes');
+    yes.disabled=true;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({observeMode:want})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t switch.');return b;});})
+      .then(function(b){state.status.observeMode=b.observeMode;$('confirm').hidden=true;showNotice('');renderStatus();})
+      .catch(function(e){showNotice(e.message);})
+      .then(function(){yes.disabled=false;});
+  });
+
+  /* ---------- runs ---------- */
+  function visibleRuns(){
+    return state.runs.filter(function(r){
+      var o=OUT[r.outcome]||{group:'person'};
+      if(state.filter!=='all'&&o.group!==state.filter) return false;
+      if(state.agent&&r.agent!==state.agent) return false;
+      return true;
+    });
+  }
+  function renderRuns(){
+    var list=$('runs'); list.innerHTML='';
+    var rows=visibleRuns();
+    if(!rows.length){var e=el('li','empty',state.runs.length?'No runs match this filter.':'No runs logged yet. The log starts with the first lead after this version of the service went live.');list.appendChild(e);return;}
+    rows.forEach(function(r){
+      var o=OUT[r.outcome]||{label:r.outcome,cls:''};
+      var li=el('li'), b=el('button','row'); b.type='button';
+      if(state.selected===r) b.setAttribute('aria-current','true');
+      b.appendChild(el('span','addr',r.address||'(no address)'));
+      b.appendChild(el('span','pill '+o.cls,o.label));
+      b.appendChild(el('span','meta',ny(r.at)+' · '+(r.agentName||r.agent||'unknown agent')+(r.secs!=null?' · '+r.secs+'s':'')));
+      b.addEventListener('click',function(){state.selected=r;renderRuns();renderDetail();});
+      li.appendChild(b); list.appendChild(li);
+    });
+  }
+  function renderAgentFilter(){
+    var sel=$('agentFilter'), keep=sel.value, seen={};
+    state.runs.forEach(function(r){if(r.agent)seen[r.agent]=r.agentName||r.agent;});
+    sel.innerHTML='<option value="">Everyone</option>';
+    Object.keys(seen).sort(function(a,b){return seen[a].localeCompare(seen[b]);}).forEach(function(k){
+      var o=el('option',null,seen[k]); o.value=k; sel.appendChild(o);
+    });
+    sel.value=seen[keep]?keep:'';
+  }
+  function renderDetail(){
+    var r=state.selected, d=$('detail'); d.innerHTML='';
+    if(!r){d.appendChild(el('p','muted','Pick a run to see what happened at each step, with its screenshots.'));return;}
+    var o=OUT[r.outcome]||{label:r.outcome,cls:''};
+    var top=el('div'); top.style.cssText='display:flex;justify-content:space-between;gap:10px;align-items:start';
+    top.appendChild(el('h3',null,r.address||'(no address)')); top.firstChild.style.margin='0';
+    top.appendChild(el('span','pill '+o.cls,o.label)); d.appendChild(top);
+    var f=el('dl','facts');
+    [['When',ny(r.at)],['Agent',(r.agentName?r.agentName+' · ':'')+(r.agent||'unknown')],['Deadline',ny(r.deadline)],
+     ['Took',r.secs!=null?r.secs+' seconds':'—'],['Email subject',r.subject||'—']].forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
+    d.appendChild(f);
+    if(r.reason){d.appendChild(el('p','reason',r.reason));}
+    if(r.steps&&r.steps.length){
+      var st=el('div','steps');
+      r.steps.forEach(function(s,i){if(i)st.appendChild(el('i',null,'→'));st.appendChild(el('span',null,STEP[s]||s));});
+      d.appendChild(st);
+    }
+    var caps=r.captures||[];
+    if(!caps.length){d.appendChild(el('p','small muted','No screenshots for this run.'));return;}
+    var shots=el('div','shots'); d.appendChild(shots);
+    caps.slice().reverse().forEach(function(name){
+      var fig=el('figure','shot'); fig.style.margin='0';
+      var label=name.split('_').pop();
+      fig.appendChild(el('figcaption',null,STEP[label]||label));
+      var a=el('a'); a.target='_blank'; a.rel='noopener'; var img=el('img'); img.alt='Screenshot: '+(STEP[label]||label); img.loading='lazy';
+      a.appendChild(img); fig.appendChild(a); shots.appendChild(fig);
+      loadShot(name).then(function(u){img.src=u;a.href=u;},function(){fig.appendChild(el('p','small muted','Screenshot not available (kept 14 days).'));img.remove();});
+    });
+  }
+  function loadShot(name){
+    if(shotUrls[name]) return Promise.resolve(shotUrls[name]);
+    return api('?capture='+encodeURIComponent(name)).then(function(r){
+      if(!r.ok) throw new Error('gone');
+      return r.blob();
+    }).then(function(b){return (shotUrls[name]=URL.createObjectURL(b));});
+  }
+  [].forEach.call(document.querySelectorAll('.chip'),function(c){
+    c.addEventListener('click',function(){
+      state.filter=c.getAttribute('data-f');
+      [].forEach.call(document.querySelectorAll('.chip'),function(x){x.setAttribute('aria-pressed',String(x===c));});
+      renderRuns();
+    });
+  });
+  $('agentFilter').addEventListener('change',function(e){state.agent=e.target.value;renderRuns();});
+
+  /* ---------- agents ---------- */
+  function renderAgents(){
+    var box=$('agents'); box.innerHTML='';
+    var bad=(state.status&&state.status.agentsWithBadPassword)||[];
+    if(!state.agents.length){box.appendChild(el('p','muted','No agents yet.'));return;}
+    state.agents.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).forEach(function(a){
+      var c=el('div','agent'); c.appendChild(el('b',null,a.name||a.email));
+      c.appendChild(el('div','mono',a.email));
+      var note=a.autoAdded?('Added automatically '+ny(a.autoAdded)):'On the starting list';
+      if(bad.indexOf(a.email)!==-1) note+=' · password rejected, uses email codes';
+      c.appendChild(el('div','small muted',note));
+      box.appendChild(c);
+    });
+  }
+
+  /* ---------- load ---------- */
+  function load(){
+    $('refresh').disabled=true;
+    return Promise.all([getJson('?view=status'),getJson('?view=runs&limit=300'),getJson('?view=agents')])
+      .then(function(x){
+        state.status=x[0]; state.runs=Array.isArray(x[1])?x[1]:[]; state.agents=Array.isArray(x[2])?x[2]:[];
+        if(state.selected){state.selected=state.runs.filter(function(r){return r.at===state.selected.at&&r.subject===state.selected.subject;})[0]||null;}
+        showNotice('');
+      },function(e){state.status=null;showNotice(e.message);})
+      .then(function(){renderStatus();renderAgentFilter();renderRuns();renderDetail();renderAgents();$('refresh').disabled=false;});
+  }
+  $('refresh').addEventListener('click',load);
+
+  window.CBStudio.ready.then(function(user){
+    if(!user) return;
+    load();
+    setInterval(function(){if(!document.hidden&&$('confirm').hidden)load();},60000);
+  });
+})();
+</script>
+<script src="../../assets/studio-header.js" defer></script>
+</body>
+</html>

@@ -34,6 +34,7 @@ export const STUDIO_TOOLS: readonly StudioTool[] = [
   { key: 'profilepic', name: 'Profile pic', default: 'team', floor: 'team' },
   { key: 'agentcms', name: 'Agent CMS', default: 'team', floor: 'team' },
   { key: 'agentsites', name: 'Agent sites', default: 'team', floor: 'everyone' },
+  { key: 'leadaccept', name: 'Lead auto-accept', default: 'team', floor: 'team' },
 ];
 
 export const TOOLS_STORE = 'cb-studio-tools';
