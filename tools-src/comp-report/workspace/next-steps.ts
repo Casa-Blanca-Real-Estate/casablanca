@@ -12,6 +12,15 @@ export const WHATS_NEXT: { key: 'follow-up' | 'plan-offer'; text: string }[] = [
 ];
 export const NEXT_KEYS: readonly string[] = WHATS_NEXT.map((i) => i.key);
 
+/**
+ * An item's words for the report's side (the walk of 2026-11-10: a seller's Done said "Plan the offer
+ * together"). The key stays plan-offer either way: the activity log and the saved ticks use it.
+ */
+export function nextText(key: 'follow-up' | 'plan-offer', side: 'buyer' | 'seller'): string {
+  if (key === 'plan-offer' && side === 'seller') return 'Agree the list price together';
+  return WHATS_NEXT.find((i) => i.key === key)!.text;
+}
+
 /** Where the follow-up stands: not sent (null), waiting for its two days, due, or ticked. */
 export function followUpState(sentAt: string | undefined | null, checks: Record<string, boolean> | undefined, now: Date = new Date()): 'waiting' | 'due' | 'done' | null {
   if (!sentAt) return null;

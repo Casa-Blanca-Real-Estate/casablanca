@@ -17,7 +17,7 @@ export const NEED_WORD: Record<Exclude<RowNeed, 'confirm'>, string> = { tier: 't
 /** $4.45M, $850K: the way the handoff writes prices in a row. */
 export function shortPrice(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v) || v <= 0) return '—';
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1_000_000) return `$${(Math.round(v / 10_000) / 100).toFixed(2)}M`;
   if (v >= 1_000) return `$${Math.round(v / 1_000)}K`;
   return `$${Math.round(v)}`;
 }

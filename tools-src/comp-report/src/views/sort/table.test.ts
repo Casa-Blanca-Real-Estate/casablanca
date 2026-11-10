@@ -5,6 +5,7 @@ import { median, monthYear, needText, nextSort, passes, shortName, shortPrice, s
 test('prices and dates read as the handoff writes them', () => {
   assert.equal(shortPrice(4_450_000), '$4.45M');
   assert.equal(shortPrice(4_600_000), '$4.60M');
+  assert.equal(shortPrice(4_175_000), '$4.18M', 'rounds half up, as the email does (4.175 is 4.17499… in floating point)');
   assert.equal(shortPrice(850_000), '$850K');
   assert.equal(shortPrice(null), '—');
   assert.equal(shortPrice(0), '—');

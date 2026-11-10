@@ -14,7 +14,7 @@ import { useSendEmail } from '../send/useSendEmail.ts';
 import '../../styles/send.css';
 import { entry } from './bits.tsx';
 import type { StepProps } from './model.ts';
-import { WHATS_NEXT } from '../../../workspace/next-steps.ts';
+import { nextText, WHATS_NEXT } from '../../../workspace/next-steps.ts';
 
 function Amount({ id, label, hint, value, onChange, today, disabled }: {
   id: string;
@@ -153,7 +153,7 @@ export function Done({ ws }: StepProps) {
               onClick={() => ws.setDoneChecks({ ...checks, [item.key]: !on })}
             >
               <span className={`se-next-box${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
-              <span>{item.text}</span>
+              <span>{nextText(item.key, ws.side)}</span>
             </button>
           );
         })}

@@ -150,7 +150,21 @@ export function SendStep({ ws }: StepProps) {
 /** The step after Send, one component in two places: read, then copy and open, then mark as sent. */
 function StepButton({ m, ws, flow }: { m: SendModel; ws: Workspace; flow: Flow }) {
   if (!flow.read) {
-    return <button type="button" className="btn se2-step se2-lock" aria-disabled="true" title="Scroll the email to its end">Read the full email ↓</button>;
+    // Reading stays the gate, but the button does what it says (the walk of 2026-11-10): each press scrolls
+    // the preview on by most of a screen, so it can be clicked through to the end as well as scrolled.
+    return (
+      <button
+        type="button"
+        className="btn se2-step se2-lock se2-reading"
+        title="Read the email to its end: scroll it, or press this to move on through it"
+        onClick={() => {
+          const el = document.querySelector<HTMLElement>('.se2-preview');
+          if (el) el.scrollBy({ top: Math.max(200, el.clientHeight * 0.85), behavior: 'smooth' });
+        }}
+      >
+        Read the full email ↓
+      </button>
+    );
   }
   if (!flow.out) {
     return (

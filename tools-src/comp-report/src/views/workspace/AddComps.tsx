@@ -179,7 +179,7 @@ export function ReadRows({ ws, onTypeItIn }: { ws: Workspace; onTypeItIn?: (p: M
 function priceLine(c: WorkspaceComp): string {
   const p = compPrice(c).value;
   if (!p) return '—';
-  const short = p >= 1e6 ? `$${(p / 1e6).toFixed(2)}M` : `$${Math.round(p / 1e3).toLocaleString('en-US')}K`;
+  const short = p >= 1e6 ? `$${(Math.round(p / 1e4) / 100).toFixed(2)}M` : `$${Math.round(p / 1e3).toLocaleString('en-US')}K`;
   return `${short} ${compStatus(c) === 'sold' ? 'sale' : 'ask'}`;
 }
 

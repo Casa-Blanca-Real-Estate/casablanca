@@ -119,6 +119,14 @@ describe('The new report, filled from the read', { skip: skipWithoutDatabase }, 
     assert.equal((await comps('PATCH', { tagEdits: [] })).status, 400);
   });
 
+  test('tagEdits with from: the data’s change lands on the tags as stored, so a tag saved meanwhile stays', async () => {
+    // Stored now: Same area (the agent's pick, saved after the settle was worked out from no tags).
+    assert.equal((await comps('PATCH', { tagEdits: [{ reportCompId: chambers, tags: ['Same area'] }] })).status, 200);
+    const r = await comps('PATCH', { tagEdits: [{ reportCompId: chambers, tags: ['Much smaller'], from: [] }] });
+    assert.equal(r.status, 200, r.body.message);
+    assert.deepEqual(byKey(r.body, CHAMBERS).tags, ['Same area', 'Much smaller']);
+  });
+
   test('a listing comp’s photos: https on StreetEasy’s image hosts only, at most 8, never an off-list host or a userinfo URL', async () => {
     const good = Array.from({ length: 10 }, (_, i) => `${HOST}/photo${i}-se_large_800_400.webp`);
     const bad = [
