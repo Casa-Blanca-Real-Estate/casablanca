@@ -74,7 +74,7 @@ test('a capture is fetched as PNG; a name that isn’t one is refused before any
   const ok = await handleLeadAccept(get('?capture=2026-11-10T21-53-48-123Z_d-tashi_agent-tools'), d);
   assert.equal(ok.status, 200);
   assert.equal(ok.headers.get('content-type'), 'image/png');
-  assert.equal(seen[0].url, `${BASE}/captures/2026-11-10T21-53-48-123Z_d-tashi_agent-tools.png`);
+  assert.equal(seen[0]?.url, `${BASE}/captures/2026-11-10T21-53-48-123Z_d-tashi_agent-tools.png`);
   for (const bad of ['../settings', 'x.png', '..%2Fruns', '']) {
     assert.equal((await handleLeadAccept(get(`?capture=${encodeURIComponent(bad)}`), d)).status, 400, bad);
   }
@@ -86,9 +86,9 @@ test('observe mode: the team switches it; a guest can look but not switch; a bad
   const res = await handleLeadAccept(post({ observeMode: true }), d);
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { observeMode: true });
-  assert.equal(seen[0].url, `${BASE}/admin/settings`);
-  assert.equal(seen[0].method, 'POST');
-  assert.equal(seen[0].body, JSON.stringify({ observeMode: true }));
+  assert.equal(seen[0]?.url, `${BASE}/admin/settings`);
+  assert.equal(seen[0]?.method, 'POST');
+  assert.equal(seen[0]?.body, JSON.stringify({ observeMode: true }));
   assert.equal((await handleLeadAccept(post({ observeMode: 'yes' }), d)).status, 400);
 
   const g = deps(GUEST);
