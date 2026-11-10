@@ -55,3 +55,4 @@ The sheet above lives in Kimani's personal account. Nothing needs carrying over 
 | `questions.json` | The content, by hand. HTML fields may use `{repo}/path` (a link to a file on `claude/main`) and `#123` (a PR link) |
 | `build.mjs` | Expands it and splices it into the template; checks ids, prefixes and reading-list references |
 | `template.html` | The page, with `__QDATA__` where the data goes |
+| `design-pass.json` | The **Design pass** tab (2026-11-10): every page of the comp report and the Studio's new pages, each with what opens from it nested under it, marked `designed`, `light` or `not`. Kimani's ticks and notes save to the db, collection `design`, one doc per id (`{done, note, at}`); a page's tick counts everything under it as done. Edit by hand when a design round lands |
