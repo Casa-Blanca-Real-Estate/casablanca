@@ -65,7 +65,9 @@ export function TourMarks() {
   const card = useRef<HTMLDivElement>(null);
   const scrolled = useRef<string | null>(null);
 
-  useEffect(() => onTour(setTour), []);
+  useEffect(() => {
+    return onTour(setTour);
+  }, []);
   useEffect(() => {
     const f = (e: Event) => setScreen((e as CustomEvent<string>).detail);
     addEventListener('cr:screen', f);
