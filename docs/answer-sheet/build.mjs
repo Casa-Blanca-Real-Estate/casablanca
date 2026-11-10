@@ -73,7 +73,35 @@ for (const p of design.pages) for (const x of [p, ...p.children]) {
   designIds.add(x.id);
 }
 
+// The To-do tab (todo-groups.json): every to-do under the job it belongs to. Question cards move there by id.
+const todo = JSON.parse(readFileSync(join(here, 'todo-groups.json'), 'utf8'));
+const todoIds = new Set();
+const todoQs = new Set();
+for (const g of todo.groups) {
+  if (todoIds.has(g.id)) throw new Error(`Duplicate to-do id ${g.id}`);
+  todoIds.add(g.id);
+  for (const it of g.items) {
+    if (it.q) {
+      if (!ids.has(it.q)) continue; // answered and retired from questions.json: it simply drops off the tab
+      if (todoQs.has(it.q)) throw new Error(`${it.q} is in two to-do groups`);
+      todoQs.add(it.q);
+    } else {
+      if (!it.id || !it.name) throw new Error(`A to-do item in ${g.id} needs an id and a name`);
+      if (todoIds.has(it.id)) throw new Error(`Duplicate to-do id ${it.id}`);
+      todoIds.add(it.id);
+    }
+  }
+}
+const loose = topics.filter((t) => t.prefix === 'TD').flatMap((t) => t.questions.map((q) => q.id)).filter((id) => !todoQs.has(id));
+if (loose.length) {
+  // A new TD question nobody has grouped yet still shows, in a group of its own.
+  todo.groups.push({ id: 'ungrouped', name: 'Not grouped yet', sub: '', desc: 'New to-dos; a thread files them under their job.', items: loose.map((q) => ({ q })) });
+  console.warn(`To-dos not in a group yet: ${loose.join(', ')}`);
+}
+todo.groups = todo.groups.map((g) => ({ ...g, desc: g.desc || '', items: g.items.filter((it) => !it.q || ids.has(it.q)) }));
+
 const data = {
+  todo: { asOf: todo.asOf, groups: todo.groups },
   design: { asOf: design.asOf, pages: design.pages },
   topics,
   reading: src.reading.map((r) => ({ id: r.id, date: r.date, qids: r.qids, settledIds: r.settledIds ?? [], html: links(r.html) })),
@@ -84,4 +112,4 @@ const data = {
 const json = JSON.stringify(data).replace(/</g, '\\u003c');
 const page = readFileSync(join(here, 'template.html'), 'utf8').replace('__QDATA__', () => json);
 writeFileSync(out, page);
-console.log(`${out}: ${ids.size} questions in ${topics.length} topics, ${data.reading.length} reading items, ${designIds.size} design items in ${design.pages.length} pages, ${page.length} bytes`);
+console.log(`${out}: ${ids.size} questions in ${topics.length} topics, ${data.reading.length} reading items, ${designIds.size} design items in ${design.pages.length} pages, ${todo.groups.reduce((n, g) => n + g.items.length, 0)} to-dos in ${todo.groups.length} groups, ${page.length} bytes`);
