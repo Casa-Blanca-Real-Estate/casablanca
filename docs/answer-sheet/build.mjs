@@ -64,7 +64,17 @@ const topics = src.topics.map((t) => ({
 for (const r of src.reading) for (const id of r.qids) if (!ids.has(id)) throw new Error(`Reading ${r.id} names unknown ${id}`);
 for (const id of src.newIds ?? []) if (!ids.has(id)) throw new Error(`newIds names unknown ${id}`);
 
+// The Design pass tab (design-pass.json): pages with what opens from them nested under each.
+const design = JSON.parse(readFileSync(join(here, 'design-pass.json'), 'utf8'));
+const designIds = new Set();
+for (const p of design.pages) for (const x of [p, ...p.children]) {
+  if (designIds.has(x.id)) throw new Error(`Duplicate design id ${x.id}`);
+  if (!['designed', 'light', 'not'].includes(x.status)) throw new Error(`${x.id}: status ${x.status}`);
+  designIds.add(x.id);
+}
+
 const data = {
+  design: { asOf: design.asOf, pages: design.pages },
   topics,
   reading: src.reading.map((r) => ({ id: r.id, date: r.date, qids: r.qids, settledIds: r.settledIds ?? [], html: links(r.html) })),
   prefixes: src.topics.map((t) => t.prefix),
@@ -74,4 +84,4 @@ const data = {
 const json = JSON.stringify(data).replace(/</g, '\\u003c');
 const page = readFileSync(join(here, 'template.html'), 'utf8').replace('__QDATA__', () => json);
 writeFileSync(out, page);
-console.log(`${out}: ${ids.size} questions in ${topics.length} topics, ${data.reading.length} reading items, ${page.length} bytes`);
+console.log(`${out}: ${ids.size} questions in ${topics.length} topics, ${data.reading.length} reading items, ${designIds.size} design items in ${design.pages.length} pages, ${page.length} bytes`);
