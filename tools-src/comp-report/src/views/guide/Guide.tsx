@@ -67,7 +67,9 @@ function StepPage({ step, onWord }: { step: GuideStep; onWord: (term: string) =>
 function Glossary({ q, setQ }: { q: string; setQ: (q: string) => void }) {
   const found = useMemo(() => searchGlossary(q), [q]);
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => input.current?.focus(), []);
+  useEffect(() => {
+    input.current?.focus();
+  }, []);
   return (
     <div className="gd-glossary">
       <h2 className="gd-print-title">Comp report · Glossary</h2>
@@ -116,8 +118,12 @@ export function Guide({ initial, onClose }: { initial: GuideView; onClose: () =>
   const dialog = useRef<HTMLDivElement>(null);
   const opener = useRef<Element | null>(document.activeElement);
 
-  useEffect(() => onPresenter(setPresenting), []);
-  useEffect(() => writeUrl(view), [view]);
+  useEffect(() => {
+    return onPresenter(setPresenting);
+  }, []);
+  useEffect(() => {
+    writeUrl(view);
+  }, [view]);
   useEffect(() => {
     dialog.current?.focus();
     const back = opener.current;
@@ -211,13 +217,17 @@ export function Guide({ initial, onClose }: { initial: GuideView; onClose: () =>
 export function PresenterMarks({ onOpenStep }: { onOpenStep: (n: number) => void }) {
   const [on, setOn] = useState(presenterOn);
   const [screen, setScreen] = useState<string | null>(currentScreen);
-  useEffect(() => onPresenter(setOn), []);
+  useEffect(() => {
+    return onPresenter(setOn);
+  }, []);
   useEffect(() => {
     const f = (e: Event) => setScreen((e as CustomEvent<string>).detail);
     addEventListener('cr:screen', f);
     return () => removeEventListener('cr:screen', f);
   }, []);
-  useEffect(() => (on ? startPointerMarks() : undefined), [on]);
+  useEffect(() => {
+    return on ? startPointerMarks() : undefined;
+  }, [on]);
   if (!on) return null;
   const step = screen ? stepForScreen(screen) : null;
   return createPortal(
