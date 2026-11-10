@@ -303,6 +303,9 @@ label.se-field { display: flex; flex-direction: column; gap: 6px; font-size: 13p
 .se2-copy-row { display: flex; gap: 8px; align-items: stretch; }
 .btn.se2-open { flex: 1; padding: 14px 16px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
 .btn.se2-lock, .btn.primary.se2-lock, .btn.se2-lock:hover { background: #dddbd5; color: #555550; border-color: #dddbd5; cursor: not-allowed; opacity: 1; }
+/* Read the full email ↓ moves the preview on when pressed (the walk of 2026-11-10). */
+.btn.se2-lock.se2-reading { cursor: pointer; }
+.btn.se2-lock.se2-reading:hover { color: var(--cb-black); }
 .se2-help { display: flex; align-items: center; gap: 8px; position: relative; font-size: 11px; color: #6f6d68; }
 .se2-tip { flex: none; width: 18px; height: 18px; padding: 0; border: 1px solid var(--cb-mid); border-radius: 50%; background: none; font: inherit; font-size: 10px; color: #6f6d68; cursor: help; }
 .se2-tip:hover, .se2-tip:focus-visible { border-color: var(--cb-black); color: var(--cb-black); }

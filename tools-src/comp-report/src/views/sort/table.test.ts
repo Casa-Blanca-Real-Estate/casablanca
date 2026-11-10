@@ -5,6 +5,7 @@ import { median, monthYear, needText, nextSort, passes, shortName, shortPrice, s
 test('prices and dates read as the handoff writes them', () => {
   assert.equal(shortPrice(4_450_000), '$4.45M');
   assert.equal(shortPrice(4_600_000), '$4.60M');
+  assert.equal(shortPrice(4_175_000), '$4.18M', 'rounds half up, as the email does (4.175 is 4.17499… in floating point)');
   assert.equal(shortPrice(850_000), '$850K');
   assert.equal(shortPrice(null), '—');
   assert.equal(shortPrice(0), '—');
@@ -45,7 +46,9 @@ test('a missing value sorts last either way; ties keep the list order; unsorted 
   const rows = [row('a', 3), row('b', null), row('c', 1), row('d', 3)];
   assert.deepEqual(sortRows(rows, { key: 'price', dir: 1 }).map((r) => r.id), ['c', 'a', 'd', 'b']);
   assert.deepEqual(sortRows(rows, { key: 'price', dir: -1 }).map((r) => r.id), ['a', 'd', 'c', 'b']);
-  assert.equal(sortRows(rows, { key: null, dir: 1 }), rows);
+  // No header sort: newest first, undated last, ties in list order.
+  const unsorted = [row('old', 1, null, '2026-06-01'), row('none', 1, null, null), row('new', 1, null, '2026-09-17'), row('mid', 1, null, '2026-08-27')];
+  assert.deepEqual(sortRows(unsorted, { key: null, dir: 1 }).map((r) => r.id), ['new', 'mid', 'old', 'none']);
   const tiers = [row('x', 1, 'excluded'), row('y', 1, null), row('z', 1, 'primary')];
   assert.deepEqual(sortRows(tiers, { key: 'tier', dir: 1 }).map((r) => r.id), ['y', 'z', 'x']);
   const dates = [row('p', 1, null, '2026-08-01'), row('q', 1, null, null), row('r', 1, null, '2026-06-01')];

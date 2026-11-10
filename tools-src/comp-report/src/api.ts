@@ -101,7 +101,13 @@ export interface Report {
   rangeHigh?: number | null;
   sentAt?: string | null;
   photo?: string | null;
+  /** Where the photo came from: the home's own read, the sample's stored photos, or another unit in the same building. */
+  photoFrom?: 'read' | 'sample' | 'building' | null;
   ownerLevel?: 'practice' | 'full' | null;
+  /** Done's What's next items ticked (state.doneChecks), by key: "follow-up", "plan-offer". */
+  doneChecks?: string[];
+  /** When it was last worked on: the report or any of its comps changed. Stage · updated shows and sorts by it. */
+  workedAt?: string;
 }
 
 export interface AllowlistEntry {
@@ -275,7 +281,7 @@ export const workspaceApi = {
   editComp: (reportId: string, reportCompId: string, edit: CompEdit) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, ...edit } }),
   /** Several comps' tags at once: the tags the data settles (NB-9 C). */
-  setTags: (reportId: string, tagEdits: { reportCompId: string; tags: string[] }[]) =>
+  setTags: (reportId: string, tagEdits: { reportCompId: string; tags: string[]; from?: string[] }[]) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, tagEdits } }),
 };
 

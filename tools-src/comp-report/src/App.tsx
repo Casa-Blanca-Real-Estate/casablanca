@@ -14,6 +14,7 @@ import { Shell } from './views/shell/TopBar.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
 import { STUDIO_SIGN_IN, studioSignInUrl } from './studio-sign-in.ts';
 import { offerDevNotebook } from './dev-notebook.ts';
+import { GuideLauncher } from './views/guide/Launcher.tsx';
 
 function currentReportId(): string | null {
   return new URLSearchParams(location.search).get('report');
@@ -150,6 +151,8 @@ export function App() {
           {framed ? <Center>{body}</Center> : body}
         </ErrorBoundary>
       </div>
+      {/* The guide: its top bar button, the ? key, ?guide= links and presenter mode (views/guide/). */}
+      {state.status === 'signed-in' && me && !refusal && <GuideLauncher me={me} onReports={!reportId} />}
     </Shell>
   );
 }

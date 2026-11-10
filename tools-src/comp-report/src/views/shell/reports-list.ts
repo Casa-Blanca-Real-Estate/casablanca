@@ -2,6 +2,7 @@
 // each row shows, and the date. Plain functions, so the sort rule can be tested without a browser.
 import type { Report } from '../../api.ts';
 import type { ScreenId } from '../workspace/screens.ts';
+import { followUpState } from '../../../workspace/next-steps.ts';
 
 export type SortKey = 'home' | 'side' | 'range' | 'comps' | 'when';
 export interface SortState { key: SortKey; dir: 1 | -1 }
@@ -34,16 +35,26 @@ export function nextSort(current: SortState, key: SortKey): SortState {
 type Stage = NonNullable<Report['stage']>;
 export const stageOf = (r: Report): Stage => r.stage ?? 'sort';
 
+/** When a report was last worked on: the report or one of its comps (the server's workedAt), else its own update. */
+export const workedAt = (r: Report): string => r.workedAt ?? r.updatedAt;
+
+/** The date Stage · updated shows, and sorts by: when it was sent, for a sent report; else when it was last worked on. */
+export const whenOf = (r: Report): string => (stageOf(r) === 'sent' && r.sentAt ? r.sentAt : workedAt(r));
+
 /** A report's sort value; null sorts last whichever way the column runs. */
 function sortValue(r: Report, key: SortKey): string | number | null {
-  if (key === 'home') return r.title.toLowerCase();
+  if (key === 'home') return r.title.trim();
   if (key === 'side') return r.side ?? null;
   if (key === 'range') return r.rangeLow ?? null;
   if (key === 'comps') return r.comps ?? null;
-  return r.updatedAt;
+  const t = Date.parse(whenOf(r));
+  return Number.isNaN(t) ? null : t;
 }
 
-/** The list in the header's order. Plain comparison; empty values last; ties keep the server's order. */
+// Addresses compare as people read them: "25 Leonard" before "100 Barclay", case aside.
+const byAddress = new Intl.Collator('en-US', { numeric: true, sensitivity: 'base' });
+
+/** The list in the header's order. Empty values last; ties keep the server's order (newest worked on first). */
 export function sortReports(reports: Report[], sort: SortState): Report[] {
   return reports
     .map((r, i) => ({ r, i }))
@@ -51,8 +62,10 @@ export function sortReports(reports: Report[], sort: SortState): Report[] {
       const x = sortValue(a.r, sort.key);
       const y = sortValue(b.r, sort.key);
       if (x === null || y === null) return x === y ? a.i - b.i : x === null ? 1 : -1;
-      const cmp = (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
-      return cmp || a.i - b.i;
+      const raw = typeof x === 'string' && typeof y === 'string' ? byAddress.compare(x, y) : x > y ? 1 : x < y ? -1 : 0;
+      // Range by its low end; two with the same low, by the high.
+      const tie = !raw && sort.key === 'range' ? (a.r.rangeHigh ?? 0) - (b.r.rangeHigh ?? 0) : 0;
+      return (raw || tie) * sort.dir || a.i - b.i;
     })
     .map(({ r }) => r);
 }
@@ -90,7 +103,8 @@ export function listStats(reports: Report[], now: Date = new Date()): { reports:
 
 /** Pick up where you left off: the most recently changed report that isn't sent yet. */
 export function pickUp(reports: Report[]): Report | null {
-  return reports.filter((r) => stageOf(r) !== 'sent' && r.status === 'active').sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))[0] ?? null;
+  return reports.filter((r) => stageOf(r) !== 'sent' && r.status === 'active')
+    .sort((a, b) => Date.parse(workedAt(b)) - Date.parse(workedAt(a)))[0] ?? null;
 }
 
 /** "Nov 4"; the year instead when it isn't this one. */
@@ -131,3 +145,33 @@ export function updatedLabel(iso: string, now: Date = new Date()): string {
 }
 
 export const PAGE_SIZE = 10;
+
+// ─── Hubert's follow-up reminder (Done's What's next, the design pass) ──────
+
+/** Not after a month: by then it's moved on, one way or the other. */
+export const FOLLOW_UP_UNTIL_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** A sent report whose follow-up is due (workspace/next-steps.ts, as Done's Hubert reads it), and under a month old. */
+export function followUpIsDue(r: Report, now: Date = new Date()): boolean {
+  if (r.status !== 'active' || stageOf(r) !== 'sent' || !r.sentAt) return false;
+  const checks = Object.fromEntries((r.doneChecks ?? []).map((k) => [k, true]));
+  return followUpState(r.sentAt, checks, now) === 'due' && now.getTime() - Date.parse(r.sentAt) <= FOLLOW_UP_UNTIL_MS;
+}
+
+/** The reminder on Reports' hero: the longest-waiting report that's due, or null. */
+export function followUpDue(reports: Report[], now: Date = new Date()): Report | null {
+  return reports.filter((r) => followUpIsDue(r, now)).sort((a, b) => (a.sentAt! < b.sentAt! ? -1 : a.sentAt! > b.sentAt! ? 1 : 0))[0] ?? null;
+}
+
+/** "Sent to Jordan and Sam on Nov 4. Heard back? Tick it on Done." */
+export function followUpLine(r: Report, now: Date = new Date()): string {
+  const when = r.sentAt ? shortDate(r.sentAt, now) : '';
+  return `Sent${r.client ? ` to ${r.client}` : ''}${when ? ` on ${when}` : ''}. Heard back? Tick it on Done.`;
+}
+
+/** "100 Barclay Street #17L" as the photo's stand-in: the number large, the street under it. */
+export function thumbWords(title: string): { number: string; street: string } {
+  const t = title.replace(/\s+#\S+$/, '').trim();
+  const m = /^(\d+[\w-]*)\s+(.+)$/.exec(t);
+  return m ? { number: m[1]!, street: m[2]! } : { number: '', street: t };
+}

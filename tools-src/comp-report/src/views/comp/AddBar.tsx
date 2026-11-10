@@ -4,7 +4,7 @@
 // it), or "Type one in". Drop the StreetEasy export (or its PDF: the links are read here) anywhere on the screen
 // that holds it (useDropTarget). Screenshots aren't read in this version: the
 // screen says so where they're dropped.
-import { useState, type DragEvent, type ReactNode } from 'react';
+import { useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { parseExport } from '../../../engine/index.ts';
 import { linksApi, workspaceApi } from '../../api.ts';
 import { checkListingLink, MAX_LINKS_PER_REQUEST } from '../../../workspace/links.ts';
@@ -138,6 +138,9 @@ export function AddBar({ ws, note, onNote }: { ws: Workspace; note: string | nul
   const [paste, setPaste] = useState('');
   // The form: closed, typed from the bar (its address is the bar's text), or "Type one in".
   const [form, setForm] = useState<null | { typed: boolean; prefill: CompPrefill | null; key: number }>(null);
+  // Choose the file as well as drop it (the walk of 2026-11-10): not everyone drags, and a trackpad drag
+  // from the Downloads folder is the hard part of the PDF route.
+  const picker = useRef<HTMLInputElement>(null);
   if (ws.readOnly) return null;
   const hasPaste = LINKISH.test(paste.trim());
 
@@ -188,7 +191,22 @@ export function AddBar({ ws, note, onNote }: { ws: Workspace; note: string | nul
         {hasPaste && <button type="button" className="btn primary paste-add" disabled={Boolean(ws.busy)} onClick={() => void add()}>Add</button>}
         <button type="button" className="link paste-type" onClick={() => setForm({ typed: false, prefill: null, key: Date.now() })}>Type one in</button>
       </div>
-      <div className="paste-hint">Or drop the StreetEasy export (CSV, XLSX or PDF) or listing screenshots anywhere here</div>
+      <div className="paste-hint">
+        Or drop the StreetEasy export (CSV, XLSX or PDF) or listing screenshots anywhere here, or{' '}
+        <button type="button" className="link paste-choose" onClick={() => picker.current?.click()}>choose the file</button>
+        <input
+          ref={picker}
+          type="file"
+          hidden
+          accept=".csv,.xlsx,.pdf,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          aria-label="Choose the StreetEasy export"
+          onChange={(e) => {
+            const file = e.currentTarget.files?.[0];
+            e.currentTarget.value = '';
+            if (file) void addExport(ws, file).then(onNote);
+          }}
+        />
+      </div>
       {note && <p className="paste-note" role="status">{note}</p>}
       {form && (
         <CompForm

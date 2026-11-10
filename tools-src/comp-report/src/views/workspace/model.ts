@@ -13,6 +13,7 @@ import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
 } from '../../../workspace/state.ts';
 import type { StartScreen } from '../newcomp/NewComp.tsx';
+import type { StartNote } from '../newcomp/start-words.ts';
 
 
 export interface Workspace {
@@ -138,6 +139,8 @@ export interface Workspace {
   removed: WorkspaceComp[];
   /** The New report window is open (the home, its details, add comps): Hubert sits beside it. */
   starting: boolean;
+  /** Start with Hubert's note, when the report was started from his field on Reports: what he took from the agent's words. */
+  startNote: StartNote | null;
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;

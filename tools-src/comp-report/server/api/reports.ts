@@ -17,7 +17,11 @@ import { normalizeEmail } from '../access.ts';
 import { requireUser, type AuthDeps, type SessionUser } from '../session.ts';
 import { logAccess, logViewed } from '../logs.ts';
 import { readsEveryReport, reportFor } from './workspace.ts';
-import { cleanPhotoUrls } from '../../engine/index.ts';
+import { cleanPhotoUrls, compRecordFromListing, identify } from '../../engine/index.ts';
+import type { Queryable } from '../db.ts';
+import { neutralNumbers, newYorkToday } from '../numbers.ts';
+import { samplePhotos, type SamplePhotoStore } from '../sample/photos.ts';
+import { answerResult } from '../../workspace/reading.ts';
 import { duplicateReport } from './duplicate.ts';
 
 export interface ReportSummary {
@@ -48,8 +52,14 @@ export interface ReportSummary {
   sentAt?: string | null;
   /** The home's photo, from its StreetEasy page (linked, never copied: NW-020 a). */
   photo?: string | null;
+  /** Where the photo came from: the home's own read, the sample's stored photos, or another unit in the same building. */
+  photoFrom?: 'read' | 'sample' | 'building' | null;
   /** The owner's level, on Everyone's reports: practice or full. */
   ownerLevel?: 'practice' | 'full' | null;
+  /** Done's What's next items ticked (state.doneChecks), by key. */
+  doneChecks?: string[];
+  /** The latest change to the report or any of its comps (a comp's tier lives on its own row). */
+  workedAt?: string;
 }
 
 export type ReportStage = 'sort' | 'findings' | 'send' | 'sent';
@@ -75,6 +85,13 @@ export interface ReportRow {
   sent_at?: string | null;
   photo?: string | null;
   owner_level?: 'practice' | 'full' | null;
+  revealed?: boolean;
+  worked_at?: Date | null;
+  done_checks?: string[] | null;
+  intake_address?: string | null;
+  intake_unit?: string | null;
+  /** Filled in after the query: the photo's source (see photoFrom). */
+  photo_from?: 'read' | 'sample' | 'building' | null;
 }
 
 const num = (v: number | string | null | undefined): number | null => {
@@ -104,6 +121,9 @@ export function summary(r: ReportRow): ReportSummary {
       rangeHigh: num(r.range_high),
       sentAt: r.sent_at && !Number.isNaN(Date.parse(r.sent_at)) ? new Date(r.sent_at).toISOString() : null,
       photo: cleanPhotoUrls([r.photo])[0] ?? null,
+      photoFrom: cleanPhotoUrls([r.photo])[0] ? (r.photo_from ?? 'read') : null,
+      doneChecks: Array.isArray(r.done_checks) ? r.done_checks.filter((k) => typeof k === 'string') : [],
+      ...(r.worked_at ? { workedAt: new Date(r.worked_at).toISOString() } : {}),
     } : {}),
     ...(r.owner_level !== undefined ? { ownerLevel: r.owner_level } : {}),
   };
@@ -118,7 +138,108 @@ export function requirePool(deps: AuthDeps): PoolLike {
 
 export const asUser = (user: SessionUser) => ({ kind: 'user' as const, email: user.email, role: user.role });
 
-export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
+export interface ReportsDeps extends AuthDeps {
+  /** The sample's stored photos (server/sample/photos.ts): a sample report's thumbnail. */
+  samplePhotos?: SamplePhotoStore | null;
+}
+
+/** At most this many ranges are worked out per list: the rest keep what their report last showed. */
+export const RANGE_LIMIT = 60;
+
+/**
+ * The range each revealed report shows now, worked out here from what's stored (the wiring pass, 2026-11-06).
+ * The browser writes state.range only when the owner opens the report, so a mentor or admin reading the list
+ * saw the range as it stood then, and reports from before that saw the reveal's pin. The engine runs on the
+ * server exactly as get_numbers does; the range doesn't depend on the call, the target or the deal terms.
+ * A report the engine can't run on keeps the stored one.
+ */
+async function currentRanges(tx: Queryable, rows: ReportRow[], asOf: string): Promise<void> {
+  for (const r of rows.filter((x) => x.revealed).slice(0, RANGE_LIMIT)) {
+    await tx.query('savepoint cr_range');
+    try {
+      const n = await neutralNumbers(tx, r.id, asOf);
+      await tx.query('release savepoint cr_range');
+      if (!n) continue;
+      const range = n.output.results[answerResult(n.output)].range;
+      r.range_low = range ? Math.round(range.low.value) : null;
+      r.range_high = range ? Math.round(range.high.value) : null;
+    } catch {
+      await tx.query('rollback to savepoint cr_range').catch(() => {});
+    }
+  }
+}
+
+/** The street a property key or an address is on, normalised ("100 barclay street"): the same building, near enough. */
+const streetOfKey = (key: string | null | undefined) => (key ? key.split('|')[3] || null : null);
+
+function homeStreet(r: ReportRow): string | null {
+  const address = r.intake_address?.trim() || r.title.replace(/\s+#\S+$/, '');
+  try {
+    return identify({ address, unit: r.intake_unit ?? null }).address.normalized_street ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A thumbnail for the rows without a read of their own (the wiring pass): a sample's from the sample's stored
+ * photos (a comp in the same building, since 17L has no page of its own), and any other's from a comp read in
+ * the same building on that report. Still none: the list sets the address in type.
+ */
+async function fallbackPhotos(tx: Queryable, rows: ReportRow[], store: SamplePhotoStore | null | undefined): Promise<void> {
+  const bare = rows.filter((r) => !cleanPhotoUrls([r.photo])[0]);
+  if (!bare.length) return;
+  for (const r of rows) if (cleanPhotoUrls([r.photo])[0]) r.photo_from = 'read';
+
+  const samples = bare.filter((r) => r.sample_data);
+  if (samples.length && store) {
+    const kept = await samplePhotos(store);
+    const byStreet = new Map<string, string>();
+    for (const [key, urls] of Object.entries(kept)) {
+      const street = streetOfKey(key);
+      if (street && urls[0] && !byStreet.has(street)) byStreet.set(street, urls[0]);
+    }
+    for (const r of samples) {
+      const street = homeStreet(r);
+      const photo = street ? byStreet.get(street) : undefined;
+      if (photo) {
+        r.photo = photo;
+        r.photo_from = 'sample';
+      }
+    }
+  }
+
+  const still = bare.filter((r) => !r.photo);
+  if (!still.length) return;
+  const { rows: reads } = await tx.query<{ report_id: string; url: string; as_of: string | null; extract: Record<string, unknown> | null }>(
+    `select report_id, url, as_of::text as as_of, extract from comp_report.link_reads
+      where report_id = any($1::uuid[]) and purpose = 'comp' and status = 'done' and dismissed_at is null and extract is not null
+      order by seq desc`,
+    [still.map((r) => r.id)],
+  );
+  for (const r of still) {
+    const street = homeStreet(r);
+    if (!street) continue;
+    for (const read of reads) {
+      if (read.report_id !== r.id || !read.extract) continue;
+      const photo = cleanPhotoUrls([read.extract['heroImageUrl'], ...(Array.isArray(read.extract['photos']) ? read.extract['photos'] : [])])[0];
+      if (!photo) continue;
+      let same = false;
+      try {
+        same = compRecordFromListing(read.extract, { as_of: read.as_of ?? newYorkToday(), url: read.url }).record.identity.address.normalized_street === street;
+      } catch {
+        same = false;
+      }
+      if (same) {
+        r.photo = photo;
+        r.photo_from = 'building';
+        break;
+      }
+    }
+  }
+}
+
+export function handleReports(req: Request, deps: ReportsDeps): Promise<Response> {
   return respond(async () => {
     allowMethods(req, 'GET', 'POST', 'PATCH');
     const user = await requireUser(req, deps);
@@ -173,7 +294,16 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
                   (select coalesce(lr.extract->>'heroImageUrl', lr.extract->'photos'->>0) from comp_report.link_reads lr
                     where lr.report_id = r.id and lr.purpose = 'subject' and lr.status = 'done'
                     order by lr.seq desc limit 1) as photo,
-                  (select u.capability from comp_report.users u where u.email = r.owner_email) as owner_level
+                  (select u.capability from comp_report.users u where u.email = r.owner_email) as owner_level,
+                  r.agent_call is not null as revealed,
+                  -- Last worked on: the report, or any of its comps (a tier or a note is saved on the comp's own row).
+                  greatest(r.updated_at, (select max(rc.updated_at) from comp_report.report_comps rc where rc.report_id = r.id)) as worked_at,
+                  -- Done's What's next, the items ticked.
+                  (select coalesce(jsonb_agg(k.key order by k.key), '[]'::jsonb)
+                     from jsonb_each(case when jsonb_typeof(r.state -> 'doneChecks') = 'object' then r.state -> 'doneChecks' else '{}'::jsonb end) k
+                    where k.value = 'true'::jsonb) as done_checks,
+                  r.state -> 'intake' -> 'address' ->> 'value' as intake_address,
+                  r.state -> 'intake' -> 'unit' ->> 'value' as intake_unit
              from comp_report.reports r
             where ($3 or r.owner_email = $1) and ($4::text is null or r.owner_email = $4) and r.status = $2
               and (not $5 or r.owner_email in (select m.agent_email from comp_report.mentees m
@@ -183,6 +313,8 @@ export function handleReports(req: Request, deps: AuthDeps): Promise<Response> {
             order by r.updated_at desc limit 200`,
           [user.email, status, everyone, owner, mentees],
         );
+        await currentRanges(tx, rows, newYorkToday());
+        await fallbackPhotos(tx, rows, deps.samplePhotos);
         return rows;
       });
       // An admin or mentor loading everyone's: one line per viewer and half hour (Dispatch 22b).

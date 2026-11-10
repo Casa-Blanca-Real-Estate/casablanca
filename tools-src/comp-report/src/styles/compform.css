@@ -51,6 +51,7 @@
 .paste-add { font-size: 11px; padding: 10px 16px; }
 .paste-type { font-size: 12px; flex: none; }
 .paste-hint { font-size: 12px; color: var(--cb-mid); }
+.paste-hint .paste-choose { font-size: 12px; }
 .paste-note { margin: 0; font-size: 12px; color: var(--cb-black); }
 /* The drop veil covers whatever holds the bar (it needs position: relative). */
 .drop-veil {

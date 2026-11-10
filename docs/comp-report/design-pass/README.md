@@ -101,6 +101,26 @@ of 11-09). Those screens keep working exactly as before until then.
 
 Open questions from this round are on the Answer Sheet: DP-16 (an admin's tab name) to DP-20 (Start with Hubert).
 
+**Wired after the round (the wiring thread, 2026-11-06)**, what the screens needed beyond their design:
+
+- **Start with Hubert, the fuller version** (`newcomp/start-words.ts`): the hero's field reads the agent's words
+  first (a link or an address, and if said: buyer or seller, the client's name, Co-op or Condo, a budget or target),
+  makes the report and opens the window on step 2 with Hubert's drawer beside it. His note says what he took from
+  the words, offers Buyer / Seller when the side wasn't said, and once the listing is read, names what it couldn't
+  give. Plain rules, no model call. Without a usable home the window opens on step 1 with what was read. Beside the
+  New report window Hubert now shows his New report note, not Sort's greeting.
+- **Reports' Range** is worked out on the server from what's stored (as `get_numbers` runs the engine), so a
+  mentor's or admin's list is current, not the range the owner's browser last wrote. Before the Gate, "—".
+- **Reports' photos**: the home's own read; a sample's from the sample's stored photos (a comp in its building);
+  otherwise a comp read in the same building, marked "Same building"; with none, the address set in type.
+- **The sorts, audited**: Stage · updated now counts a comp's tier or note (they live on the comp's row) and sorts
+  by the date it shows (a sent report by when it was sent); Home sorts 1, 15, 100; Range ties go by the high end.
+  Sort lists each status group **newest first** (DP-22): the export's own order wasn't by date.
+- **What's next's ticks** feed Hubert's follow-up reminder (Reports' hero and a Follow up tag on the row two days
+  after sending, his note on Done) and the Access timeline (`report.next_ticked`, migration `20261110120000`).
+
+Left for Kimani: DP-16 to DP-18, DP-21 (the other Studio tools' top bar), DP-22.
+
 ---
 
 ## 0. Since this was written (2026-11-05)
