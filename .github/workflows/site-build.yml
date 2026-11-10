@@ -29,6 +29,8 @@ jobs:
         run: npm run test:agent-pics
       - name: the Property Sign builder's tests (team only, the roster as a sign needs it, saved signs)
         run: npm run test:property-signs
+      - name: the lead auto-accept page's tests (team only, the service's key never reaching the browser)
+        run: npm run test:lead-accept
       - name: the Netlify build
         run: npm run build
       - name: the build wrote nothing outside its gitignored output
