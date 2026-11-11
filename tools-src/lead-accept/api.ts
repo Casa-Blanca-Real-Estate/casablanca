@@ -12,6 +12,7 @@
 //   GET  ?capture=<name>      one run's screenshot, as PNG
 //   POST {observeMode: bool}  switch observe mode; takes effect on the next lead
 //   POST {agentPassword: {email, password | null}}  set or clear one agent's own StreetEasy password
+//   POST {addAgent: {email, name?, password?}}      add an agent by hand (or update one that exists)
 //
 // SECURITY
 //   Every request needs the Studio sign-in, and the user must be the Studio's team (the same rule as
@@ -85,10 +86,28 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
 
     if (req.method === 'POST') {
       if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
-      const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown } } | null;
+      const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown };
+        addAgent?: { email?: unknown; name?: unknown; password?: unknown } } | null;
 
       // One agent's own StreetEasy password: { agentPassword: { email, password } }, or password null
       // to go back to the shared one. Passed straight to the service; never logged or returned.
+      // Add an agent by hand: { addAgent: { email, name?, password? } }. The password, if any,
+      // goes straight to the service and is never logged or returned.
+      if (body?.addAgent) {
+        const { email, name, password } = body.addAgent;
+        if (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) throw new LeadAcceptError(400, 'bad_email', 'Enter the agent’s StreetEasy email.');
+        if (name != null && typeof name !== 'string') throw new LeadAcceptError(400, 'bad_name');
+        if (password != null && password !== '' && (typeof password !== 'string' || password.length > 200)) {
+          throw new LeadAcceptError(400, 'bad_password', 'The password must be text, up to 200 characters.');
+        }
+        const res = await call('/admin/agents', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), name: typeof name === 'string' ? name.trim() : '', password: password || null }),
+        });
+        console.log(`lead-accept: agent ${email.trim()} added or updated by ${user.email}${password ? ' (own password)' : ''}`);
+        return json(await res.json(), res.status);
+      }
+
       if (body?.agentPassword) {
         const { email, password } = body.agentPassword;
         if (typeof email !== 'string' || !email.includes('@')) throw new LeadAcceptError(400, 'bad_email', 'Which agent? Send their StreetEasy email.');

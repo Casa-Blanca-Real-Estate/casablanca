@@ -131,3 +131,24 @@ test('an agent’s own password: the team sets or clears it; it goes only to the
   assert.equal((await handleLeadAccept(post({ agentPassword: { email: 'a@b.com', password: 'x' } }), deps(GUEST).d)).status, 403);
   assert.equal((await handleLeadAccept(post({ agentPassword: { email: 'a@b.com', password: 'x' } }), deps(AGENT).d)).status, 403);
 });
+
+test('adding an agent by hand: email required, password optional and never echoed or logged', async () => {
+  const pw = 'Another-secret-77';
+  const logged: string[] = [];
+  const orig = console.log; console.log = (...a: unknown[]) => { logged.push(a.join(' ')); };
+  try {
+    const { d, seen } = deps(KIMANI, () => Response.json({ email: 'j.new@email.casa-blanca.com', name: 'J. New', added: true, hasOwnPassword: true }, { status: 201 }));
+    const res = await handleLeadAccept(post({ addAgent: { email: ' j.new@email.casa-blanca.com ', name: 'J. New', password: pw } }), d);
+    assert.equal(res.status, 201);
+    assert.ok(!(await res.text()).includes(pw));
+    assert.equal(seen[0].url, `${BASE}/admin/agents`);
+    assert.deepEqual(JSON.parse(seen[0].body!), { email: 'j.new@email.casa-blanca.com', name: 'J. New', password: pw });
+    await handleLeadAccept(post({ addAgent: { email: 'k@x.com' } }), d);
+    assert.deepEqual(JSON.parse(seen[1].body!), { email: 'k@x.com', name: '', password: null });
+    assert.ok(logged.every((l) => !l.includes(pw)));
+  } finally { console.log = orig; }
+  const { d } = deps(KIMANI);
+  assert.equal((await handleLeadAccept(post({ addAgent: { email: 'not-an-email' } }), d)).status, 400);
+  assert.equal((await handleLeadAccept(post({ addAgent: { email: 'a@b.com', password: 'x'.repeat(201) } }), d)).status, 400);
+  assert.equal((await handleLeadAccept(post({ addAgent: { email: 'a@b.com' } }), deps(GUEST).d)).status, 403);
+});

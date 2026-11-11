@@ -97,6 +97,12 @@
   .agent form button{padding:6px 10px;font-size:11px}
   .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
   .tag.own{background:var(--accent);color:var(--plum)} .tag.rej{background:var(--bad-bg);color:var(--bad)}
+  .addbar{margin:0 0 10px}
+  .addform{display:flex;flex-direction:column;gap:10px;margin:0 0 12px;max-width:760px}
+  .addform .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .addform label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800}
+  .addform label .muted{font-weight:400}
+  .addform input{font:inherit;font-size:13px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0}
   .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;overflow-wrap:anywhere}
 
   /* how it works */
@@ -164,6 +170,20 @@
 
   <h2>Referral agents</h2>
   <p class="muted">Every agent the service has seen. New ones are added the first time a lead or sign-in code arrives for them. They all use the shared StreetEasy password unless you set their own here. If a password is rejected, the service signs in with a one-time email code instead, which only works when that code reaches the shared inbox.</p>
+  <div class="addbar"><button type="button" id="addAgentBtn">Add an agent</button></div>
+  <form class="card addform" id="addAgentForm" hidden>
+    <h3 style="margin:0">Add an agent</h3>
+    <p class="small muted" style="margin:0">For an agent whose first lead hasn't come in yet, so their password is ready before it does.</p>
+    <div class="fields">
+      <label>StreetEasy email<input id="newEmail" type="email" required autocomplete="off" placeholder="j.doe@email.casa-blanca.com"></label>
+      <label>Name <span class="muted">(optional)</span><input id="newName" type="text" autocomplete="off" maxlength="80" placeholder="Jane Doe"></label>
+      <label>Own password <span class="muted">(optional; blank uses the shared one)</span><input id="newPw" type="password" autocomplete="new-password" maxlength="200"></label>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="submit" class="primary" id="addSave">Add agent</button>
+      <button type="button" id="addCancel">Cancel</button>
+    </div>
+  </form>
   <div class="agents" id="agents"></div>
 
   <h2>How it works</h2>
@@ -390,7 +410,7 @@
       if(a.passwordRejected||bad.indexOf(a.email)!==-1) name.appendChild(el('span','tag rej','Password rejected'));
       c.appendChild(name);
       c.appendChild(el('div','mono',a.email));
-      c.appendChild(el('div','small muted',a.autoAdded?('Added automatically '+ny(a.autoAdded)):'On the starting list'));
+      c.appendChild(el('div','small muted',a.autoAdded?('Added automatically '+ny(a.autoAdded)):a.addedByHand?('Added by hand '+ny(a.addedByHand)):'On the starting list'));
       var acts=el('div','acts');
       var setBtn=el('button',null,a.hasOwnPassword?'Change password':'Set own password'); setBtn.type='button';
       acts.appendChild(setBtn);
@@ -414,6 +434,21 @@
       box.appendChild(c);
     });
   }
+  $('addAgentBtn').addEventListener('click',function(){$('addAgentForm').hidden=false;$('addAgentBtn').hidden=true;$('newEmail').focus();});
+  function closeAdd(){var f=$('addAgentForm');f.reset();f.hidden=true;$('addAgentBtn').hidden=false;}
+  $('addCancel').addEventListener('click',closeAdd);
+  $('addAgentForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var btn=$('addSave'); btn.disabled=true;
+    var body={addAgent:{email:$('newEmail').value.trim(),name:$('newName').value.trim(),password:$('newPw').value||null}};
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t add the agent.');return b;});})
+      .then(function(b){closeAdd();showNotice('');return load().then(function(){
+        if(!b.added) showNotice((b.name||b.email)+' was already on the list. Updated.');
+      });})
+      .catch(function(err){showNotice(err.message);})
+      .then(function(){btn.disabled=false;});
+  });
   function savePassword(email,password,btn){
     btn.disabled=true;
     api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agentPassword:{email:email,password:password}})})
