@@ -48,6 +48,15 @@ await p.waitForTimeout(900);
 await shot('03-basics-reading');
 check(await p.locator('.nc-hub').count() === 1, 'Hubert’s panel is open on the left');
 check(!(await p.locator('.sh-page').count()), 'no workspace behind the window');
+// CR-17: while the page is read, Next waits but the rail opens every step; the listing's fields stay locked, notes open.
+if (await p.locator('.nc-pct').count()) {
+  await p.locator('.nc-rail button', { hasText: 'General' }).click();
+  await p.waitForTimeout(400);
+  await shot('03b-general-while-reading');
+  check(await p.locator('.nc-notes textarea').isEnabled(), 'the notes are open while the page is read');
+  await p.locator('.nc-rail button', { hasText: 'Basics' }).click();
+  await p.waitForTimeout(300);
+}
 await p.waitForFunction(() => !document.querySelector('.nc-pct'), null, { timeout: 30000 }).catch(() => errors.push('the read never landed'));
 await settle();
 await p.getByRole('button', { name: 'Jordan', exact: false }).count();

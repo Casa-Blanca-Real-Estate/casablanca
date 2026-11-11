@@ -235,6 +235,9 @@ function useGuards(onClose: () => void) {
   return { register, attempt, asking, setAsking };
 }
 
+/** The steps the listing fills: locked while its page is read. */
+const LISTING_STEPS: ReadonlySet<string> = new Set(['general', 'shared', 'amenities', 'building']);
+
 export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
   ws: Workspace;
   screen: StartScreen;
@@ -415,11 +418,16 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
   const saved = error ? null : ws.busy ? ws.busy : reading ? 'The report is made: anything you type is kept.' : ws.readOnly ? 'Read only' : '✓ Saved as you go';
 
   let content: ReactNode;
+  // While the home's page is read (CR-17, Kimani 2026-11-11): Next waits, but the rail opens every step. What the
+  // listing fills stays locked until it lands, so the read can't write over the agent; the notes, Basics, Client
+  // info and the comps are the agent's own and stay open.
+  const lockedByRead = reading && !editing && LISTING_STEPS.has(key);
+  const filling = lockedByRead ? { ...ws, readOnly: true } : ws;
   if (key === 'basics') content = <BasicsStep ws={ws} typeFromPage={typeFromPage && !typeMismatch} />;
-  else if (key === 'general') content = <GeneralStep ws={ws} />;
-  else if (key === 'shared') content = <SharedStep ws={ws} />;
-  else if (key === 'amenities') content = <AmenitiesStep ws={ws} />;
-  else if (key === 'building') content = <BuildingStep ws={ws} />;
+  else if (key === 'general') content = <GeneralStep ws={filling} />;
+  else if (key === 'shared') content = <SharedStep ws={filling} />;
+  else if (key === 'amenities') content = <AmenitiesStep ws={filling} />;
+  else if (key === 'building') content = <BuildingStep ws={filling} />;
   else if (key === 'client') content = <ClientStep ws={ws} />;
   else content = <CompsStep ws={ws} note={note} onNote={setNote} />;
 
@@ -456,7 +464,7 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
                     type="button"
                     className={`${here ? 'here' : ''}${reach ? ' reached' : ''}`}
                     aria-current={here ? 'step' : undefined}
-                    disabled={!reach || (reading && !editing)}
+                    disabled={!reach && !(reading && !editing)}
                     onClick={() => void (n > index ? confirmHome().then((ok) => ok && move(n)) : move(n))}
                   >
                     <span className="nc-rb"><span /></span>
@@ -475,6 +483,9 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
                   Its StreetEasy page says {pageType!.label ?? TYPE_LABEL[typeMismatch]}, and this report is a {TYPE_LABEL[ws.propertyType].toLowerCase()}.{' '}
                   {!ws.readOnly && <button type="button" className="link" onClick={() => ws.setPropertyType(typeMismatch)}>Make it a {TYPE_LABEL[typeMismatch].toLowerCase()}</button>}
                 </p>
+              )}
+              {lockedByRead && (
+                <p className="nc-note" role="status">Still reading its StreetEasy page: these fill in when it’s read, and open then. The notes are open now.</p>
               )}
               {content}
               {step.notes && <StepNotes ws={ws} where={step.notes} hint={step.notesHint} placeholder={step.notesPlaceholder} />}
@@ -518,7 +529,7 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
               <button type="button" className="nc-bp" disabled={Boolean(ws.busy)} onClick={() => void open()}>OPEN WORKSPACE →</button>
             ) : (
               <>
-                {step.optional && <button type="button" className="link nc-skip" onClick={() => move(index + 1)}>Skip for now</button>}
+                {step.optional && !reading && <button type="button" className="link nc-skip" onClick={() => move(index + 1)}>Skip for now</button>}
                 <button type="button" className="nc-bp" disabled={reading || Boolean(ws.busy)} onClick={() => void next()}>
                   NEXT: {steps[index + 1]!.label.toUpperCase()} →
                 </button>
