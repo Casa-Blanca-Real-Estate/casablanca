@@ -24,7 +24,7 @@ import { withActor, type PoolLike } from '../server/db.ts';
 import type { TrailEntry, TrailSource } from '../server/hubert-trail.ts';
 import type { IdentityUser } from '../server/identity.ts';
 import type { WebSearcher } from '../server/web-search.ts';
-import { applyHomeSet, homeUndoStands, type HubertHomeEdit } from '../workspace/home-edit.ts';
+import { applyClientSet, applyHomeSet, homeUndoStands, type HubertHomeEdit } from '../workspace/home-edit.ts';
 import type { Intake } from '../workspace/state.ts';
 import { undoStands } from '../workspace/trail-undo.ts';
 import { startFakeAnthropic, type FakeAnthropic, type Script } from '../dev/fake-anthropic.ts';
@@ -485,5 +485,57 @@ describe('Hubert’s trail: comp edits and the web', { skip: skipWithoutDatabase
       assert.match(String(result.content), says);
       assert.ok(!events.some((e) => e.type === 'home_edit' || e.type === 'change'));
     }
+  });
+  test('the New comp window: the building’s laundry with its feature, a step’s notes, and the client’s facts (set_client_fact)', async () => {
+    const intake: Intake = { building: { value: ['Doorman'], asOf: '2026-10-01', from: 'listing' }, notesGeneral: { value: 'Size includes a storage cage.', asOf: '2026-10-01' } };
+    const save = async (body: Record<string, unknown>) => assert.equal((await handleWorkspace(request('workspace', 'PATCH', { reportId, ...body }), deps)).status, 200);
+    await save({ state: { intake }, brief: { audience: { value: 'buyer', asOf: '2026-10-01' } } });
+    const view = { screen: 'new_report', compId: null, step: 'shared' };
+
+    const home = await call('set_home_fact', {
+      changes: [
+        { field: 'buildingLaundry', value: 'floor' },
+        { field: 'noSharedOutdoor', value: 'yes' },
+        { field: 'notesGeneral', add: ['Listed size is from the floor plan.'] },
+      ],
+    }, 'Laundry room on the floor, no roof deck. Note the size is from the floor plan.', view);
+    assert.equal(home.result.is_error, undefined, String(home.result.content));
+    const edit = home.events.find((e) => e.type === 'home_edit')!.edit as HubertHomeEdit;
+    assert.equal((edit.set.buildingLaundry as { value: string }).value, 'floor');
+    assert.deepEqual((edit.set.building as { value: string[] }).value, ['Doorman', 'Laundry in building'], 'the building’s feature follows its laundry');
+    assert.equal((edit.set.notesGeneral as { value: string }).value, 'Size includes a storage cage.\nListed size is from the floor plan.');
+    const applied = applyHomeSet(intake, edit.set);
+    let now = applied;
+    for (const e of home.events.filter((x) => x.type === 'change').map((x) => x.entry as TrailEntry)) now = applyHomeSet(now, e.undo!.edit as HubertHomeEdit['set']);
+    assert.deepEqual(now, intake, 'Undo puts the building’s list back too');
+
+    const clientView = { screen: 'new_report', compId: null, step: 'client' };
+    const c = await call('set_client_fact', {
+      changes: [
+        { field: 'preApprovalAmount', value: '$4M' },
+        { field: 'pace', value: 'ready to buy now' },
+        { field: 'motivations', value: 'Lease ends in March' },
+      ],
+    }, 'Pre-approved for $4M, ready to go, lease ends in March.', clientView);
+    assert.equal(c.result.is_error, undefined, String(c.result.content));
+    const ce = c.events.find((e) => e.type === 'home_edit')!.edit as HubertHomeEdit;
+    assert.equal(ce.client?.preApprovalAmount?.value, 4_000_000);
+    assert.equal(ce.client?.preApproved?.value, true, 'an amount says they’re pre-approved');
+    assert.equal(ce.client?.pace?.value, 'asap');
+    const centries = c.events.filter((e) => e.type === 'change').map((e) => e.entry as TrailEntry);
+    assert.deepEqual(centries.map((e) => [e.field, e.after]), [
+      ['client.preApproved', 'Yes'], ['client.preApprovalAmount', '$4,000,000'], ['client.pace', 'Ready to buy now'], ['client.motivations', 'Lease ends in March'],
+    ]);
+    const brief = { audience: { value: 'buyer' as const, asOf: '2026-10-01' } };
+    const done = applyClientSet(brief, null, ce.client!);
+    assert.equal(done.terms?.preApprovalAmount?.value, 4_000_000);
+    assert.equal(done.brief.client?.urgency?.pace?.value, 'asap');
+    assert.ok(centries.every((e) => homeUndoStands(e, {}, done)));
+
+    const seen = JSON.parse(String((await call('get_view', {}, 'What have I got?', clientView)).result.content));
+    assert.match(seen.new_report_step, /^Client info/);
+
+    const refused = await call('set_client_fact', { changes: [{ field: 'pace', value: 'whenever' }] } as unknown as Block);
+    assert.equal(refused.result.is_error, true);
   });
 });

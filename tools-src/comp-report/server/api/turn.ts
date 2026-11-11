@@ -112,7 +112,7 @@ async function prepare(
         results.push(result);
         const edit = call.name === 'edit_email' ? editFromResult(result) : null;
         if (edit) edits.push(edit);
-        const home = call.name === 'set_home_fact' ? homeEditFromResult(result) : null;
+        const home = call.name === 'set_home_fact' || call.name === 'set_client_fact' ? homeEditFromResult(result) : null;
         if (home) homeEdits.push(home);
         changes.push(...trailOf(call.name, result).changes);
       }

@@ -79,7 +79,7 @@ export function trailOf(name: string, result: Record<string, unknown>): { change
   }
   if (!parsed || typeof parsed !== 'object') return none;
   if (name === 'edit_email' && parsed.edit) return { changes: emailTrail(parsed.edit as HubertEmailEdit), sources: [] };
-  if ((name === 'edit_comp' || name === 'show_comp_link' || name === 'set_home_fact') && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
+  if ((name === 'edit_comp' || name === 'show_comp_link' || name === 'set_home_fact' || name === 'set_client_fact') && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
   if ((name === 'web_search' || name === 'read_page') && Array.isArray(parsed.results)) {
     const sources = (parsed.results as Array<Record<string, unknown>>)
       .filter((r) => typeof r.url === 'string' && /^https:\/\//.test(r.url as string))

@@ -12,7 +12,8 @@
 import { LAUNDRY_STATES } from '../engine/index.ts';
 import { CONDITION_TO_LABEL, FEATURE_GROUPS, OUTDOOR_TO_LABEL } from '../workspace/features.ts';
 import type { HubertHomeEdit } from '../workspace/home-edit.ts';
-import type { Entry, Intake } from '../workspace/state.ts';
+import { BUILDING_LAUNDRY_LABEL, isHomeNotesKey, withBuildingLaundry } from '../workspace/home-notes.ts';
+import type { BuildingLaundry, Entry, Intake } from '../workspace/state.ts';
 import type { Queryable } from './db.ts';
 import type { TrailEntry } from './hubert-trail.ts';
 import { newYorkToday } from './links.ts';
@@ -53,13 +54,20 @@ export const HOME_FIELDS = {
   outdoorSqft: { label: 'Outdoor size', kind: 'number', check: whole(1, 100_000), says: 'whole square feet above zero', unit: 'sqft' },
   yearBuilt: { label: 'Year built', kind: 'number', check: (n) => whole(1700, Number(newYorkToday().slice(0, 4)) + 5)(n), says: 'a year, like 1929' },
   neighborhood: { label: 'Neighborhood', kind: 'text', max: 80 },
-  notes: { label: 'Notes', kind: 'text', max: 4000 },
+  // Each step of the New comp window keeps its own notes (2026-11-11); `notes` is Home amenities', the original.
+  notesGeneral: { label: 'Notes on General', kind: 'text', max: 4000 },
+  notesShared: { label: 'Notes on laundry and outdoor space', kind: 'text', max: 4000 },
+  notes: { label: 'Notes on the home', kind: 'text', max: 4000 },
+  notesBuilding: { label: 'Notes on the building', kind: 'text', max: 4000 },
+  notesComps: { label: 'Notes on the comps', kind: 'text', max: 4000 },
   dishwasher: { label: 'Dishwasher', kind: 'yesno' },
   centralAir: { label: 'Central air', kind: 'yesno' },
   fireplace: { label: 'Working fireplace', kind: 'yesno' },
   corner: { label: 'Corner unit', kind: 'yesno' },
   newDevelopment: { label: 'New development', kind: 'yesno' },
   laundry: { label: 'Washer/dryer', kind: 'choice', choices: LAUNDRY_LABEL },
+  buildingLaundry: { label: 'The building’s laundry', kind: 'choice', choices: BUILDING_LAUNDRY_LABEL },
+  noSharedOutdoor: { label: 'No shared outdoor space', kind: 'yesno' },
   outdoorKind: { label: 'Private outdoor space', kind: 'choice', choices: OUTDOOR_TO_LABEL },
   condition: { label: 'Unit condition', kind: 'choice', choices: CONDITION_TO_LABEL },
   views: { label: 'Views', kind: 'list', options: options('views') },
@@ -125,6 +133,7 @@ export async function setHomeFacts(tx: Queryable, reportId: string, input: unkno
   const set: HubertHomeEdit['set'] = {};
   const trail: TrailEntry[] = [];
   const was = (key: keyof Intake) => (intake[key] ?? null) as Entry<unknown> | null;
+  let laundryUndo: HubertHomeEdit['set'] | null = null;
 
   for (const c of input.changes) {
     if (!isObject(c) || typeof c.field !== 'string' || !(c.field in HOME_FIELDS)) {
@@ -137,7 +146,7 @@ export async function setHomeFacts(tx: Queryable, reportId: string, input: unkno
     const add = Array.isArray(c.add) ? c.add.filter((x): x is string => typeof x === 'string') : [];
     const remove = Array.isArray(c.remove) ? c.remove.filter((x): x is string => typeof x === 'string') : [];
     if (c.estimate !== undefined && f.kind !== 'number') return { ok: false, error: `Only a number can be an estimate, not the ${f.label.toLowerCase()}.` };
-    if ((add.length || remove.length) && f.kind !== 'list' && key !== 'notes') {
+    if ((add.length || remove.length) && f.kind !== 'list' && !isHomeNotesKey(key)) {
       return { ok: false, error: `add and remove are for lists (views, exposures, building, policies) and the notes. Give the ${f.label.toLowerCase()} as value.` };
     }
     if (value === undefined && !add.length && !remove.length) return { ok: false, error: `Give the ${f.label.toLowerCase()} as value (an empty value clears it).` };
@@ -153,7 +162,7 @@ export async function setHomeFacts(tx: Queryable, reportId: string, input: unkno
     } else if (f.kind === 'text') {
       let text = value?.trim() ?? '';
       // Notes: "add to my notes" goes under what's there, never over it.
-      if (key === 'notes' && add.length) text = [String(before?.value ?? '').trim(), ...add.map((a) => a.trim())].filter(Boolean).join('\n');
+      if (isHomeNotesKey(key) && add.length) text = [String(before?.value ?? '').trim(), ...add.map((a) => a.trim())].filter(Boolean).join('\n');
       if (text.length > f.max!) return { ok: false, error: `The ${f.label.toLowerCase()} is too long (${f.max} characters at most).` };
       next = text;
     } else if (f.kind === 'yesno') {
@@ -193,6 +202,8 @@ export async function setHomeFacts(tx: Queryable, reportId: string, input: unkno
       set.outdoorSqft = null;
       undoSet.outdoorSqft = intake.outdoorSqft;
     }
+    // The building's laundry: "Laundry in building" on the building's list follows it, as in the window (after the loop).
+    if (key === 'buildingLaundry') laundryUndo = undoSet;
     if (key === 'exposures' && intake.exposure) {
       set.exposure = null;
       undoSet.exposure = intake.exposure;
@@ -202,6 +213,13 @@ export async function setHomeFacts(tx: Queryable, reportId: string, input: unkno
       kind: 'home', target: 'The home', field: key, label: estimate ? `${f.label} (your estimate)` : f.label,
       before: homeValueText(f, before?.value), after, undo: { edit: undoSet, left: next },
     });
+  }
+  if (laundryUndo && !('building' in set)) {
+    const synced = withBuildingLaundry(intake, (set.buildingLaundry as Entry<BuildingLaundry> | null)?.value, asOf);
+    if (JSON.stringify(synced.building ?? null) !== JSON.stringify(intake.building ?? null)) {
+      set.building = synced.building ?? null;
+      laundryUndo.building = intake.building ?? null;
+    }
   }
   if (!trail.length) return { ok: false, error: 'Nothing to change: the home already reads that way.' };
   return { ok: true, edit: { set }, trail, summary: trail.map((t) => `${t.label}: ${t.after ?? 'cleared'}`).join('; ') };
@@ -224,7 +242,7 @@ export function homeDetailsOf(intake: Intake | null): Record<string, string> {
   for (const key of HOME_FIELD_KEYS) {
     const e = intake?.[key] as Entry<unknown> | undefined;
     // The notes whole: he reads them (NOTES_TIP); the trail's text is short.
-    const text = e ? (key === 'notes' ? String(e.value) : homeValueText(HOME_FIELDS[key]!, e.value)) : null;
+    const text = e ? (isHomeNotesKey(key) ? String(e.value) : homeValueText(HOME_FIELDS[key]!, e.value)) : null;
     if (text) out[key] = `${text}${e!.estimate ? ' (the agent’s estimate)' : ''}${e!.from === 'listing' ? ' (from its StreetEasy page)' : ''}`;
   }
   return out;

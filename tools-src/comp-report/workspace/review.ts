@@ -15,6 +15,7 @@
 //     engine measured one against the other, Kara's checks, and the agent's own
 //     note and tags. Never the agent's number, the target, the deal terms or the
 //     tier (D-4: the reveal hasn't happened yet).
+import { allHomeNotes } from './home-notes.ts';
 import type { EngineOutput, Tier } from '../engine/index.ts';
 import { addressOf } from './email.ts';
 import type { WorkspaceComp } from './engine-input.ts';
@@ -178,7 +179,8 @@ function intakeFacts(i: Intake): Record<string, string> {
   if (i.yearBuilt) out.year_built = String(i.yearBuilt.value);
   if (i.newDevelopment) out.new_development = i.newDevelopment.value ? 'yes' : 'no';
   if (i.neighborhood) out.neighborhood = i.neighborhood.value;
-  if (i.notes?.value.trim()) out.what_stands_out = i.notes.value.trim();
+  const notes = allHomeNotes(i);
+  if (notes) out.what_stands_out = notes;
   return out;
 }
 
