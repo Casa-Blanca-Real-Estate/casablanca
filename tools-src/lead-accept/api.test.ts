@@ -117,10 +117,10 @@ test('an agent’s own password: the team sets or clears it; it goes only to the
     const res = await handleLeadAccept(post({ agentPassword: { email: 'j.f@casa-blanca.com', password: pw } }), d);
     assert.equal(res.status, 200);
     assert.ok(!(await res.text()).includes(pw));
-    assert.equal(seen[0].url, `${BASE}/admin/agents/password`);
-    assert.deepEqual(JSON.parse(seen[0].body!), { email: 'j.f@casa-blanca.com', password: pw });
+    assert.equal(seen[0]!.url, `${BASE}/admin/agents/password`);
+    assert.deepEqual(JSON.parse(seen[0]!.body!), { email: 'j.f@casa-blanca.com', password: pw });
     assert.equal((await handleLeadAccept(post({ agentPassword: { email: 'j.f@casa-blanca.com', password: null } }), d)).status, 200);
-    assert.equal(JSON.parse(seen[1].body!).password, null);
+    assert.equal(JSON.parse(seen[1]!.body!).password, null);
     assert.ok(logged.every((l) => !l.includes(pw)), 'the password is never logged');
   } finally { console.log = orig; }
 
@@ -141,10 +141,10 @@ test('adding an agent by hand: email required, password optional and never echoe
     const res = await handleLeadAccept(post({ addAgent: { email: ' j.new@email.casa-blanca.com ', name: 'J. New', password: pw } }), d);
     assert.equal(res.status, 201);
     assert.ok(!(await res.text()).includes(pw));
-    assert.equal(seen[0].url, `${BASE}/admin/agents`);
-    assert.deepEqual(JSON.parse(seen[0].body!), { email: 'j.new@email.casa-blanca.com', name: 'J. New', password: pw });
+    assert.equal(seen[0]!.url, `${BASE}/admin/agents`);
+    assert.deepEqual(JSON.parse(seen[0]!.body!), { email: 'j.new@email.casa-blanca.com', name: 'J. New', password: pw });
     await handleLeadAccept(post({ addAgent: { email: 'k@x.com' } }), d);
-    assert.deepEqual(JSON.parse(seen[1].body!), { email: 'k@x.com', name: '', password: null });
+    assert.deepEqual(JSON.parse(seen[1]!.body!), { email: 'k@x.com', name: '', password: null });
     assert.ok(logged.every((l) => !l.includes(pw)));
   } finally { console.log = orig; }
   const { d } = deps(KIMANI);
