@@ -11,6 +11,8 @@ import type { Queryable } from './db.ts';
 import { editCompForAgent, showCompLinkForAgent } from './hubert-comps.ts';
 import { emailFor, editEmail, EMAIL_FIELDS } from './hubert-email.ts';
 import { HOME_FIELD_KEYS, setHomeFacts } from './hubert-home.ts';
+import { setClientFacts } from './hubert-client.ts';
+import { CLIENT_FIELDS } from '../workspace/home-edit.ts';
 import { viewFor, type HubertView } from './hubert-view.ts';
 import { numbersFor } from './numbers.ts';
 import type { Action } from './logs.ts';
@@ -242,6 +244,12 @@ const EDIT_COMP_STAR: Anthropic.Beta.BetaToolUnion = {
   eager_input_streaming: true,
 };
 
+// The fields set_home_fact named when hb-home shipped (2026-10-29), in its order.
+const HOME_FIELD_KEYS_HB_HOME = [
+  'areaSqft', 'beds', 'baths', 'rooms', 'floor', 'askingPrice', 'commonCharges', 'taxes', 'outdoorSqft', 'yearBuilt', 'neighborhood', 'notes',
+  'dishwasher', 'centralAir', 'fireplace', 'corner', 'newDevelopment', 'laundry', 'outdoorKind', 'condition', 'views', 'exposures', 'building', 'policies',
+] as const;
+
 // The home's details on dictation (hubert-plan.md "Tools next" 3; server/hubert-home.ts).
 const SET_HOME_FACT: Anthropic.Beta.BetaToolUnion = {
   name: 'set_home_fact',
@@ -271,11 +279,92 @@ const SET_HOME_FACT: Anthropic.Beta.BetaToolUnion = {
           additionalProperties: false,
           required: ['field'],
           properties: {
+            // As shipped with hb-home (2026-10-29): a version's tools never change. The New comp window's fields are SET_HOME_FACT_STEPS'.
+            field: { type: 'string', enum: [...HOME_FIELD_KEYS_HB_HOME] },
+            value: { type: 'string' },
+            add: { type: 'array', items: { type: 'string' } },
+            remove: { type: 'array', items: { type: 'string' } },
+            estimate: { type: 'boolean' },
+          },
+        },
+      },
+    },
+  },
+  strict: true,
+  eager_input_streaming: true,
+};
+
+// The New comp window's steps (design pass, new-comp.md, 2026-11-11): set_home_fact also sets each step's own
+// notes, the building's laundry and "no shared outdoor space"; set_client_fact fills Client info.
+const SET_HOME_FACT_STEPS: Anthropic.Beta.BetaToolUnion = {
+  name: 'set_home_fact',
+  description:
+    "Fills in or changes the home's details, as the agent dictated them: the fields of the New comp window's steps (General, Laundry and outdoor space, Home amenities, Building amenities). " +
+    "One change per detail they named, all in one call. `field` is: areaSqft (interior square feet), beds, baths and rooms (halves allowed), " +
+    "floor, askingPrice (dollars), commonCharges (common charges, or a co-op's maintenance, dollars a month), taxes (dollars a month), " +
+    "outdoorSqft, yearBuilt, neighborhood, dishwasher, centralAir, fireplace, corner, newDevelopment (yes or no), laundry, the home's own " +
+    "(installed for in the unit, permitted for allowed but not installed, none_listed for none, prohibited for not allowed), buildingLaundry, the building's " +
+    "(floor for on the home's floor, building for elsewhere in the building, none), noSharedOutdoor (yes when the agent says the building has no shared outdoor space), " +
+    "outdoorKind, the home's own (none, balcony, terrace, roof_deck for a private roof, garden or patio), condition " +
+    "(needs_work, original, good for well kept, updated, renovated or mint), and the lists views (Water, City, Open, Partial, Courtyard), " +
+    "exposures (North, South, East, West), building (Doorman, Concierge, Elevator, Live-in super, Package room, Laundry in building, " +
+    "Bike room, Storage, Parking, Wheelchair access, Gym, Pool, Hot tub, Children's playroom, Media room, Roof deck, Courtyard, Garden, " +
+    "Terrace, Patio, Deck, Other) and policies (Pets allowed, Smoke-free, Pied-à-terre allowed, Sublets allowed, Guarantors accepted, " +
+    "Co-purchasing allowed, Gifting allowed, Parents buying allowed). " +
+    "Each step has its own notes: notesGeneral (size, rooms, costs), notesShared (laundry and outdoor space), notes (the home: light, views, condition, layout), " +
+    "notesBuilding (the building and the block) and notesComps (about the comps the agent picked). " +
+    "`value` is the detail as text (\"1240\", \"yes\", \"renovated\"; " +
+    "for a list, the whole list, comma-separated); an empty value clears it. For a list, `add` and `remove` change it by its options instead; " +
+    "for a step's notes, `add` puts the agent's words under what's there. `estimate` true marks a number as the agent's estimate, not a known fact. " +
+    "The agent sees each change at once, in the chat with Show and Undo.",
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['changes'],
+    properties: {
+      changes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['field'],
+          properties: {
             field: { type: 'string', enum: [...HOME_FIELD_KEYS] },
             value: { type: 'string' },
             add: { type: 'array', items: { type: 'string' } },
             remove: { type: 'array', items: { type: 'string' } },
             estimate: { type: 'boolean' },
+          },
+        },
+      },
+    },
+  },
+  strict: true,
+  eager_input_streaming: true,
+};
+
+const SET_CLIENT_FACT: Anthropic.Beta.BetaToolUnion = {
+  name: 'set_client_fact',
+  description:
+    "Fills in or changes what the agent told you about their client: the New comp window's Client info step. One change per fact they named, all in one call. " +
+    "`field` is: financing (cash or mortgage; a buyer's), preApproved (yes or not yet; a buyer's), preApprovalAmount (dollars, like 4000000 or 4M; a buyer's), " +
+    "pace (asap: ready to buy now, or needs to sell soon; can_wait: can wait for the right one, or for the right price), motivations (what's moving them, in the agent's words) " +
+    "and notes (anything else about the client the agent wants kept). `value` is the fact as text; an empty value clears it. " +
+    "None of it ever changes a number. The agent sees each change at once, in the chat with Undo.",
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['changes'],
+    properties: {
+      changes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['field', 'value'],
+          properties: {
+            field: { type: 'string', enum: [...CLIENT_FIELDS] },
+            value: { type: 'string' },
           },
         },
       },
@@ -593,7 +682,28 @@ PROMPTS['hb-voice-2026-11-06'] = {
   ].join('\n\n')),
 };
 
-export const CURRENT_PROMPT = PROMPTS['hb-voice-2026-11-06']!;
+// The New comp window (design pass, new-comp.md, 2026-11-11): the target property in seven steps, Hubert on the
+// left. He fills each step from the agent's words: the home's details as before, each step's own notes, the
+// building's laundry, and the client's facts (set_client_fact). Builds on hb-voice.
+const HB_VOICE = PROMPTS['hb-voice-2026-11-06']!;
+const HB_VOICE_HOME = "The home's details. Use set_home_fact when the agent tells you a detail of the home they're pricing: its size, beds, baths, rooms, floor, asking price, charges and taxes, what it has, its views and exposure, the building's features and policies, its condition, year built, neighborhood, and their notes.";
+PROMPTS['hb-newcomp-2026-11-11'] = {
+  id: 'hb-newcomp-2026-11-11',
+  wideNumbers: true,
+  tools: HB_VOICE.tools.map((t) => ('name' in t && t.name === 'set_home_fact' ? SET_HOME_FACT_STEPS : t)).concat([SET_CLIENT_FACT]),
+  system: HB_VOICE.system.replace(HB_VOICE_HOME, [
+    "The New comp window. A new report starts in a window of seven steps: Basics (buyer or seller, co-op or condo, the client's name and budget or target), General (size, rooms, floor, the costs), Laundry and outdoor space (the home's own and the building's), Home amenities, Building amenities, Client info, then Add comps. You sit beside it. get_view says which step the agent is on and gives the details as they stand.",
+    "- The agent tells you, you fill the step: what they say about the home goes in with set_home_fact, what they say about their client with set_client_fact. Fill only what they said, the same rules as below.",
+    "- Each step has its own notes. When they say to add something to the notes, or say something worth keeping that no field holds, add it to the notes of the step they're on (get_view's new_report_step), or of the step it's plainly about.",
+    "- Laundry: the home's own (in the unit, allowed but not installed, none) and the building's (on the home's floor, elsewhere in the building, none) are two separate facts. Outdoor space likewise: the home's own, and the building's shared spaces.",
+    "- Client info is optional and only for the agent and you: it shapes the advice, never a number. Don't ask about the client's finances or life beyond what the agent offers.",
+    "- Basics (buyer or seller, co-op or condo, the client's name and budget) are the agent's to click: if they tell you one, say where to click it.",
+    '',
+    HB_VOICE_HOME,
+  ].join('\n')),
+};
+
+export const CURRENT_PROMPT = PROMPTS['hb-newcomp-2026-11-11']!;
 /** Conversations recorded before messages carried a version started on CR-1's. */
 const BEFORE_VERSIONS = PROMPTS['cr1-2026-09-25']!;
 
@@ -713,6 +823,12 @@ export async function runTool(
   }
   if (call.name === 'set_home_fact') {
     const done = await setHomeFacts(tx, reportId, call.input);
+    return done.ok
+      ? { type: 'tool_result', tool_use_id: call.id, content: JSON.stringify({ applied: done.summary, edit: done.edit, trail: done.trail }) }
+      : error(done.error);
+  }
+  if (call.name === 'set_client_fact') {
+    const done = await setClientFacts(tx, reportId, call.input);
     return done.ok
       ? { type: 'tool_result', tool_use_id: call.id, content: JSON.stringify({ applied: done.summary, edit: done.edit, trail: done.trail }) }
       : error(done.error);

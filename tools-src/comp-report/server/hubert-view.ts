@@ -8,21 +8,34 @@
 // stored but the tool's result. The open comp comes back as get_numbers'
 // wider read gives it, so one call answers about it.
 import { address } from '../workspace/summary.ts';
-import type { Intake } from '../workspace/state.ts';
+import type { Brief, DealTermsState, Intake } from '../workspace/state.ts';
+import { clientDetailsOf } from './hubert-client.ts';
 import type { Queryable } from './db.ts';
 import { homeDetailsOf } from './hubert-home.ts';
 import { neutralNumbers, newYorkToday, summaryOf } from './numbers.ts';
 
 export const VIEW_SCREENS = ['new_report', 'sort', 'review', 'gate', 'findings', 'send', 'done'] as const;
 export type ViewScreen = (typeof VIEW_SCREENS)[number];
-const NEW_REPORT_STEPS = ['home', 'details', 'comps'] as const;
+// The New comp window's seven steps (2026-11-11), and the three of the window before it.
+const NEW_REPORT_STEPS = ['basics', 'general', 'shared', 'amenities', 'building', 'client', 'comps', 'home', 'details'] as const;
+const STEP_WORDS: Record<(typeof NEW_REPORT_STEPS)[number], string> = {
+  basics: 'Basics: buyer or seller, co-op or condo, the client’s name and their budget or target',
+  general: 'General: the size, beds, baths, rooms, floor, asking price and the monthly costs',
+  shared: 'Laundry and outdoor space: the home’s own and the building’s',
+  amenities: 'Home amenities: condition, views, exposure, corner, dishwasher, central air, fireplace',
+  building: 'Building amenities: neighborhood, year built, resale or new development, services, wellness, policies',
+  client: 'Client info: financing, pre-approval, how soon, what’s moving them (optional)',
+  comps: 'Add comps: the export and listing links',
+  home: 'the home: its StreetEasy link or address',
+  details: 'the home’s details (Edit details)',
+};
 
 export interface HubertView {
   /** The screen; `review` is Sort's per-comp review (Dispatch 25), one comp at a time; `new_report` the New report window. */
   screen: ViewScreen;
   /** The report comp open on Sort, or under review. */
   compId: string | null;
-  /** In the New report window: which of its three steps. */
+  /** In the New comp window: which of its steps. */
   step?: (typeof NEW_REPORT_STEPS)[number];
   /** On Sort: the rows top to bottom as they show, so "comps 1 and 2" can be counted. */
   order?: string[];
@@ -45,7 +58,7 @@ export function readView(raw: unknown): HubertView | null {
 }
 
 const SCREEN_WORDS: Record<ViewScreen, string> = {
-  new_report: 'The New report window: the home, its details, and adding comps. The agent types the details, or tells you them (set_home_fact, where you have it).',
+  new_report: 'The New comp window: the home in steps, then adding comps. The agent types the details, or tells you them (set_home_fact and set_client_fact, where you have them).',
   sort: 'Sort: the comps table, where the agent tiers each comp, writes why it’s a comp and tags it.',
   review: 'The per-comp review on Sort: one comp at a time, the agent’s note and tags first, then the tier.',
   gate: 'Your number: the agent gives their own number before the range shows. The number is theirs alone.',
@@ -57,11 +70,15 @@ const SCREEN_WORDS: Record<ViewScreen, string> = {
 export async function viewFor(tx: Queryable, reportId: string, view: HubertView | null) {
   if (!view) return { screen: null, about: 'The screen didn’t come with this message. Ask the agent which comp they mean.' };
   const out: Record<string, unknown> = { screen: view.screen, about: SCREEN_WORDS[view.screen] };
-  if (view.step) out.new_report_step = { home: 'the home: its StreetEasy link or address', details: 'the home’s details', comps: 'adding comps: the export and links' }[view.step];
+  if (view.step) out.new_report_step = STEP_WORDS[view.step];
   // The home's details as the agent has them (set_home_fact changes them): in the New report window, where they're filled.
   if (view.screen === 'new_report') {
     const intake = (await tx.query<{ intake: Intake | null }>(`select state -> 'intake' as intake from comp_report.reports where id = $1`, [reportId])).rows[0]?.intake ?? null;
     out.home_details = homeDetailsOf(intake);
+    if (view.step === 'client') {
+      const c = (await tx.query<{ brief: Brief | null; terms: DealTermsState | null }>(`select brief, state -> 'dealTerms' as terms from comp_report.reports where id = $1`, [reportId])).rows[0];
+      out.client_details = clientDetailsOf(c?.brief ?? null, c?.terms ?? null);
+    }
   }
   const asOf = newYorkToday();
   const wantsComps = (view.screen === 'sort' && (view.compId || view.order?.length)) || (view.screen === 'review' && view.compId);

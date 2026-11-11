@@ -33,6 +33,10 @@ export interface Entry<T> {
 
 export type OutdoorChoice = OutdoorKind | 'none';
 
+/** The building's laundry, as the New comp window asks it (2026-11-11). */
+export const BUILDING_LAUNDRY = ['floor', 'building', 'none'] as const;
+export type BuildingLaundry = (typeof BUILDING_LAUNDRY)[number];
+
 /** Unit condition, low to high: Needs work, Original, Well kept (`good`), Updated, Renovated, Mint (NW-012, NB-4; factor 8's scale). */
 export type Condition = 'original' | 'updated' | 'renovated' | 'mint' | 'good' | 'needs_work';
 
@@ -55,12 +59,28 @@ export interface Intake {
   askingPrice?: Entry<number>;
   commonCharges?: Entry<number>;
   taxes?: Entry<number>;
-  /** "What stands out?" Kara: "you really go crazy on the notes." Never a number (§2). */
+  /**
+   * "What stands out?" Kara: "you really go crazy on the notes." Never a number (§2). Since the New comp
+   * window's steps (2026-11-11), the Home amenities step's notes: light, views, condition, layout.
+   */
   notes?: Entry<string>;
+  /** The New comp window's other steps' notes (2026-11-11): each step keeps its own. Never a number. */
+  notesGeneral?: Entry<string>;
+  notesShared?: Entry<string>;
+  notesBuilding?: Entry<string>;
+  /** About the comps the agent picked (the Add comps step). */
+  notesComps?: Entry<string>;
   centralAir?: Entry<boolean>;
   dishwasher?: Entry<boolean>;
   fireplace?: Entry<boolean>;
   laundry?: Entry<LaundryState>;
+  /**
+   * The building's laundry (2026-11-11): on the home's floor, elsewhere in the building, or none. The
+   * building's "Laundry in building" feature follows it (workspace/home-notes.ts), so the comps still match on it.
+   */
+  buildingLaundry?: Entry<BuildingLaundry>;
+  /** The agent said the building has no shared outdoor space: a choice, not a blank (Kimani, 2026-11-11). */
+  noSharedOutdoor?: Entry<boolean>;
   outdoorKind?: Entry<OutdoorChoice>;
   outdoorSqft?: Entry<number>;
   views?: Entry<string[]>;
@@ -138,6 +158,8 @@ export interface ClientFacts {
   /** What the client would pay more for. */
   paysMoreFor?: Entry<string>;
   nonNegotiables?: Entry<string>;
+  /** The Client info step's notes (2026-11-11): anything else about them worth knowing. */
+  notes?: Entry<string>;
   /** Most important first: each at most once. */
   priorities?: ClientPriority[];
 }

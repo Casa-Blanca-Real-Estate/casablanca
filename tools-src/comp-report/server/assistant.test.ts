@@ -33,13 +33,25 @@ test('a conversation keeps the version it started on', () => {
 test('hb-voice (2026-11-06): hb-home with the chat voice, the step call-out and the calculator, its tools unchanged', () => {
   const voice = PROMPTS['hb-voice-2026-11-06']!;
   const home = PROMPTS['hb-home-2026-10-29']!;
-  assert.equal(CURRENT_PROMPT.id, voice.id);
   assert.deepEqual(voice.tools, home.tools);
   assert.ok(voice.system.startsWith(home.system.split('Be concise and plain-spoken')[0]!), 'everything before the old last line is kept');
   for (const part of ['Your voice in the chat.', "Meet the agent's energy", 'Where the agent is.', 'The calculator.', 'Building the comps together', 'never call it one']) {
     assert.ok(voice.system.includes(part), part);
   }
   assert.ok(!voice.system.includes('Be concise and plain-spoken'), 'the flat line is replaced');
+});
+
+test('hb-newcomp (2026-11-11): hb-voice with the New comp window, set_home_fact on its steps and set_client_fact', () => {
+  const next = PROMPTS['hb-newcomp-2026-11-11']!;
+  const voice = PROMPTS['hb-voice-2026-11-06']!;
+  assert.equal(CURRENT_PROMPT.id, next.id);
+  const names = (p: typeof next) => p.tools.map((t) => ('name' in t ? t.name : ''));
+  assert.deepEqual(names(next), [...names(voice), 'set_client_fact']);
+  // hb-home's set_home_fact is as it shipped: the new fields are only in the new version's.
+  const fields = (p: typeof next) => JSON.stringify(p.tools.find((t) => 'name' in t && t.name === 'set_home_fact'));
+  assert.ok(!fields(voice).includes('buildingLaundry') && !fields(voice).includes('notesGeneral'));
+  assert.ok(fields(next).includes('buildingLaundry') && fields(next).includes('notesGeneral') && fields(next).includes('noSharedOutdoor'));
+  for (const part of ['The New comp window.', 'set_client_fact', "The home's details. Use set_home_fact", 'Your voice in the chat.']) assert.ok(next.system.includes(part), part);
 });
 
 test('Stop: a withdraw marker takes its message and everything after it out, up to the marker', () => {

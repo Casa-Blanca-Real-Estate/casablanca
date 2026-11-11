@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CompJudgment } from '../../workspace/state.ts';
 import type { CompRecord, ListingStatus } from '../../engine/index.ts';
 import { noteOf } from '../../workspace/state.ts';
-import { homeUndoStands } from '../../workspace/home-edit.ts';
+import { homeUndoStands, type ClientSet } from '../../workspace/home-edit.ts';
 import { undoStands } from '../../workspace/trail-undo.ts';
 import { linksApi, type CompEdit, type HubertHomeEdit } from '../api.ts';
 import { Chat } from './Chat.tsx';
@@ -23,7 +23,7 @@ import { monthYear, shortPrice } from './sort/rows.ts';
 import { STATUS_LABEL } from './workspace/comps.tsx';
 import type { Workspace } from './workspace/model.ts';
 import { homeName } from './workspace/screens.ts';
-import { entry } from './workspace/bits.tsx';
+import { stepOf, type StepDef } from './newcomp/steps.ts';
 import { missingDetails } from './newcomp/start-words.ts';
 import { followUpState } from '../../workspace/next-steps.ts';
 import '../styles/hubert.css';
@@ -160,67 +160,47 @@ function StepNow({ step }: { step: GuideStep }) {
   );
 }
 
-const PRICE_WORDS = (n: number) => (n >= 1e6 ? `$${(Math.round(n / 1e4) / 100).toFixed(2).replace(/\.?0+$/, '')}M` : `$${Math.round(n / 1e3)}K`);
-
 /**
- * Start with Hubert (DP-20): beside step 2, what he took from the agent's words and what's still to do.
- * Written here, never generated. The side he defaulted can be switched in the bubble.
+ * Beside the New comp window (the design pass, 2026-11-11): his note about the listing (being read, read, or
+ * none to read for a typed address) and his note for the step the agent is on. Written here, never generated.
  */
-function StartNoteBubbles({ ws }: { ws: Workspace }) {
-  const note = ws.startNote;
-  if (!note || !ws.starting) return null;
-  const said = note.said;
-  const bits = [
-    said.side ? `a ${said.side} report` : null,
-    said.client ? `for ${said.client}` : null,
-    said.type ? (said.type === 'condo' ? 'a condo' : 'a co-op') : null,
-    said.price ? `${said.side === 'seller' ? 'the client’s target' : 'the client’s budget'} at ${PRICE_WORDS(said.price)}` : null,
-  ].filter(Boolean);
+function NewCompBubbles({ ws, step }: { ws: Workspace; step: StepDef }) {
   const home = ws.reads.filter((r) => r.purpose === 'subject').at(-1) ?? null;
-  const reading = note.from === 'link' && (!home || home.status === 'queued' || home.status === 'running');
-  const failed = note.from === 'link' && home?.status === 'failed';
+  const reading = Boolean(home && (home.status === 'queued' || home.status === 'running'));
   const missing = missingDetails(ws.intake);
-  const them = missing?.includes(' and ') ? 'them' : 'it';
-  const off = ws.readOnly;
+  const listing = reading
+    ? 'I’m reading the listing now. Anything you type meanwhile is kept.'
+    : home?.status === 'failed'
+      ? 'I couldn’t read the listing. Type the details in, or tell me them (“1,850 feet, 2 beds, floor 12”) and I’ll fill them in.'
+      : home?.status === 'done'
+        ? `I’ve read the listing: what it gave is in, each marked with a dot. Check them against what you know.${missing ? ` It didn’t give ${missing}: tell me and I’ll fill ${missing.includes(' and ') ? 'them' : 'it'} in.` : ''}`
+        : 'No listing to read, so the fields are yours. Tell me the details (“1,240 square feet, 2 beds, doorman and gym”) and I’ll fill them in.';
   return (
     <>
-      <div className="hb-bubble">
-        {bits.length ? `I’ve started the report from what you wrote: ${bits.join(', ')}.` : 'I’ve started the report from the listing.'}
-        {!said.side && (
-          <span className="hb-start-side">
-            {' '}You didn’t say buyer or seller, so it’s {ws.side === 'seller' ? 'a seller' : 'a buyer'} report for now:{' '}
-            {(['buyer', 'seller'] as const).map((a) => (
-              <button
-                key={a}
-                type="button"
-                className={`hb-start-pick${ws.side === a ? ' on' : ''}`}
-                aria-pressed={ws.side === a}
-                disabled={off}
-                onClick={() => ws.setBrief({ ...ws.brief, audience: entry(a, ws.today) })}
-              >{a === 'buyer' ? 'Buyer' : 'Seller'}</button>
-            ))}
-          </span>
-        )}
-        {!said.client && ' No client name yet: add it with ← Back.'}
-        {!said.type && (note.from === 'link' ? ' Co-op or Condo follows the listing once it’s read.' : ` It’s ${ws.propertyType === 'condo' ? 'a condo' : 'a co-op'} for now: change it with ← Back.`)}
-      </div>
-      <div className="hb-bubble" aria-live="polite">
-        {reading
-          ? 'I’m reading the listing now. The details fill in here as it lands, and you can carry on meanwhile.'
-          : failed
-            ? 'I couldn’t read the listing. Type the details in, or tell me them (“1,850 feet, 2 beds, floor 12”) and I’ll fill them in.'
-            : missing
-              ? `${note.from === 'link' ? 'The listing’s in. ' : ''}I don’t have ${missing} yet. Tell me (“it’s 1,850 feet, floor 12”) and I’ll fill ${them} in, or type ${them} in here.`
-              : 'The listing’s in, with the size, the rooms and the floor. Check them against what you know, then Next.'}
-      </div>
+      <div className="hb-bubble" aria-live="polite">{listing}</div>
+      <div className="hb-bubble">{step.hubert}</div>
     </>
   );
 }
 
-export function Hubert({ ws }: { ws: Workspace }) {
+/** "You're on / New comp · General": where the agent is in the window. */
+function NewCompNow({ step }: { step: StepDef }) {
+  return (
+    <div className="hb-now" aria-live="polite">
+      <span className="hb-now-label">You’re on</span>
+      <span className="hb-now-name">New comp · {step.label}</span>
+    </div>
+  );
+}
+
+/** Hubert's panel. On the right of the workspace; on the left of the New comp window (`side`). */
+export function Hubert({ ws, side = 'right' }: { ws: Workspace; side?: 'left' | 'right' }) {
   const home = homeName(ws.intake, ws.report.title);
   const sent = Boolean(ws.send.sentAt);
-  const s = ws.starting ? { hint: NEW_REPORT_HINT, chips: NEW_REPORT_CHIPS } : said(ws.screen, ws.side, ws.comps, home, sent);
+  const windowStep = ws.starting && ws.windowStep ? stepOf(ws.windowStep) : null;
+  const s = windowStep
+    ? { hint: '', chips: windowStep.asks.map((label): Chip => ({ label, kind: 'ask' })) }
+    : ws.starting ? { hint: NEW_REPORT_HINT, chips: NEW_REPORT_CHIPS } : said(ws.screen, ws.side, ws.comps, home, sent);
 
   // Done's "Reopen to edit": the sent mark comes off and Send opens, as Done's own Reopen does.
   function onAction(chip: Chip) {
@@ -234,13 +214,7 @@ export function Hubert({ ws }: { ws: Workspace }) {
   }
 
   // The New report window first: the workspace behind it is on Sort, but the agent is setting up the report.
-  const opening = ws.starting ? (
-    // A rough start (Kimani, 2026-10-29): Hubert beside the New report window, so the design pass has him to design against.
-    <>
-      <StartNoteBubbles ws={ws} />
-      <p className="hb-hint">{NEW_REPORT_HINT}</p>
-    </>
-  ) : ws.screen === 'sort' ? (
+  const opening = windowStep ? <NewCompBubbles ws={ws} step={windowStep} /> : ws.starting ? <p className="hb-hint">{NEW_REPORT_HINT}</p> : ws.screen === 'sort' ? (
     <>
       <div className="hb-bubble">{greeting(ws.agentFirstName)}</div>
       <div className="hb-bubble">{intro(ws.side)}</div>
@@ -259,9 +233,9 @@ export function Hubert({ ws }: { ws: Workspace }) {
       <div className="hb-head">
         <span className="hb-mark" aria-hidden="true">✦</span>
         <span className="hb-name">Hubert</span>
-        <button type="button" className="hb-close" aria-label="Close Hubert" title="Close" onClick={() => ws.setDrawerOpen(false)}>›</button>
+        <button type="button" className="hb-close" aria-label="Close Hubert" title="Close" onClick={() => ws.setDrawerOpen(false)}>{side === 'left' ? '‹' : '›'}</button>
       </div>
-      {!ws.readOnly && <StepNow step={ws.guideStep} />}
+      {windowStep ? <NewCompNow step={windowStep} /> : !ws.readOnly && <StepNow step={ws.guideStep} />}
       <Chat
         reportId={ws.reportId}
         readOnly={ws.readOnly}
@@ -271,21 +245,26 @@ export function Hubert({ ws }: { ws: Workspace }) {
         onAction={onAction}
         beforeAsk={ws.flush}
         onEmailEdit={ws.queueHubertEdit}
-        onHomeEdit={(edit) => ws.applyHomeSet(edit.set)}
+        onHomeEdit={(edit) => {
+          if (Object.keys(edit.set).length) ws.applyHomeSet(edit.set);
+          if (edit.client) ws.applyClientSet(edit.client);
+        }}
         onCompsChanged={ws.reloadComps}
-        guides={reachedGuides(ws.stepsAt, ws.side)}
+        // In the New comp window each step says its own piece (NewCompBubbles): the step guides wait for the workspace.
+        guides={windowStep ? [] : reachedGuides(ws.stepsAt, ws.side)}
         view={ws.view}
         queued={ws.hubertQuestion}
         onQueuedTaken={() => ws.askHubert(null)}
         undo={{
           // The comps and the home as the screen has them: Undo shows while the field still reads as he left it.
           can: (entry) => entry.kind === 'home'
-            ? homeUndoStands(entry, ws.intake)
+            ? homeUndoStands(entry, ws.intake, { brief: ws.brief, terms: ws.dealTerms })
             : undoStands(entry, ws.comps.find((c) => c.judgment?.reportCompId === entry.compId)?.judgment),
           // The agent's own edit: the intake's entries as they were, or through the same queue as their other comp edits.
           run: async (entry) => {
             if (entry.kind === 'home' && entry.undo) {
-              ws.applyHomeSet(entry.undo.edit as HubertHomeEdit['set']);
+              if (entry.field.startsWith('client.')) ws.applyClientSet((entry.undo.edit as { client: ClientSet }).client);
+              else ws.applyHomeSet(entry.undo.edit as HubertHomeEdit['set']);
               ws.toast(`${entry.label} put back.`);
               return;
             }
@@ -308,8 +287,8 @@ export function Hubert({ ws }: { ws: Workspace }) {
           if (entry.kind === 'email') {
             if (ws.screen !== 'send') ws.go('send');
           } else if (entry.kind === 'home') {
-            // The details step of the New report window, where the agent types them.
-            if (!ws.readOnly) ws.openStart('details');
+            // The New comp window, at the step that holds the field (Edit details once the report is under way).
+            if (!ws.readOnly && !ws.starting) ws.openStart('details');
           } else if (entry.compId) {
             // In the per-comp review, the review moves to that comp; otherwise Sort opens on its row.
             if (ws.reviewing) ws.openReview(entry.compId);

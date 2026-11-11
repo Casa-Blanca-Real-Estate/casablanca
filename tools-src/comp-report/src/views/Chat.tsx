@@ -24,7 +24,7 @@ const empty: Live = { text: '', progress: [], tools: [], changes: [], note: null
 const TOOL_WORDS: Record<string, string> = {
   get_numbers: 'the numbers', get_view: 'your screen', get_report: 'the report', get_email: 'the email', web_search: 'the web', read_page: 'a web page',
 };
-const CHANGES = new Set(['edit_email', 'edit_comp', 'set_home_fact', 'show_comp_link']);
+const CHANGES = new Set(['edit_email', 'edit_comp', 'set_home_fact', 'set_client_fact', 'show_comp_link']);
 
 /** What he's doing, in words, while he does it, with the dots moving (Kimani, 2026-11-06: not a static box). */
 function Working({ text }: { text: string }) {

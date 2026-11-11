@@ -181,35 +181,24 @@ body:has(.sh-account) #cb-chrome-r .cb-whoami { display: none; }
 .sh-pick-stage { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #d8d6d0; }
 .sh-pick-stage .sq.sent { border-color: #fff; }
 .sh-pick-go { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.sh-start { display: flex; flex-direction: column; gap: 10px; }
-.sh-start-head { position: relative; display: flex; align-items: center; gap: 10px; }
-.sh-start-spark { font-size: 22px; line-height: 1; color: var(--cb-lavender); }
-.sh-start-label { font-size: 11px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--cb-lavender); }
-.sh-tip {
-  flex-shrink: 0; width: 18px; height: 18px; padding: 0; border: 1px solid #888680; border-radius: 50%;
-  background: none; color: var(--cb-sand); font: inherit; font-size: 10px; cursor: pointer;
+/* + NEW COMP morphs (new-comp.md §1, 2026-11-11): a field grows out to its left and it becomes START →. */
+.sh-nc { display: inline-flex; align-items: flex-end; gap: 12px; }
+.sh-nc-field { position: relative; display: block; overflow: hidden; max-width: 0; opacity: 0; transition: max-width .42s cubic-bezier(.2,.7,.2,1), opacity .3s ease; }
+.sh-nc.open .sh-nc-field { max-width: 520px; opacity: 1; transition: max-width .42s cubic-bezier(.2,.7,.2,1), opacity .3s ease .12s; overflow: visible; }
+.sh-nc-input {
+  width: 520px; max-width: 100%; box-sizing: border-box; min-width: 320px; border: 0; border-bottom: 1px solid var(--cb-black);
+  background: transparent; font: inherit; font-size: 14px; padding: 10px 0; outline: none;
 }
-.sh-tip:hover, .sh-tip:focus-visible { border-color: #fff; color: #fff; }
-.sh-tip-card {
-  position: absolute; top: 30px; left: 0; z-index: 6; width: 300px; padding: 10px 12px;
-  background: #fff; color: var(--cb-black); font-size: 12px; line-height: 1.5; box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
-}
-.sh-start-row { display: flex; align-items: flex-end; gap: 12px; }
-.sh-start-input {
-  flex: 1; min-width: 0; border: 0; border-bottom: 1px solid #888680; background: transparent; color: #fff;
-  font-size: 15px; padding: 10px 0;
-}
-.sh-start-input::placeholder { color: #a9a7a1; }
-.sh-start-input:hover { border-bottom-color: #fff; }
-.sh-start-input:focus { border-color: transparent; border-bottom: 2px solid var(--cb-lavender); padding-bottom: 9px; }
-.sh-start-go {
-  font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
-  background: var(--cb-lavender); color: var(--cb-black); border: 0; padding: 12px 16px; cursor: pointer;
-}
-.sh-start-go:hover { background: #fff; }
-.sh-start-go:disabled, .sh-start-input:disabled { opacity: .6; cursor: default; }
-.sh-start-busy { font-size: 13px; color: var(--cb-lavender); }
-.sh-start-err { font-size: 13px; color: #ffb4a8; }
+.sh-nc-input::placeholder { color: var(--cb-mid); }
+.sh-nc-input:focus { border-bottom: 2px solid var(--cb-deep); padding-bottom: 9px; }
+.sh-nc-msg { position: absolute; left: 0; top: calc(100% + 6px); font-size: 12px; color: var(--cb-deep); white-space: nowrap; }
+.sh-nc-msg.error { color: var(--cb-red); white-space: normal; width: 100%; }
+.sh-nc-go { min-width: 132px; height: 44px; }
+.sh-nc-x-wrap { display: block; overflow: hidden; width: 0; opacity: 0; transition: width .3s ease, opacity .25s ease; }
+.sh-nc.open .sh-nc-x-wrap { width: 36px; opacity: 1; }
+.sh-nc-x { width: 36px; height: 36px; border: 0; background: none; font-size: 18px; color: var(--cb-mid); cursor: pointer; transition: background-color .15s, color .15s; }
+.sh-nc-x:hover { background: #f1effa; color: var(--cb-black); }
+@media (prefers-reduced-motion: reduce) { .sh-nc-field, .sh-nc-x-wrap { transition: none; } }
 /* Hubert's follow-up reminder (Done's What's next): the pick-up card's look, a lavender rule. */
 .sh-follow { border-left: 3px solid var(--cb-lavender); }
 .sh-follow .sh-pick-eyebrow { color: var(--cb-lavender); }

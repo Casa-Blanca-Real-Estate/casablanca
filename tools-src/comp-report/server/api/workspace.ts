@@ -365,7 +365,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 function checkClient(client: unknown) {
   if (client === undefined) return;
   if (!isObject(client)) throw new HttpError(400, 'bad_client', 'The client’s facts are an object.');
-  const { urgency, paysMoreFor, nonNegotiables, priorities, motivations } = client;
+  const { urgency, paysMoreFor, nonNegotiables, priorities, motivations, notes } = client;
   if (urgency !== undefined) {
     if (!isObject(urgency)) throw new HttpError(400, 'bad_client', 'Urgency is an object.');
     if (urgency.pace !== undefined && (!isObject(urgency.pace) || !(CLIENT_PACES as readonly unknown[]).includes(urgency.pace.value))) {
@@ -379,6 +379,7 @@ function checkClient(client: unknown) {
   checkText('What they’d pay more for', paysMoreFor);
   checkText('Non-negotiables', nonNegotiables);
   checkText('What’s moving them', motivations);
+  checkText('Notes', notes);
   if (priorities !== undefined) {
     const ok = Array.isArray(priorities)
       && priorities.every((p) => (CLIENT_PRIORITIES as readonly unknown[]).includes(p))

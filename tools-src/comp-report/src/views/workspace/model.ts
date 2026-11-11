@@ -7,13 +7,13 @@ import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
+import type { ClientSet } from '../../../workspace/home-edit.ts';
 import type { CompJudgment, GuideStep, Outcomes, Reached, RevealPin } from '../../../workspace/state.ts';
 import type { ScreenId, SortReadiness } from './screens.ts';
 import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
 } from '../../../workspace/state.ts';
-import type { StartScreen } from '../newcomp/NewComp.tsx';
-import type { StartNote } from '../newcomp/start-words.ts';
+import type { StartScreen, StepKey } from '../newcomp/steps.ts';
 
 
 export interface Workspace {
@@ -62,7 +62,7 @@ export interface Workspace {
   geocodes: GeocodeView[];
   /** The located ones, by building key: what distance reads. */
   locations: ReadonlyMap<string, Location>;
-  /** Opens the new-comp modal on one of its screens: the home, its details, or adding comps. */
+  /** Opens the New comp window on one of its steps, or as Edit details ('details'). */
   openStart: (screen: StartScreen) => void;
 
   output: EngineOutput | null;
@@ -137,10 +137,11 @@ export interface Workspace {
   suggestions: { judgment: CompJudgment; record: CompRecord }[];
   /** Every comp the agent took out, for Sort's "Removed" fold (Dispatch 15): each can be put back. */
   removed: WorkspaceComp[];
-  /** The New report window is open (the home, its details, add comps): Hubert sits beside it. */
+  /** The New comp window is open (the target property in steps, then the comps): Hubert sits beside it, on the left. */
   starting: boolean;
-  /** Start with Hubert's note, when the report was started from his field on Reports: what he took from the agent's words. */
-  startNote: StartNote | null;
+  /** The window's step showing, for Hubert's panel and get_view; null when it's closed. */
+  windowStep: StepKey | null;
+  setWindowStep: (step: StepKey | null) => void;
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
@@ -170,6 +171,8 @@ export interface Workspace {
   takeHubertEdits: (n: number) => void;
   /** Hubert's edit to the home's details (server/hubert-home.ts), or its Undo: the entries written into the intake. */
   applyHomeSet: (set: HubertHomeEdit['set']) => void;
+  /** Hubert's edit to the client's facts (server/hubert-client.ts), or its Undo: the brief's and the deal terms' entries. */
+  applyClientSet: (set: ClientSet) => void;
   outcomes: Outcomes;
   setOutcomes: (next: Outcomes) => void;
   /** Done's "What's next" ticks (the design pass). */
