@@ -50,6 +50,7 @@ briefs beside this file, and all three are built and released:
 | `email-restyle.md` | The Designed email: hero text on the photo, lead-in headlines, the range on white, photo cards, market rows, "Best," and the square headshot | #139 |
 | `send.md` | Send: full width, the preview filling the window with edit in place, the rail, the one step button (Read → Copy & open in Gmail → Mark as sent), Ask Hubert to review | #139 |
 | `reports-and-workspace.md` | Reports, the shared top bar, Done, and a light pass on Sort, the Gate and Findings | the overnight build of 2026-11-06 (this round) |
+| `new-comp.md` | New comp: + NEW COMP morphs into the field and START; the target property in seven steps on its own page, Hubert on the left (2026-11-11) | not built yet |
 
 **What this round changed, surface by surface** (before and after screenshots at 1440 and 2400 wide are in
 Kimani's project files, `design-pass-2-before/` and `design-pass-2-after/`):
