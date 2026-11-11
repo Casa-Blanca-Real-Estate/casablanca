@@ -15,6 +15,28 @@ only what's live on production, and it runs behind. Anything this brief calls "b
 and what landed before that in [section 0](#0-since-this-was-written-2026-11-05). Sections 1 to 12 still describe the
 tool as of #110; where 0a says a surface was rebuilt, 0a wins.
 
+**Standardize the design elements (Kimani, 2026-11-11).** His walk through the New comp window found the same piece
+looking different from one place to the next. One field heading was heavy and grey while its neighbours were regular
+and black. Typed numbers were grey while typed text was black. A tooltip was cut off by the window it sat in. These
+came from the old forms' base styles leaking into new screens, not from a design choice. The design track should
+define each element once and reuse it everywhere. The elements are:
+
+- the field heading (eyebrow)
+- the text input, the number input and the money input
+- the notes box
+- the chip, the segmented choice, and Yes/No
+- the ⓘ and its tooltip
+- the search dropdown (the neighborhood picker)
+- the primary, secondary and link buttons
+- the "filled from the listing" dot
+- the inline note
+
+A build should use those and not restyle them locally. Two rules for every element: typed text is ink, never grey,
+and only placeholders are grey. Every tooltip draws above everything, never clipped by a window or panel; the ⓘ's
+tip (`Info`, `src/views/newcomp/Frame.tsx`) already does. The New comp window (`src/styles/newcomp.css`) is the
+closest to the canvas today. Where an element differs between it and the older screens, the window's version is the
+one to standardize on, unless the design says otherwise.
+
 **Design for laptop and tablet widths only (Kimani, 2026-10-29).** Agents won't use the tool on phones for
 now; phone layouts get their own design later. Don't design phone breakpoints, and skip the phone screenshots.
 

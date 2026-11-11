@@ -1,7 +1,8 @@
 // What the New comp window (Window.tsx) shares with the rest of the tool: the ⓘ, the close guard a
 // half-typed comp sets, and the mark that tells a new report's window from Edit details across a reload.
 // (Until 2026-11-11 this was also the modal's frame: an 820px card on a dark scrim, "N of 3".)
-import { createContext, useContext, useEffect, useId, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import '../../styles/newreport.css';
 
 /** Something half-done inside the window (a comp form with text in it) that Escape or ✕ would drop. */
@@ -22,15 +23,43 @@ export function useCloseGuard(on: boolean): void {
 }
 
 /**
- * The ⓘ: its text shows on hover, on focus and on a click (touch). The line it
- * sits in positions the tip (position: relative), so it never runs off the card.
+ * The ⓘ: its text shows on hover, on focus and on a click (touch). The tip is drawn on the page itself, above
+ * everything (Kimani 2026-11-11: no tooltip is ever cut off by a window or a panel), beside its ⓘ: under it, or
+ * over it when there's no room below, and kept inside the screen.
  */
 export function Info({ text, label, align = 'right' }: { text: string; label: string; align?: 'left' | 'right' }) {
   const [open, setOpen] = useState(false);
+  const [at, setAt] = useState<{ top: number; left: number } | null>(null);
   const id = useId();
+  const button = useRef<HTMLButtonElement>(null);
+  const tip = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    if (!open) return setAt(null);
+    const place = () => {
+      const b = button.current?.getBoundingClientRect();
+      const t = tip.current?.getBoundingClientRect();
+      if (!b || !t) return;
+      const gap = 8;
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      let left = align === 'right' ? b.right - t.width : b.left;
+      left = Math.max(gap, Math.min(left, vw - t.width - gap));
+      let top = b.bottom + 6;
+      if (top + t.height > vh - gap && b.top - 6 - t.height >= gap) top = b.top - 6 - t.height;
+      setAt({ top, left });
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open, align, text]);
   return (
     <>
       <button
+        ref={button}
         type="button"
         className="nr-info"
         aria-label={label}
@@ -44,7 +73,19 @@ export function Info({ text, label, align = 'right' }: { text: string; label: st
       >
         ⓘ
       </button>
-      <span role="tooltip" id={id} className={`nr-tip ${align}`} hidden={!open}>{text}</span>
+      {createPortal(
+        <span
+          ref={tip}
+          role="tooltip"
+          id={id}
+          className="nr-tip floating"
+          hidden={!open}
+          style={at ? { top: at.top, left: at.left } : { top: -9999, left: -9999 }}
+        >
+          {text}
+        </span>,
+        document.body,
+      )}
     </>
   );
 }

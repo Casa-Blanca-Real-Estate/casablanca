@@ -74,7 +74,7 @@ body:has(.nc-hub.resizing) .nc-stage { transition: none; }
   transition: background-color .15s, border-color .15s;
 }
 .nc-se:hover { border-color: #032765; background: #f2f5fa; }
-.nc-se-logo { width: 66px; height: 11px; display: block; }
+.nc-se-logo { width: auto; height: 12px; display: block; }
 .nc-se-note { font-size: 11px; color: #6f6d68; display: flex; align-items: center; }
 .nc-se-note .nc-dot { margin: 0 5px 0 0; }
 .nc-addlink { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 6px; }
@@ -206,3 +206,17 @@ body:has(.nc-hub.resizing) .nc-stage { transition: none; }
   .nc-hub, .nc-window, .nc-pane.in-f, .nc-pane.in-b { animation: none; }
   .nc-stage, .nc-rb > span { transition: none; }
 }
+
+/* The app's base label (styles.css: 11px, heavy, grey, capitals) is the old forms'. In the window a label takes
+   its look from where it sits: a field's heading is .nc-k, typed text is black (Kimani 2026-11-11). */
+.nc-page label:not(.nc-k) { font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; }
+.nc-page .nr-num input { color: var(--cb-black); }
+.nc-page .nr-num.invalid input { color: var(--cb-red); }
+
+/* The neighborhood, with StreetEasy's names to pick from as it's typed. */
+.nc-hood-field { margin-top: 28px; max-width: 460px; }
+.nc-hood { position: relative; }
+.nc-hood-list { position: fixed; z-index: 2147482000; margin: 0; padding: 4px 0; list-style: none; background: #fff; border: 1px solid var(--cb-black); box-shadow: 0 10px 28px rgba(15, 15, 15, .12); max-height: 296px; overflow-y: auto; }
+.nc-hood-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; font-size: 14px; cursor: pointer; }
+.nc-hood-list li.on { background: #f2f1ec; }
+.nc-hood-boro { font-size: 11px; color: #6f6d68; letter-spacing: .04em; }

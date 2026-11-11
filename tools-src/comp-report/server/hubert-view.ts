@@ -20,10 +20,10 @@ export type ViewScreen = (typeof VIEW_SCREENS)[number];
 const NEW_REPORT_STEPS = ['basics', 'general', 'shared', 'amenities', 'building', 'client', 'comps', 'home', 'details'] as const;
 const STEP_WORDS: Record<(typeof NEW_REPORT_STEPS)[number], string> = {
   basics: 'Basics: buyer or seller, co-op or condo, the client’s name and their budget or target',
-  general: 'General: the size, beds, baths, rooms, floor, asking price and the monthly costs',
+  general: 'General: the size, beds, baths, rooms, floor, asking price, the monthly costs and the neighborhood',
   shared: 'Laundry and outdoor space: the home’s own and the building’s',
   amenities: 'Home amenities: condition, views, exposure, corner, dishwasher, central air, fireplace',
-  building: 'Building amenities: neighborhood, year built, resale or new development, services, wellness, policies',
+  building: 'Building amenities: year built, resale or new development, services, wellness, policies',
   client: 'Client info: financing, pre-approval, how soon, what’s moving them (optional)',
   comps: 'Add comps: the export and listing links',
   home: 'the home: its StreetEasy link or address',

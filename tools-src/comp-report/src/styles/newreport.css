@@ -53,6 +53,8 @@
 .nr-tip.right { right: 0; }
 .nr-tip.left { left: 0; }
 .nr-tip[hidden] { display: none; }
+/* The ⓘ's tip, drawn on the page above everything (Info, Frame.tsx): never cut off by a window or a panel. */
+.nr-tip.floating { position: fixed; right: auto; z-index: 2147483000; white-space: normal; text-align: left; pointer-events: none; }
 
 /* ─── 1 of 3: which home ─────────────────────────────────────────────────── */
 .nr-home { display: flex; flex-direction: column; gap: 14px; }

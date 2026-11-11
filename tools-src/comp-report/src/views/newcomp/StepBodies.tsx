@@ -3,7 +3,8 @@
 // the same intake, brief, target and deal terms as before, so nothing downstream changes. Nothing is picked
 // by default: None is a choice the agent clicks, a blank means nobody said (Kimani, 2026-11-11). A lavender
 // dot after a field's label marks what came from StreetEasy.
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { LaundryState, PropertyType as EngineType } from '../../../engine/index.ts';
 import { withBuyerFinance } from '../../../workspace/client.ts';
 import { fairHousingFindings } from '../../../workspace/fair-housing.ts';
@@ -20,6 +21,7 @@ import { inFlight } from '../workspace/reads.ts';
 import { Info } from './Frame.tsx';
 import { TARGET_TIP, targetText } from './Home.tsx';
 import { NrNumber } from './inputs.tsx';
+import NEIGHBORHOODS from '../../../workspace/data/streeteasy-neighborhoods.json';
 
 /** The lavender dot after a label: this came from its StreetEasy page. */
 export function Dot({ on }: { on: boolean | undefined }) {
@@ -302,6 +304,111 @@ export function GeneralStep({ ws }: { ws: Workspace }) {
         {money('commonCharges', coop ? 'Maintenance / mo' : 'Common charges / mo')}
         {money('taxes', 'Taxes / mo')}
       </div>
+      <div className="nc-field nc-hood-field">
+        <span className="nc-k">Neighborhood<Dot on={fromPage(intake.neighborhood)} /></span>
+        <NeighborhoodInput
+          value={intake.neighborhood?.value ?? ''}
+          disabled={off}
+          onChange={(v) => set('neighborhood', v.trim() ? entry(v, today) : undefined)}
+        />
+      </div>
+    </div>
+  );
+}
+
+// The neighborhood, as StreetEasy writes it (Kimani 2026-11-11): typing shows its names to pick from, so every report
+// spells it the same way. A name not on the list is kept as typed (the list is StreetEasy's, read 2026-10-21).
+const HOODS = (NEIGHBORHOODS as { name: string; borough: string }[]);
+const fold = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const HOOD_KEYS = HOODS.map((h) => ({ ...h, key: fold(h.name) }));
+
+export function hoodMatches(typed: string, max = 8): { name: string; borough: string }[] {
+  const q = fold(typed);
+  if (!q) return [];
+  const starts = HOOD_KEYS.filter((h) => h.key.startsWith(q));
+  const words = HOOD_KEYS.filter((h) => !h.key.startsWith(q) && h.key.split(' ').some((w) => w.startsWith(q)));
+  const within = HOOD_KEYS.filter((h) => !h.key.startsWith(q) && !h.key.split(' ').some((w) => w.startsWith(q)) && h.key.includes(q));
+  return [...starts, ...words, ...within].slice(0, max).map(({ name, borough }) => ({ name, borough }));
+}
+
+function NeighborhoodInput({ value, disabled, onChange }: { value: string; disabled: boolean; onChange: (v: string) => void }) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const list = open ? hoodMatches(value) : [];
+  const exact = list.length === 1 && list[0]!.name === value;
+  const showing = list.length > 0 && !exact;
+  const pick = (name: string) => {
+    onChange(name);
+    setOpen(false);
+  };
+  // The list draws on the page, above everything, under the field (or over it when there's no room below).
+  const field = useRef<HTMLInputElement>(null);
+  const [at, setAt] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!showing) return setAt(null);
+    const place = () => {
+      const r = field.current?.getBoundingClientRect();
+      if (!r) return;
+      const vh = window.innerHeight;
+      const below = vh - r.bottom - 8;
+      setAt(below >= 220 || below >= r.top - 8
+        ? { left: r.left, width: r.width, top: r.bottom + 2 }
+        : { left: r.left, width: r.width, bottom: vh - r.top + 2 });
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [showing]);
+  return (
+    <div className="nc-hood">
+      <input
+        ref={field}
+        className="nc-input"
+        role="combobox"
+        aria-expanded={showing}
+        aria-controls={`${id}-list`}
+        aria-autocomplete="list"
+        aria-activedescendant={showing ? `${id}-${active}` : undefined}
+        aria-label="Neighborhood"
+        value={value}
+        disabled={disabled}
+        maxLength={80}
+        placeholder="Start typing: Tribeca, Park Slope…"
+        autoComplete="off"
+        onChange={(e) => { onChange(e.target.value); setOpen(true); setActive(0); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onKeyDown={(e) => {
+          if (!showing) return;
+          if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, list.length - 1)); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+          else if (e.key === 'Enter') { e.preventDefault(); pick(list[active]!.name); }
+          else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); }
+        }}
+      />
+      {showing && createPortal(
+        <ul className="nc-hood-list" id={`${id}-list`} role="listbox" aria-label="StreetEasy’s neighborhoods" style={at ?? { visibility: 'hidden' }}>
+          {list.map((h, n) => (
+            <li
+              key={h.name}
+              id={`${id}-${n}`}
+              role="option"
+              aria-selected={n === active}
+              className={n === active ? 'on' : ''}
+              onMouseDown={(e) => { e.preventDefault(); pick(h.name); }}
+              onMouseEnter={() => setActive(n)}
+            >
+              <span>{h.name}</span><span className="nc-hood-boro">{h.borough}</span>
+            </li>
+          ))}
+        </ul>,
+        document.body,
+      )}
     </div>
   );
 }
@@ -390,12 +497,6 @@ export function BuildingStep({ ws }: { ws: Workspace }) {
   const { intake, today, readOnly: off } = ws;
   return (
     <div className="nc-rows">
-      <label className="nc-row">
-        <span className="nc-row-k"><span className="nc-k">Neighborhood<Dot on={fromPage(intake.neighborhood)} /></span></span>
-        <span className="nc-chips">
-          <input className="nc-input nc-input-short" value={intake.neighborhood?.value ?? ''} disabled={off} maxLength={80} placeholder="—" onChange={(e) => set('neighborhood', e.target.value.trim() ? entry(e.target.value, today) : undefined)} />
-        </span>
-      </label>
       <label className="nc-row">
         <span className="nc-row-k"><span className="nc-k">Year built<Dot on={fromPage(intake.yearBuilt)} /></span></span>
         <span className="nc-chips">
