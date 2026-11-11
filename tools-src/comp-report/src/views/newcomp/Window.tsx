@@ -26,6 +26,7 @@ import { KIND_LABEL } from '../../../workspace/features.ts';
 import { AmenitiesStep, BasicsStep, BuildingStep, ClientStep, CompsStep, GeneralStep, SharedStep, StepNotes } from './StepBodies.tsx';
 import { EDIT_STEPS, STEPS, type StartScreen, type StepDef, type StepKey } from './steps.ts';
 import '../../styles/newcomp.css';
+import seLogo from '../../assets/streeteasy-logo.svg';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -118,11 +119,8 @@ export function readPercent(elapsedMs: number): number {
   return Math.min(99, Math.max(1, Math.round(100 * (1 - Math.exp(-elapsedMs / 40_000)))));
 }
 
-const SE_LOGO = (
-  <svg className="nc-se-logo" viewBox="0 0 92 14" aria-hidden="true">
-    <text x="0" y="11.5" fontFamily="Helvetica, Arial, sans-serif" fontSize="13" fontWeight="700" fill="#032765" letterSpacing="-0.2">StreetEasy</text>
-  </svg>
-);
+// StreetEasy's own logo (dark blue), as Kimani gave it (2026-11-11).
+const SE_LOGO = <img className="nc-se-logo" src={seLogo} alt="" aria-hidden="true" />;
 
 function HomeRow({ ws, home, refused }: { ws: Workspace; home: LinkReadView | null; refused: string | null }) {
   const reading = Boolean(home && (home.status === 'queued' || home.status === 'running'));
