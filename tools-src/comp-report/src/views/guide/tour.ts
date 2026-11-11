@@ -20,44 +20,44 @@ export interface TourTip {
 
 export const TIPS: TourTip[] = [
   {
-    id: 'reports-start', screen: 'reports', targets: ['.sh-start', '.sh-hero .btn.primary'],
+    id: 'reports-start', screen: 'reports', targets: ['.sh-nc'],
     title: 'Start a report here',
-    body: 'Paste the home’s StreetEasy link and say who it’s for, like “buyer, Jordan and Sam”. Or use + New comp.',
+    body: 'Click + New comp, paste the home’s StreetEasy link (or type its address) and press Start.',
   },
   {
-    id: 'home-link', screen: 'new-report', targets: ['.nr-line'],
+    id: 'home-link', screen: 'new-report', targets: ['.nc-home'],
     title: 'The home you’re pricing',
-    body: 'Paste its StreetEasy link, or type its address. The link fills in most of the details for you.',
+    body: 'The link fills in most of the details for you. Everything it filled is marked with a dot.',
   },
   {
-    id: 'home-side', screen: 'new-report', targets: ['.nr-pair'],
+    id: 'home-side', screen: 'new-report', targets: ['.nc-basics'],
     title: 'Who it’s for',
-    body: 'Pick Buyer or Seller, add the client’s name, and check Co-op or Condo.',
+    body: 'Pick Buyer or Seller, check Co-op or Condo, and add the client’s name.',
   },
   {
-    id: 'home-next', screen: 'new-report', targets: ['.nr-foot .btn.primary'],
+    id: 'home-next', screen: 'new-report', targets: ['.nc-foot .nc-bp'],
     title: 'Then go on',
-    body: 'Once the home is matched, this takes you to its details.',
+    body: 'Next takes you through the home’s details, one step at a time.',
   },
   {
-    id: 'details-size', screen: 'new-report-details', targets: ['.nr-size', '.nr-sec'],
+    id: 'details-size', screen: 'new-report-details', targets: ['.nc-size', '.nc-pane'],
     title: 'Check the size first',
     body: 'Every comp is compared against these details, and the size matters most. Fix anything the listing got wrong.',
   },
   {
-    id: 'details-next', screen: 'new-report-details', targets: ['.nr-foot .btn.primary'],
+    id: 'details-next', screen: 'new-report-details', targets: ['.nc-foot .nc-bp'],
     title: 'Then add your comps',
-    body: 'Floor, outdoor space, views and condition help too, but they can wait.',
+    body: 'Outdoor space, amenities and the client help too. Skip for now leaves them for later.',
   },
   {
     id: 'comps-paste', screen: 'new-report-comps', targets: ['.paste-bar', '.add-bar'],
     title: 'Bring in your comps',
-    body: 'Drop the StreetEasy export or its PDF anywhere on this window, paste listing links here, or Type one in.',
+    body: 'Drop the StreetEasy export or its PDF on this step, paste listing links here, or Type one in.',
   },
   {
-    id: 'comps-next', screen: 'new-report-comps', targets: ['.nr-foot .btn.primary'],
+    id: 'comps-next', screen: 'new-report-comps', targets: ['.nc-foot .nc-bp'],
     title: 'On to Sort',
-    body: 'A comp read from a link asks you to confirm it. When they’re in, go to Sort.',
+    body: 'A comp read from a link asks you to confirm it. When they’re in, Open workspace takes you to Sort.',
   },
   {
     id: 'sort-row', screen: 'sort', targets: ['.so-row-wrap.incomplete .so-row', '.so-row'],

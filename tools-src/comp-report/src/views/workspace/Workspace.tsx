@@ -15,7 +15,7 @@ import { agentCardApi, ApiError, clientWordsApi, geocodeApi, maySample, reviewAp
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { cleanAllClientRounds } from '../../../workspace/client-words.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
-import { applyHomeSet } from '../../../workspace/home-edit.ts';
+import { applyClientSet, applyHomeSet } from '../../../workspace/home-edit.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
 import { answerResult } from '../../../workspace/reading.ts';
@@ -24,8 +24,8 @@ import {
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
-import { StartFlow, type StartScreen } from '../newcomp/NewComp.tsx';
-import { readStartNote, startNoteKey, type StartNote } from '../newcomp/start-words.ts';
+import { guideStepOf, loggedScreen, startFromParam, type StartScreen, type StepKey } from '../newcomp/steps.ts';
+import { NewCompWindow } from '../newcomp/Window.tsx';
 import type { StepId } from './About.tsx';
 import { BuildNotesContext, useBuildNotesSwitch } from './buildNotes.tsx';
 import { Done } from './Done.tsx';
@@ -140,11 +140,11 @@ function readViewAsNew(): boolean {
   }
 }
 
-/** The new-comp modal's screen, from ?start= (and CR-3a's ?step=home and ?step=export, which it replaces). */
+/** The New comp window's step, from ?start= (and CR-3a's ?step=home and ?step=export, which it replaces). */
 function startFromUrl(): StartScreen | null {
   const q = new URLSearchParams(location.search);
-  const start = q.get('start');
-  if (start === 'home' || start === 'details' || start === 'comps') return start;
+  const start = startFromParam(q.get('start'));
+  if (start) return start;
   const step = q.get('step');
   return step === 'home' ? 'details' : step === 'export' ? 'comps' : null;
 }
@@ -173,22 +173,14 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [state, setStateState] = useState<WorkspaceState>({});
   const [screen, setScreen] = useState<ScreenId>(screenFromUrl);
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
-  // The activity log's screen line (Dispatch 22b): the new report's steps while its modal is open, else the screen.
+  // The step the New comp window shows (Edit details keeps its own, so it's set from the window).
+  const [windowStep, setWindowStep] = useState<StepKey | null>(null);
+  // The activity log's screen line (Dispatch 22b): the New comp window's steps while it's open, else the screen.
   useEffect(() => {
-    trackScreen(start === 'home' ? 'new-report' : start ? (`new-report-${start}` as const) : screen, reportId);
-  }, [start, screen, reportId]);
-  // Start with Hubert (Reports' hero) hands over his note: what he took from the agent's words. He opens beside step 2 with it.
-  const [startNote] = useState<StartNote | null>(() => {
-    try {
-      const key = startNoteKey(reportId);
-      const note = readStartNote(sessionStorage.getItem(key));
-      sessionStorage.removeItem(key);
-      return note;
-    } catch {
-      return null;
-    }
-  });
-  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work' || Boolean(startNote));
+    trackScreen(start ? loggedScreen(windowStep ?? start) : screen, reportId);
+  }, [start, windowStep, screen, reportId]);
+  // Hubert opens by default beside the New comp window (the design pass, 2026-11-11).
+  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work' || Boolean(startFromUrl()));
   // The drawer stays mounted for its slide out (shell.css), then goes (Kimani's notebook, 2026-10-27).
   const [drawerShown, setDrawerShown] = useState(drawerOpen);
   useEffect(() => {
@@ -499,14 +491,14 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const viewRef = useRef<() => HubertView>(() => ({ screen: 'sort', compId: null }));
   viewRef.current = () => {
     // The New report window sits over whatever screen is behind it: it's what the agent sees.
-    if (start) return { screen: 'new_report', compId: null, step: start };
+    if (start) return { screen: 'new_report', compId: null, step: windowStep ?? start };
     const inReview = Boolean(reviewing) && screen === 'sort';
     const at = inReview ? lookingRef.current.review : screen === 'sort' ? lookingRef.current.sort : null;
     return { screen: inReview ? 'review' : screen, compId: at, ...(screen === 'sort' ? { order: lookingRef.current.order } : {}) };
   };
   // Hubert's step guides (2026-10-28): the first time the agent reaches each step, it's noted, and his chat
   // shows that step's guide from then on. The owner's only: a mentor reading the report changes nothing.
-  const guideStep: GuideStep = start ?? (reviewing && screen === 'sort' ? 'review' : screen);
+  const guideStep: GuideStep = start ? guideStepOf(windowStep ?? start) : (reviewing && screen === 'sort' ? 'review' : screen);
   useEffect(() => {
     if (!data || readOnlyRef.current || stateRef.current.stepsAt?.[guideStep]) return;
     setState({ ...stateRef.current, stepsAt: { ...stateRef.current.stepsAt, [guideStep]: new Date().toISOString() } });
@@ -688,7 +680,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     suggestions,
     removed,
     starting: Boolean(start),
-    startNote,
+    windowStep: start ? (windowStep ?? (start === 'details' ? 'basics' : start)) : null,
+    setWindowStep,
     drawerOpen,
     setDrawerOpen,
     reloadComps,
@@ -722,6 +715,16 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     applyHomeSet: (set) => {
       if (readOnlyRef.current) return;
       setState({ ...stateRef.current, intake: applyHomeSet(stateRef.current.intake ?? {}, set) });
+    },
+    // Hubert's edit to the client's facts (set_client_fact), or its Undo: Client info's fields, as the agent's own typing writes them.
+    applyClientSet: (set) => {
+      if (readOnlyRef.current) return;
+      const next = applyClientSet(brief, stateRef.current.dealTerms ?? null, set);
+      if (JSON.stringify(next.brief) !== JSON.stringify(brief)) {
+        setBriefState(next.brief);
+        save.queue('brief', next.brief);
+      }
+      if (JSON.stringify(next.terms) !== JSON.stringify(stateRef.current.dealTerms ?? null)) setState({ ...stateRef.current, dealTerms: next.terms });
     },
     outcomes: state.outcomes ?? {},
     setOutcomes: (next: Outcomes) => setState({ ...stateRef.current, outcomes: next }),
@@ -831,6 +834,42 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const sortLocked = !readOnly && !readiness.ready && (screen === 'gate' || screen === 'findings' || screen === 'send');
   const stepFor: Record<ScreenId, StepId> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
   const step = stepFor[screen];
+  const toastEl = toastText && (
+    <div className={`toast sh-toast${drawerOpen && !start ? ' with-drawer' : ''}`} role="status">
+      {toastText.text}
+      {toastText.action && (
+        <button
+          type="button"
+          className="sh-toast-action"
+          onClick={() => {
+            const run = toastText.action!.run;
+            setToastText(null);
+            run();
+          }}
+        >
+          {toastText.action.label}
+        </button>
+      )}
+    </div>
+  );
+  // The New comp window has the page to itself (the design pass, 2026-11-11): the top bar, the window, and
+  // Hubert's panel on its left. Over it, a save or a server call says what it's doing, and what went wrong.
+  if (start) {
+    return (
+      <BuildNotesContext.Provider value={buildNotes}>
+        <ReportBar ws={ws} setDevTools={setBuildNotes} />
+        <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
+          <NewCompWindow ws={ws} screen={start} onScreen={openStart} onDone={closeStart} onReports={onBack} />
+        </ErrorBoundary>
+        {(busy || actionError) && (
+          <div className="sh-modal-notes">
+            <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
+          </div>
+        )}
+        {toastEl}
+      </BuildNotesContext.Provider>
+    );
+  }
   return (
     <BuildNotesContext.Provider value={buildNotes}>
       <ReportBar ws={ws} setDevTools={setBuildNotes} />
@@ -865,42 +904,13 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
         </section>
       </div>
 
-      {start && (
-        <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
-          <StartFlow ws={ws} screen={start} onScreen={openStart} onDone={closeStart} />
-        </ErrorBoundary>
-      )}
-      {/* Over the modal, a save or a server call says what it's doing, and what went wrong, where it can be seen. */}
-      {start && (busy || actionError) && (
-        <div className="sh-modal-notes">
-          <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
-        </div>
-      )}
-
       {reviewing && screen === 'sort' && (
         <ErrorBoundary resetKey={`review:${reviewing.at ?? ''}`} onBack={() => setReviewing(null)}>
           <ReviewFlow ws={ws} startAt={reviewing.at} onClose={() => setReviewing(null)} />
         </ErrorBoundary>
       )}
       {drawerShown && <HubertDrawer ws={ws} closing={!drawerOpen} />}
-      {toastText && (
-        <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">
-          {toastText.text}
-          {toastText.action && (
-            <button
-              type="button"
-              className="sh-toast-action"
-              onClick={() => {
-                const run = toastText.action!.run;
-                setToastText(null);
-                run();
-              }}
-            >
-              {toastText.action.label}
-            </button>
-          )}
-        </div>
-      )}
+      {toastEl}
     </BuildNotesContext.Provider>
   );
 }

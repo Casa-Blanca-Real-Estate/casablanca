@@ -1,19 +1,20 @@
 // The reports list (the design pass, "1 · Reports", 2026-11-06; first built from the handoff's screen 2).
-// The hero: "Comp report", and at its right Pick up where you left off (the newest open report) and Start
-// with Hubert (a link or an address, which opens the New report window with it). Then the list's header
-// row (the tabs or "Your reports", the numbers, search, + New comp) and the table: the home's photo, the
+// The hero: "Comp report", and at its right Pick up where you left off (the newest open report). Then the
+// list's header row (the tabs or "Your reports", the numbers, search, + NEW COMP, which grows a field and
+// becomes START →: new-comp.md §1, 2026-11-11) and the table: the home's photo, the
 // address with the client and a Sample badge, the side, the range once Findings has one, the comps, and
 // the stage with the date. Every header sorts (↑, ↓, then cleared); ten rows show, then "Show N more".
 // Everything comes with the list in one call. A row's archive (and a sample's delete, Kimani's decision of
 // 2026-10-22) sit in the page margin on hover; the archived ones fold at the bottom, with Restore.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, type Me, type Report } from '../api.ts';
 import { clientPrice } from '../../workspace/format.ts';
 import { trackScreen } from '../activity.ts';
 import { Access } from './Access.tsx';
 import { MenteePicker, loadMentees, type MenteesState } from './Mentees.tsx';
-import { NewCompStart, startReport } from './newcomp/NewComp.tsx';
-import { noteOf, readStartWords, startNoteKey, startsOnDetails, type StartWords } from './newcomp/start-words.ts';
+import { startReport } from './newcomp/NewComp.tsx';
+import { readStartWords } from './newcomp/start-words.ts';
+import type { StartScreen } from './newcomp/steps.ts';
 import { Center, StateLine } from './shell/Pieces.tsx';
 import {
   COLUMNS, DEFAULT_SORT, PAGE_SIZE, followUpDue, followUpIsDue, followUpLine, thumbWords, whenOf, workedAt, STAGE_SQUARE, compsLabel, listStats, matchesSearch, nextSort, pickUp, rangeLabel, screenFor, shortDate,
@@ -26,18 +27,12 @@ import type { ScreenId } from './workspace/screens.ts';
 
 const SAMPLE_TITLE = 'Sample data was used in this report. Nothing in it is for clients.';
 
-function Hero({ pick, onPick, onStart, starting = null, startError = null, followUp = null }: {
+function Hero({ pick, onPick, followUp = null }: {
   pick: Report | null;
   onPick: (r: Report) => void;
-  onStart: ((text: string) => void) | null;
-  /** Start with Hubert is making the report: what it's doing. */
-  starting?: string | null;
-  startError?: string | null;
   /** Hubert's follow-up reminder: a sent report whose What's next follow-up is due and not ticked. */
   followUp?: { report: Report; line: string } | null;
 }) {
-  const [text, setText] = useState('');
-  const [tip, setTip] = useState(false);
   return (
     <section className="sh-hero">
       <div className="sh-hero-in">
@@ -45,7 +40,7 @@ function Hero({ pick, onPick, onStart, starting = null, startError = null, follo
           <h1>Comp<br />report</h1>
           <p>Bring the comps you found on StreetEasy, work through them, and leave with a defensible range and a client-ready email.</p>
         </div>
-        {(pick || onStart) && (
+        {(pick || followUp) && (
           <div className="sh-hero-side">
             {followUp && (
               <a
@@ -79,48 +74,88 @@ function Hero({ pick, onPick, onStart, starting = null, startError = null, follo
                 <span className="sh-pick-go">Continue →</span>
               </a>
             )}
-            {onStart && (
-              <form
-                className="sh-start"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!starting) onStart(text.trim());
-                }}
-              >
-                <div className="sh-start-head">
-                  <span className="sh-start-spark" aria-hidden="true">✦</span>
-                  <label htmlFor="sh-start-text" className="sh-start-label">Start with Hubert</label>
-                  <button
-                    type="button"
-                    className="sh-tip"
-                    aria-label="What Start with Hubert does"
-                    aria-describedby={tip ? 'sh-start-tip' : undefined}
-                    onMouseEnter={() => setTip(true)}
-                    onMouseLeave={() => setTip(false)}
-                    onFocus={() => setTip(true)}
-                    onBlur={() => setTip(false)}
-                  >?</button>
-                  {tip && <span id="sh-start-tip" role="tooltip" className="sh-tip-card">Paste the listing and say who it’s for (“buyer, Jordan and Sam”). Hubert reads the listing, fills in the home and opens beside it. You check it, then add comps.</span>}
-                </div>
-                <div className="sh-start-row">
-                  <input
-                    id="sh-start-text"
-                    className="sh-start-input"
-                    placeholder="Paste a StreetEasy link, or type the address"
-                    value={text}
-                    disabled={Boolean(starting)}
-                    onChange={(e) => setText(e.target.value)}
-                  />
-                  <button type="submit" className="sh-start-go" disabled={Boolean(starting)}>Start →</button>
-                </div>
-                {starting && <p className="sh-start-busy" aria-live="polite">{starting}</p>}
-                {startError && <p className="sh-start-err" role="alert">{startError}</p>}
-              </form>
-            )}
           </div>
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * + NEW COMP (new-comp.md §1, 2026-11-11): clicking it grows a field out to its left, and the button becomes
+ * START →. A link or an address, then Enter or START, makes the report and opens the New comp window on Basics.
+ * × or Escape folds it back. Words with the link ("buyer, Jordan and Sam") fill Basics too.
+ */
+function NewCompStart({ onStarted, open: initiallyOpen = false }: { onStarted: (id: string) => void; open?: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const fold = () => {
+    if (busy) return;
+    setOpen(false);
+    setText('');
+    setError(null);
+  };
+  async function start() {
+    if (!open) {
+      setOpen(true);
+      window.setTimeout(() => field.current?.focus(), 120);
+      return;
+    }
+    if (busy) return;
+    const w = readStartWords(text);
+    if (!w.home || (w.home.kind === 'typed' && w.home.address.trim().length < 3)) {
+      setError(text.trim() ? 'Paste its StreetEasy link, or type the full address.' : null);
+      field.current?.focus();
+      return;
+    }
+    if (w.home.kind === 'bad-link') {
+      setError(w.home.reason);
+      field.current?.focus();
+      return;
+    }
+    setError(null);
+    setBusy(w.home.kind === 'link' ? 'Starting the report and reading the listing…' : 'Starting the report…');
+    try {
+      const id = await startReport({
+        home: w.home, side: w.side ?? 'buyer', client: w.client ?? '', type: w.type ?? 'coop', typePicked: Boolean(w.type), price: w.price,
+      });
+      onStarted(id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  }
+  return (
+    <span className={`sh-nc${open ? ' open' : ''}`}>
+      <span className="sh-nc-field">
+        <label htmlFor="sh-nc-line" className="sh-sr">A StreetEasy link, or the address</label>
+        <input
+          id="sh-nc-line"
+          ref={field}
+          className="sh-nc-input"
+          tabIndex={open ? 0 : -1}
+          aria-hidden={!open || undefined}
+          placeholder="Paste a StreetEasy link, or type the address"
+          value={text}
+          disabled={Boolean(busy)}
+          onChange={(e) => { setText(e.target.value); setError(null); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); void start(); }
+            if (e.key === 'Escape') { e.preventDefault(); fold(); }
+          }}
+        />
+        {(busy || error) && <span className={`sh-nc-msg${error ? ' error' : ''}`} role={error ? 'alert' : 'status'}>{error ?? busy}</span>}
+      </span>
+      <button type="button" className="btn primary sh-nc-go" disabled={Boolean(busy)} onClick={() => void start()}>
+        {open ? 'Start →' : '+ New comp'}
+      </button>
+      <span className="sh-nc-x-wrap">
+        <button type="button" className="sh-nc-x" aria-label="Cancel" tabIndex={open ? 0 : -1} onClick={fold}>×</button>
+      </span>
+    </span>
   );
 }
 
@@ -276,41 +311,10 @@ function hrefFor(r: Report): string {
   return `?report=${r.id}${step ? `&step=${step}` : ''}`;
 }
 
-export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: 'details', step?: ScreenId) => void }) {
+export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: StartScreen, step?: ScreenId) => void }) {
   const [reports, setReports] = useState<Report[] | null>(null);
   const [own, setOwn] = useState<Report[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // The New report window: open, and what Start with Hubert handed it.
-  const [starting, setStarting] = useState<({ text: string } & Partial<Omit<StartWords, 'home'>>) | null>(null);
-  const [startBusy, setStartBusy] = useState<string | null>(null);
-  const [startError, setStartError] = useState<string | null>(null);
-
-  // Start with Hubert (DP-20, the fuller version): the words are read first. With a home it can use,
-  // the report is made from them and opens on step 2, the details, with Hubert beside it saying what
-  // he filled in; without one, the New report window opens with what he did read.
-  const startWithHubert = useCallback(async (raw: string) => {
-    const w = readStartWords(raw);
-    setStartError(null);
-    if (!startsOnDetails(w) || !w.home || w.home.kind === 'bad-link') {
-      setStarting({ text: w.home?.kind === 'bad-link' ? w.home.text : raw, side: w.side, client: w.client, type: w.type, price: w.price });
-      return;
-    }
-    setStartBusy(w.home.kind === 'link' ? 'Hubert is starting the report and reading the listing…' : 'Hubert is starting the report…');
-    try {
-      const id = await startReport({
-        home: w.home, side: w.side ?? 'buyer', client: w.client ?? '', type: w.type ?? 'coop', typePicked: Boolean(w.type), price: w.price,
-      });
-      try {
-        sessionStorage.setItem(startNoteKey(id), JSON.stringify(noteOf(w)));
-      } catch {
-        // Private mode: Hubert opens without his note.
-      }
-      onOpen(id, 'details');
-    } catch (e) {
-      setStartError(`${e instanceof Error ? e.message : String(e)} Try again, or use + New comp.`);
-      setStartBusy(null);
-    }
-  }, [onOpen]);
   const [copying, setCopying] = useState<Report | null>(null);
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [all, setAll] = useState(false);
@@ -376,8 +380,8 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   const sorted = useMemo(() => sortReports(reports ?? [], sort), [reports, sort]);
   const found = useMemo(() => sorted.filter((r) => matchesSearch(r, q)), [sorted, q]);
   useEffect(() => {
-    if (ready) trackScreen(starting ? 'new-report' : 'reports');
-  }, [ready, starting]);
+    if (ready) trackScreen('reports');
+  }, [ready]);
 
   const badge = roleBadge(me.user.role);
   const bar = badge ? <InBar where="pills"><span className="sh-role-badge">{badge}</span></InBar> : null;
@@ -385,7 +389,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   if (!ready) {
     return (
       <>
-        <Hero pick={null} onPick={() => {}} onStart={null} />
+        <Hero pick={null} onPick={() => {}} />
         <Center>
           <div className="sh-card">
             <p className="eyebrow mid">Reports</p>
@@ -400,9 +404,7 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
   const empty = reports?.length === 0;
   const shown = all || q.trim() ? found : found.slice(0, PAGE_SIZE);
   const hidden = q.trim() ? 0 : found.length - PAGE_SIZE;
-  const newComp = (
-    <button type="button" className="btn primary" onClick={() => setStarting({ text: '' })}>+ New comp</button>
-  );
+  const newComp = <NewCompStart onStarted={(id) => onOpen(id, 'basics')} />;
   const stats = listStats(reports ?? []);
   const numbers: [number, string][] = onEveryone && mentor && byMentees
     ? [[stats.reports, 'Reports'], [mentees?.mentees.length ?? 0, 'Mentees'], [stats.sentThisMonth, 'Sent this month']]
@@ -417,9 +419,6 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
       <Hero
         pick={pick}
         onPick={(r) => onOpen(r.id, undefined, screenFor(r))}
-        onStart={(text) => void startWithHubert(text)}
-        starting={startBusy}
-        startError={startError}
         followUp={followUp}
       />
       <main className="sh-reports">
@@ -506,7 +505,6 @@ export function Reports({ me, onOpen }: { me: Me; onOpen: (id: string, start?: '
             onClose={() => setPicking(false)}
           />
         )}
-        {starting && <NewCompStart me={me} initial={starting} onCreated={(id) => onOpen(id, 'details')} onClose={() => setStarting(null)} />}
         {copying && <DuplicateDialog r={copying} onClose={() => setCopying(null)} onDone={(id) => { setCopying(null); const at = screenFor(copying); onOpen(id, undefined, at === 'done' ? 'send' : at); }} />}
         {error && <p className="sh-note error" role="alert">{error}</p>}
         {reports === null && !error && <StateLine>Loading…</StateLine>}

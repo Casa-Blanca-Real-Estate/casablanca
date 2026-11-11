@@ -10,7 +10,7 @@ import { STEPS, stepForScreen } from './steps.ts';
 import { endTour, nextTip, onTour, readTour, tipDone, tipsFor, type TourState, type TourTip } from './tour.ts';
 
 /** Windows that cover the page: a target outside the topmost one can't be clicked, so the tour waits. */
-const LAYERS = '.gd-veil, .sh-dlg-scrim, .so-lightbox, .rv-scrim, .nr-scrim';
+const LAYERS = '.gd-veil, .sh-dlg-scrim, .so-lightbox, .rv-scrim';
 
 function visible(el: Element): boolean {
   const r = el.getBoundingClientRect();

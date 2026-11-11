@@ -9,6 +9,7 @@ import { AcceptInvite, NotAuthorised, SetNewPassword, SignIn, Unavailable } from
 import { Reports } from './views/Reports.tsx';
 import { Workspace } from './views/workspace/Workspace.tsx';
 import type { ScreenId } from './views/workspace/screens.ts';
+import type { StartScreen } from './views/newcomp/steps.ts';
 import { Center, StateLine } from './views/shell/Pieces.tsx';
 import { Shell } from './views/shell/TopBar.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
@@ -113,9 +114,9 @@ export function App() {
     setState({ status: 'signed-out' });
   }, []);
 
-  // A new comp opens straight into its modal's next screen (?start=details); a report from the list
+  // A new comp opens straight into the New comp window (?start=basics); a report from the list
   // opens on the screen its stage reached (?step=send).
-  const open = useCallback((id: string | null, start?: 'details', step?: ScreenId) => {
+  const open = useCallback((id: string | null, start?: StartScreen, step?: ScreenId) => {
     const query = id ? `?report=${id}${start ? `&start=${start}` : ''}${step ? `&step=${step}` : ''}` : location.pathname;
     history.pushState(null, '', query);
     setReportId(id);

@@ -29,16 +29,16 @@ export const STEPS: GuideStep[] = [
     points: [
       'A new report starts with the home you’re pricing: its StreetEasy link or its address.',
       'Sample reports are for practice. Nothing in them is for clients.',
-      'Hubert, the assistant, can start one for you: paste a link in Start with Hubert. Inside a report he’s the lavender button in the top bar.',
+      'Hubert, the assistant, sits beside every step of a new report. Inside a report he’s the lavender button in the top bar.',
     ],
     words: ['Comp report', 'Hubert', 'Sample report'],
     screens: ['reports'],
   },
   {
     n: 2,
-    where: 'New report · 1 of 3',
+    where: 'New comp · Basics',
     title: 'The home',
-    todo: 'Paste the home’s StreetEasy link, or type its address. Say whether you’re working for the buyer or the seller, and add the client’s name.',
+    todo: 'Paste the home’s StreetEasy link, or type its address, and press Start. Then say whether you’re working for the buyer or the seller, check Co-op or Condo, and add the client’s name.',
     points: [
       'The link fills in most of the details for you.',
       'A client’s budget or target can go in now or later. It never changes the numbers.',
@@ -48,9 +48,9 @@ export const STEPS: GuideStep[] = [
   },
   {
     n: 3,
-    where: 'New report · 2 of 3',
+    where: 'New comp · General to Client info',
     title: 'Check the details',
-    todo: 'Look over what the listing gave: fix anything wrong and add what’s missing. The size matters most.',
+    todo: 'Go through the home’s steps: General, Own or shared, Home amenities, Building amenities and Client info. Fix anything the listing got wrong and add what’s missing. The size matters most.',
     points: [
       'Every comp is compared against these details, so they’re worth a minute.',
       'Floor, outdoor space, views and condition all help tell the comps apart.',
@@ -60,7 +60,7 @@ export const STEPS: GuideStep[] = [
   },
   {
     n: 4,
-    where: 'New report · 3 of 3',
+    where: 'New comp · Add comps',
     title: 'Add your comps',
     todo: 'Bring in the sales you found on StreetEasy: drop the export or its PDF, paste listing links, or type a sale in.',
     points: [

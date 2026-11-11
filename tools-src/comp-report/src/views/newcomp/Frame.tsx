@@ -1,24 +1,16 @@
-// The new-report modal's frame (the handoff, screens 03–05; Dispatch 14): an
-// 820px card on a dark scrim, a three-bar progress row with "N of 3" and ✕, or
-// "Edit details" when it's opened from a workspace. Escape closes it (asking
-// first while a comp is half-typed, useCloseGuard); the page
-// behind it doesn't scroll while it's open.
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type DragEvent, type ReactNode } from 'react';
+// What the New comp window (Window.tsx) shares with the rest of the tool: the ⓘ, the close guard a
+// half-typed comp sets, and the mark that tells a new report's window from Edit details across a reload.
+// (Until 2026-11-11 this was also the modal's frame: an 820px card on a dark scrim, "N of 3".)
+import { createContext, useContext, useEffect, useId, useState } from 'react';
 import '../../styles/newreport.css';
 
-export interface DropHandlers {
-  onDragOver: (e: DragEvent) => void;
-  onDragLeave: (e: DragEvent) => void;
-  onDrop: (e: DragEvent) => void;
-}
-
-/** Something half-done inside the modal (a comp form with text in it) that Escape or ✕ would drop. */
-const GuardContext = createContext<((id: string, on: boolean) => void) | null>(null);
+/** Something half-done inside the window (a comp form with text in it) that Escape or ✕ would drop. */
+export const GuardContext = createContext<((id: string, on: boolean) => void) | null>(null);
 
 /**
- * Inside the modal, `on` makes Escape and ✕ ask before closing (Dispatch 20,
+ * Inside the window, `on` makes Escape and ✕ ask before closing (Dispatch 20,
  * from Dispatch 14's follow-ups): a half-filled comp isn't dropped by a stray
- * Escape. Outside the modal it does nothing.
+ * Escape. Outside the window it does nothing.
  */
 export function useCloseGuard(on: boolean): void {
   const register = useContext(GuardContext);
@@ -27,94 +19,6 @@ export function useCloseGuard(on: boolean): void {
     register?.(id, on);
     return () => register?.(id, false);
   }, [register, id, on]);
-}
-
-export function Frame({ step, editing = false, title, onClose, children, footer, drop, veil }: {
-  /** 1, 2 or 3: the bars filled and "N of 3". */
-  step: 1 | 2 | 3;
-  /** Edit details, from a workspace: no progress, "Edit details" instead. */
-  editing?: boolean;
-  /** The dialog's accessible name. */
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-  footer: ReactNode;
-  /** The panel is the drop target on Add comps (useDropTarget). */
-  drop?: DropHandlers;
-  veil?: ReactNode;
-}) {
-  const dialog = useRef<HTMLDivElement>(null);
-  const guards = useRef(new Set<string>());
-  const [asking, setAsking] = useState(false);
-  const register = useCallback((id: string, on: boolean) => {
-    if (on) guards.current.add(id);
-    else guards.current.delete(id);
-    if (!guards.current.size) setAsking(false);
-  }, []);
-  // Escape and ✕ close, unless something half-done inside asks first; Escape again keeps editing.
-  const attempt = () => {
-    if (!guards.current.size) return onClose();
-    setAsking((a) => !a);
-  };
-  const close = useRef(attempt);
-  close.current = attempt;
-
-  useEffect(() => {
-    dialog.current?.focus({ preventScroll: true });
-    // The page behind stays put while the modal is open.
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) close.current();
-    };
-    addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = overflow;
-      removeEventListener('keydown', onKey);
-    };
-  }, []);
-
-  return (
-    <div className="nr-scrim">
-      <div
-        className="nr-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        tabIndex={-1}
-        ref={dialog}
-        data-testid={editing ? 'edit-details' : `new-report-${step}`}
-        {...(drop ?? {})}
-      >
-        {veil}
-        <div className="nr-head">
-          {editing ? (
-            <div className="nr-edit-label">Edit details</div>
-          ) : (
-            <>
-              <div className="nr-progress" role="img" aria-label={`Step ${step} of 3`}>
-                {[1, 2, 3].map((n) => <span key={n} className={n <= step ? 'on' : ''} />)}
-              </div>
-              <span className="nr-count" aria-hidden="true">{step} of 3</span>
-            </>
-          )}
-          <button type="button" className="nr-x" aria-label="Close" onClick={attempt}>✕</button>
-        </div>
-        <GuardContext.Provider value={register}>
-          <div className="nr-body">{children}</div>
-        </GuardContext.Provider>
-        {asking && (
-          <div className="nr-ask" role="alertdialog" aria-label="Close and lose the comp you’re typing?">
-            <span>You’re partway through a comp. Close and lose it?</span>
-            <button type="button" className="link" onClick={() => setAsking(false)} autoFocus>Keep editing</button>
-            <span aria-hidden="true">·</span>
-            <button type="button" className="link" onClick={() => { setAsking(false); onClose(); }}>Close anyway</button>
-          </div>
-        )}
-        <div className="nr-foot">{footer}</div>
-      </div>
-    </div>
-  );
 }
 
 /**
@@ -146,8 +50,8 @@ export function Info({ text, label, align = 'right' }: { text: string; label: st
 }
 
 // ─── A new report's flow, across a reload ───────────────────────────────────
-// The first screen makes the report, then the workspace opens with the modal on
-// 2 of 3. Edit details opens the same screen from a workspace's ✎. What tells
+// START on Reports makes the report, then the window opens on its own page. Edit
+// details opens the same window from a workspace's ✎. What tells
 // them apart is this mark, set when the report is made and cleared when the flow
 // ends (Open workspace, ✕, or leaving the report).
 
@@ -157,7 +61,7 @@ export function markNewReport(reportId: string): void {
   try {
     sessionStorage.setItem(NEW_KEY(reportId), '1');
   } catch {
-    // Private mode: the flow still runs; a reload opens 2 of 3 as Edit details.
+    // Private mode: the window still runs; only an old ?start=details link opens as Edit details.
   }
 }
 
