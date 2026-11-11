@@ -1,8 +1,9 @@
 {
   "repo": "https://github.com/Casa-Blanca-Real-Estate/casablanca",
   "newIds": [
-    "CR-14",
-    "TD-29"
+    "CR-15",
+    "CR-16",
+    "CR-17"
   ],
   "topics": [
     {
@@ -720,6 +721,71 @@
             ]
           ],
           "source": "#154 · D-11"
+        },
+        {
+          "id": "CR-15",
+          "q": "The New comp window's step 3: what should it be called?",
+          "short": "Name for New comp step 3",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>From the New comp port (#168). For now step 3 reads <strong>\"Own or shared\"</strong>, the canvas's placeholder, which you said you don't love. Renaming it is a single word change. Write the name you want in the note.</p>",
+          "options": [
+            [
+              "A",
+              "Keep \"Own or shared\" for Nov 13",
+              "rename after"
+            ],
+            [
+              "B",
+              "A new name",
+              "write it in the note"
+            ]
+          ],
+          "source": "#168 · #167"
+        },
+        {
+          "id": "CR-16",
+          "q": "The home's laundry \"None\": none listed, or not allowed?",
+          "short": "Laundry \"None\" meaning",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>From #168. Picking <strong>None</strong> for the home's laundry saves as \"none listed\", the same as the old picker did. It could mean \"not allowed\" in the building instead.</p>",
+          "options": [
+            [
+              "A",
+              "None listed, as now",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Not allowed",
+              ""
+            ]
+          ],
+          "source": "#168 · #167"
+        },
+        {
+          "id": "CR-17",
+          "q": "Next while the StreetEasy page is being read: wait, or let the agent move on?",
+          "short": "Next during the StreetEasy read",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>From #168. Following the canvas, Next stays disabled while the StreetEasy page is read, which usually takes 10 to 40 seconds. Letting the agent move on means the read's results fill in later, behind them.</p>",
+          "options": [
+            [
+              "A",
+              "Keep Next disabled until the read finishes",
+              "as on the canvas",
+              true
+            ],
+            [
+              "B",
+              "Let the agent move on while it reads",
+              ""
+            ]
+          ],
+          "source": "#168 · #167"
         }
       ],
       "settled": [
@@ -1363,6 +1429,14 @@
     }
   ],
   "changes": [
+    {
+      "date": "2026-11-11",
+      "label": "Wed Nov 11",
+      "items": [
+        "New, from the New comp port (#168): CR-15 (step 3's name), CR-16 (laundry \"None\"), CR-17 (Next during the StreetEasy read). All three need you.",
+        "To-do: Noble approves the New comp guide text before Nov 13, and #167 and #168 merge and release together."
+      ]
+    },
     {
       "date": "2026-11-10",
       "label": "Mon Nov 10",
