@@ -11,6 +11,7 @@
 //   GET  ?view=agents         the referral agents the service knows (passwords never leave Railway)
 //   GET  ?capture=<name>      one run's screenshot, as PNG
 //   POST {observeMode: bool}  switch observe mode; takes effect on the next lead
+//   POST {agentPassword: {email, password | null}}  set or clear one agent's own StreetEasy password
 //
 // SECURITY
 //   Every request needs the Studio sign-in, and the user must be the Studio's team (the same rule as
@@ -83,8 +84,24 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
     }
 
     if (req.method === 'POST') {
-      if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not switch observe mode.');
-      const body = await req.json().catch(() => null) as { observeMode?: unknown } | null;
+      if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
+      const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown } } | null;
+
+      // One agent's own StreetEasy password: { agentPassword: { email, password } }, or password null
+      // to go back to the shared one. Passed straight to the service; never logged or returned.
+      if (body?.agentPassword) {
+        const { email, password } = body.agentPassword;
+        if (typeof email !== 'string' || !email.includes('@')) throw new LeadAcceptError(400, 'bad_email', 'Which agent? Send their StreetEasy email.');
+        if (!(password === null || (typeof password === 'string' && password.length > 0 && password.length <= 200))) {
+          throw new LeadAcceptError(400, 'bad_password', 'Send a password, or null to use the shared one.');
+        }
+        const res = await call('/admin/agents/password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
+        });
+        console.log(`lead-accept: own password ${password === null ? 'cleared' : 'set'} for ${email} by ${user.email}`);
+        return json(await res.json());
+      }
+
       if (typeof body?.observeMode !== 'boolean') throw new LeadAcceptError(400, 'bad_body', 'Send { observeMode: true | false }.');
       const res = await call('/admin/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ observeMode: body.observeMode }),

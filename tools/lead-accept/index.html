@@ -90,6 +90,13 @@
   .agent{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 12px;font-size:12px}
   .agent b{display:block;font-size:13px}
   .agent .mono{color:var(--muted)}
+  .agent .acts{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px}
+  .agent .acts button{border:none;background:none;padding:0;border-bottom:1px solid var(--accent);border-radius:0;font-weight:400;letter-spacing:0;font-size:11px}
+  .agent form{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .agent form input{flex:1 1 140px;min-width:0;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+  .agent form button{padding:6px 10px;font-size:11px}
+  .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+  .tag.own{background:var(--accent);color:var(--plum)} .tag.rej{background:var(--bad-bg);color:var(--bad)}
   .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;overflow-wrap:anywhere}
 
   /* how it works */
@@ -156,7 +163,7 @@
   </div>
 
   <h2>Referral agents</h2>
-  <p class="muted">Every agent the service has seen. New ones are added the first time a lead or sign-in code arrives for them. All use the shared StreetEasy password unless it was rejected, in which case the service signs in with a one-time email code instead.</p>
+  <p class="muted">Every agent the service has seen. New ones are added the first time a lead or sign-in code arrives for them. They all use the shared StreetEasy password unless you set their own here. If a password is rejected, the service signs in with a one-time email code instead, which only works when that code reaches the shared inbox.</p>
   <div class="agents" id="agents"></div>
 
   <h2>How it works</h2>
@@ -186,7 +193,7 @@
     <ul class="plain">
       <li><b>Every week:</b> the Make connection that sends alerts from creative@ expires. A scheduled reminder fires Tuesdays at 3:21 PM: Make → Connections → <i>Creative Google Restricted connection</i> → Reauthorize, then check <i>StreetEasy Lead Alerts → Email</i> is on. Until it's done, alerts queue up in Make and nobody is told.</li>
       <li><b>Observe mode</b> (the switch above): opens each lead and reports which button it would click, but doesn't click. Use it after StreetEasy changes its pages, or while a fix is going in. It takes effect on the next lead.</li>
-      <li><b>Password changed:</b> update the StreetEasy password in Railway's variables. Agents whose old password was rejected are tried again with the new one.</li>
+      <li><b>An agent with a different password:</b> on their card below, <i>Set own password</i>. It's saved on the service, never shown again, and the next login uses it. <b>The shared password changed:</b> update it in Railway's variables; agents marked rejected are tried again.</li>
       <li><b>"No agent match":</b> the lead email didn't name an agent the service could find. The alert shows who it was sent to.</li>
       <li><b>"Failed" on the Respond step:</b> StreetEasy may have changed the button or the message pop-up. Switch to observe mode and send the run's screenshots to a Claude session.</li>
       <li><b>Bot check:</b> the service never tries to get past one. That lead goes to Derek.</li>
@@ -378,13 +385,41 @@
     var bad=(state.status&&state.status.agentsWithBadPassword)||[];
     if(!state.agents.length){box.appendChild(el('p','muted','No agents yet.'));return;}
     state.agents.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).forEach(function(a){
-      var c=el('div','agent'); c.appendChild(el('b',null,a.name||a.email));
+      var c=el('div','agent'), name=el('b',null,a.name||a.email);
+      if(a.hasOwnPassword) name.appendChild(el('span','tag own','Own password'));
+      if(a.passwordRejected||bad.indexOf(a.email)!==-1) name.appendChild(el('span','tag rej','Password rejected'));
+      c.appendChild(name);
       c.appendChild(el('div','mono',a.email));
-      var note=a.autoAdded?('Added automatically '+ny(a.autoAdded)):'On the starting list';
-      if(bad.indexOf(a.email)!==-1) note+=' · password rejected, uses email codes';
-      c.appendChild(el('div','small muted',note));
+      c.appendChild(el('div','small muted',a.autoAdded?('Added automatically '+ny(a.autoAdded)):'On the starting list'));
+      var acts=el('div','acts');
+      var setBtn=el('button',null,a.hasOwnPassword?'Change password':'Set own password'); setBtn.type='button';
+      acts.appendChild(setBtn);
+      if(a.hasOwnPassword){
+        var clr=el('button',null,'Use shared password'); clr.type='button';
+        clr.addEventListener('click',function(){savePassword(a.email,null,clr);});
+        acts.appendChild(clr);
+      }
+      c.appendChild(acts);
+      setBtn.addEventListener('click',function(){
+        if(c.querySelector('form')) return;
+        var f=el('form'), inp=el('input'), save=el('button','primary','Save'), cancel=el('button',null,'Cancel');
+        inp.type='password'; inp.autocomplete='new-password'; inp.placeholder='Their StreetEasy password'; inp.required=true; inp.maxLength=200;
+        inp.setAttribute('aria-label','StreetEasy password for '+(a.name||a.email));
+        save.type='submit'; cancel.type='button';
+        f.appendChild(inp); f.appendChild(save); f.appendChild(cancel);
+        cancel.addEventListener('click',function(){f.remove();});
+        f.addEventListener('submit',function(e){e.preventDefault(); if(inp.value) savePassword(a.email,inp.value,save);});
+        c.appendChild(f); inp.focus();
+      });
       box.appendChild(c);
     });
+  }
+  function savePassword(email,password,btn){
+    btn.disabled=true;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agentPassword:{email:email,password:password}})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the password.');return b;});})
+      .then(function(){showNotice('');return load();})
+      .catch(function(e){showNotice(e.message);btn.disabled=false;});
   }
 
   /* ---------- load ---------- */

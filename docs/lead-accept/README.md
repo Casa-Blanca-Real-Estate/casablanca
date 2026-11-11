@@ -51,6 +51,7 @@ as needing a person.
 |---|---|---|
 | Railway | `CASA_SECRET` | Shared key; Make sends it, the Studio's function sends it |
 | Railway | `SE_SHARED_PASSWORD` | The referral agents' StreetEasy password |
+| Studio page | an agent's own password | For agents whose StreetEasy password differs: *Set own password* on their card. Kept in the agent list on Railway's disk (`/data/agents.json`), never sent back to the page |
 | Railway | `ALERT_WEBHOOK_URL` | The alert scenario's Make webhook |
 | Railway | `PUBLIC_URL` | The service's own URL |
 | Railway | `OBSERVE_MODE` | Starting value only; the Studio switch (saved in `/data/settings.json`) wins once used |
