@@ -16,13 +16,18 @@
 //   POST {recipients: {failures?, successes?, notices?: string[]}}  who gets each kind of alert email
 //   GET  ?view=guide          the "How it works" guide (Blobs; the default in guide.ts until first saved)
 //   POST {guide: Guide}       save an edited guide
+//   GET  ?view=make           the two Make scenarios (state, recent runs, errors) and the alerts' Gmail connection
+//   POST {makeScenario: {id, active}}  start or stop one of those two scenarios (no other id)
 //
 // SECURITY
 //   Every request needs the Studio sign-in, and the user must be the Studio's team (the same rule as
 //   the Property Sign builder). A preview's guest can read but not switch observe mode. Screenshots
 //   show clients' names and inquiries, which is why they're fetched through here, not linked.
+//   The Make token (Netlify env MAKE_API_TOKEN) is held the same way: it goes only to Make's API,
+//   never to the browser or a log (make.ts).
 import { isTeam, type SignUser } from '../property-signs/api.ts';
 import { cleanGuide, DEFAULT_GUIDE, type Guide } from './guide.ts';
+import { MakeError, makeView, setScenarioActive } from './make.ts';
 
 export const GUIDE_STORE = 'cb-lead-accept';
 const GUIDE_KEY = 'guide';
@@ -43,6 +48,8 @@ export interface LeadAcceptDeps {
   fetch: typeof fetch;
   /** Where the edited guide is kept. */
   guideStore: GuideBlobs;
+  /** A Make user API token (scenarios:read, scenarios:write, connections:read), for the Make panel. */
+  makeToken?: string | undefined;
 }
 
 export class LeadAcceptError extends Error {
@@ -69,8 +76,26 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
       const saved = await deps.guideStore.get(GUIDE_KEY, { type: 'json' }).catch(() => null) as Guide | null;
       return json(saved && Array.isArray(saved.steps) ? { ...saved, isDefault: false } : { ...DEFAULT_GUIDE, isDefault: true });
     }
+    // Make is its own API, so the panel works whether or not the service is reachable.
+    const needMake = () => {
+      if (!deps.makeToken) throw new LeadAcceptError(503, 'not_configured', 'Set MAKE_API_TOKEN in Netlify to show the Make scenarios here.');
+      return deps.makeToken;
+    };
+    if (req.method === 'GET' && gurl.searchParams.get('view') === 'make') {
+      return json(await makeView(deps.fetch, needMake()));
+    }
     if (req.method === 'POST') {
-      const peek = await req.clone().json().catch(() => null) as { guide?: unknown } | null;
+      const peek = await req.clone().json().catch(() => null) as { guide?: unknown; makeScenario?: { id?: unknown; active?: unknown } } | null;
+      if (peek && 'makeScenario' in peek) {
+        if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
+        const m = peek.makeScenario;
+        if (!m || typeof m !== 'object' || typeof m.active !== 'boolean' || typeof m.id !== 'number') {
+          throw new LeadAcceptError(400, 'bad_body', 'Send { makeScenario: { id, active: true | false } }.');
+        }
+        const out = await setScenarioActive(deps.fetch, needMake(), m.id, m.active);
+        console.log(`lead-accept: Make scenario ${m.id} ${m.active ? 'started' : 'stopped'} by ${user.email}`);
+        return json(out);
+      }
       if (peek && 'guide' in peek) {
         if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
         const guide = cleanGuide(peek.guide);
@@ -187,7 +212,7 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
 
     throw new LeadAcceptError(405, 'method');
   } catch (e) {
-    if (e instanceof LeadAcceptError) return json({ error: e.code, message: e.message }, e.status);
+    if (e instanceof LeadAcceptError || e instanceof MakeError) return json({ error: e.code, message: e.message }, e.status);
     if (e && typeof e === 'object' && 'status' in e && 'code' in e && typeof (e as { status: unknown }).status === 'number') {
       const h = e as { status: number; code: string; message?: string };   // the comp report's HttpError, from the sign-in check
       return json({ error: h.code, message: h.message }, h.status);

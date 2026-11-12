@@ -19,7 +19,11 @@ login per browser, every agent has their own account, and logging in sends a ver
    It doesn't mark anything read. blancacasa1002's separate "forward all mail" setting (to another
    inbox) is unrelated.
 2. **Make → Railway.** Scenario *StreetEasy Referral Lead → Auto-Accept* (id 6887314) posts each email
-   to `https://casablanca-production-e067.up.railway.app/lead` with the `x-casa-secret` header.
+   to `https://casablanca-production-e067.up.railway.app/lead` with the `x-casa-secret` header. Since
+   2026-11-12 that header comes from the Make key **"Casa lead service (x-casa-secret)"** (key id 247869, type
+   `http:ActionSendDataAPIKeyAuth`) instead of a plain-text header typed into the HTTP module, so the value no
+   longer shows in the scenario's blueprint. Changing `CASA_SECRET` in Railway means updating that key in Make
+   (Keys, in team 1942598) too.
 3. **The service** (Node + Playwright, Docker on Railway, disk at `/data`):
    - sorts the email: a lead ("…to respond to an Inquiry from <ADDRESS>"), a sign-in code
      ("Your authentication code"), or ignored;
@@ -57,6 +61,8 @@ as needing a person.
 | Railway | `OBSERVE_MODE` | Starting value only; the Studio switch (saved in `/data/settings.json`) wins once used |
 | Netlify | `SE_AUTOMATION_URL` | `https://casablanca-production-e067.up.railway.app` |
 | Netlify | `SE_AUTOMATION_SECRET` | Same value as `CASA_SECRET` |
+| Netlify | `MAKE_API_TOKEN` | A Make user API token for the page's Make panel (Production; Functions scope). Scopes `scenarios:read`, `scenarios:write`, `connections:read`. Zone us2, team 1942598, organization 6744294 |
+| Make | key "Casa lead service (x-casa-secret)" | Id 247869. Same value as `CASA_SECRET`; the Auto-Accept scenario's HTTP module sends it |
 
 ## The Studio page
 
@@ -65,6 +71,27 @@ as needing a person.
 public static HTML like every Studio page, so it names no addresses, keys or webhooks; they're here.
 Service endpoints it uses: `GET /admin/status`, `GET /admin/runs`, `GET /agents`, `GET /captures/<name>.png`,
 `POST /admin/settings`.
+
+### The Make panel (Nov 12)
+
+The *Make* section shows the two scenarios and the alerts' Gmail connection, read live from Make's API
+(`https://us2.make.com/api/v2`, `Authorization: Token <MAKE_API_TOKEN>`; the code is
+`tools-src/lead-accept/make.ts`, and the token never reaches the browser or a log):
+
+- **Lead intake**, scenario 6887314, and **Lead alerts**, scenario 6889011: name, an On/Off switch, last run,
+  incomplete runs (Make's `dlqCount`), last edited, an "invalid" warning, and the last 10 executions with the
+  error message of up to 3 failed ones. Turning intake off asks first, since it stops lead intake entirely.
+  The switch calls Make's `POST /scenarios/{id}/start` or `/stop`; the function refuses any other scenario id.
+  Guests see the panel but the switches are disabled.
+- **The Gmail connection** 12126157 (creative@): red, *Needs reconnecting*, when the alerts scenario is off or its
+  last run failed on the connection; *Working* when its last run went through; with the last alert sent and a
+  *Reconnect in Make* button to `https://us2.make.com/1942598/connections`. Make's `expire` for this connection
+  is no use here: on Nov 12 it read 2027-05-12 while the sign-in lapses about weekly. Make's own check
+  (`POST /connections/{id}/test`) needs `connections:write`, which the token doesn't have.
+- Make endpoints used: `GET /scenarios/{id}`, `GET /scenarios/{id}/logs`, `GET /scenarios/{id}/executions/{executionId}`,
+  `POST /scenarios/{id}/start|stop`, `GET /connections/{id}`. No token: the panel says to set `MAKE_API_TOKEN`
+  (503). Make refusing it (401/403): "refused the API token, or it is missing a scope".
+- Nothing about the scenarios' URL, fields or key can be changed from the page.
 
 ## Known upkeep and open items
 

@@ -163,6 +163,26 @@
   details.card[open]>summary{margin-bottom:8px}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#ebe9e3;border-radius:5px;padding:1px 5px}
   ul.plain{margin:0 0 10px;padding-left:18px;max-width:80ch} ul.plain li{margin:0 0 4px}
+  /* make */
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start}
+  .mcard{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .mcard.bad{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+  .mhead{display:flex;justify-content:space-between;align-items:start;gap:10px}
+  .mhead h3{margin:0;font-size:14px;overflow-wrap:anywhere}
+  .mhead .role{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+  .switch{display:inline-flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border-radius:999px;flex:none}
+  .switch .track{position:relative;width:34px;height:20px;border-radius:999px;background:var(--line);transition:background .15s}
+  .switch .track::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+  .switch[aria-checked="true"] .track{background:var(--ok)}
+  .switch[aria-checked="true"] .track::after{left:16px}
+  @media (prefers-reduced-motion:reduce){.switch .track,.switch .track::after{transition:none}}
+  .mruns{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:12px}
+  .mruns li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;border-top:1px solid var(--line);padding-top:4px}
+  .mruns .err{grid-column:1/-1;color:var(--bad);font-size:11px;overflow-wrap:anywhere}
+  .mwarn{margin:0;font-size:12px;color:var(--bad)}
+  a.btn{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 12px}
+  a.btn:hover{border-color:var(--accent)}
+  a.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -199,6 +219,11 @@
       <p class="small muted" id="badPw" style="margin:10px 0 0" hidden></p>
     </div>
   </section>
+
+  <h2>Make</h2>
+  <p class="muted">The two Make scenarios on either side of the service, and the Gmail connection the alerts send through. The creative@ connection lapses about once a week; when it does, Make turns the alert scenario off and alerts wait in Make until it's reconnected and switched back on.</p>
+  <p id="makeNotice" class="notice bad" role="alert" hidden></p>
+  <div class="mgrid" id="make"><p class="muted">Loading…</p></div>
 
   <h2>Run log</h2>
   <div class="filters" role="group" aria-label="Filter runs">
@@ -675,6 +700,100 @@
   function closeEditor(){$('guideForm').hidden=true;$('guideForm').innerHTML='';$('guide').hidden=false;renderGuide();}
   $('guideEditBtn').addEventListener('click',openEditor);
 
+  /* ---------- make ---------- */
+  var make=null, makeAsk=null;
+  var MROLE={intake:{title:'Lead intake',desc:'Inbox → the service. Off means no lead gets answered, automatically or by alert.'},
+    alerts:{title:'Lead alerts',desc:'The service → email from creative@. Off means alerts wait in Make.'}};
+  var MRUN={success:{label:'OK',cls:'ok'},warning:{label:'Warning',cls:'warn'},error:{label:'Error',cls:'bad'},running:{label:'Running',cls:''},paused:{label:'Paused',cls:''},unknown:{label:'—',cls:''}};
+  function until(iso){var h=Math.round((Date.parse(iso)-Date.now())/3600000);return h<1?'within the hour':h<36?'in '+h+' hr':'in '+Math.round(h/24)+' days';}
+  function isGuest(){return !!(window.CBStudio.user&&window.CBStudio.user.guest);}
+  function renderMake(){
+    var box=$('make'); box.innerHTML='';
+    if(!make){box.appendChild(el('p','muted','Shown once Make answers.'));return;}
+    make.scenarios.forEach(function(sc){
+      var r=MROLE[sc.role]||{title:'Scenario',desc:''};
+      var card=el('div','card mcard'+(sc.isActive===false||sc.isinvalid?' bad':''));
+      var head=el('div','mhead'), h=el('h3',null,sc.name||('Scenario '+sc.id));
+      h.appendChild(el('span','role',r.title+' · '+r.desc)); head.appendChild(h);
+      if(sc.isActive!=null){
+        var sw=el('button','switch'); sw.type='button'; sw.setAttribute('role','switch'); sw.setAttribute('aria-checked',String(!!sc.isActive));
+        sw.setAttribute('aria-label',(sc.name||r.title)+': '+(sc.isActive?'on':'off'));
+        sw.appendChild(el('span','track')); sw.appendChild(el('span',null,sc.isActive?'On':'Off'));
+        sw.disabled=isGuest()||makeAsk!==null;
+        if(isGuest()) sw.title='A preview guest can look but not switch.';
+        sw.addEventListener('click',function(){
+          var want=!sc.isActive;
+          if(!want&&sc.role==='intake'){makeAsk=sc.id;renderMake();return;}
+          switchScenario(sc,want,sw);
+        });
+        head.appendChild(sw);
+      }
+      card.appendChild(head);
+      if(makeAsk===sc.id){
+        var c=el('div','confirm'), yes=el('button','primary','Yes, turn it off'), no=el('button',null,'Cancel');
+        yes.type='button'; no.type='button';
+        c.appendChild(el('span',null,'Turn off lead intake? Lead emails stop reaching the service: nothing gets accepted and nobody is alerted until it’s back on.'));
+        c.appendChild(yes); c.appendChild(no); card.appendChild(c);
+        no.addEventListener('click',function(){makeAsk=null;renderMake();});
+        yes.addEventListener('click',function(){yes.disabled=true;switchScenario(sc,false,yes);});
+        setTimeout(function(){no.focus();},0);
+      }
+      if(sc.problem){card.appendChild(el('p','mwarn',sc.problem));box.appendChild(card);return;}
+      if(sc.isActive===false) card.appendChild(el('p','mwarn',sc.role==='alerts'?'Off. If the Gmail connection lapsed, reconnect it first, then switch this back on.':'Off. Leads aren’t reaching the service.'));
+      if(sc.isinvalid) card.appendChild(el('p','mwarn','Make marks this scenario invalid. Open it in Make to see why.'));
+      var last=sc.runs[0], f=el('dl','facts'); f.style.margin='0';
+      [['Last run',last&&last.at?(ny(last.at)+' · '+ago(last.at)):'none recently'],
+       ['Incomplete runs',sc.dlqCount==null?'—':String(sc.dlqCount)],
+       ['Last edited',sc.lastEdit?ny(sc.lastEdit):'—']].concat(sc.isPaused?[['Paused','yes']]:[])
+       .forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
+      card.appendChild(f);
+      if(sc.runs.length){
+        var ul=el('ul','mruns');
+        sc.runs.forEach(function(run){
+          var m=MRUN[run.status]||MRUN.unknown, li=el('li');
+          li.appendChild(el('span',null,ny(run.at)+(run.duration!=null?' · '+(run.duration/1000).toFixed(1)+'s':'')));
+          li.appendChild(el('span','pill '+m.cls,m.label));
+          if(run.error) li.appendChild(el('span','err',run.error));
+          ul.appendChild(li);
+        });
+        card.appendChild(ul);
+      }
+      var open=el('a','ref small','Open in Make'); open.href=sc.url; open.target='_blank'; open.rel='noopener'; open.style.alignSelf='flex-start';
+      card.appendChild(open);
+      box.appendChild(card);
+    });
+    var cn=make.connection, alertsOff=make.scenarios.some(function(s){return s.role==='alerts'&&s.isActive===false;});
+    var cc=el('div','card mcard'+(cn.expired?' bad':'')), ch=el('div','mhead'), ct=el('h3',null,cn.name||('Connection '+cn.id));
+    ct.appendChild(el('span','role','Gmail connection · the alerts send through it'+(cn.account?' ('+cn.account+')':'')));
+    ch.appendChild(ct);
+    ch.appendChild(el('span','pill '+(cn.expired?'bad':cn.expired===false?'ok':''),cn.expired?'Needs reconnecting':cn.expired===false?'Working':'Unknown'));
+    cc.appendChild(ch);
+    if(cn.problem) cc.appendChild(el('p','mwarn',cn.problem));
+    else {
+      var cf=el('dl','facts'); cf.style.margin='0';
+      cf.appendChild(el('dt',null,'Last alert sent')); cf.appendChild(el('dd',null,cn.lastWorked?(ny(cn.lastWorked)+' · '+ago(cn.lastWorked)):'None in the recent runs'));
+      cc.appendChild(cf);
+      if(alertsOff) cc.appendChild(el('p','mwarn','Lead alerts is off, which usually means this connection lapsed (it does about weekly). Reconnect it in Make, then switch Lead alerts back on.'));
+      else if(cn.expired) cc.appendChild(el('p','mwarn','The last alert failed on this connection: alerts can’t be sent. Reconnect it in Make.'));
+      cc.appendChild(el('p','small muted','Read from the alerts scenario: Make’s own expiry date for this connection is months out and doesn’t show the weekly lapse.'));
+    }
+    var rc=el('a','btn'+(cn.expired||alertsOff?' primary':''),'Reconnect in Make'); rc.href=cn.reconnectUrl; rc.target='_blank'; rc.rel='noopener'; rc.style.alignSelf='flex-start';
+    cc.appendChild(rc);
+    box.appendChild(cc);
+  }
+  function switchScenario(sc,want,btn){
+    btn.disabled=true;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({makeScenario:{id:sc.id,active:want}})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t switch the scenario.');return b;});})
+      .then(function(b){sc.isActive=b.isActive;makeAsk=null;$('makeNotice').hidden=true;renderMake();return loadMake();})
+      .catch(function(e){makeAsk=null;var n=$('makeNotice');n.textContent=e.message;n.hidden=false;renderMake();});
+  }
+  function loadMake(){
+    return getJson('?view=make').then(function(m){make=m;$('makeNotice').hidden=true;},function(e){
+      make=null; var n=$('makeNotice'); n.textContent=e.message; n.hidden=false;
+    }).then(renderMake);
+  }
+
   /* ---------- load ---------- */
   function load(){
     $('refresh').disabled=true;
@@ -686,13 +805,14 @@
       },function(e){state.status=null;showNotice(e.message);})
       .then(function(){renderStatus();renderAgentFilter();renderRuns();renderDetail();renderAgents();renderRecipients();focusLinkedRun();$('refresh').disabled=false;});
   }
-  $('refresh').addEventListener('click',load);
+  $('refresh').addEventListener('click',function(){load();loadMake();});
 
   window.CBStudio.ready.then(function(user){
     if(!user) return;
     load();
+    loadMake();
     loadGuide();
-    setInterval(function(){if(!document.hidden&&$('confirm').hidden)load();},60000);
+    setInterval(function(){if(!document.hidden&&$('confirm').hidden)load();if(!document.hidden&&makeAsk===null)loadMake();},60000);
   });
 })();
 </script>
