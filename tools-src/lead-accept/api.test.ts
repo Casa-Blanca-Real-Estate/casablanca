@@ -193,3 +193,163 @@ test('the guide: the default until saved, then the saved one; cleaned; works wit
   assert.equal((await handleLeadAccept(post({ guide: edited }), deps(GUEST).d)).status, 403);
   assert.equal((await handleLeadAccept(get('?view=guide'), deps(AGENT).d)).status, 403);
 });
+
+// ---------- the Make panel ----------
+const MAKE_TOKEN = 'mk-' + 't'.repeat(30);
+const MAKE = 'https://us2.make.com/api/v2';
+interface MakeSeen { url: string; method: string; auth: string | null }
+function makeDeps(user: SignUser, answer: (url: string, method: string) => Response, over: Partial<LeadAcceptDeps> = {}) {
+  const seen: MakeSeen[] = [];
+  const d: LeadAcceptDeps = {
+    user: async () => user, baseUrl: undefined, secret: undefined, guideStore: memGuide(), makeToken: MAKE_TOKEN,
+    fetch: (async (url: string, init: RequestInit = {}) => {
+      const method = init.method ?? 'GET';
+      seen.push({ url, method, auth: new Headers(init.headers).get('authorization') });
+      return answer(url, method);
+    }) as typeof fetch,
+    ...over,
+  };
+  return { d, seen };
+}
+/** Make's answers, in the shapes its API reference documents. */
+function makeApi(over: { connectionExpire?: string | null; alertsActive?: boolean } = {}) {
+  return (url: string, method: string): Response => {
+    const path = url.slice(MAKE.length);
+    if (method === 'POST') {
+      const m = /^\/scenarios\/(\d+)\/(start|stop)$/.exec(path);
+      return m ? Response.json({ scenario: { id: Number(m[1]), isActive: m[2] === 'start', islinked: m[2] === 'start' } }) : new Response('{}', { status: 404 });
+    }
+    if (path === '/scenarios/6887314') return Response.json({ scenario: { id: 6887314, name: 'StreetEasy Referral Lead → Auto-Accept', isActive: true, isPaused: false, isinvalid: false, dlqCount: 0, lastEdit: '2026-11-12T15:00:00.000Z', nextExec: null } });
+    if (path === '/scenarios/6889011') return Response.json({ scenario: { id: 6889011, name: 'StreetEasy Lead Alerts → Email', isActive: over.alertsActive ?? false, isPaused: false, isinvalid: false, dlqCount: 4, lastEdit: '2026-11-10T15:00:00.000Z' } });
+    if (path.startsWith('/scenarios/6887314/logs?')) return Response.json({ scenarioLogs: [
+      { id: 'a1', imtId: 'x', type: 'modify', timestamp: '2026-11-12T15:00:00Z', authorName: 'Kimani' },
+      ...Array.from({ length: 14 }, (_, i) => ({ id: `e${i}`, imtId: `i${i}`, type: 'auto', timestamp: `2026-11-12T14:${String(59 - i).padStart(2, '0')}:00Z`, status: 1, displayStatus: 'SUCCESS', duration: 900, operations: 2 })),
+    ], pg: { limit: 30, sortDir: 'desc' } });
+    if (path.startsWith('/scenarios/6889011/logs?')) return Response.json({ scenarioLogs: [
+      { id: 'f1', imtId: 'j1', type: 'auto', timestamp: '2026-11-12T13:00:00Z', status: 3, displayStatus: 'ERROR', duration: 400, operations: 1 },
+      { id: 'f0', imtId: 'j0', type: 'auto', timestamp: '2026-11-11T13:00:00Z', status: 1, displayStatus: 'SUCCESS', duration: 400, operations: 2 },
+    ], pg: {} });
+    if (path === '/scenarios/6889011/executions/f1') return Response.json({ status: 'ERROR', error: { name: 'ConnectionError', message: 'The connection has expired.', causeModule: { name: 'Gmail', appName: 'google-email' } } });
+    if (path === '/connections/12126157') return Response.json({ connection: { id: 12126157, name: 'Creative Google Restricted connection (creative@casa-blanca.com)', accountName: 'google-restricted', accountLabel: 'Google Restricted', packageName: 'google-email', expire: over.connectionExpire === undefined ? '2026-11-11T00:00:00.000Z' : over.connectionExpire, metadata: { type: 'email', value: 'creative@casa-blanca.com' } } });
+    return new Response('{"message":"Not found"}', { status: 404 });
+  };
+}
+
+test('make: both scenarios, their last 10 runs (not edits), error messages, and the connection; the token stays server-side', async () => {
+  const logged: string[] = [];
+  const orig = console.log; console.log = (...a: unknown[]) => { logged.push(a.join(' ')); };
+  try {
+    const { d, seen } = makeDeps(KIMANI, makeApi());
+    const res = await handleLeadAccept(get('?view=make'), d);
+    assert.equal(res.status, 200);
+    const text = await res.text();
+    assert.ok(!text.includes(MAKE_TOKEN), 'the token never reaches the browser');
+    const v = JSON.parse(text);
+    const [intake, alerts] = v.scenarios;
+    assert.equal(intake.id, 6887314);
+    assert.equal(intake.role, 'intake');
+    assert.equal(intake.name, 'StreetEasy Referral Lead → Auto-Accept');
+    assert.equal(intake.isActive, true);
+    assert.equal(intake.runs.length, 10);
+    assert.ok(intake.runs.every((r: { status: string }) => r.status === 'success'), 'the edit row is left out');
+    assert.equal(intake.runs[0].at, '2026-11-12T14:59:00Z');
+    assert.equal(alerts.isActive, false);
+    assert.equal(alerts.dlqCount, 4);
+    assert.equal(alerts.runs[0].status, 'error');
+    assert.equal(alerts.runs[0].error, 'Gmail — ConnectionError: The connection has expired.');
+    assert.equal(alerts.runs[1].error, undefined);
+    assert.equal(v.connection.name, 'Creative Google Restricted connection (creative@casa-blanca.com)');
+    assert.equal(v.connection.expired, true);
+    assert.equal(v.connection.verified, null);
+    assert.equal(v.connection.reconnectUrl, 'https://us2.make.com/1942598/connections');
+    assert.ok(seen.every((s) => s.auth === `Token ${MAKE_TOKEN}`));
+    assert.ok(seen.every((s) => s.url.startsWith(MAKE + '/') && !s.url.includes(MAKE_TOKEN)));
+    assert.ok(seen.every((s) => s.method === 'GET'), 'reading never switches anything');
+    assert.ok(seen.some((s) => s.url.startsWith(`${MAKE}/scenarios/6887314/logs?`)));
+    assert.ok(logged.every((l) => !l.includes(MAKE_TOKEN)));
+  } finally { console.log = orig; }
+
+  const later = makeDeps(KIMANI, makeApi({ connectionExpire: '2099-01-01T00:00:00Z' }));
+  assert.equal((await (await handleLeadAccept(get('?view=make'), later.d)).json()).connection.expired, false);
+  const none = makeDeps(KIMANI, makeApi({ connectionExpire: null }));
+  assert.equal((await (await handleLeadAccept(get('?view=make'), none.d)).json()).connection.expired, null);
+});
+
+test('make: a guest can look; an agent who isn’t the team is refused before any call', async () => {
+  const g = makeDeps(GUEST, makeApi());
+  assert.equal((await handleLeadAccept(get('?view=make'), g.d)).status, 200);
+  const a = makeDeps(AGENT, makeApi());
+  assert.equal((await handleLeadAccept(get('?view=make'), a.d)).status, 403);
+  assert.equal(a.seen.length, 0);
+});
+
+test('make: no token is a 503 that names the variable; Make refusing the token says so', async () => {
+  const { d, seen } = makeDeps(KIMANI, makeApi(), { makeToken: undefined });
+  const r1 = await handleLeadAccept(get('?view=make'), d);
+  assert.equal(r1.status, 503);
+  const b1 = await r1.json();
+  assert.equal(b1.error, 'not_configured');
+  assert.match(b1.message, /MAKE_API_TOKEN/);
+  assert.equal((await handleLeadAccept(post({ makeScenario: { id: 6889011, active: true } }), d)).status, 503);
+  assert.equal(seen.length, 0);
+
+  for (const status of [401, 403]) {
+    const refused = makeDeps(KIMANI, () => new Response('{"message":"Access denied"}', { status }));
+    const r = await handleLeadAccept(get('?view=make'), refused.d);
+    assert.equal(r.status, 502);
+    const b = await r.json();
+    assert.equal(b.error, 'make_token_refused');
+    assert.match(b.message, /scope/);
+    assert.ok(!JSON.stringify(b).includes(MAKE_TOKEN));
+  }
+  const down = makeDeps(KIMANI, () => { throw new TypeError('fetch failed'); });
+  const dv = await (await handleLeadAccept(get('?view=make'), down.d)).json();
+  assert.ok([...dv.scenarios, dv.connection].every((x: { problem?: string }) => /didn’t answer/.test(x.problem ?? '')), 'Make not answering shows on each card');
+});
+
+test('make: the service being unconfigured doesn’t stop the Make panel', async () => {
+  const { d } = makeDeps(KIMANI, makeApi());   // baseUrl and secret are unset here
+  assert.equal((await handleLeadAccept(get('?view=status'), d)).status, 503);
+  assert.equal((await handleLeadAccept(get('?view=make'), d)).status, 200);
+});
+
+test('make: one missing scenario shows as a problem on its card, not a failed page', async () => {
+  const api = makeApi();
+  const { d } = makeDeps(KIMANI, (url, m) => url.startsWith(`${MAKE}/scenarios/6889011`) ? new Response('{}', { status: 404 }) : api(url, m));
+  const v = await (await handleLeadAccept(get('?view=make'), d)).json();
+  assert.equal(v.scenarios[0].isActive, true);
+  assert.match(v.scenarios[1].problem, /doesn’t have/);
+});
+
+test('make: start and stop the two scenarios; any other id, a bad body, a guest or an agent is refused', async () => {
+  const logged: string[] = [];
+  const orig = console.log; console.log = (...a: unknown[]) => { logged.push(a.join(' ')); };
+  try {
+    const { d, seen } = makeDeps(KIMANI, makeApi());
+    const off = await handleLeadAccept(post({ makeScenario: { id: 6887314, active: false } }), d);
+    assert.equal(off.status, 200);
+    assert.deepEqual(await off.json(), { id: 6887314, isActive: false });
+    assert.deepEqual(seen[0], { url: `${MAKE}/scenarios/6887314/stop`, method: 'POST', auth: `Token ${MAKE_TOKEN}` });
+    const on = await handleLeadAccept(post({ makeScenario: { id: 6889011, active: true } }), d);
+    assert.deepEqual(await on.json(), { id: 6889011, isActive: true });
+    assert.equal(seen[1]!.url, `${MAKE}/scenarios/6889011/start`);
+    assert.ok(logged.some((l) => l.includes('6887314') && l.includes(KIMANI.email)));
+    assert.ok(logged.every((l) => !l.includes(MAKE_TOKEN)));
+
+    for (const bad of [{ id: 1234567, active: true }, { id: '6887314', active: true }, { id: 6887314, active: 'yes' }, null]) {
+      assert.equal((await handleLeadAccept(post({ makeScenario: bad }), d)).status, 400, JSON.stringify(bad));
+    }
+    assert.equal(seen.length, 2, 'refused requests never reach Make');
+  } finally { console.log = orig; }
+
+  const g = makeDeps(GUEST, makeApi());
+  assert.equal((await handleLeadAccept(post({ makeScenario: { id: 6889011, active: true } }), g.d)).status, 403);
+  const a = makeDeps(AGENT, makeApi());
+  assert.equal((await handleLeadAccept(post({ makeScenario: { id: 6889011, active: true } }), a.d)).status, 403);
+  assert.equal(g.seen.length + a.seen.length, 0);
+
+  const failing = makeDeps(KIMANI, () => new Response('{"detail":"Scenario contains invalid modules."}', { status: 400 }));
+  const r = await handleLeadAccept(post({ makeScenario: { id: 6889011, active: true } }), failing.d);
+  assert.equal(r.status, 502);
+  assert.match((await r.json()).message, /invalid modules/);
+});
