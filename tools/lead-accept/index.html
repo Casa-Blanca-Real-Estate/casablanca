@@ -766,16 +766,16 @@
     var cc=el('div','card mcard'+(cn.expired?' bad':'')), ch=el('div','mhead'), ct=el('h3',null,cn.name||('Connection '+cn.id));
     ct.appendChild(el('span','role','Gmail connection · the alerts send through it'+(cn.account?' ('+cn.account+')':'')));
     ch.appendChild(ct);
-    ch.appendChild(el('span','pill '+(cn.expired?'bad':cn.expired===false?'ok':''),cn.expired?'Expired':cn.expired===false?'Valid':'Unknown'));
+    ch.appendChild(el('span','pill '+(cn.expired?'bad':cn.expired===false?'ok':''),cn.expired?'Needs reconnecting':cn.expired===false?'Working':'Unknown'));
     cc.appendChild(ch);
     if(cn.problem) cc.appendChild(el('p','mwarn',cn.problem));
     else {
       var cf=el('dl','facts'); cf.style.margin='0';
-      cf.appendChild(el('dt',null,cn.expired?'Expired':'Expires')); cf.appendChild(el('dd',null,cn.expire?(ny(cn.expire)+' · '+(cn.expired?ago(cn.expire):until(cn.expire))):'Make gives no date'));
+      cf.appendChild(el('dt',null,'Last alert sent')); cf.appendChild(el('dd',null,cn.lastWorked?(ny(cn.lastWorked)+' · '+ago(cn.lastWorked)):'None in the recent runs'));
       cc.appendChild(cf);
-      if(cn.expired) cc.appendChild(el('p','mwarn','Expired: alerts can’t be sent. Reconnect it in Make, then turn Lead alerts back on.'));
-      else if(alertsOff) cc.appendChild(el('p','mwarn','Lead alerts is off, which usually means this connection lapsed. Reconnect it, then switch alerts back on.'));
-      cc.appendChild(el('p','small muted','Make’s date only. Checking the sign-in itself needs a token that can change connections, which this page doesn’t have.'));
+      if(alertsOff) cc.appendChild(el('p','mwarn','Lead alerts is off, which usually means this connection lapsed (it does about weekly). Reconnect it in Make, then switch Lead alerts back on.'));
+      else if(cn.expired) cc.appendChild(el('p','mwarn','The last alert failed on this connection: alerts can’t be sent. Reconnect it in Make.'));
+      cc.appendChild(el('p','small muted','Read from the alerts scenario: Make’s own expiry date for this connection is months out and doesn’t show the weekly lapse.'));
     }
     var rc=el('a','btn'+(cn.expired||alertsOff?' primary':''),'Reconnect in Make'); rc.href=cn.reconnectUrl; rc.target='_blank'; rc.rel='noopener'; rc.style.alignSelf='flex-start';
     cc.appendChild(rc);

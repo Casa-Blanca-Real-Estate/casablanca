@@ -212,7 +212,7 @@ function makeDeps(user: SignUser, answer: (url: string, method: string) => Respo
   return { d, seen };
 }
 /** Make's answers, in the shapes its API reference documents. */
-function makeApi(over: { connectionExpire?: string | null; alertsActive?: boolean } = {}) {
+function makeApi(over: { connectionExpire?: string | null; alertsActive?: boolean; alertsLastOk?: boolean } = {}) {
   return (url: string, method: string): Response => {
     const path = url.slice(MAKE.length);
     if (method === 'POST') {
@@ -226,6 +226,7 @@ function makeApi(over: { connectionExpire?: string | null; alertsActive?: boolea
       ...Array.from({ length: 14 }, (_, i) => ({ id: `e${i}`, imtId: `i${i}`, type: 'auto', timestamp: `2026-11-12T14:${String(59 - i).padStart(2, '0')}:00Z`, status: 1, displayStatus: 'SUCCESS', duration: 900, operations: 2 })),
     ], pg: { limit: 30, sortDir: 'desc' } });
     if (path.startsWith('/scenarios/6889011/logs?')) return Response.json({ scenarioLogs: [
+      ...(over.alertsLastOk ? [{ id: 'g2', imtId: 'j2', type: 'auto', timestamp: '2026-11-12T16:00:00Z', status: 1, displayStatus: 'SUCCESS', duration: 400, operations: 2 }] : []),
       { id: 'f1', imtId: 'j1', type: 'auto', timestamp: '2026-11-12T13:00:00Z', status: 3, displayStatus: 'ERROR', duration: 400, operations: 1 },
       { id: 'f0', imtId: 'j0', type: 'auto', timestamp: '2026-11-11T13:00:00Z', status: 1, displayStatus: 'SUCCESS', duration: 400, operations: 2 },
     ], pg: {} });
@@ -269,10 +270,15 @@ test('make: both scenarios, their last 10 runs (not edits), error messages, and 
     assert.ok(logged.every((l) => !l.includes(MAKE_TOKEN)));
   } finally { console.log = orig; }
 
-  const later = makeDeps(KIMANI, makeApi({ connectionExpire: '2099-01-01T00:00:00Z' }));
-  assert.equal((await (await handleLeadAccept(get('?view=make'), later.d)).json()).connection.expired, false);
-  const none = makeDeps(KIMANI, makeApi({ connectionExpire: null }));
-  assert.equal((await (await handleLeadAccept(get('?view=make'), none.d)).json()).connection.expired, null);
+  // Make's own date doesn't decide it (it reads months out while the sign-in lapses weekly): the alert scenario does.
+  const offButDated = makeDeps(KIMANI, makeApi({ connectionExpire: '2099-01-01T00:00:00Z' }));
+  const c1 = (await (await handleLeadAccept(get('?view=make'), offButDated.d)).json()).connection;
+  assert.equal(c1.expired, true);
+  assert.equal(c1.lastWorked, '2026-11-11T13:00:00Z');
+  const working = makeDeps(KIMANI, makeApi({ connectionExpire: '2020-01-01T00:00:00Z', alertsActive: true, alertsLastOk: true }));
+  assert.equal((await (await handleLeadAccept(get('?view=make'), working.d)).json()).connection.expired, false);
+  const lastFailedOnConn = makeDeps(KIMANI, makeApi({ alertsActive: true }));
+  assert.equal((await (await handleLeadAccept(get('?view=make'), lastFailedOnConn.d)).json()).connection.expired, true);
 });
 
 test('make: a guest can look; an agent who isn’t the team is refused before any call', async () => {

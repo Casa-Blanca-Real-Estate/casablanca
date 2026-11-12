@@ -11,7 +11,10 @@
 //   POST /scenarios/{id}/start, /stop               { scenario: { id, isActive } }          (scenarios:write)
 //   GET  /connections/{id}                          { connection: { name, accountName, accountLabel, packageName, expire, … } }
 //   POST /connections/{id}/test would verify the connection, but it needs connections:write, which this
-//   token doesn't have, so the page shows what GET says (expire) and the alert scenario's own state.
+//   token doesn't have. Make's `expire` isn't the weekly lapse either: for this Google connection it reads
+//   six months out (2027-05-12 on 2026-11-12) while the sign-in itself dies about weekly. So whether the
+//   connection works is read from the alert scenario that uses it: off, or its last run failed on the
+//   connection → lapsed; its last run went through → working; otherwise unknown.
 
 export const MAKE_API = 'https://us2.make.com/api/v2';
 export const MAKE_APP = 'https://us2.make.com';
@@ -45,8 +48,11 @@ export interface MakeScenarioView {
 }
 export interface MakeConnectionView {
   id: number; name: string | null; account: string | null; expire: string | null;
-  /** From `expire`: true when it's in the past, false when in the future, null when Make gives none. */
+  /** From the alert scenario, not `expire`: true when it's off or its last run failed on the connection,
+   *  false when its last run went through, null when there's nothing to go on. */
   expired: boolean | null;
+  /** The alert scenario's last run that went through: the last time the connection is known to have worked. */
+  lastWorked: string | null;
   /** Make's verify call needs connections:write; this token can't make it. */
   verified: null;
   usedBy: number; reconnectUrl: string; problem?: string;
@@ -138,9 +144,21 @@ async function scenarioView(f: Fetch, token: string, s: (typeof MAKE_SCENARIOS)[
   return view;
 }
 
-async function connectionView(f: Fetch, token: string, now: number): Promise<MakeConnectionView> {
+/** Whether the alert scenario says its Gmail connection works (see the note at the top). */
+const CONNECTION_ERROR = /connect|auth|token|grant|expired|unauthori[sz]ed|credential|401|403/i;
+function connectionHealth(alerts: MakeScenarioView | undefined): Pick<MakeConnectionView, 'expired' | 'lastWorked'> {
+  if (!alerts || alerts.problem) return { expired: null, lastWorked: null };
+  const lastWorked = alerts.runs.find((r) => r.status === 'success')?.at ?? null;
+  const last = alerts.runs.find((r) => r.status !== 'running');
+  if (alerts.isActive === false || alerts.isinvalid) return { expired: true, lastWorked };
+  if (last?.status === 'error' && CONNECTION_ERROR.test(last.error ?? '')) return { expired: true, lastWorked };
+  if (last?.status === 'success') return { expired: false, lastWorked };
+  return { expired: null, lastWorked };
+}
+
+async function connectionView(f: Fetch, token: string, _now: number): Promise<MakeConnectionView> {
   const view: MakeConnectionView = {
-    id: MAKE_CONNECTION, name: null, account: null, expire: null, expired: null, verified: null,
+    id: MAKE_CONNECTION, name: null, account: null, expire: null, expired: null, lastWorked: null, verified: null,
     usedBy: 6889011, reconnectUrl: `${MAKE_APP}/${MAKE_TEAM}/connections`,
   };
   try {
@@ -149,8 +167,6 @@ async function connectionView(f: Fetch, token: string, now: number): Promise<Mak
     view.name = str(c.name);
     view.account = str(c.accountLabel) ?? str((c.metadata as { value?: unknown } | undefined)?.value) ?? str(c.accountName);
     view.expire = str(c.expire);
-    const t = view.expire ? Date.parse(view.expire) : NaN;
-    view.expired = Number.isFinite(t) ? t <= now : null;
   } catch (err) {
     if (err instanceof MakeError && err.code !== 'make_token_refused') view.problem = err.message;
     else throw err;
@@ -164,6 +180,7 @@ export async function makeView(f: Fetch, token: string, now = Date.now()) {
     Promise.all(MAKE_SCENARIOS.map((s) => scenarioView(f, token, s))),
     connectionView(f, token, now),
   ]);
+  Object.assign(connection, connectionHealth(scenarios.find((s) => s.role === 'alerts')));
   return { scenarios, connection, checkedAt: new Date(now).toISOString() };
 }
 

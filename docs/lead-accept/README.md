@@ -83,10 +83,11 @@ The *Make* section shows the two scenarios and the alerts' Gmail connection, rea
   error message of up to 3 failed ones. Turning intake off asks first, since it stops lead intake entirely.
   The switch calls Make's `POST /scenarios/{id}/start` or `/stop`; the function refuses any other scenario id.
   Guests see the panel but the switches are disabled.
-- **The Gmail connection** 12126157 (creative@): red, *Expired*, when Make's `expire` date is past, and a
-  *Reconnect in Make* button to `https://us2.make.com/1942598/connections`. If alerts are off, the panel says
-  the connection has probably lapsed. Make's own check (`POST /connections/{id}/test`) needs `connections:write`,
-  which the token doesn't have, so the page shows only the date Make reports.
+- **The Gmail connection** 12126157 (creative@): red, *Needs reconnecting*, when the alerts scenario is off or its
+  last run failed on the connection; *Working* when its last run went through; with the last alert sent and a
+  *Reconnect in Make* button to `https://us2.make.com/1942598/connections`. Make's `expire` for this connection
+  is no use here: on Nov 12 it read 2027-05-12 while the sign-in lapses about weekly. Make's own check
+  (`POST /connections/{id}/test`) needs `connections:write`, which the token doesn't have.
 - Make endpoints used: `GET /scenarios/{id}`, `GET /scenarios/{id}/logs`, `GET /scenarios/{id}/executions/{executionId}`,
   `POST /scenarios/{id}/start|stop`, `GET /connections/{id}`. No token: the panel says to set `MAKE_API_TOKEN`
   (503). Make refusing it (401/403): "refused the API token, or it is missing a scope".
