@@ -193,3 +193,17 @@ test('the guide: the default until saved, then the saved one; cleaned; works wit
   assert.equal((await handleLeadAccept(post({ guide: edited }), deps(GUEST).d)).status, 403);
   assert.equal((await handleLeadAccept(get('?view=guide'), deps(AGENT).d)).status, 403);
 });
+
+test('Claude session links: claude.ai only, kept in order; a guide saved before them gets the defaults', async () => {
+  const { d } = deps(KIMANI);
+  // An older saved guide with no sessions key.
+  await (d.guideStore as unknown as { setJSON(k: string, v: unknown): Promise<void> }).setJSON('guide', { intro: '', steps: [{ title: 'One', summary: '', details: [] }], sections: [], links: [] });
+  const old = await (await handleLeadAccept(get('?view=guide'), d)).json();
+  assert.ok(old.sessions.length >= 1 && old.sessions[0].url.startsWith('https://claude.ai/'));
+
+  const g = { intro: '', steps: [{ title: 'One', summary: '', details: [] }], sections: [], links: [],
+    sessions: [{ label: 'New code session', url: 'https://claude.ai/code/session_new' }, { label: 'Phish', url: 'https://example.com/x' }, { label: 'Old', url: 'https://claude.ai/chat/old' }] };
+  await handleLeadAccept(post({ guide: g }), d);
+  const back = await (await handleLeadAccept(get('?view=guide'), d)).json();
+  assert.deepEqual(back.sessions, [{ label: 'New code session', url: 'https://claude.ai/code/session_new' }, { label: 'Old', url: 'https://claude.ai/chat/old' }]);
+});

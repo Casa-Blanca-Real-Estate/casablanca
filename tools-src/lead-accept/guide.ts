@@ -14,11 +14,14 @@
 export interface GuideStep { title: string; summary: string; details: string[] }
 export interface GuideSection { title: string; body: string }
 export interface GuideLink { name: string; url: string }
+/** A Claude session or chat that worked on this tool. The first is the current one. */
+export interface GuideSession { label: string; url: string }
 export interface Guide {
   intro: string;
   steps: GuideStep[];
   sections: GuideSection[];
   links: GuideLink[];
+  sessions?: GuideSession[];
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -113,6 +116,10 @@ export const DEFAULT_GUIDE: Guide = {
         '- Bot checks: the service never tries to get past one. That lead goes to a person.',
     },
   ],
+  sessions: [
+    { label: 'Build session, Nov 3–12 (Claude Code)', url: 'https://claude.ai/code/session_01UYdn92KnUfkzoUGCHzGwes' },
+    { label: 'The original Claude chat', url: 'https://claude.ai/chat/98a32a9f-8d79-408f-bc3a-397dede0318f?artifact=ee999b8a-f77b-4d13-9571-637f5449d250' },
+  ],
   links: [
     { name: 'StreetEasy Referral Lead → Auto-Accept', url: 'https://us2.make.com/1942598/scenarios/6887314/edit' },
     { name: 'StreetEasy Lead Alerts → Email', url: 'https://us2.make.com/1942598/scenarios/6889011/edit' },
@@ -147,6 +154,11 @@ export function cleanGuide(v: unknown): Guide | null {
     const t = (x ?? {}) as Record<string, unknown>;
     return { name: s(t.name, 80), url: s(t.url, 500) };
   }).filter((l) => l.name && /^(https?:\/\/|mailto:)/i.test(l.url));
+  // Sessions: Claude links only, so the list can't become a way to send people elsewhere.
+  const sessions = (Array.isArray(g.sessions) ? g.sessions.slice(0, 12) : []).map((x) => {
+    const t = (x ?? {}) as Record<string, unknown>;
+    return { label: s(t.label, 120), url: s(t.url, 500) };
+  }).filter((x) => x.label && /^https:\/\/claude\.ai\//.test(x.url));
   if (!steps.length) return null;
-  return { intro: s(g.intro, 2000), steps, sections, links };
+  return { intro: s(g.intro, 2000), steps, sections, links, sessions };
 }
