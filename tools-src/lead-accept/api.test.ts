@@ -163,8 +163,8 @@ test('alert recipients: validated, de-duplicated, passed to the service; guests 
   const { d, seen } = deps(KIMANI, () => Response.json({ recipients: {} }));
   const ok = await handleLeadAccept(post({ recipients: { failures: [' D.Prestly@casa-blanca.com', 'success@casa-blanca.com', 'd.prestly@casa-blanca.com'] } }), d);
   assert.equal(ok.status, 200);
-  assert.equal(seen[0].url, `${BASE}/admin/settings`);
-  assert.deepEqual(JSON.parse(seen[0].body!), { recipients: { failures: ['d.prestly@casa-blanca.com', 'success@casa-blanca.com'] } });
+  assert.equal(seen[0]!.url, `${BASE}/admin/settings`);
+  assert.deepEqual(JSON.parse(seen[0]!.body!), { recipients: { failures: ['d.prestly@casa-blanca.com', 'success@casa-blanca.com'] } });
   assert.equal((await handleLeadAccept(post({ recipients: { failures: ['not an email'] } }), d)).status, 400);
   assert.equal((await handleLeadAccept(post({ recipients: { everyone: ['a@b.com'] } }), d)).status, 400);
   assert.equal((await handleLeadAccept(post({ recipients: { failures: ['a@b.com'] } }), deps(GUEST).d)).status, 403);
