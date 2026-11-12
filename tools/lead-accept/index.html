@@ -98,6 +98,8 @@
   .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
   .tag.own{background:var(--accent);color:var(--plum)} .tag.rej{background:var(--bad-bg);color:var(--bad)}
   .addbar{margin:0 0 10px}
+  .sessions{margin:-4px 0 14px;font-size:13px}
+  .sessions a{color:var(--plum);font-weight:800;text-decoration:none;border-bottom:1px solid var(--accent)}
   /* run highlighted from an alert email's link */
   .row.flash{animation:flash 2.4s ease-out 1;border-color:var(--ink);box-shadow:0 0 0 2px var(--accent)}
   @keyframes flash{0%,40%{background:#efeaff}100%{background:var(--surface)}}
@@ -174,8 +176,7 @@
   <h1>StreetEasy lead auto-accept</h1>
   <p class="lede">Referral leads land in the shared inbox with about 30 minutes to respond. This service opens each one in the right agent's StreetEasy account and clicks Respond Now, so nobody has to. Derek only hears about the ones it couldn't do.</p>
   <!-- The chat this tool was built in (Kimani, 2026-11-10): changes to the service start there. Set data-href to its link; empty hides the line. -->
-  <p class="muted" id="origin" data-href="https://claude.ai/chat/98a32a9f-8d79-408f-bc3a-397dede0318f?artifact=ee999b8a-f77b-4d13-9571-637f5449d250" hidden style="margin:-4px 0 14px;font-size:13px">Built in <a id="originLink" target="_blank" rel="noopener">the original Claude chat</a>. Go back there for changes to the service.</p>
-  <script>(function(){var p=document.getElementById('origin'),u=p.getAttribute('data-href');if(/^https:\/\/claude\.ai\//.test(u)){document.getElementById('originLink').href=u;p.hidden=false;}})();</script>
+  <p class="muted sessions" id="sessions" hidden></p>
   <p id="notice" class="notice bad" role="alert" hidden></p>
 
   <section class="status" aria-label="Status">
@@ -588,8 +589,22 @@
     }).join('')+'</ol>';
     (guide.sections||[]).forEach(function(sec){h+='<section class="gsec"><h3>'+fmt(sec.title)+'</h3>'+blockHtml(sec.body)+'</section>';});
     box.innerHTML=h;
+    renderSessions();
     $('guideMeta').textContent=guide.isDefault?'The starting version. Edit it to make it yours.':('Last edited '+ny(guide.updatedAt)+(guide.updatedBy?' by '+guide.updatedBy:''));
     $('guideEditBtn').hidden=!!(window.CBStudio.user&&window.CBStudio.user.guest);
+  }
+  /* The Claude sessions that work on this tool: the first is the current one. Edited with the guide. */
+  function renderSessions(){
+    var p=$('sessions'), list=((guide&&guide.sessions)||[]).filter(function(x){return /^https:\/\/claude\.ai\//.test(x.url);});
+    p.innerHTML=''; p.hidden=!list.length; if(!list.length) return;
+    p.appendChild(document.createTextNode('For changes to the service, use the current Claude session: '));
+    function a(x){var l=el('a',null,x.label);l.href=x.url;l.target='_blank';l.rel='noopener';return l;}
+    p.appendChild(a(list[0])); p.appendChild(document.createTextNode('.'));
+    if(list.length>1){
+      p.appendChild(document.createTextNode(' Earlier: '));
+      list.slice(1).forEach(function(x,i){if(i)p.appendChild(document.createTextNode(', '));p.appendChild(a(x));});
+      p.appendChild(document.createTextNode('.'));
+    }
   }
   function loadGuide(){
     return getJson('?view=guide').then(function(g){guide=g;renderGuide();},function(e){guide=null;renderGuide();showNotice(e.message);});
@@ -638,6 +653,26 @@
     (draft.sections||[]).forEach(addSec);
     var addC=el('button',null,'Add a section'); addC.type='button'; addC.addEventListener('click',function(){addSec({title:'',body:''});}); f.appendChild(addC);
 
+    var sesFs=el('fieldset'); sesFs.appendChild(el('legend',null,'Claude sessions'));
+    sesFs.appendChild(el('p','hint','Shown at the top of the page. The first one is the current session; put a new one first. claude.ai links only.'));
+    var sesRows=[];
+    function addSes(x,first){
+      var r=el('div','lrow'), n=el('input'), u=el('input'), rm=el('button','rm','×'); rm.type='button';
+      n.value=x.label||''; n.placeholder='e.g. Claude Code session, from Nov 12'; n.setAttribute('aria-label','Session label');
+      u.value=x.url||''; u.placeholder='https://claude.ai/…'; u.setAttribute('aria-label','Session link');
+      rm.setAttribute('aria-label','Remove session');
+      r.appendChild(n); r.appendChild(u); r.appendChild(rm);
+      var row={n:n,u:u,r:r};
+      if(first){sesRows.unshift(row); sesFs.insertBefore(r,sesFs.querySelector('.lrow')||addSs);} else {sesRows.push(row); sesFs.insertBefore(r,addSs);}
+      rm.addEventListener('click',function(){sesRows.splice(sesRows.indexOf(row),1);r.remove();});
+      return row;
+    }
+    var addSs=el('button',null,'Add the current session'); addSs.type='button';
+    addSs.addEventListener('click',function(){addSes({},true).n.focus();});
+    sesFs.appendChild(addSs);
+    (draft.sessions||[]).forEach(function(x){addSes(x,false);});
+    f.appendChild(sesFs);
+
     var linkFs=el('fieldset'); linkFs.appendChild(el('legend',null,'Links'));
     linkFs.appendChild(el('p','hint','A name here becomes a link everywhere it appears in the guide. Longer names win, so “StreetEasy Lead Alerts → Email” links to the scenario, not to Make.'));
     var linkRows=[];
@@ -664,7 +699,8 @@
       var g={intro:intro.input.value,
         steps:stepRows.map(function(r){return {title:r.t.value,summary:r.su.value,details:r.de.value.split('\n').map(function(x){return x.trim();}).filter(Boolean)};}),
         sections:secRows.map(function(r){return {title:r.t.value,body:r.b.value};}),
-        links:linkRows.map(function(r){return {name:r.n.value.trim(),url:r.u.value.trim()};}).filter(function(l){return l.name||l.url;})};
+        links:linkRows.map(function(r){return {name:r.n.value.trim(),url:r.u.value.trim()};}).filter(function(l){return l.name||l.url;}),
+        sessions:sesRows.map(function(r){return {label:r.n.value.trim(),url:r.u.value.trim()};}).filter(function(x){return x.label||x.url;})};
       api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guide:g})})
         .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the guide.');return b;});})
         .then(function(b){guide=b;closeEditor();showNotice('');renderGuide();})
