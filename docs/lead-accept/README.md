@@ -79,3 +79,16 @@ Service endpoints it uses: `GET /admin/status`, `GET /admin/runs`, `GET /agents`
 - Marking lead emails read/starred in blancacasa1002 by outcome was proposed and set aside (Kimani,
   Nov 10): the ACTION NEEDED email is Derek's signal instead.
 - StreetEasy terms on automated access to agent accounts weren't reviewed.
+
+## Alert emails, run links and the guide (Nov 12)
+
+- **Recipients per alert type**, edited on the page under *Alert emails*: **Needs a person** (ACTION NEEDED;
+  default Derek and success@casa-blanca.com), **Accepted** and **Notices** (new agent, password rejected;
+  both casacalliste by default). Kept in the service's `/data/settings.json`. The Make alert scenario splits the
+  comma-separated `to` the service sends; casacalliste is still cc'd on every alert so Claude sessions can read them.
+- **Every alert links to its run**: `https://casa-blanca-creative-studio.netlify.app/tools/lead-accept/#run-<id>`
+  (service variable `STUDIO_URL`). Opening it selects and highlights that run in the log.
+- **How it works** is an editable guide (for Erez and the team): steps with a summary and collapsed
+  step-by-step beats, free sections, and a link list. Stored in Netlify Blobs (`cb-lead-accept` / `guide`); the
+  starting text is `tools-src/lead-accept/guide.ts`. Plain text: emails are highlighted, names in the link list
+  become links wherever they appear, `**bold**`, and `- ` bullets in sections.
