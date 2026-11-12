@@ -18,6 +18,9 @@
 //   POST {guide: Guide}       save an edited guide
 //   GET  ?view=make           the two Make scenarios (state, recent runs, errors) and the alerts' Gmail connection
 //   POST {makeScenario: {id, active}}  start or stop one of those two scenarios (no other id)
+//   POST {fileMaker: {emailOn?: bool, emailTo?: email}}  the one email per lead to FileMaker's inbox
+//   GET  ?view=inbox&limit=N&kind=lead|sign-in-code|other  the emails Make posted, newest first (N up to 500);
+//        kind=other carries StreetEasy's client messages, parsed. Client details pass through, never logged.
 //
 // SECURITY
 //   Every request needs the Studio sign-in, and the user must be the Studio's team (the same rule as
@@ -38,6 +41,7 @@ export interface GuideBlobs {
 }
 const RECIPIENT_GROUPS = ['failures', 'successes', 'notices'] as const;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const INBOX_KINDS = ['lead', 'sign-in-code', 'other'] as const;
 
 export interface LeadAcceptDeps {
   /** The signed-in user; throws the comp report's HttpError(401/403/503) when there's none. */
@@ -142,6 +146,14 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
         return json(await (await call(`/admin/runs?limit=${limit}`)).json());
       }
       if (view === 'agents') return json(await (await call('/agents')).json());
+      if (view === 'inbox') {
+        const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit')) || 50));
+        const kind = url.searchParams.get('kind');
+        if (kind !== null && !(INBOX_KINDS as readonly string[]).includes(kind)) {
+          throw new LeadAcceptError(400, 'bad_kind', 'kind is lead, sign-in-code or other.');
+        }
+        return json(await (await call(`/admin/inbox?limit=${limit}${kind ? `&kind=${kind}` : ''}`)).json());
+      }
       throw new LeadAcceptError(400, 'bad_view');
     }
 
@@ -149,7 +161,31 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
       if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
       const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown };
         addAgent?: { email?: unknown; name?: unknown; password?: unknown };
-        recipients?: Record<string, unknown> } | null;
+        recipients?: Record<string, unknown>; fileMaker?: unknown } | null;
+
+      // The FileMaker email: { fileMaker: { emailOn?: bool, emailTo?: email } } (either or both).
+      if (body?.fileMaker !== undefined) {
+        const fm = body.fileMaker as Record<string, unknown> | null;
+        if (!fm || typeof fm !== 'object' || Array.isArray(fm)) throw new LeadAcceptError(400, 'bad_filemaker', 'Send { fileMaker: { emailOn?, emailTo? } }.');
+        const extra = Object.keys(fm).filter((k) => k !== 'emailOn' && k !== 'emailTo');
+        if (extra.length) throw new LeadAcceptError(400, 'bad_filemaker', `Unknown FileMaker setting: ${extra.join(', ')}.`);
+        const out: { emailOn?: boolean; emailTo?: string } = {};
+        if (fm.emailOn !== undefined) {
+          if (typeof fm.emailOn !== 'boolean') throw new LeadAcceptError(400, 'bad_filemaker', 'emailOn is true or false.');
+          out.emailOn = fm.emailOn;
+        }
+        if (fm.emailTo !== undefined) {
+          const to = typeof fm.emailTo === 'string' ? fm.emailTo.trim().toLowerCase() : '';
+          if (!EMAIL.test(to)) throw new LeadAcceptError(400, 'bad_email', `Not an email address: ${String(fm.emailTo)}`);
+          out.emailTo = to;
+        }
+        if (!Object.keys(out).length) throw new LeadAcceptError(400, 'bad_filemaker', 'Send emailOn, emailTo or both.');
+        const res = await call('/admin/settings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileMaker: out }),
+        });
+        console.log(`lead-accept: FileMaker email ${out.emailOn === undefined ? 'settings' : out.emailOn ? 'on' : 'off'} changed by ${user.email}`);
+        return json(await res.json());
+      }
 
       // Who gets each kind of alert: { recipients: { failures: [...], ... } } (any subset).
       if (body?.recipients !== undefined) {
