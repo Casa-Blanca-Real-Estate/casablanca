@@ -98,6 +98,54 @@
   .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
   .tag.own{background:var(--accent);color:var(--plum)} .tag.rej{background:var(--bad-bg);color:var(--bad)}
   .addbar{margin:0 0 10px}
+  /* run highlighted from an alert email's link */
+  .row.flash{animation:flash 2.4s ease-out 1;border-color:var(--ink);box-shadow:0 0 0 2px var(--accent)}
+  @keyframes flash{0%,40%{background:#efeaff}100%{background:var(--surface)}}
+  @media (prefers-reduced-motion:reduce){.row.flash{animation:none;background:#efeaff}}
+  /* alert emails */
+  .rgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin:0 0 6px}
+  .rgroup{display:flex;flex-direction:column;gap:8px}
+  .rgroup h3{margin:0;font-size:13px}
+  .rgroup .desc{font-size:12px;color:var(--muted);margin:0}
+  .rchips{display:flex;flex-wrap:wrap;gap:6px}
+  .rchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
+  .rchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rchip button{border:none;background:none;padding:0 6px;font-size:14px;line-height:1;color:var(--muted);border-radius:999px}
+  .rchip button:hover{color:var(--bad)}
+  .radd{display:flex;gap:6px}
+  .radd input{flex:1 1 auto;min-width:0;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:9px;padding:6px 8px}
+  .radd button{padding:6px 10px;font-size:11px}
+  .rwarn{font-size:12px;color:var(--bad);margin:0}
+  /* the guide */
+  .guidebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 10px}
+  .gintro{font-size:15px;max-width:70ch;margin:0 0 14px}
+  .gsteps{list-style:none;counter-reset:step;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:8px}
+  .gsteps>li{counter-increment:step;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .gsteps>li::before{content:counter(step);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:800}
+  .gsteps .gt{font-weight:800}
+  .gsteps p{margin:2px 0 0;max-width:80ch}
+  .gsteps details{margin-top:8px}
+  .gsteps summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--plum)}
+  .gsteps details ul{margin:8px 0 0;padding-left:18px;max-width:80ch}
+  .gsteps details li{margin:0 0 5px}
+  .gsec{margin:18px 0 0}
+  .gsec h3{margin:0 0 6px}
+  .gsec p{max-width:80ch}
+  .gsec ul{margin:0 0 10px;padding-left:18px;max-width:84ch} .gsec li{margin:0 0 5px}
+  a.ref{color:var(--plum);text-decoration:none;border-bottom:1px solid var(--accent);font-weight:800}
+  a.ref:hover{border-bottom-color:var(--plum)}
+  a.ref.email{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;font-weight:400;background:#efeaff;border:none;border-radius:5px;padding:0 4px;color:var(--plum)}
+  /* guide editor */
+  .gform{display:flex;flex-direction:column;gap:12px}
+  .gform fieldset{border:1px solid var(--line);border-radius:11px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;margin:0}
+  .gform legend{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+  .gform label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:800}
+  .gform input,.gform textarea{font:inherit;font-size:13px;font-weight:400;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0;width:100%}
+  .gform textarea{resize:vertical;min-height:54px}
+  .gform .lrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:6px;align-items:center}
+  .gform .rm{font-size:11px;padding:4px 8px;align-self:flex-start}
+  .gform .gactions{display:flex;flex-wrap:wrap;gap:8px;position:sticky;bottom:0;background:var(--surface);padding:8px 0 2px}
+  .gform .hint{font-size:11px;color:var(--muted);font-weight:400}
   .addform{display:flex;flex-direction:column;gap:10px;margin:0 0 12px;max-width:760px}
   .addform .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
   .addform label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800}
@@ -168,6 +216,10 @@
     </article>
   </div>
 
+  <h2>Alert emails</h2>
+  <p class="muted">Who gets each kind of email. Changes apply to the next alert. casacalliste@gmail.com also gets a copy of every alert, so a Claude session can read them.</p>
+  <div class="rgroups" id="recipients"></div>
+
   <h2>Referral agents</h2>
   <p class="muted">Every agent the service has seen. New ones are added the first time a lead or sign-in code arrives for them. They all use the shared StreetEasy password unless you set their own here. If a password is rejected, the service signs in with a one-time email code instead, which only works when that code reaches the shared inbox.</p>
   <div class="addbar"><button type="button" id="addAgentBtn">Add an agent</button></div>
@@ -187,38 +239,12 @@
   <div class="agents" id="agents"></div>
 
   <h2>How it works</h2>
-  <div class="card">
-    <ol class="flow">
-      <li><div><b>A lead arrives.</b> StreetEasy emails the referral agent's alias. It lands in the shared referral inbox, and a Gmail filter there forwards anything from streeteasy.com to a Make mailhook. The inbox copy stays unread.</div></li>
-      <li><div><b>Make passes it on.</b> The scenario <i>StreetEasy Referral Lead → Auto-Accept</i> posts the email to the service on Railway within a few seconds.</div></li>
-      <li><div><b>The service sorts it.</b> A lead email is matched to an agent by the address it was sent to. A sign-in code email is held for a login that's waiting on it. Anything else is ignored. Leads past their deadline are skipped.</div></li>
-      <li><div><b>It opens the agent's account.</b> Each agent has a saved StreetEasy session on Railway's disk, so most leads need no login. When one is needed: Log in, email, shared password, then StreetEasy's verification switched from text to email, with the code read from the same inbox. "Remember this device" is ticked, so it lasts 30 days.</div></li>
-      <li><div><b>It responds.</b> On the agent's Connections list it finds the lead's card by building number and unit, clicks <b>Respond Now</b>, sends the pre-filled message, reloads, and checks the card no longer asks for a response.</div></li>
-      <li><div><b>It reports.</b> Done: an email to the tools inbox only. Anything a person must do: an <b>ACTION NEEDED by &lt;time&gt;</b> email to Derek with the property, the agent account and the link, plus a screenshot. Observe mode counts as needing a person, since it never clicks.</div></li>
-    </ol>
+  <div class="guidebar">
+    <span class="small muted" id="guideMeta"></span>
+    <button type="button" id="guideEditBtn" hidden>Edit</button>
   </div>
-
-  <h3>Where each piece lives</h3>
-  <dl class="where">
-    <dt>The service</dt><dd>Railway, project <i>casablanca</i>. Code in the GitHub repo <code>se-autoaccept</code>; a push to <code>main</code> redeploys it. Its disk at <code>/data</code> holds the agent list, saved sessions, the run log and screenshots (kept 14 days).</dd>
-    <dt>Make</dt><dd><i>StreetEasy Referral Lead → Auto-Accept</i> (inbox to service) and <i>StreetEasy Lead Alerts → Email</i> (service to Derek and the tools inbox).</dd>
-    <dt>Shared inbox</dt><dd>The referral inbox (named in the doc): the Gmail filter on <code>from:streeteasy.com</code> that forwards to Make. Its "forward all mail" setting goes elsewhere and isn't part of this.</dd>
-    <dt>Settings</dt><dd>Railway variables: the shared key, the StreetEasy password, the alert webhook, the service's own URL. Netlify variables for this page: <code>SE_AUTOMATION_URL</code> and <code>SE_AUTOMATION_SECRET</code>.</dd>
-    <dt>Full notes</dt><dd><code>docs/lead-accept/README.md</code> in the Studio repo, and the <code>se-autoaccept</code> README.</dd>
-  </dl>
-
-  <h3>Routine and troubleshooting</h3>
-  <details class="card" open>
-    <summary>What needs a person, and when</summary>
-    <ul class="plain">
-      <li><b>Every week:</b> the Make connection that sends alerts from creative@ expires. A scheduled reminder fires Tuesdays at 3:21 PM: Make → Connections → <i>Creative Google Restricted connection</i> → Reauthorize, then check <i>StreetEasy Lead Alerts → Email</i> is on. Until it's done, alerts queue up in Make and nobody is told.</li>
-      <li><b>Observe mode</b> (the switch above): opens each lead and reports which button it would click, but doesn't click. Use it after StreetEasy changes its pages, or while a fix is going in. It takes effect on the next lead.</li>
-      <li><b>An agent with a different password:</b> on their card below, <i>Set own password</i>. It's saved on the service, never shown again, and the next login uses it. <b>The shared password changed:</b> update it in Railway's variables; agents marked rejected are tried again.</li>
-      <li><b>"No agent match":</b> the lead email didn't name an agent the service could find. The alert shows who it was sent to.</li>
-      <li><b>"Failed" on the Respond step:</b> StreetEasy may have changed the button or the message pop-up. Switch to observe mode and send the run's screenshots to a Claude session.</li>
-      <li><b>Bot check:</b> the service never tries to get past one. That lead goes to Derek.</li>
-    </ul>
-  </details>
+  <div id="guide"><p class="muted">Loading…</p></div>
+  <form id="guideForm" class="card gform" hidden></form>
 </main>
 
 <script>
@@ -337,6 +363,7 @@
     rows.forEach(function(r){
       var o=OUT[r.outcome]||{label:r.outcome,cls:''};
       var li=el('li'), b=el('button','row'); b.type='button';
+      if(r.id) b.setAttribute('data-run',r.id);
       if(state.selected===r) b.setAttribute('aria-current','true');
       b.appendChild(el('span','addr',r.address||'(no address)'));
       b.appendChild(el('span','pill '+o.cls,o.label));
@@ -457,6 +484,197 @@
       .catch(function(e){showNotice(e.message);btn.disabled=false;});
   }
 
+  /* ---------- a run linked from an alert email: #run-<id> ---------- */
+  var wantRun=null;
+  function readHash(){var m=/^#run-([a-f0-9]+)$/i.exec(location.hash||'');wantRun=m?m[1]:null;}
+  function focusLinkedRun(){
+    if(!wantRun||!state.runs.length) return;
+    var r=state.runs.filter(function(x){return x.id===wantRun;})[0];
+    if(!r){showNotice('That run isn’t in the log shown here. It may be older than the last 300 leads.');wantRun=null;return;}
+    wantRun=null;
+    state.filter='all'; state.agent=''; $('agentFilter').value='';
+    [].forEach.call(document.querySelectorAll('.chip'),function(x){x.setAttribute('aria-pressed',String(x.getAttribute('data-f')==='all'));});
+    state.selected=r; renderRuns(); renderDetail();
+    var row=document.querySelector('.row[data-run="'+r.id+'"]');
+    if(row){row.classList.add('flash');row.scrollIntoView({block:'center',behavior:'smooth'});row.focus({preventScroll:true});}
+  }
+  window.addEventListener('hashchange',function(){readHash();focusLinkedRun();});
+  readHash();
+
+  /* ---------- alert emails ---------- */
+  var GROUPS=[
+    {key:'failures',title:'Needs a person',desc:'“ACTION NEEDED” emails: a lead someone has to answer before its deadline.'},
+    {key:'successes',title:'Accepted',desc:'A lead the service answered on its own, or found already answered.'},
+    {key:'notices',title:'Notices',desc:'A new agent was added, or an agent’s password was rejected.'}
+  ];
+  function renderRecipients(){
+    var box=$('recipients'); box.innerHTML='';
+    var rec=(state.status&&state.status.recipients)||null;
+    if(!rec){box.appendChild(el('p','muted','Shown once the service answers.'));return;}
+    GROUPS.forEach(function(g){
+      var list=rec[g.key]||[], card=el('div','card rgroup');
+      card.appendChild(el('h3',null,g.title)); card.appendChild(el('p','desc',g.desc));
+      var chips=el('div','rchips');
+      list.forEach(function(addr){
+        var c=el('span','rchip'), t=el('span',null,addr), x=el('button',null,'×'); x.type='button';
+        x.setAttribute('aria-label','Remove '+addr+' from '+g.title);
+        x.addEventListener('click',function(){saveRecipients(g.key,list.filter(function(e){return e!==addr;}),x);});
+        c.appendChild(t); c.appendChild(x); chips.appendChild(c);
+      });
+      card.appendChild(chips);
+      if(!list.length) card.appendChild(el('p','rwarn','Nobody gets these right now.'));
+      var f=el('form','radd'), inp=el('input'), add=el('button',null,'Add'); add.type='submit';
+      inp.type='email'; inp.placeholder='name@casa-blanca.com'; inp.required=true; inp.autocomplete='off';
+      inp.setAttribute('aria-label','Add an address to '+g.title);
+      f.appendChild(inp); f.appendChild(add);
+      f.addEventListener('submit',function(e){e.preventDefault();var v=inp.value.trim().toLowerCase();if(!v)return;
+        if(list.indexOf(v)!==-1){inp.value='';return;} saveRecipients(g.key,list.concat([v]),add);});
+      card.appendChild(f);
+      box.appendChild(card);
+    });
+  }
+  function saveRecipients(key,list,btn){
+    btn.disabled=true;
+    var body={recipients:{}}; body.recipients[key]=list;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the recipients.');return b;});})
+      .then(function(b){if(state.status&&b.recipients)state.status.recipients=b.recipients;showNotice('');renderRecipients();})
+      .catch(function(e){showNotice(e.message);btn.disabled=false;});
+  }
+
+  /* ---------- how it works (the editable guide) ---------- */
+  var guide=null;
+  function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function reEsc(t){return t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+  function safeUrl(u){return /^(https?:\/\/|mailto:)/i.test(u)?u:null;}
+  /* Plain text in, formatted HTML out: emails highlighted, link names linked, **bold**. Escaped first. */
+  function fmt(text){
+    var links=((guide&&guide.links)||[]).filter(function(l){return l.name&&safeUrl(l.url);})
+      .sort(function(a,b){return b.name.length-a.name.length;});
+    var byName={}; links.forEach(function(l){byName[l.name]=l.url;});
+    var names=links.map(function(l){return reEsc(esc(l.name));}).join('|');
+    var re=new RegExp('([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})|\\*\\*(.+?)\\*\\*'+(names?'|(?<![\\w@.])('+names+')(?![\\w])':''),'g');
+    function run(src,inBold){
+      return src.replace(re,function(m,email,bold,name){
+        if(email) return '<a class="ref email" href="mailto:'+email+'">'+email+'</a>';
+        if(bold!=null) return inBold?bold:'<b>'+run(bold,true)+'</b>';
+        var raw=name.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        var u=byName[raw]; return u?'<a class="ref" href="'+esc(u)+'" target="_blank" rel="noopener">'+name+'</a>':name;
+      });
+    }
+    return run(esc(text),false);
+  }
+  function blockHtml(body){
+    var out='', list=null;
+    String(body||'').split('\n').forEach(function(line){
+      var l=line.trim();
+      if(/^-\s+/.test(l)){ if(!list){list=[];} list.push('<li>'+fmt(l.replace(/^-\s+/,''))+'</li>'); return; }
+      if(list){out+='<ul>'+list.join('')+'</ul>';list=null;}
+      if(l) out+='<p>'+fmt(l)+'</p>';
+    });
+    if(list) out+='<ul>'+list.join('')+'</ul>';
+    return out;
+  }
+  function renderGuide(){
+    var box=$('guide');
+    if(!guide){box.innerHTML='<p class="muted">The guide couldn’t be loaded.</p>';return;}
+    var h='';
+    if(guide.intro) h+='<p class="gintro">'+fmt(guide.intro)+'</p>';
+    h+='<ol class="gsteps">'+guide.steps.map(function(st){
+      var d=(st.details||[]).filter(Boolean);
+      return '<li><div><div class="gt">'+fmt(st.title)+'</div>'+(st.summary?'<p>'+fmt(st.summary)+'</p>':'')+
+        (d.length?'<details><summary>Step by step ('+d.length+')</summary><ul>'+d.map(function(x){return '<li>'+fmt(x)+'</li>';}).join('')+'</ul></details>':'')+
+        '</div></li>';
+    }).join('')+'</ol>';
+    (guide.sections||[]).forEach(function(sec){h+='<section class="gsec"><h3>'+fmt(sec.title)+'</h3>'+blockHtml(sec.body)+'</section>';});
+    box.innerHTML=h;
+    $('guideMeta').textContent=guide.isDefault?'The starting version. Edit it to make it yours.':('Last edited '+ny(guide.updatedAt)+(guide.updatedBy?' by '+guide.updatedBy:''));
+    $('guideEditBtn').hidden=!!(window.CBStudio.user&&window.CBStudio.user.guest);
+  }
+  function loadGuide(){
+    return getJson('?view=guide').then(function(g){guide=g;renderGuide();},function(e){guide=null;renderGuide();showNotice(e.message);});
+  }
+
+  function gField(label,value,multi,hint){
+    var l=el('label'); l.appendChild(document.createTextNode(label));
+    if(hint) l.appendChild(el('span','hint',hint));
+    var i=el(multi?'textarea':'input'); i.value=value||''; if(!multi) i.type='text';
+    if(multi) i.rows=Math.min(10,Math.max(2,String(value||'').split('\n').length+1));
+    l.appendChild(i); return {label:l,input:i};
+  }
+  function openEditor(){
+    var f=$('guideForm'); f.innerHTML='';
+    var draft=JSON.parse(JSON.stringify(guide||{intro:'',steps:[],sections:[],links:[]}));
+    f.appendChild(el('p','small muted','Plain text. Email addresses are highlighted, any name listed under Links becomes a link wherever it appears, and **double asterisks** make bold. In a section, a line starting “- ” is a bullet.'));
+    var intro=gField('Introduction',draft.intro,true); f.appendChild(intro.label);
+
+    var stepsBox=el('div'); stepsBox.style.cssText='display:flex;flex-direction:column;gap:10px';
+    f.appendChild(el('h3',null,'Steps')); f.appendChild(stepsBox);
+    var stepRows=[];
+    function addStep(st){
+      var fs=el('fieldset'), lg=el('legend',null,'Step'); fs.appendChild(lg);
+      var t=gField('Title',st.title), su=gField('Summary',st.summary,true), de=gField('Step-by-step details',(st.details||[]).join('\n'),true,'One beat per line. Shown collapsed under the step.');
+      var rm=el('button','rm','Remove step'); rm.type='button';
+      fs.appendChild(t.label); fs.appendChild(su.label); fs.appendChild(de.label); fs.appendChild(rm);
+      var row={fs:fs,t:t.input,su:su.input,de:de.input}; stepRows.push(row);
+      rm.addEventListener('click',function(){stepRows.splice(stepRows.indexOf(row),1);fs.remove();});
+      stepsBox.appendChild(fs);
+    }
+    draft.steps.forEach(addStep);
+    var addS=el('button',null,'Add a step'); addS.type='button'; addS.addEventListener('click',function(){addStep({title:'',summary:'',details:[]});}); f.appendChild(addS);
+
+    var secBox=el('div'); secBox.style.cssText='display:flex;flex-direction:column;gap:10px';
+    f.appendChild(el('h3',null,'Sections')); f.appendChild(secBox);
+    var secRows=[];
+    function addSec(sc){
+      var fs=el('fieldset'); fs.appendChild(el('legend',null,'Section'));
+      var t=gField('Title',sc.title), b=gField('Text',sc.body,true);
+      var rm=el('button','rm','Remove section'); rm.type='button';
+      fs.appendChild(t.label); fs.appendChild(b.label); fs.appendChild(rm);
+      var row={t:t.input,b:b.input}; secRows.push(row);
+      rm.addEventListener('click',function(){secRows.splice(secRows.indexOf(row),1);fs.remove();});
+      secBox.appendChild(fs);
+    }
+    (draft.sections||[]).forEach(addSec);
+    var addC=el('button',null,'Add a section'); addC.type='button'; addC.addEventListener('click',function(){addSec({title:'',body:''});}); f.appendChild(addC);
+
+    var linkFs=el('fieldset'); linkFs.appendChild(el('legend',null,'Links'));
+    linkFs.appendChild(el('p','hint','A name here becomes a link everywhere it appears in the guide. Longer names win, so “StreetEasy Lead Alerts → Email” links to the scenario, not to Make.'));
+    var linkRows=[];
+    function addLink(lk){
+      var r=el('div','lrow'), n=el('input'), u=el('input'), rm=el('button','rm','×'); rm.type='button';
+      n.value=lk.name||''; n.placeholder='Name as written'; n.setAttribute('aria-label','Link name');
+      u.value=lk.url||''; u.placeholder='https://…'; u.setAttribute('aria-label','Link address');
+      rm.setAttribute('aria-label','Remove link');
+      r.appendChild(n); r.appendChild(u); r.appendChild(rm);
+      var row={n:n,u:u}; linkRows.push(row);
+      rm.addEventListener('click',function(){linkRows.splice(linkRows.indexOf(row),1);r.remove();});
+      linkFs.insertBefore(r,addL);
+    }
+    var addL=el('button',null,'Add a link'); addL.type='button'; addL.addEventListener('click',function(){addLink({});});
+    linkFs.appendChild(addL);
+    (draft.links||[]).forEach(addLink);
+    f.appendChild(linkFs);
+
+    var acts=el('div','gactions'), save=el('button','primary','Save guide'), cancel=el('button',null,'Cancel');
+    save.type='submit'; cancel.type='button'; acts.appendChild(save); acts.appendChild(cancel); f.appendChild(acts);
+    cancel.addEventListener('click',closeEditor);
+    f.onsubmit=function(e){
+      e.preventDefault(); save.disabled=true;
+      var g={intro:intro.input.value,
+        steps:stepRows.map(function(r){return {title:r.t.value,summary:r.su.value,details:r.de.value.split('\n').map(function(x){return x.trim();}).filter(Boolean)};}),
+        sections:secRows.map(function(r){return {title:r.t.value,body:r.b.value};}),
+        links:linkRows.map(function(r){return {name:r.n.value.trim(),url:r.u.value.trim()};}).filter(function(l){return l.name||l.url;})};
+      api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guide:g})})
+        .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the guide.');return b;});})
+        .then(function(b){guide=b;closeEditor();showNotice('');renderGuide();})
+        .catch(function(err){showNotice(err.message);save.disabled=false;});
+    };
+    f.hidden=false; $('guide').hidden=true; $('guideEditBtn').hidden=true; intro.input.focus();
+  }
+  function closeEditor(){$('guideForm').hidden=true;$('guideForm').innerHTML='';$('guide').hidden=false;renderGuide();}
+  $('guideEditBtn').addEventListener('click',openEditor);
+
   /* ---------- load ---------- */
   function load(){
     $('refresh').disabled=true;
@@ -466,13 +684,14 @@
         if(state.selected){state.selected=state.runs.filter(function(r){return r.at===state.selected.at&&r.subject===state.selected.subject;})[0]||null;}
         showNotice('');
       },function(e){state.status=null;showNotice(e.message);})
-      .then(function(){renderStatus();renderAgentFilter();renderRuns();renderDetail();renderAgents();$('refresh').disabled=false;});
+      .then(function(){renderStatus();renderAgentFilter();renderRuns();renderDetail();renderAgents();renderRecipients();focusLinkedRun();$('refresh').disabled=false;});
   }
   $('refresh').addEventListener('click',load);
 
   window.CBStudio.ready.then(function(user){
     if(!user) return;
     load();
+    loadGuide();
     setInterval(function(){if(!document.hidden&&$('confirm').hidden)load();},60000);
   });
 })();

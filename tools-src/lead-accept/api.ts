@@ -13,12 +13,26 @@
 //   POST {observeMode: bool}  switch observe mode; takes effect on the next lead
 //   POST {agentPassword: {email, password | null}}  set or clear one agent's own StreetEasy password
 //   POST {addAgent: {email, name?, password?}}      add an agent by hand (or update one that exists)
+//   POST {recipients: {failures?, successes?, notices?: string[]}}  who gets each kind of alert email
+//   GET  ?view=guide          the "How it works" guide (Blobs; the default in guide.ts until first saved)
+//   POST {guide: Guide}       save an edited guide
 //
 // SECURITY
 //   Every request needs the Studio sign-in, and the user must be the Studio's team (the same rule as
 //   the Property Sign builder). A preview's guest can read but not switch observe mode. Screenshots
 //   show clients' names and inquiries, which is why they're fetched through here, not linked.
 import { isTeam, type SignUser } from '../property-signs/api.ts';
+import { cleanGuide, DEFAULT_GUIDE, type Guide } from './guide.ts';
+
+export const GUIDE_STORE = 'cb-lead-accept';
+const GUIDE_KEY = 'guide';
+/** The part of a Blobs store the guide uses. */
+export interface GuideBlobs {
+  get(key: string, opts: { type: 'json' }): Promise<unknown>;
+  setJSON(key: string, value: unknown): Promise<unknown>;
+}
+const RECIPIENT_GROUPS = ['failures', 'successes', 'notices'] as const;
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export interface LeadAcceptDeps {
   /** The signed-in user; throws the comp report's HttpError(401/403/503) when there's none. */
@@ -27,6 +41,8 @@ export interface LeadAcceptDeps {
   baseUrl: string | undefined;
   secret: string | undefined;
   fetch: typeof fetch;
+  /** Where the edited guide is kept. */
+  guideStore: GuideBlobs;
 }
 
 export class LeadAcceptError extends Error {
@@ -46,6 +62,26 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
   try {
     const user = await deps.user(req);
     if (!isTeam(user)) throw new LeadAcceptError(403, 'not_team', 'The lead auto-accept page is for the Studio team.');
+
+    // The guide is the Studio's own (Blobs), so it works even when the service isn't reachable.
+    const gurl = new URL(req.url);
+    if (req.method === 'GET' && gurl.searchParams.get('view') === 'guide') {
+      const saved = await deps.guideStore.get(GUIDE_KEY, { type: 'json' }).catch(() => null) as Guide | null;
+      return json(saved && Array.isArray(saved.steps) ? { ...saved, isDefault: false } : { ...DEFAULT_GUIDE, isDefault: true });
+    }
+    if (req.method === 'POST') {
+      const peek = await req.clone().json().catch(() => null) as { guide?: unknown } | null;
+      if (peek && 'guide' in peek) {
+        if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
+        const guide = cleanGuide(peek.guide);
+        if (!guide) throw new LeadAcceptError(400, 'bad_guide', 'The guide needs at least one step with a title.');
+        const saved = { ...guide, updatedAt: new Date().toISOString(), updatedBy: user.email };
+        if (JSON.stringify(saved).length > 100_000) throw new LeadAcceptError(400, 'too_long', 'The guide is too long to save.');
+        await deps.guideStore.setJSON(GUIDE_KEY, saved);
+        console.log(`lead-accept: guide saved by ${user.email}`);
+        return json({ ...saved, isDefault: false });
+      }
+    }
     if (!deps.baseUrl || !deps.secret) {
       throw new LeadAcceptError(503, 'not_configured', 'Set SE_AUTOMATION_URL and SE_AUTOMATION_SECRET in Netlify to connect this page to the service.');
     }
@@ -87,7 +123,27 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
     if (req.method === 'POST') {
       if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
       const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown };
-        addAgent?: { email?: unknown; name?: unknown; password?: unknown } } | null;
+        addAgent?: { email?: unknown; name?: unknown; password?: unknown };
+        recipients?: Record<string, unknown> } | null;
+
+      // Who gets each kind of alert: { recipients: { failures: [...], ... } } (any subset).
+      if (body?.recipients !== undefined) {
+        if (!body.recipients || typeof body.recipients !== 'object') throw new LeadAcceptError(400, 'bad_recipients');
+        const out: Record<string, string[]> = {};
+        for (const [group, list] of Object.entries(body.recipients)) {
+          if (!(RECIPIENT_GROUPS as readonly string[]).includes(group)) throw new LeadAcceptError(400, 'bad_group', `Unknown alert type: ${group}.`);
+          if (!Array.isArray(list) || list.length > 20) throw new LeadAcceptError(400, 'bad_list', 'Up to 20 addresses per alert type.');
+          const clean = list.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
+          const bad = clean.filter((e) => !EMAIL.test(e));
+          if (bad.length) throw new LeadAcceptError(400, 'bad_email', `Not an email address: ${bad.join(', ')}`);
+          out[group] = [...new Set(clean)];
+        }
+        const res = await call('/admin/settings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipients: out }),
+        });
+        console.log(`lead-accept: alert recipients changed by ${user.email}`);
+        return json(await res.json());
+      }
 
       // One agent's own StreetEasy password: { agentPassword: { email, password } }, or password null
       // to go back to the shared one. Passed straight to the service; never logged or returned.

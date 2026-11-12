@@ -11,12 +11,17 @@ const GUEST: SignUser = { email: 'guest@preview', role: 'agent', guest: true };
 const BASE = 'https://svc.example';
 const SECRET = 's'.repeat(32);
 
+function memGuide() {
+  const m = new Map<string, unknown>();
+  return { m, get: async (k: string) => m.get(k) ?? null, setJSON: async (k: string, v: unknown) => { m.set(k, v); } };
+}
 interface Seen { url: string; method: string; secret: string | null; body: string | null }
 function deps(user: SignUser | Error, answer: (url: string) => Response = () => Response.json({ ok: true }), over: Partial<LeadAcceptDeps> = {}) {
   const seen: Seen[] = [];
   const d: LeadAcceptDeps = {
     user: async () => { if (user instanceof Error) throw user; return user; },
     baseUrl: BASE + '/', secret: SECRET,
+    guideStore: memGuide(),
     fetch: (async (url: string, init: RequestInit = {}) => {
       const h = new Headers(init.headers);
       seen.push({ url, method: init.method ?? 'GET', secret: h.get('x-casa-secret'), body: (init.body as string) ?? null });
@@ -151,4 +156,40 @@ test('adding an agent by hand: email required, password optional and never echoe
   assert.equal((await handleLeadAccept(post({ addAgent: { email: 'not-an-email' } }), d)).status, 400);
   assert.equal((await handleLeadAccept(post({ addAgent: { email: 'a@b.com', password: 'x'.repeat(201) } }), d)).status, 400);
   assert.equal((await handleLeadAccept(post({ addAgent: { email: 'a@b.com' } }), deps(GUEST).d)).status, 403);
+});
+
+
+test('alert recipients: validated, de-duplicated, passed to the service; guests refused', async () => {
+  const { d, seen } = deps(KIMANI, () => Response.json({ recipients: {} }));
+  const ok = await handleLeadAccept(post({ recipients: { failures: [' D.Prestly@casa-blanca.com', 'success@casa-blanca.com', 'd.prestly@casa-blanca.com'] } }), d);
+  assert.equal(ok.status, 200);
+  assert.equal(seen[0].url, `${BASE}/admin/settings`);
+  assert.deepEqual(JSON.parse(seen[0].body!), { recipients: { failures: ['d.prestly@casa-blanca.com', 'success@casa-blanca.com'] } });
+  assert.equal((await handleLeadAccept(post({ recipients: { failures: ['not an email'] } }), d)).status, 400);
+  assert.equal((await handleLeadAccept(post({ recipients: { everyone: ['a@b.com'] } }), d)).status, 400);
+  assert.equal((await handleLeadAccept(post({ recipients: { failures: ['a@b.com'] } }), deps(GUEST).d)).status, 403);
+  assert.equal(seen.length, 1);
+});
+
+test('the guide: the default until saved, then the saved one; cleaned; works with the service down; guests read only', async () => {
+  const down = { fetch: (async () => { throw new TypeError('fetch failed'); }) as typeof fetch };
+  const { d } = deps(KIMANI, undefined, down);
+  const first = await (await handleLeadAccept(get('?view=guide'), d)).json();
+  assert.equal(first.isDefault, true);
+  assert.ok(first.steps.length >= 5);
+
+  const edited = { intro: 'Hi Erez', steps: [{ title: 'One', summary: 'S', details: ['a', '', 'b'] }, { title: '', summary: 'dropped' }],
+    sections: [{ title: 'Where', body: '- x' }], links: [{ name: 'Make', url: 'https://make.com' }, { name: 'Bad', url: 'javascript:alert(1)' }] };
+  const saved = await handleLeadAccept(post({ guide: edited }), d);
+  assert.equal(saved.status, 200);
+  const back = await (await handleLeadAccept(get('?view=guide'), d)).json();
+  assert.equal(back.isDefault, false);
+  assert.equal(back.intro, 'Hi Erez');
+  assert.deepEqual(back.steps, [{ title: 'One', summary: 'S', details: ['a', 'b'] }]);
+  assert.deepEqual(back.links, [{ name: 'Make', url: 'https://make.com' }], 'non-web links are dropped');
+  assert.equal(back.updatedBy, KIMANI.email);
+
+  assert.equal((await handleLeadAccept(post({ guide: { steps: [], sections: [], links: [] } }), d)).status, 400);
+  assert.equal((await handleLeadAccept(post({ guide: edited }), deps(GUEST).d)).status, 403);
+  assert.equal((await handleLeadAccept(get('?view=guide'), deps(AGENT).d)).status, 403);
 });
