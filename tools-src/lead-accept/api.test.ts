@@ -171,6 +171,51 @@ test('alert recipients: validated, de-duplicated, passed to the service; guests 
   assert.equal(seen.length, 1);
 });
 
+test('FileMaker email: validated, passed to the service; guests and agents refused before any call', async () => {
+  const { d, seen } = deps(KIMANI, () => Response.json({ observeMode: false, fileMaker: { emailOn: true, emailTo: 'fm@example.com' } }));
+  const ok = await handleLeadAccept(post({ fileMaker: { emailOn: true, emailTo: ' FM@Example.com ' } }), d);
+  assert.equal(ok.status, 200);
+  assert.deepEqual((await ok.json()).fileMaker, { emailOn: true, emailTo: 'fm@example.com' });
+  assert.equal(seen[0]!.url, `${BASE}/admin/settings`);
+  assert.equal(seen[0]!.method, 'POST');
+  assert.deepEqual(JSON.parse(seen[0]!.body!), { fileMaker: { emailOn: true, emailTo: 'fm@example.com' } });
+  assert.equal((await handleLeadAccept(post({ fileMaker: { emailOn: false } }), d)).status, 200);
+  assert.deepEqual(JSON.parse(seen[1]!.body!), { fileMaker: { emailOn: false } });
+  for (const bad of [{ emailOn: 'yes' }, { emailTo: 'not an email' }, { emailTo: 7 }, {}, { emailOn: true, pullKey: 'x' }, null, [true]]) {
+    assert.equal((await handleLeadAccept(post({ fileMaker: bad }), d)).status, 400, JSON.stringify(bad));
+  }
+  assert.equal(seen.length, 2, 'refused requests never reach the service');
+  const g = deps(GUEST), a = deps(AGENT);
+  assert.equal((await handleLeadAccept(post({ fileMaker: { emailOn: true } }), g.d)).status, 403);
+  assert.equal((await handleLeadAccept(post({ fileMaker: { emailOn: true } }), a.d)).status, 403);
+  assert.equal(g.seen.length + a.seen.length, 0);
+});
+
+test('inbox: limit clamped, kind checked, passed through with the secret; client details never logged', async () => {
+  const msg = { at: '2026-11-12T15:00:00Z', kind: 'other', from: 'noreply@streeteasy.com', subject: 'New message',
+    message: { type: 'client-message', address: '12 Example St #3', clientName: 'Pat Sample', message: 'Is it still available?', needsResponse: true } };
+  const logged: string[] = [];
+  const orig = console.log; console.log = (...a: unknown[]) => { logged.push(a.join(' ')); };
+  try {
+    const { d, seen } = deps(KIMANI, () => Response.json([msg]));
+    const res = await handleLeadAccept(get('?view=inbox&limit=9999&kind=other'), d);
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), [msg]);
+    await handleLeadAccept(get('?view=inbox'), d);
+    await handleLeadAccept(get('?view=inbox&limit=0&kind=lead'), d);
+    assert.deepEqual(seen.map((s) => s.url), [`${BASE}/admin/inbox?limit=500&kind=other`, `${BASE}/admin/inbox?limit=50`, `${BASE}/admin/inbox?limit=50&kind=lead`]);
+    assert.ok(seen.every((s) => s.secret === SECRET));
+    assert.equal((await handleLeadAccept(get('?view=inbox&kind=everything'), d)).status, 400);
+    assert.equal((await handleLeadAccept(get('?view=inbox&kind=other%26x%3D1'), d)).status, 400);
+    assert.equal(seen.length, 3);
+    assert.ok(logged.every((l) => !l.includes('Pat Sample')));
+  } finally { console.log = orig; }
+  assert.equal((await handleLeadAccept(get('?view=inbox&kind=other'), deps(GUEST).d)).status, 200, 'a guest can read');
+  const a = deps(AGENT);
+  assert.equal((await handleLeadAccept(get('?view=inbox'), a.d)).status, 403);
+  assert.equal(a.seen.length, 0);
+});
+
 test('the guide: the default until saved, then the saved one; cleaned; works with the service down; guests read only', async () => {
   const down = { fetch: (async () => { throw new TypeError('fetch failed'); }) as typeof fetch };
   const { d } = deps(KIMANI, undefined, down);
