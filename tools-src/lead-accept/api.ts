@@ -16,13 +16,21 @@
 //   POST {recipients: {failures?, successes?, notices?: string[]}}  who gets each kind of alert email
 //   GET  ?view=guide          the "How it works" guide (Blobs; the default in guide.ts until first saved)
 //   POST {guide: Guide}       save an edited guide
+//   GET  ?view=make           the two Make scenarios (state, recent runs, errors) and the alerts' Gmail connection
+//   POST {makeScenario: {id, active}}  start or stop one of those two scenarios (no other id)
+//   POST {fileMaker: {emailOn?: bool, emailTo?: email}}  the one email per lead to FileMaker's inbox
+//   GET  ?view=inbox&limit=N&kind=lead|sign-in-code|other  the emails Make posted, newest first (N up to 500);
+//        kind=other carries StreetEasy's client messages, parsed. Client details pass through, never logged.
 //
 // SECURITY
 //   Every request needs the Studio sign-in, and the user must be the Studio's team (the same rule as
 //   the Property Sign builder). A preview's guest can read but not switch observe mode. Screenshots
 //   show clients' names and inquiries, which is why they're fetched through here, not linked.
+//   The Make token (Netlify env MAKE_API_TOKEN) is held the same way: it goes only to Make's API,
+//   never to the browser or a log (make.ts).
 import { isTeam, type SignUser } from '../property-signs/api.ts';
 import { cleanGuide, DEFAULT_GUIDE, type Guide } from './guide.ts';
+import { MakeError, makeView, setScenarioActive } from './make.ts';
 
 export const GUIDE_STORE = 'cb-lead-accept';
 const GUIDE_KEY = 'guide';
@@ -33,6 +41,7 @@ export interface GuideBlobs {
 }
 const RECIPIENT_GROUPS = ['failures', 'successes', 'notices'] as const;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const INBOX_KINDS = ['lead', 'sign-in-code', 'other'] as const;
 
 export interface LeadAcceptDeps {
   /** The signed-in user; throws the comp report's HttpError(401/403/503) when there's none. */
@@ -43,6 +52,8 @@ export interface LeadAcceptDeps {
   fetch: typeof fetch;
   /** Where the edited guide is kept. */
   guideStore: GuideBlobs;
+  /** A Make user API token (scenarios:read, scenarios:write, connections:read), for the Make panel. */
+  makeToken?: string | undefined;
 }
 
 export class LeadAcceptError extends Error {
@@ -70,8 +81,26 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
       // A guide saved before session links existed shows the default ones until it's edited.
       return json(saved && Array.isArray(saved.steps) ? { ...saved, sessions: saved.sessions ?? DEFAULT_GUIDE.sessions, isDefault: false } : { ...DEFAULT_GUIDE, isDefault: true });
     }
+    // Make is its own API, so the panel works whether or not the service is reachable.
+    const needMake = () => {
+      if (!deps.makeToken) throw new LeadAcceptError(503, 'not_configured', 'Set MAKE_API_TOKEN in Netlify to show the Make scenarios here.');
+      return deps.makeToken;
+    };
+    if (req.method === 'GET' && gurl.searchParams.get('view') === 'make') {
+      return json(await makeView(deps.fetch, needMake()));
+    }
     if (req.method === 'POST') {
-      const peek = await req.clone().json().catch(() => null) as { guide?: unknown } | null;
+      const peek = await req.clone().json().catch(() => null) as { guide?: unknown; makeScenario?: { id?: unknown; active?: unknown } } | null;
+      if (peek && 'makeScenario' in peek) {
+        if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
+        const m = peek.makeScenario;
+        if (!m || typeof m !== 'object' || typeof m.active !== 'boolean' || typeof m.id !== 'number') {
+          throw new LeadAcceptError(400, 'bad_body', 'Send { makeScenario: { id, active: true | false } }.');
+        }
+        const out = await setScenarioActive(deps.fetch, needMake(), m.id, m.active);
+        console.log(`lead-accept: Make scenario ${m.id} ${m.active ? 'started' : 'stopped'} by ${user.email}`);
+        return json(out);
+      }
       if (peek && 'guide' in peek) {
         if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
         const guide = cleanGuide(peek.guide);
@@ -118,6 +147,14 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
         return json(await (await call(`/admin/runs?limit=${limit}`)).json());
       }
       if (view === 'agents') return json(await (await call('/agents')).json());
+      if (view === 'inbox') {
+        const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit')) || 50));
+        const kind = url.searchParams.get('kind');
+        if (kind !== null && !(INBOX_KINDS as readonly string[]).includes(kind)) {
+          throw new LeadAcceptError(400, 'bad_kind', 'kind is lead, sign-in-code or other.');
+        }
+        return json(await (await call(`/admin/inbox?limit=${limit}${kind ? `&kind=${kind}` : ''}`)).json());
+      }
       throw new LeadAcceptError(400, 'bad_view');
     }
 
@@ -125,7 +162,31 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
       if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
       const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown };
         addAgent?: { email?: unknown; name?: unknown; password?: unknown };
-        recipients?: Record<string, unknown> } | null;
+        recipients?: Record<string, unknown>; fileMaker?: unknown } | null;
+
+      // The FileMaker email: { fileMaker: { emailOn?: bool, emailTo?: email } } (either or both).
+      if (body?.fileMaker !== undefined) {
+        const fm = body.fileMaker as Record<string, unknown> | null;
+        if (!fm || typeof fm !== 'object' || Array.isArray(fm)) throw new LeadAcceptError(400, 'bad_filemaker', 'Send { fileMaker: { emailOn?, emailTo? } }.');
+        const extra = Object.keys(fm).filter((k) => k !== 'emailOn' && k !== 'emailTo');
+        if (extra.length) throw new LeadAcceptError(400, 'bad_filemaker', `Unknown FileMaker setting: ${extra.join(', ')}.`);
+        const out: { emailOn?: boolean; emailTo?: string } = {};
+        if (fm.emailOn !== undefined) {
+          if (typeof fm.emailOn !== 'boolean') throw new LeadAcceptError(400, 'bad_filemaker', 'emailOn is true or false.');
+          out.emailOn = fm.emailOn;
+        }
+        if (fm.emailTo !== undefined) {
+          const to = typeof fm.emailTo === 'string' ? fm.emailTo.trim().toLowerCase() : '';
+          if (!EMAIL.test(to)) throw new LeadAcceptError(400, 'bad_email', `Not an email address: ${String(fm.emailTo)}`);
+          out.emailTo = to;
+        }
+        if (!Object.keys(out).length) throw new LeadAcceptError(400, 'bad_filemaker', 'Send emailOn, emailTo or both.');
+        const res = await call('/admin/settings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileMaker: out }),
+        });
+        console.log(`lead-accept: FileMaker email ${out.emailOn === undefined ? 'settings' : out.emailOn ? 'on' : 'off'} changed by ${user.email}`);
+        return json(await res.json());
+      }
 
       // Who gets each kind of alert: { recipients: { failures: [...], ... } } (any subset).
       if (body?.recipients !== undefined) {
@@ -188,7 +249,7 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
 
     throw new LeadAcceptError(405, 'method');
   } catch (e) {
-    if (e instanceof LeadAcceptError) return json({ error: e.code, message: e.message }, e.status);
+    if (e instanceof LeadAcceptError || e instanceof MakeError) return json({ error: e.code, message: e.message }, e.status);
     if (e && typeof e === 'object' && 'status' in e && 'code' in e && typeof (e as { status: unknown }).status === 'number') {
       const h = e as { status: number; code: string; message?: string };   // the comp report's HttpError, from the sign-in check
       return json({ error: h.code, message: h.message }, h.status);

@@ -11,6 +11,7 @@ export default (req: Request) =>
     baseUrl: process.env.SE_AUTOMATION_URL,
     secret: process.env.SE_AUTOMATION_SECRET,
     fetch,
+    makeToken: process.env.MAKE_API_TOKEN,
     // Strong: an edit is read straight back by the page.
     guideStore: getStore({ name: GUIDE_STORE, consistency: 'strong' }) as unknown as GuideBlobs,
   });
