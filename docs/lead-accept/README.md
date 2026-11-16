@@ -70,7 +70,7 @@ as needing a person.
 (`tools-src/lead-accept/api.ts`), which checks the team sign-in and holds the service's key. The page is
 public static HTML like every Studio page, so it names no addresses, keys or webhooks; they're here.
 Service endpoints it uses: `GET /admin/status`, `GET /admin/runs`, `GET /agents`, `GET /captures/<name>.png`,
-`POST /admin/settings`.
+`GET /admin/inbox`, `POST /admin/settings`.
 
 ### The Make panel (Nov 12)
 
@@ -119,3 +119,33 @@ The *Make* section shows the two scenarios and the alerts' Gmail connection, rea
   step-by-step beats, free sections, and a link list. Stored in Netlify Blobs (`cb-lead-accept` / `guide`); the
   starting text is `tools-src/lead-accept/guide.ts`. Plain text: emails are highlighted, names in the link list
   become links wherever they appear, `**bold**`, and `- ` bullets in sections.
+
+## Client details, FileMaker and client messages (Nov 12)
+
+Built against the service's branch `claude/lead-client-details` (se-autoaccept); the page tolerates a service
+that doesn't have these yet (no `client` on a run, no `fileMaker` in status, `/admin/inbox` a 404).
+
+- **The client, in a run's detail.** The service reads the lead's panel and card on StreetEasy and logs
+  `client` on each run (or null): name, phone (a `tel:` link), email (`mailto:`), role, status, price range,
+  neighborhoods, inquiry count, property, tour request, message, received, and whether it came from the panel and
+  card or the card alone. *What it read*, collapsed, shows the raw panel and card text, for tuning the reader.
+  The block isn't shown when `client` is null. The run list shows the client's name. A timing line comes
+  from the run's `forwardSecs`, `queueSecs`, `secs` and `totalSecs`: "Sent → here 4 s · waited 0 s · ran 17 s · total 21 s"
+  (email sent → the service got it, time in the queue, the run itself, the whole thing).
+- **FileMaker**, its own section under *Alert emails*: **Email each lead to FileMaker**, an On/Off switch and the
+  address (`POST {fileMaker: {emailOn?, emailTo?}}` → the service's `POST /admin/settings`, kept in
+  `/data/settings.json`). **Off by default.** On, the service sends one email per lead to that inbox with the
+  client's details as `Field: value` lines and as JSON. Guests see it read-only.
+- **FileMaker pulling** instead: the service has `GET /filemaker/leads` and `GET /filemaker/messages`, guarded by
+  Railway's `FILEMAKER_KEY` (sent as the `x-filemaker-key` header or `Authorization: Bearer <key>`), with
+  `?since=<ISO time>` for only what's new. The page shows *Pull access: key set / not set* from
+  `/admin/status`'s `fileMaker.pullKeySet`; the key itself never leaves Railway.
+- **Client messages**, under the run log: the emails Make posted that aren't leads or sign-in codes
+  (`GET ?view=inbox&kind=other` → the service's `GET /admin/inbox?limit=&kind=`, limit 1–500), as StreetEasy's
+  parsed messages: time, agent, client, property, *Client wrote* or *Our reply*, a red *Needs a response*, and
+  the text, with a link to the lead's run when the service matched one (`leadId`).
+- Client details pass through `/api/lead-accept` to the signed-in team only and are never logged there.
+
+| Where | Name | What |
+|---|---|---|
+| Railway | `FILEMAKER_KEY` | The key FileMaker sends to pull leads and messages (`/filemaker/leads`, `/filemaker/messages`) |

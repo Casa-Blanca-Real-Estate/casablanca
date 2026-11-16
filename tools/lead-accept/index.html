@@ -183,6 +183,30 @@
   a.btn{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 12px}
   a.btn:hover{border-color:var(--accent)}
   a.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  /* the client, in a run's detail */
+  .client{border:1px solid var(--line);border-radius:11px;background:var(--paper);padding:10px 12px;margin:0 0 12px}
+  .client h4{margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .client .facts{margin:0}
+  .client .facts dd.msg{white-space:pre-wrap}
+  .client a{color:var(--plum)}
+  .client details{margin-top:8px}
+  .client summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--plum)}
+  .client pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0 0;max-height:260px;overflow:auto}
+  .timing{font-size:11px;color:var(--muted);margin:8px 0 12px;font-variant-numeric:tabular-nums}
+  .row .who{color:var(--ink)}
+  /* filemaker */
+  .fm{display:flex;flex-direction:column;gap:10px;max-width:760px}
+  .fm .mhead h3{font-size:14px}
+  .fm .facts{margin:0}
+  /* client messages */
+  .msgs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .msgs li{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+  .msgs li.need{border-color:var(--bad)}
+  .msgs .mtop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+  .msgs .mtop b{overflow-wrap:anywhere}
+  .msgs .mmeta{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+  .msgs .mtext{white-space:pre-wrap;overflow-wrap:anywhere;max-width:80ch}
+  .msgs a.ref{align-self:flex-start;font-size:11px}
 </style>
 </head>
 <body>
@@ -241,9 +265,17 @@
     </article>
   </div>
 
+  <h2>Client messages</h2>
+  <p class="muted">What clients wrote through StreetEasy, and the replies sent, read from the emails that reach the shared inbox. Newest first.</p>
+  <ul class="msgs" id="msgs"><li class="empty">Loading…</li></ul>
+
   <h2>Alert emails</h2>
   <p class="muted">Who gets each kind of email. Changes apply to the next alert. casacalliste@gmail.com also gets a copy of every alert, so a Claude session can read them.</p>
   <div class="rgroups" id="recipients"></div>
+
+  <h2>FileMaker</h2>
+  <p class="muted">Each lead's client details, for Casa's FileMaker database: sent as an email per lead, and readable by FileMaker directly with its own key.</p>
+  <div class="card fm" id="fileMaker"><p class="muted" style="margin:0">Shown once the service answers.</p></div>
 
   <h2>Referral agents</h2>
   <p class="muted">Every agent the service has seen. New ones are added the first time a lead or sign-in code arrives for them. They all use the shared StreetEasy password unless you set their own here. If a password is rejected, the service signs in with a one-time email code instead, which only works when that code reaches the shared inbox.</p>
@@ -392,7 +424,10 @@
       if(state.selected===r) b.setAttribute('aria-current','true');
       b.appendChild(el('span','addr',r.address||'(no address)'));
       b.appendChild(el('span','pill '+o.cls,o.label));
-      b.appendChild(el('span','meta',ny(r.at)+' · '+(r.agentName||r.agent||'unknown agent')+(r.secs!=null?' · '+r.secs+'s':'')));
+      var meta=el('span','meta');
+      if(r.client&&r.client.name){meta.appendChild(el('span','who',r.client.name));meta.appendChild(document.createTextNode(' · '));}
+      meta.appendChild(document.createTextNode(ny(r.at)+' · '+(r.agentName||r.agent||'unknown agent')+(r.secs!=null?' · '+r.secs+'s':'')));
+      b.appendChild(meta);
       b.addEventListener('click',function(){state.selected=r;renderRuns();renderDetail();});
       li.appendChild(b); list.appendChild(li);
     });
@@ -417,6 +452,8 @@
     [['When',ny(r.at)],['Agent',(r.agentName?r.agentName+' · ':'')+(r.agent||'unknown')],['Deadline',ny(r.deadline)],
      ['Took',r.secs!=null?r.secs+' seconds':'—'],['Email subject',r.subject||'—']].forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
     d.appendChild(f);
+    var tl=timing(r); if(tl) d.appendChild(el('p','timing',tl));
+    if(r.client) d.appendChild(clientBlock(r.client));
     if(r.reason){d.appendChild(el('p','reason',r.reason));}
     if(r.steps&&r.steps.length){
       var st=el('div','steps');
@@ -434,6 +471,45 @@
       a.appendChild(img); fig.appendChild(a); shots.appendChild(fig);
       loadShot(name).then(function(u){img.src=u;a.href=u;},function(){fig.appendChild(el('p','small muted','Screenshot not available (kept 14 days).'));img.remove();});
     });
+  }
+  /* "Sent → here 4 s · waited 0 s · ran 17 s · total 21 s", from whichever of the four the run has */
+  function timing(r){
+    var parts=[['Sent → here',r.forwardSecs],['waited',r.queueSecs],['ran',r.secs],['total',r.totalSecs]]
+      .filter(function(p){return typeof p[1]==='number'&&isFinite(p[1]);})
+      .map(function(p){return p[0]+' '+Math.round(p[1])+' s';});
+    return parts.length?parts.join(' · '):'';
+  }
+  function link(href,text){var a=el('a',null,text);a.href=href;return a;}
+  function clientBlock(c){
+    var box=el('section','client'); box.setAttribute('aria-label','Client');
+    box.appendChild(el('h4',null,'Client'));
+    var f=el('dl','facts');
+    function row(label,val,cls){
+      if(val==null||val==='') return;
+      f.appendChild(el('dt',null,label));
+      var dd=el('dd',cls||null); if(typeof val==='string') dd.textContent=val; else dd.appendChild(val); f.appendChild(dd);
+    }
+    var phoneDigits=c.phone?String(c.phone).replace(/[^\d+]/g,''):'';
+    var received=c.receivedOn&&!isNaN(Date.parse(c.receivedOn))&&/\d{4}-\d{2}-\d{2}T/.test(c.receivedOn)?ny(c.receivedOn):c.receivedOn;
+    row('Name',c.name);
+    row('Phone',c.phone?(phoneDigits?link('tel:'+phoneDigits,String(c.phone)):String(c.phone)):null);
+    row('Email',c.email?link('mailto:'+String(c.email).trim(),String(c.email)):null);
+    row('Role',c.role); row('Status',c.status); row('Price range',c.priceRange);
+    row('Neighborhoods',Array.isArray(c.neighborhoods)&&c.neighborhoods.length?c.neighborhoods.join(', '):null);
+    row('Inquiries',c.inquiryCount!=null?String(c.inquiryCount):null);
+    row('Property',c.address); row('Tour request',c.tourRequest); row('Message',c.message,'msg'); row('Received',received);
+    if(!f.childNodes.length) f.appendChild(el('dd','muted','Nothing read for this lead.'));
+    box.appendChild(f);
+    var src=c.source==='card'?'Read from the lead card only (the panel didn’t open).':c.source==='panel+card'?'Read from the lead panel and card.':'';
+    if(src||c.note) box.appendChild(el('p','small muted',[src,c.note].filter(Boolean).join(' ')));
+    var raw=c.raw||{};
+    if(raw.panel||raw.card){
+      var det=el('details'); det.appendChild(el('summary',null,'What it read'));
+      if(raw.panel){det.appendChild(el('div','small muted','Panel'));det.appendChild(el('pre',null,String(raw.panel)));}
+      if(raw.card){det.appendChild(el('div','small muted','Card'));det.appendChild(el('pre',null,String(raw.card)));}
+      box.appendChild(det);
+    }
+    return box;
   }
   function loadShot(name){
     if(shotUrls[name]) return Promise.resolve(shotUrls[name]);
@@ -565,6 +641,88 @@
       .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the recipients.');return b;});})
       .then(function(b){if(state.status&&b.recipients)state.status.recipients=b.recipients;showNotice('');renderRecipients();})
       .catch(function(e){showNotice(e.message);btn.disabled=false;});
+  }
+
+  /* ---------- filemaker ---------- */
+  var fmBusy=false;
+  function renderFileMaker(){
+    var box=$('fileMaker');
+    if(!fmBusy&&box.contains(document.activeElement)&&document.activeElement.tagName==='INPUT') return;   // don't wipe an address being typed
+    box.innerHTML='';
+    var fm=state.status&&state.status.fileMaker;
+    if(!fm){box.appendChild(el('p','muted',state.status?'This version of the service doesn’t have the FileMaker settings yet.':'Shown once the service answers.'));box.lastChild.style.margin='0';return;}
+    var guest=isGuest();
+    var head=el('div','mhead'), h=el('h3',null,'Email each lead to FileMaker');
+    h.appendChild(el('span','role','One email per lead to the address below, with the client’s details as “Field: value” lines and as JSON.'));
+    head.appendChild(h);
+    var sw=el('button','switch'); sw.type='button'; sw.setAttribute('role','switch'); sw.setAttribute('aria-checked',String(!!fm.emailOn));
+    sw.setAttribute('aria-label','Email each lead to FileMaker: '+(fm.emailOn?'on':'off'));
+    sw.appendChild(el('span','track')); sw.appendChild(el('span',null,fm.emailOn?'On':'Off'));
+    sw.disabled=guest||fmBusy; if(guest) sw.title='A preview guest can look but not switch.';
+    sw.addEventListener('click',function(){
+      if(!fm.emailOn&&!fm.emailTo){showNotice('Set FileMaker’s address first.');return;}
+      saveFileMaker({emailOn:!fm.emailOn});
+    });
+    head.appendChild(sw); box.appendChild(head);
+    var f=el('dl','facts');
+    f.appendChild(el('dt',null,'Sends to')); f.appendChild(el('dd','mono',fm.emailTo||'no address set'));
+    f.appendChild(el('dt',null,'Pull access'));
+    var pa=el('dd'); pa.appendChild(el('span','pill '+(fm.pullKeySet?'ok':''),fm.pullKeySet?'Key set':'Not set'));
+    if(!fm.pullKeySet) pa.appendChild(el('span','small muted',' FILEMAKER_KEY in Railway'));
+    f.appendChild(pa); box.appendChild(f);
+    if(!guest){
+      var form=el('form','radd'), inp=el('input'), save=el('button',null,fm.emailTo?'Change':'Set'); save.type='submit';
+      inp.type='email'; inp.required=true; inp.autocomplete='off'; inp.placeholder='filemaker@casa-blanca.com'; inp.value=fm.emailTo||'';
+      inp.setAttribute('aria-label','FileMaker’s email address'); save.disabled=fmBusy;
+      form.appendChild(inp); form.appendChild(save);
+      form.addEventListener('submit',function(e){e.preventDefault();var v=inp.value.trim().toLowerCase();if(!v||v===fm.emailTo)return;saveFileMaker({emailTo:v});});
+      box.appendChild(form);
+    }
+    if(fm.emailOn&&!fm.emailTo) box.appendChild(el('p','rwarn','On, but with no address: nothing is sent.'));
+  }
+  function saveFileMaker(change){
+    fmBusy=true; renderFileMaker();
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileMaker:change})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the FileMaker setting.');return b;});})
+      .then(function(b){if(state.status&&b.fileMaker)state.status.fileMaker=b.fileMaker;showNotice('');})
+      .catch(function(e){showNotice(e.message);})
+      .then(function(){fmBusy=false;renderFileMaker();});
+  }
+
+  /* ---------- client messages (the inbox, kind=other) ---------- */
+  var inbox=null, inboxErr='';
+  var MSGTYPE={'client-message':{label:'Client wrote',cls:''},'our-reply':{label:'Our reply',cls:'ok'}};
+  function agentLabel(a){
+    if(!a) return '';
+    var m=state.agents.filter(function(x){return x.email===a;})[0];
+    return m&&m.name?m.name:a;
+  }
+  function renderInbox(){
+    var ul=$('msgs'); ul.innerHTML='';
+    if(!inbox){ul.appendChild(el('li','empty',inboxErr||'Loading…'));return;}
+    var rows=inbox.filter(function(x){return x&&x.message;});
+    if(!rows.length){ul.appendChild(el('li','empty','No client messages yet.'));return;}
+    rows.forEach(function(x){
+      var m=x.message, t=MSGTYPE[m.type]||{label:m.type||'Message',cls:''};
+      var li=el('li',m.needsResponse?'need':null), top=el('div','mtop');
+      top.appendChild(el('span','pill '+t.cls,t.label));
+      if(m.needsResponse) top.appendChild(el('span','pill bad','Needs a response'));
+      top.appendChild(el('b',null,m.clientName||'Client'));
+      li.appendChild(top);
+      li.appendChild(el('div','mmeta',[ny(x.sentAt||x.at),agentLabel(x.agent),m.address,m.tourRequest?'Tour: '+m.tourRequest:'',m.price||''].filter(Boolean).join(' · ')));
+      if(m.message) li.appendChild(el('div','mtext',m.message));
+      if(x.leadId){
+        var a=el('a','ref','See the lead’s run'); a.href='#run-'+x.leadId;
+        a.addEventListener('click',function(e){e.preventDefault();history.replaceState(null,'','#run-'+x.leadId);wantRun=x.leadId;focusLinkedRun();});
+        li.appendChild(a);
+      }
+      ul.appendChild(li);
+    });
+  }
+  function loadInbox(){
+    return getJson('?view=inbox&limit=40&kind=other').then(function(b){inbox=Array.isArray(b)?b:(b&&Array.isArray(b.emails)?b.emails:[]);inboxErr='';},function(e){
+      inbox=null; inboxErr=/doesn’t have/.test(e.message)?'This version of the service doesn’t log client messages yet.':e.message;
+    }).then(renderInbox);
   }
 
   /* ---------- how it works (the editable guide) ---------- */
@@ -803,16 +961,17 @@
         if(state.selected){state.selected=state.runs.filter(function(r){return r.at===state.selected.at&&r.subject===state.selected.subject;})[0]||null;}
         showNotice('');
       },function(e){state.status=null;showNotice(e.message);})
-      .then(function(){renderStatus();renderAgentFilter();renderRuns();renderDetail();renderAgents();renderRecipients();focusLinkedRun();$('refresh').disabled=false;});
+      .then(function(){renderStatus();renderAgentFilter();renderRuns();renderDetail();renderAgents();renderRecipients();renderFileMaker();renderInbox();focusLinkedRun();$('refresh').disabled=false;});
   }
-  $('refresh').addEventListener('click',function(){load();loadMake();});
+  $('refresh').addEventListener('click',function(){load();loadMake();loadInbox();});
 
   window.CBStudio.ready.then(function(user){
     if(!user) return;
     load();
     loadMake();
+    loadInbox();
     loadGuide();
-    setInterval(function(){if(!document.hidden&&$('confirm').hidden)load();if(!document.hidden&&makeAsk===null)loadMake();},60000);
+    setInterval(function(){if(!document.hidden&&$('confirm').hidden){load();loadInbox();}if(!document.hidden&&makeAsk===null)loadMake();},60000);
   });
 })();
 </script>
