@@ -186,6 +186,10 @@
   a.btn:hover{border-color:var(--accent)}
   a.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
   /* the client, in a run's detail */
+  .fmlog{margin-top:8px}
+  .fmlog summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--plum)}
+  .fmreqs{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px;display:flex;flex-direction:column;gap:3px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .fmreqs li.bad{color:var(--bad)}
   .client{border:1px solid var(--line);border-radius:11px;background:var(--paper);padding:10px 12px;margin:0 0 12px}
   .client h4{margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
   .client .facts{margin:0}
@@ -707,7 +711,30 @@
     f.appendChild(el('dt',null,'Pull access'));
     var pa=el('dd'); pa.appendChild(el('span','pill '+(fm.pullKeySet?'ok':''),fm.pullKeySet?'Key set':'Not set'));
     if(!fm.pullKeySet) pa.appendChild(el('span','small muted',' FILEMAKER_KEY in Railway'));
-    f.appendChild(pa); box.appendChild(f);
+    f.appendChild(pa);
+    if(fm.pullKeySet&&'requests24h' in fm){
+      f.appendChild(el('dt',null,'FileMaker’s requests'));
+      f.appendChild(el('dd',null,fm.lastRequestAt
+        ?('Last '+ny(fm.lastRequestAt)+' · '+fm.requests24h+' in the last 24 hours'+(fm.refused24h?' · '+fm.refused24h+' refused (wrong key)':''))
+        :'None yet'));
+    }
+    box.appendChild(f);
+    if(fm.pullKeySet&&fm.lastRequestAt){
+      var det=el('details','fmlog'); det.appendChild(el('summary',null,'Show FileMaker’s recent requests'));
+      var ul=el('ul','fmreqs'); ul.appendChild(el('li','muted','Loading…')); det.appendChild(ul);
+      det.addEventListener('toggle',function(){
+        if(!det.open) return;
+        api('?view=filemaker-log&limit=50').then(function(r){return r.json();}).then(function(rows){
+          ul.innerHTML='';
+          if(!Array.isArray(rows)||!rows.length){ul.appendChild(el('li','muted','No requests yet.'));return;}
+          rows.forEach(function(x){
+            var q=Object.keys(x.query||{}).map(function(k){return k+'='+x.query[k];}).join(' · ');
+            ul.appendChild(el('li',x.status>=400?'bad':null,ny(x.at)+' · '+x.endpoint+(q?' · '+q:'')+' · '+(x.status===200?(x.count!=null?x.count+' item'+(x.count===1?'':'s'):'OK'):x.status===401?'refused (wrong key)':x.status===404?'nothing matched':'error '+x.status)));
+          });
+        }).catch(function(){ul.innerHTML='';ul.appendChild(el('li','bad','Couldn’t load the requests.'));});
+      });
+      box.appendChild(det);
+    }
     if(!guest){
       var form=el('form','radd'), inp=el('input'), save=el('button',null,fm.emailTo?'Change':'Set'); save.type='submit';
       inp.type='email'; inp.required=true; inp.autocomplete='off'; inp.placeholder='filemaker@casa-blanca.com'; inp.value=fm.emailTo||'';

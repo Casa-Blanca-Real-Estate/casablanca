@@ -418,3 +418,15 @@ test('make: start and stop the two scenarios; any other id, a bad body, a guest 
   assert.equal(r.status, 502);
   assert.match((await r.json()).message, /invalid modules/);
 });
+
+test('filemaker-log: passes through with a clamped limit; a guest can read', async () => {
+  const seen: string[] = [];
+  const d: LeadAcceptDeps = {
+    user: async () => GUEST, baseUrl: 'https://svc.test', secret: 's', guideStore: memGuide(),
+    fetch: (async (url: string) => { seen.push(url); return Response.json([{ at: '2026-11-16T21:41:34Z', endpoint: '/sample', status: 200, count: 1, query: {} }]); }) as typeof fetch,
+  };
+  const res = await handleLeadAccept(new Request('https://studio.test/api/lead-accept?view=filemaker-log&limit=9999'), d);
+  assert.equal(res.status, 200);
+  assert.equal((await res.json())[0].endpoint, '/sample');
+  assert.equal(seen[0], 'https://svc.test/admin/filemaker-log?limit=500');
+});
