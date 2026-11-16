@@ -99,10 +99,13 @@ The *Make* section shows the two scenarios and the alerts' Gmail connection, rea
   Claude task reminds Kimani every Tuesday at 3:21 PM ET. When it lapses, Make switches the alert
   scenario off and alerts queue. Alternative under consideration: send from casacalliste via Make's
   SMTP module with a Gmail app password.
-- **blancacasa1002 access is unexplained** (Nov 5): Gmail's activity list showed a Chrome browser and a
-  phone in South Korea, and an authorized app in Minnesota checking the inbox right after leads arrived.
-  Something marks lead emails read. Ask Derek; if unknown, change the password, sign out other sessions,
-  turn on 2-step verification.
+- **blancacasa1002 access, explained** (Kimani, Nov 16): the South Korea sign-ins are Marylu, the VA, and the
+  Minnesota app is Derek. Marylu is on the *Needs a person* alerts, so she only steps in when a lead fails.
+- **Derek's lead rules, not built yet**: skip Hannah's leads under $500K ("HANA" in the notes was Hannah), and
+  leads that already have an agent attached. To settle first: does "skip" mean leave them unanswered for Hannah,
+  or answer them but don't alert; and how the service tells a lead "already has an agent".
+- **Team members' own sign-in codes** (Hannah, Kara) reach the shared inbox too; the service drops them and
+  never uses them for its own sign-ins (se-autoaccept #8, Nov 16).
 - Marking lead emails read/starred in blancacasa1002 by outcome was proposed and set aside (Kimani,
   Nov 10): the ACTION NEEDED email is Derek's signal instead.
 - StreetEasy terms on automated access to agent accounts weren't reviewed.
@@ -165,3 +168,9 @@ Two more kinds of StreetEasy email now start a run (service: `se-autoaccept` #3 
   `GET /filemaker/lookup?sentAt=&originator=` on the service (see its README). blancacasa1004 gets its copy by
   filter, which keeps the sent time to the second.
 - Both are on by default; switches on the service: `respondToMessages`, `lookupRepeatInquiries`.
+
+## FileMaker's requests (Nov 16)
+
+The FileMaker section shows when FileMaker last called the service, how many calls in the last 24 hours and how
+many were refused for a wrong key, and (under *Show FileMaker's recent requests*) each call: when, which endpoint,
+what it asked for and what came back. Backed by `GET ?view=filemaker-log` → the service's `/admin/filemaker-log`.
