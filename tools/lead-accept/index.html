@@ -256,6 +256,7 @@
     <button type="button" class="chip" data-f="person" aria-pressed="false">Needed a person</button>
     <button type="button" class="chip" data-f="done" aria-pressed="false">Accepted</button>
     <button type="button" class="chip" data-f="expired" aria-pressed="false">Expired</button>
+    <button type="button" class="chip" data-f="lookup" aria-pressed="false">Repeat inquiries</button>
     <label class="small muted" for="agentFilter" style="margin-left:6px">Agent</label>
     <select id="agentFilter"><option value="">Everyone</option></select>
   </div>
@@ -319,10 +320,15 @@
     'failed':{label:'Failed',cls:'bad',group:'person'},
     'blocked':{label:'Bot check',cls:'bad',group:'person'},
     'unrouted':{label:'No agent match',cls:'warn',group:'person'},
-    'expired':{label:'Expired',cls:'',group:'expired'}
+    'expired':{label:'Expired',cls:'',group:'expired'},
+    'looked-up':{label:'Looked up',cls:'ok',group:'lookup'},
+    'lookup-failed':{label:'Lookup failed',cls:'warn',group:'lookup'}
   };
+  // What set a run off: a lead email, a client's message still waiting for a response, or a repeat inquiry
+  // from a client already connected (looked up only: nothing is clicked but the client's name).
+  var TRIG={'lead':'New lead','client-message':'Client message that needed a response','repeat-inquiry':'Repeat inquiry (look-up only)'};
   var STEP={login:'Sign-up page','verify-method':'Text code','method-options':'Choose email','verify-code':'Email code',
-    'password-rejected':'Password rejected','agent-tools':'Connections','accept-modal':'Message pop-up','after-accept':'After sending',error:'Error'};
+    'password-rejected':'Password rejected','agent-tools':'Connections',connections:'Connections',client:'Client panel','accept-modal':'Message pop-up','after-accept':'After sending',error:'Error'};
 
   function api(q,init){
     return CBStudio.token().then(function(t){
@@ -378,6 +384,7 @@
      ['Needed a person',(c.failed||0)+(c.unrouted||0)+(c.observed||0),((c.failed||0)+(c.unrouted||0))?'bad':''],
      ['Failed',c.failed||0,c.failed?'bad':''],
      ['Expired',c.expired||0,''],
+     ['Looked up',c.lookedUp||0,''],
      ['Total',c.total||0,'']].forEach(function(x){
       var d=el('div','count '+x[2]); d.appendChild(el('b',null,String(x[1]))); d.appendChild(el('span',null,x[0])); counts.appendChild(d);
     });
@@ -426,7 +433,10 @@
       b.appendChild(el('span','addr',r.address||'(no address)'));
       b.appendChild(el('span','pill '+o.cls,o.label));
       var meta=el('span','meta');
-      if(r.client&&r.client.name){meta.appendChild(el('span','who',r.client.name));meta.appendChild(document.createTextNode(' · '));}
+      if(r.trigger==='repeat-inquiry'){meta.appendChild(document.createTextNode('Repeat inquiry · '));}
+      else if(r.trigger==='client-message'){meta.appendChild(document.createTextNode('Client message · '));}
+      var who=(r.client&&r.client.name)||r.clientName;
+      if(who){meta.appendChild(el('span','who',who));meta.appendChild(document.createTextNode(' · '));}
       meta.appendChild(document.createTextNode(ny(r.at)+' · '+(r.agentName||r.agent||'unknown agent')+(r.secs!=null?' · '+r.secs+'s':'')));
       b.appendChild(meta);
       b.addEventListener('click',function(){state.selected=r;renderRuns();renderDetail();});
@@ -450,11 +460,12 @@
     top.appendChild(el('h3',null,r.address||'(no address)')); top.firstChild.style.margin='0';
     top.appendChild(el('span','pill '+o.cls,o.label)); d.appendChild(top);
     var f=el('dl','facts');
-    [['When',ny(r.at)],['Agent',(r.agentName?r.agentName+' · ':'')+(r.agent||'unknown')],['Deadline',ny(r.deadline)],
+    [['When',ny(r.at)],['Type',TRIG[r.trigger||'lead']||r.trigger],['Agent',(r.agentName?r.agentName+' · ':'')+(r.agent||'unknown')],['Deadline',r.trigger==='repeat-inquiry'?'None (nothing to answer)':ny(r.deadline)],
      ['Took',r.secs!=null?r.secs+' seconds':'—'],['Email subject',r.subject||'—']].forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
     d.appendChild(f);
     var tl=timing(r); if(tl) d.appendChild(el('p','timing',tl));
     if(r.client) d.appendChild(clientBlock(r.client));
+    if(r.trigger==='repeat-inquiry'&&r.message) d.appendChild(el('p','small muted','Their message: '+r.message));
     if(r.reason){d.appendChild(el('p','reason',r.reason));}
     if(r.steps&&r.steps.length){
       var st=el('div','steps');

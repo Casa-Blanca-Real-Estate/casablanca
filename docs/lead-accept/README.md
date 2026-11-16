@@ -149,3 +149,19 @@ that doesn't have these yet (no `client` on a run, no `fileMaker` in status, `/a
 | Where | Name | What |
 |---|---|---|
 | Railway | `FILEMAKER_KEY` | The key FileMaker sends to pull leads and messages (`/filemaker/leads`, `/filemaker/messages`) |
+
+## Repeat inquiries and waiting messages (Nov 16)
+
+Two more kinds of StreetEasy email now start a run (service: `se-autoaccept` #3 and #4):
+
+- **A client message that still needs a response** ("…Message from <Name> via Experts" saying "Respond now
+  to view contact info") is answered like a lead. Type *Client message that needed a response*.
+- **A repeat inquiry**: any other "…Message from <Name> via Experts", from a client already connected to that
+  agent who asks about another listing. StreetEasy sends only a first name, the address and the agent, which is
+  why FileMaker couldn't match these to the existing lead (David and Derek, Nov 12). The service finds the
+  client on the agent's Connections by name and address and reads their panel; it clicks nothing but the name.
+  Outcomes *Looked up* / *Lookup failed* (a notice to casacalliste), under the **Repeat inquiries** filter.
+- FileMaker finds any of these by the time StreetEasy sent the email and the agent it went to:
+  `GET /filemaker/lookup?sentAt=&originator=` on the service (see its README). blancacasa1004 gets its copy by
+  filter, which keeps the sent time to the second.
+- Both are on by default; switches on the service: `respondToMessages`, `lookupRepeatInquiries`.
