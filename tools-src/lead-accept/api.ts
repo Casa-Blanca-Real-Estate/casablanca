@@ -78,7 +78,8 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
     const gurl = new URL(req.url);
     if (req.method === 'GET' && gurl.searchParams.get('view') === 'guide') {
       const saved = await deps.guideStore.get(GUIDE_KEY, { type: 'json' }).catch(() => null) as Guide | null;
-      return json(saved && Array.isArray(saved.steps) ? { ...saved, isDefault: false } : { ...DEFAULT_GUIDE, isDefault: true });
+      // A guide saved before session links existed shows the default ones until it's edited.
+      return json(saved && Array.isArray(saved.steps) ? { ...saved, sessions: saved.sessions ?? DEFAULT_GUIDE.sessions, isDefault: false } : { ...DEFAULT_GUIDE, isDefault: true });
     }
     // Make is its own API, so the panel works whether or not the service is reachable.
     const needMake = () => {
