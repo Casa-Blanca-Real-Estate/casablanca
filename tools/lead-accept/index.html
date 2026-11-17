@@ -187,6 +187,8 @@
   a.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
   /* the client, in a run's detail */
   .fmlog{margin-top:8px}
+  .fmrule{border:0;border-top:1px solid var(--line);margin:12px 0}
+  #fileMaker dd.bad{color:var(--bad)}
   .fmlog summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--plum)}
   .fmreqs{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px;display:flex;flex-direction:column;gap:3px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
   .fmreqs li.bad{color:var(--bad)}
@@ -694,6 +696,38 @@
     var fm=state.status&&state.status.fileMaker;
     if(!fm){box.appendChild(el('p','muted',state.status?'This version of the service doesn’t have the FileMaker settings yet.':'Shown once the service answers.'));box.lastChild.style.margin='0';return;}
     var guest=isGuest();
+    if('pushReady' in fm){
+      // The push: each lead becomes a record in FileMaker (InCasaLeads › Emails), through its Data API.
+      var ph=el('div','mhead'), pt=el('h3',null,'Add each lead to FileMaker');
+      pt.appendChild(el('span','role',fm.pushReady?'Each lead becomes a record in '+fm.pushTarget+', with the AI_ fields filled.':'Needs FileMaker’s address and the Claude account’s password: FM_HOST and FM_PASSWORD in Railway.'));
+      ph.appendChild(pt);
+      var psw=el('button','switch'); psw.type='button'; psw.setAttribute('role','switch'); psw.setAttribute('aria-checked',String(!!fm.pushOn));
+      psw.setAttribute('aria-label','Add each lead to FileMaker: '+(fm.pushOn?'on':'off'));
+      psw.appendChild(el('span','track')); psw.appendChild(el('span',null,fm.pushOn?'On':'Off'));
+      psw.disabled=guest||fmBusy||(!fm.pushReady&&!fm.pushOn);
+      if(guest) psw.title='A preview guest can look but not switch.'; else if(!fm.pushReady) psw.title='Set FM_HOST and FM_PASSWORD in Railway first.';
+      psw.addEventListener('click',function(){saveFileMaker({pushOn:!fm.pushOn});});
+      ph.appendChild(psw); box.appendChild(ph);
+      if(fm.pushReady){
+        var pf=el('dl','facts');
+        pf.appendChild(el('dt',null,'Last added')); pf.appendChild(el('dd',null,fm.lastPushAt?(ny(fm.lastPushAt)+' · '+fm.pushes24h+' in the last 24 hours'):'None yet'));
+        if(fm.pushErrors24h){pf.appendChild(el('dt',null,'Not added')); pf.appendChild(el('dd','bad',fm.pushErrors24h+' in the last 24 hours. Last reason: '+(fm.lastPushError||'unknown')));}
+        box.appendChild(pf);
+        if(!guest){
+          var tb=el('button',null,'Send a test record'); tb.type='button'; tb.disabled=fmBusy; tb.style.alignSelf='flex-start';
+          tb.addEventListener('click',function(){
+            tb.disabled=true; tb.textContent='Sending…';
+            api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileMakerTestPush:true})})
+              .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t send the test record.');return b;});})
+              .then(function(b){showNotice(b.ok?'Test record added to FileMaker (record '+b.recordId+'). It says “TEST record … Safe to delete.”':'FileMaker didn’t take the test record: '+b.error);})
+              .catch(function(e){showNotice(e.message);})
+              .then(function(){tb.disabled=false;tb.textContent='Send a test record';});
+          });
+          box.appendChild(tb);
+        }
+      }
+      box.appendChild(el('hr','fmrule'));
+    }
     var head=el('div','mhead'), h=el('h3',null,'Email each lead to FileMaker');
     h.appendChild(el('span','role','One email per lead to the address below, with the client’s details as “Field: value” lines and as JSON.'));
     head.appendChild(h);

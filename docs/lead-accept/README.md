@@ -174,3 +174,12 @@ Two more kinds of StreetEasy email now start a run (service: `se-autoaccept` #3 
 The FileMaker section shows when FileMaker last called the service, how many calls in the last 24 hours and how
 many were refused for a wrong key, and (under *Show FileMaker's recent requests*) each call: when, which endpoint,
 what it asked for and what came back. Backed by `GET ?view=filemaker-log` → the service's `/admin/filemaker-log`.
+
+## Adding each lead to FileMaker (Nov 17)
+
+David asked for a push instead of FileMaker pulling: each lead becomes a record in InCasaLeads › Emails, on the
+Emails_API layout (the 20 AI_ fields), through the FileMaker Data API as the account "Claude". The service needs
+`FM_HOST` (FileMaker Server's address) and `FM_PASSWORD` in Railway. The FileMaker section on the page has the
+switch (*Add each lead to FileMaker*, off until turned on), when the last lead went in, any failures with the
+reason, and *Send a test record* (one invented record marked "TEST … Safe to delete."). The pull (FILEMAKER_KEY)
+keeps working alongside it. Details: the service's README, "FileMaker".
