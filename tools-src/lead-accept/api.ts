@@ -18,7 +18,8 @@
 //   POST {guide: Guide}       save an edited guide
 //   GET  ?view=make           the two Make scenarios (state, recent runs, errors) and the alerts' Gmail connection
 //   POST {makeScenario: {id, active}}  start or stop one of those two scenarios (no other id)
-//   POST {fileMaker: {emailOn?: bool, emailTo?: email}}  the one email per lead to FileMaker's inbox
+//   POST {fileMaker: {emailOn?: bool, emailTo?: email, pushOn?: bool}}  the FileMaker email, and the push into FileMaker
+//   POST {fileMakerTestPush: true}   send one invented record into FileMaker (the service's /admin/filemaker/test-push)
 //   GET  ?view=filemaker-log&limit=N   FileMaker's requests to the service, newest first (N up to 500)
 //   GET  ?view=inbox&limit=N&kind=lead|sign-in-code|other  the emails Make posted, newest first (N up to 500);
 //        kind=other carries StreetEasy's client messages, parsed. Client details pass through, never logged.
@@ -167,15 +168,27 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
       if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
       const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown };
         addAgent?: { email?: unknown; name?: unknown; password?: unknown };
-        recipients?: Record<string, unknown>; fileMaker?: unknown } | null;
+        recipients?: Record<string, unknown>; fileMaker?: unknown; fileMakerTestPush?: unknown } | null;
+
+      // One invented record into FileMaker, to check the push end to end.
+      if (body?.fileMakerTestPush !== undefined) {
+        if (body.fileMakerTestPush !== true) throw new LeadAcceptError(400, 'bad_test_push', 'Send { fileMakerTestPush: true }.');
+        const res = await call('/admin/filemaker/test-push', { method: 'POST' });
+        console.log(`lead-accept: FileMaker test record sent by ${user.email}`);
+        return json(await res.json());
+      }
 
       // The FileMaker email: { fileMaker: { emailOn?: bool, emailTo?: email } } (either or both).
       if (body?.fileMaker !== undefined) {
         const fm = body.fileMaker as Record<string, unknown> | null;
-        if (!fm || typeof fm !== 'object' || Array.isArray(fm)) throw new LeadAcceptError(400, 'bad_filemaker', 'Send { fileMaker: { emailOn?, emailTo? } }.');
-        const extra = Object.keys(fm).filter((k) => k !== 'emailOn' && k !== 'emailTo');
+        if (!fm || typeof fm !== 'object' || Array.isArray(fm)) throw new LeadAcceptError(400, 'bad_filemaker', 'Send { fileMaker: { emailOn?, emailTo?, pushOn? } }.');
+        const extra = Object.keys(fm).filter((k) => k !== 'emailOn' && k !== 'emailTo' && k !== 'pushOn');
         if (extra.length) throw new LeadAcceptError(400, 'bad_filemaker', `Unknown FileMaker setting: ${extra.join(', ')}.`);
-        const out: { emailOn?: boolean; emailTo?: string } = {};
+        const out: { emailOn?: boolean; emailTo?: string; pushOn?: boolean } = {};
+        if (fm.pushOn !== undefined) {
+          if (typeof fm.pushOn !== 'boolean') throw new LeadAcceptError(400, 'bad_filemaker', 'pushOn is true or false.');
+          out.pushOn = fm.pushOn;
+        }
         if (fm.emailOn !== undefined) {
           if (typeof fm.emailOn !== 'boolean') throw new LeadAcceptError(400, 'bad_filemaker', 'emailOn is true or false.');
           out.emailOn = fm.emailOn;
@@ -185,11 +198,11 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
           if (!EMAIL.test(to)) throw new LeadAcceptError(400, 'bad_email', `Not an email address: ${String(fm.emailTo)}`);
           out.emailTo = to;
         }
-        if (!Object.keys(out).length) throw new LeadAcceptError(400, 'bad_filemaker', 'Send emailOn, emailTo or both.');
+        if (!Object.keys(out).length) throw new LeadAcceptError(400, 'bad_filemaker', 'Send emailOn, emailTo or pushOn.');
         const res = await call('/admin/settings', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileMaker: out }),
         });
-        console.log(`lead-accept: FileMaker email ${out.emailOn === undefined ? 'settings' : out.emailOn ? 'on' : 'off'} changed by ${user.email}`);
+        console.log(`lead-accept: FileMaker ${out.pushOn !== undefined ? `push ${out.pushOn ? 'on' : 'off'}` : `email ${out.emailOn === undefined ? 'settings' : out.emailOn ? 'on' : 'off'}`} changed by ${user.email}`);
         return json(await res.json());
       }
 

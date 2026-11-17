@@ -430,3 +430,22 @@ test('filemaker-log: passes through with a clamped limit; a guest can read', asy
   assert.equal((await res.json())[0].endpoint, '/sample');
   assert.equal(seen[0], 'https://svc.test/admin/filemaker-log?limit=500');
 });
+
+test('FileMaker push: pushOn passes through; the test record passes through; guests and bad values are refused', async () => {
+  const seen: { url: string; body: string | null }[] = [];
+  const deps = (user: SignUser): LeadAcceptDeps => ({
+    user: async () => user, baseUrl: 'https://svc.test', secret: 's', guideStore: memGuide(),
+    fetch: (async (url: string, init: RequestInit = {}) => { seen.push({ url, body: (init.body as string) ?? null }); return Response.json({ ok: true, recordId: '101', fileMaker: { pushOn: true } }); }) as typeof fetch,
+  });
+  const post = (b: unknown) => new Request('https://studio.test/api/lead-accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+  assert.equal((await handleLeadAccept(post({ fileMaker: { pushOn: true } }), deps(KIMANI))).status, 200);
+  assert.equal(seen.at(-1)!.url, 'https://svc.test/admin/settings');
+  assert.deepEqual(JSON.parse(seen.at(-1)!.body!), { fileMaker: { pushOn: true } });
+  const t = await handleLeadAccept(post({ fileMakerTestPush: true }), deps(KIMANI));
+  assert.equal((await t.json()).recordId, '101');
+  assert.equal(seen.at(-1)!.url, 'https://svc.test/admin/filemaker/test-push');
+  const n = seen.length;
+  assert.equal((await handleLeadAccept(post({ fileMaker: { pushOn: 'yes' } }), deps(KIMANI))).status, 400);
+  assert.equal((await handleLeadAccept(post({ fileMakerTestPush: true }), deps(GUEST))).status, 403);
+  assert.equal(seen.length, n, 'refused requests never reach the service');
+});
