@@ -449,3 +449,14 @@ test('FileMaker push: pushOn passes through; the test record passes through; gue
   assert.equal((await handleLeadAccept(post({ fileMakerTestPush: true }), deps(GUEST))).status, 403);
   assert.equal(seen.length, n, 'refused requests never reach the service');
 });
+
+test('filemaker-check passes through to the service', async () => {
+  const seen: string[] = [];
+  const d: LeadAcceptDeps = {
+    user: async () => KIMANI, baseUrl: 'https://svc.test', secret: 's', guideStore: memGuide(),
+    fetch: (async (url: string) => { seen.push(url); return Response.json({ ok: true, server: 'FileMaker Data API Engine 21' }); }) as typeof fetch,
+  };
+  const res = await handleLeadAccept(new Request('https://studio.test/api/lead-accept?view=filemaker-check'), d);
+  assert.equal((await res.json()).ok, true);
+  assert.equal(seen[0], 'https://svc.test/admin/filemaker/check');
+});

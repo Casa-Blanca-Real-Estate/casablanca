@@ -699,7 +699,9 @@
     if('pushReady' in fm){
       // The push: each lead becomes a record in FileMaker (InCasaLeads › Emails), through its Data API.
       var ph=el('div','mhead'), pt=el('h3',null,'Add each lead to FileMaker');
-      pt.appendChild(el('span','role',fm.pushReady?'Each lead becomes a record in '+fm.pushTarget+', with the AI_ fields filled.':'Needs FileMaker’s address and the Claude account’s password: FM_HOST and FM_PASSWORD in Railway.'));
+      pt.appendChild(el('span','role',fm.pushReady?'Each lead becomes a record in '+fm.pushTarget+', with the AI_ fields filled.'
+        :fm.pushHost?'Server: '+fm.pushHost+'. Still needs the Claude account’s password: FM_PASSWORD in Railway.'
+        :'Needs FileMaker’s address and the Claude account’s password: FM_HOST and FM_PASSWORD in Railway.'));
       ph.appendChild(pt);
       var psw=el('button','switch'); psw.type='button'; psw.setAttribute('role','switch'); psw.setAttribute('aria-checked',String(!!fm.pushOn));
       psw.setAttribute('aria-label','Add each lead to FileMaker: '+(fm.pushOn?'on':'off'));
@@ -708,6 +710,18 @@
       if(guest) psw.title='A preview guest can look but not switch.'; else if(!fm.pushReady) psw.title='Set FM_HOST and FM_PASSWORD in Railway first.';
       psw.addEventListener('click',function(){saveFileMaker({pushOn:!fm.pushOn});});
       ph.appendChild(psw); box.appendChild(ph);
+      if(fm.pushHost&&!guest){
+        // Can the service reach the server at all? Needs only the address.
+        var cb=el('button',null,'Check the connection'); cb.type='button'; cb.style.alignSelf='flex-start';
+        cb.addEventListener('click',function(){
+          cb.disabled=true; cb.textContent='Checking…';
+          api('?view=filemaker-check').then(function(r){return r.json();})
+            .then(function(b){showNotice(b.ok?'Reached FileMaker at '+fm.pushHost+' ('+b.server+').'+(b.passwordSet?'':' Next: FM_PASSWORD in Railway.'):(b.error||'Couldn’t reach FileMaker.'));})
+            .catch(function(){showNotice('Couldn’t run the check.');})
+            .then(function(){cb.disabled=false;cb.textContent='Check the connection';});
+        });
+        box.appendChild(cb);
+      }
       if(fm.pushReady){
         var pf=el('dl','facts');
         pf.appendChild(el('dt',null,'Last added')); pf.appendChild(el('dd',null,fm.lastPushAt?(ny(fm.lastPushAt)+' · '+fm.pushes24h+' in the last 24 hours'):'None yet'));
