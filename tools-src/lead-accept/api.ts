@@ -20,6 +20,7 @@
 //   POST {makeScenario: {id, active}}  start or stop one of those two scenarios (no other id)
 //   POST {fileMaker: {emailOn?: bool, emailTo?: email, pushOn?: bool}}  the FileMaker email, and the push into FileMaker
 //   POST {fileMakerTestPush: true}   send one invented record into FileMaker (the service's /admin/filemaker/test-push)
+//   GET  ?view=filemaker-check          can the service reach FileMaker Server (address only, no password)?
 //   GET  ?view=filemaker-log&limit=N   FileMaker's requests to the service, newest first (N up to 500)
 //   GET  ?view=inbox&limit=N&kind=lead|sign-in-code|other  the emails Make posted, newest first (N up to 500);
 //        kind=other carries StreetEasy's client messages, parsed. Client details pass through, never logged.
@@ -149,6 +150,7 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
         return json(await (await call(`/admin/runs?limit=${limit}`)).json());
       }
       if (view === 'agents') return json(await (await call('/agents')).json());
+      if (view === 'filemaker-check') return json(await (await call('/admin/filemaker/check')).json());
       if (view === 'filemaker-log') {
         const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit')) || 50));
         return json(await (await call(`/admin/filemaker-log?limit=${limit}`)).json());
