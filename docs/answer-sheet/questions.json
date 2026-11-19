@@ -5,20 +5,18 @@
     "CR-16",
     "CR-17",
     "LA-1",
-    "LA-2",
     "LA-3",
     "LA-4",
     "LA-5",
     "LA-6",
     "LA-7",
-    "LT-1",
-    "LT-2",
     "LT-3",
     "LT-4",
     "LT-5",
     "LT-6",
     "LT-7",
-    "LT-8"
+    "LT-8",
+    "LT-9"
   ],
   "topics": [
     {
@@ -1275,7 +1273,7 @@
           "short": "DMs: what the service does",
           "quick": false,
           "needsYou": false,
-          "context": "<p><strong>What this is about.</strong> StreetEasy's third kind of email: a private message from a client in StreetEasy's Inbox, with a first name only and no address (Derek's example: Thida for M. Consamus, Nov 17). Today the service doesn't handle it, and that one never even reached it.</p><p><strong>On the call:</strong> the service reads the message and sends it to FileMaker as a message: <code>AI_Message_Lead</code>, <code>AI_flag_message</code> = 1 and the client's <code>AI_ClientID</code>, so FileMaker adds it to the inquiry's notes. To build it, I sign in as the agent once, read-only, to see the Inbox page.</p>",
+          "context": "<p><strong>What this is about.</strong> StreetEasy's third kind of email: a private message from a client in StreetEasy's Inbox, with a first name only and no address (Derek's example: Thida for M. Consamus, Nov 17). Today these go straight to Derek, not to 1002 or 1004, because he answers DMs himself; so the service never sees them. If they start going to 1002, 1002's filter gets a rule to forward them to Make, and the service handles them as below.</p><p><strong>On the call:</strong> the service reads the message and sends it to FileMaker as a message: <code>AI_Message_Lead</code>, <code>AI_flag_message</code> = 1 and the client's <code>AI_ClientID</code>, so FileMaker adds it to the inquiry's notes. To build it, I sign in as the agent once, read-only, to see the Inbox page.</p>",
           "options": [
             [
               "A",
@@ -1295,32 +1293,6 @@
             ]
           ],
           "source": "The Nov 19 call · Derek's forward of Thida's email"
-        },
-        {
-          "id": "LA-2",
-          "q": "How should agents be told about their leads and messages?",
-          "short": "Agent notifications: texts?",
-          "quick": false,
-          "needsYou": true,
-          "context": "<p><strong>What this is about.</strong> Erez asked for texts instead of emails, from a MagicJack or Magic App number. MagicJack has no API, so nothing can send from it reliably.</p><p><strong>Twilio</strong> (or Telnyx): about $1–2 a month for the number plus about a cent a text. You can move the MagicJack number over if agents know it. US carriers require registration (A2P 10DLC) before business texts go through: a form, a small fee, and days to a couple of weeks, so it's worth starting early. Someone signs up with company details and a card. <strong>Slack or WhatsApp</strong> works today with no registration. The longer-term plan from the call is notifications in a web app that sits over FileMaker.</p>",
-          "options": [
-            [
-              "A",
-              "Twilio: start the account and registration now",
-              "I build the texts while approval runs."
-            ],
-            [
-              "B",
-              "Slack or WhatsApp for now",
-              "Texts later."
-            ],
-            [
-              "C",
-              "Hold until the app",
-              "Agents keep getting emails."
-            ]
-          ],
-          "source": "The Nov 19 call"
         },
         {
           "id": "LA-3",
@@ -1437,6 +1409,7 @@
         }
       ],
       "settled": [
+        "<strong>LA-2 · Agent texts</strong>: hold for now. You'll ask Erez whether Slack or WhatsApp should come first instead of Twilio (Twilio's carrier registration takes a couple of weeks); the app is the final destination, so nothing is set up yet, recorded 2026-11-19 (in chat).",
         "<strong>AI_ClientID</strong>: one number per person, 8 digits from 10000001, kept for good; the same email or phone always gets the same number (David, Nov 19). Built in se-autoaccept #15.",
         "<strong>AI_FlagToBeStacked</strong>: 1 when the same agent already had the client (another address, or more than six hours earlier) and for every repeat inquiry; otherwise empty (Erez and David, Nov 19).",
         "<strong>Only 1002</strong>: the service reads 1002 only; 1004 retires once Derek moves the active agents' filters (Nov 19).",
@@ -1453,38 +1426,24 @@
       "intro": "<p>Errands for the go-live. Mark one <strong>Done</strong> when it's done; anything left here is still to do.</p>",
       "questions": [
         {
-          "id": "LT-1",
-          "q": "Say go to merge se-autoaccept #15 (Client ID and the stack flag)",
-          "short": "Merge #15",
+          "id": "LT-9",
+          "q": "Merge and release casablanca #183 before the call (Send this lead to FileMaker)",
+          "short": "Merge and release #183",
           "quick": true,
           "needsYou": true,
-          "context": "<p>Merging deploys it; the push stays off. Then I send one real test record so David sees both new fields filled in.</p>",
+          "context": "<p>Each run's detail on the Lead auto-accept page gets a <strong>Send this lead to FileMaker</strong> button, with its Client ID and stack flag, so David can watch a real record fill in. It works with the push on or off. Merging isn't deploying: it needs the release too.</p>",
           "options": [
             [
               "A",
               "Done"
             ]
           ],
-          "source": "https://github.com/Casa-Blanca-Real-Estate/se-autoaccept/pull/15"
-        },
-        {
-          "id": "LT-2",
-          "q": "Make 1002's Gmail filter forward \"New message from\" emails to Make",
-          "short": "1002 filter: DMs",
-          "quick": true,
-          "needsYou": true,
-          "context": "<p>Thida's DM (Nov 17) never reached the service, so the filter probably only matches some subjects. Someone with the 1002 login checks it. Until then, DMs go nowhere and nobody is told.</p>",
-          "options": [
-            [
-              "A",
-              "Done"
-            ]
-          ]
+          "source": "#183"
         },
         {
           "id": "LT-3",
-          "q": "David puts AI_flag_message on the Emails_API layout",
-          "short": "David: AI_flag_message field",
+          "q": "Ask David whether to put AI_flag_message on the Emails_API layout",
+          "short": "Ask David: AI_flag_message",
           "quick": true,
           "needsYou": true,
           "context": "<p>He created the field on the call, but it isn't on the layout in the screenshot. The Data API only fills fields that are on the layout. Needed for DMs (LA-1).</p>",
@@ -1529,7 +1488,7 @@
           "short": "Delete test records",
           "quick": true,
           "needsYou": true,
-          "context": "<p>Sent by hand on Nov 19 and probably a duplicate of the Gmail-imported copy. Plus the next test with the Client ID.</p>",
+          "context": "<p>#69849 (Brian Tietje) was sent by hand on Nov 19 and is probably a duplicate of the Gmail-imported copy. Plus the test sent during the go-live call, the first with a Client ID.</p>",
           "options": [
             [
               "A",
@@ -1567,7 +1526,10 @@
           ]
         }
       ],
-      "settled": []
+      "settled": [
+        "<strong>LT-1 · Merge se-autoaccept #15</strong>: merged and live 2026-11-19; AI_ClientID and AI_FlagToBeStacked are switched on for FileMaker (the push is still off). The test record goes during the next call so David can watch it fill in.",
+        "<strong>LT-2 · DMs and 1002's filter</strong>: nothing to fix now. DMs go straight to Derek, not 1002; if they start going to 1002, the filter gets a rule to forward them to Make then, recorded 2026-11-19 (in chat)."
+      ]
     }
   ],
   "reading": [
@@ -1757,7 +1719,8 @@
       "date": "2026-11-19",
       "label": "Thu Nov 19",
       "items": [
-        "A new <strong>Lead accept</strong> tab: the StreetEasy lead service and its FileMaker push. LA-1 to LA-7 (questions; LA-2, agent texts, needs you) and LT-1 to LT-8 (to-dos for the go-live)."
+        "A new <strong>Lead accept</strong> tab: the StreetEasy lead service and its FileMaker push. LA-1 to LA-7 (questions; LA-2, agent texts, needs you) and LT-1 to LT-8 (to-dos for the go-live).",
+        "Answered in chat: LA-2 (texts: hold; you'll ask Erez about Slack or WhatsApp), LT-1 (#15 merged and live), LT-2 (DMs go to Derek, not 1002). New: LT-9, merge and release #183, the Send this lead to FileMaker button."
       ]
     },
     {
