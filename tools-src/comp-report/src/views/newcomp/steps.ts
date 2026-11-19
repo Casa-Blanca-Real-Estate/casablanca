@@ -1,10 +1,11 @@
-// The New comp window's seven steps (design pass, docs/comp-report/design-pass/new-comp.md, 2026-11-11):
-// Basics → General → Own or shared → Home amenities → Building amenities → Client info → Add comps. Each
+// The New comp window's six steps (design pass, docs/comp-report/design-pass/new-comp.md, 2026-11-11; Add comps
+// moved out to the workspace's first step, comps.md §1, 2026-11-18):
+// Basics → General → Own or shared → Home amenities → Building amenities → Client info. Each
 // step's rail label, title, notes (every step but Basics) and what Hubert says beside it, from the canvas's
 // STEPS(). The step is in the URL (?start=<key>), so a reload lands back on it.
 import type { HomeNotesKey } from '../../../workspace/home-notes.ts';
 
-export const STEP_KEYS = ['basics', 'general', 'shared', 'amenities', 'building', 'client', 'comps'] as const;
+export const STEP_KEYS = ['basics', 'general', 'shared', 'amenities', 'building', 'client'] as const;
 export type StepKey = (typeof STEP_KEYS)[number];
 
 /** The window's URL value: a step, or Edit details (the window on its own, from a workspace's ✎). */
@@ -68,24 +69,19 @@ export const STEPS: readonly StepDef[] = [
     hubert: 'Optional, and only for you and me: it shapes the email’s advice, never the numbers.',
     asks: ['Pre-approved for $4M, lease ends in March', 'What should I ask a buyer about?'],
   },
-  {
-    key: 'comps', label: 'Comps', title: 'Add comps', notes: 'notesComps', notesHint: 'about the comps you picked',
-    notesPlaceholder: 'e.g. Found these on a Saturday tour', optional: false,
-    hubert: 'Add the comps: paste listing links or drop the StreetEasy export. Recent sales close to the home are best. You sort them next.',
-    asks: ['What makes a good comp?', 'Where do I find the StreetEasy export?'],
-  },
 ];
 
-/** The steps Edit details shows: the target property, not the comps. */
-export const EDIT_STEPS: readonly StepDef[] = STEPS.filter((s) => s.key !== 'comps');
+/** The steps Edit details shows: the same six, the target property. */
+export const EDIT_STEPS: readonly StepDef[] = STEPS;
 
 export function stepOf(key: StepKey): StepDef {
   return STEPS.find((s) => s.key === key)!;
 }
 
 /**
- * ?start= as it reads now: the seven steps, and the three of the window before them (a link or a reload from
- * before this round lands on the nearest step): home → Basics, details → Edit details or General, comps.
+ * ?start= as it reads now: the six steps, and the window's older names (a link or a reload from before lands on
+ * the nearest step): home → Basics, details → Edit details or General. ?start=comps is the workspace's Add comps
+ * now (comps.md §1): the workspace reads it, not the window.
  */
 export function startFromParam(v: string | null): StartScreen | null {
   if (!v) return null;
@@ -95,12 +91,12 @@ export function startFromParam(v: string | null): StartScreen | null {
 }
 
 /** The activity log's and the guide's names for the window's steps (a closed list on the server). */
-export function loggedScreen(s: StartScreen): 'new-report' | 'new-report-details' | 'new-report-comps' {
-  return s === 'basics' ? 'new-report' : s === 'comps' ? 'new-report-comps' : 'new-report-details';
+export function loggedScreen(s: StartScreen): 'new-report' | 'new-report-details' {
+  return s === 'basics' ? 'new-report' : 'new-report-details';
 }
 
 /** Hubert's step guides (hubert/guides.ts) by the window's step. */
-export function guideStepOf(s: StartScreen): 'home' | 'details' | 'comps' {
-  return s === 'basics' ? 'home' : s === 'comps' ? 'comps' : 'details';
+export function guideStepOf(s: StartScreen): 'home' | 'details' {
+  return s === 'basics' ? 'home' : 'details';
 }
 

@@ -7,7 +7,11 @@
 // Removed comps fold at the bottom, each with Put back (Dispatch 15).
 // Comps are added inline (the paste bar, "Type one in", or the export dropped
 // anywhere on the screen). Hubert, beside it, never sorts: the agent does.
-import { useEffect, useMemo, useState } from 'react';
+//
+// The check (comps.md §4, 2026-11-18): a banner over the list says how many are checked, with CHECK THE NEXT →;
+// each comp read from its page has a yellow edge and CHECK where its tier will go until it's checked, side by
+// side with the target; the first unchecked opens by itself when Sort opens. Then its tier.
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CompOut } from '../../../engine/index.ts';
 import { AddBar, useDropTarget } from '../comp/AddBar.tsx';
 import { Reads } from '../sort/Reads.tsx';
@@ -22,6 +26,7 @@ import { StepCta } from '../shell/WorkspaceHeader.tsx';
 import { compAddress, compStatus, STATUS_LABEL } from './comps.tsx';
 import '../../styles/sort.css';
 import '../../styles/review.css';
+import '../../styles/addcomps.css';
 
 export function SortStep({ ws }: StepProps) {
   const outById = useMemo(() => new Map<string, CompOut>((ws.output?.comps ?? []).map((c) => [c.id, c])), [ws.output]);
@@ -48,6 +53,25 @@ export function SortStep({ ws }: StepProps) {
   const groups = groupRows(shown).map((g) => ({ ...g, rows: sortRows(g.rows, sort) }));
   // The rows top to bottom, for Hubert's get_view: "comps 1 and 2" counts as Sort shows them.
   const order = groups.flatMap((g) => g.rows.map((r) => r.rcId)).filter((x): x is string => Boolean(x)).join(',');
+  // The comps still to check, top to bottom as Sort shows them (all of them, whatever the filter).
+  const unchecked = groupRows(rows).flatMap((g) => g.rows).filter((r) => r.c.unconfirmed && r.group !== 'unsortable');
+  const [checking, setChecking] = useState<string | null>(() => (ws.readOnly ? null : unchecked[0]?.c.id ?? null));
+  const [jump, setJump] = useState(0);
+  // Until the agent opens or closes one, the first unchecked comp as Sort shows them is the one open.
+  const chosen = useRef(false);
+  const firstUnchecked = unchecked[0]?.c.id ?? null;
+  useEffect(() => {
+    if (!chosen.current && !ws.readOnly) setChecking(firstUnchecked);
+  }, [firstUnchecked]);
+  const onCheck = (id: string | null, after?: 'next') => {
+    chosen.current = true;
+    if (after !== 'next') return setChecking(id);
+    setJump((n) => n + 1);
+    // Checked: the next one still to check after it opens, else the first left, else none.
+    const at = unchecked.findIndex((r) => r.c.id === id);
+    const next = unchecked.slice(at + 1).find((r) => r.c.id !== id) ?? unchecked.find((r) => r.c.id !== id);
+    setChecking(next?.c.id ?? null);
+  };
   useEffect(() => {
     ws.sortOrder(order ? order.split(',') : []);
   }, [order]);
@@ -141,8 +165,16 @@ export function SortStep({ ws }: StepProps) {
         )}
       </div>
       {addPanel}
+      <CheckBanner ws={ws} total={rows.filter((r) => r.group !== 'unsortable').length} left={unchecked.length} onNext={() => {
+        const next = unchecked.find((r) => r.c.id !== checking) ?? unchecked[0];
+        if (next) {
+          chosen.current = true;
+          setChecking(next.c.id);
+          setJump((n) => n + 1);
+        }
+      }} />
       <Reads ws={ws} />
-      {groups.map((g) => <SortGroup key={g.id} ws={ws} id={g.id} rows={g.rows} outById={outById} sort={sort} onSort={setSort} />)}
+      {groups.map((g) => <SortGroup key={g.id} ws={ws} id={g.id} rows={g.rows} outById={outById} sort={sort} onSort={setSort} checking={checking} onCheck={onCheck} jump={jump} />)}
       {shown.length === 0 && (
         <p className="so-nomatch">No comps match that filter. <button type="button" className="link" onClick={clear}>Clear it</button></p>
       )}
@@ -156,6 +188,29 @@ export function SortStep({ ws }: StepProps) {
           suggestions from market data.
         </BuildNote>
       )}
+    </div>
+  );
+}
+
+/** "3 comps to check against its page, then a tier for each", n of n checked, CHECK THE NEXT → (comps.md §4). */
+function CheckBanner({ ws, total, left, onNext }: { ws: Workspace; total: number; left: number; onNext: () => void }) {
+  if (!total || ws.readOnly) return null;
+  const done = total - left;
+  return (
+    <div className={`so-banner${left ? ' open' : ''}`} role="status">
+      <span className="so-banner-text">
+        <span className="so-banner-title">
+          {left ? `${left} comp${left === 1 ? '' : 's'} to check against ${left === 1 ? 'its page' : 'their pages'}, then a tier for each.` : `All ${total} checked. Give each a tier, then Review comps.`}
+        </span>
+        <span className="so-banner-sub">
+          {left ? 'Hubert read their pages; the facts he read carry a dot. Anything off: Fix a fact, or Remove.' : '★ is the closest comp, one per report. ✕ leaves a comp out of the numbers.'}
+        </span>
+      </span>
+      <span className="so-banner-meter">
+        <span className="so-banner-row"><span className="so-banner-k">Checked</span><strong>{done} of {total}</strong></span>
+        <span className="so-banner-bar"><span style={{ width: `${total ? (done / total) * 100 : 0}%` }} /></span>
+      </span>
+      {left > 0 && <button type="button" className="so-banner-next" onClick={onNext}>CHECK THE NEXT →</button>}
     </div>
   );
 }

@@ -495,7 +495,7 @@ body:has(.hubert-drawer.resizing) .sh-page { transition: none; }
 
 /* Hubert's edge tab is fixed at the window's right edge: with his drawer closed, the page keeps clear of it,
    so the header row's crumbs and action never sit under it. */
-.sh-page:not(.with-drawer) { --pad-right: calc(clamp(16px, 2.6vw, 40px) + 38px); }
+/* (The right-hand edge tab is gone: Hubert is on the left across the workspace, comps.md §2.) */
 
 /* A small dialog (Duplicate report, Settings; 2026-11-06), on the same scrim as New report. */
 .sh-dlg-scrim {
@@ -532,3 +532,65 @@ label.sh-switch-row {
 .sh-profile dd { margin: 0; overflow-wrap: anywhere; }
 .sh-dlg-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .sh-menu-gear { display: inline-flex; align-items: center; gap: 8px; }
+
+
+/* ─── comps.md (2026-11-18): Hubert on the left, the masthead, the step tabs ────────────────────────────
+   One Hubert panel, the same as beside the New comp window (shell/HubertPanel.tsx, newcomp.css's .nc-hub):
+   fixed under the bar at the left, resizable; the page centres in the space beside it, open or closed. */
+.nc-hub.sh-hubleft { position: fixed; top: var(--sh-bar-h); left: 0; bottom: 0; z-index: 45; }
+.nc-htab.sh-htab { position: fixed; top: calc(var(--sh-bar-h) + 88px); left: 0; z-index: 45; }
+.sh-page { padding-left: calc(var(--pad-left) + var(--sh-hub-w, 0px)); transition: padding-left .3s cubic-bezier(.2,.7,.2,1); }
+.sh-page:not(.with-hub) { padding-left: calc(var(--pad-left) + 36px); }
+body:has(.nc-hub.resizing) .sh-page { transition: none; }
+.sh-page.narrow > * { max-width: 1240px; }
+
+/* The masthead: ← Reports, the address large and heavy, ✎ Edit and All details ▾, the line under it. */
+.sh-head { flex-direction: column; align-items: stretch; gap: 18px; }
+.sh-head-main { flex: none; gap: 8px; }
+.sh-title { font-size: 34px; letter-spacing: -.02em; line-height: 1.1; }
+.sh-title-row { align-items: baseline; flex-wrap: wrap; gap: 6px 10px; }
+.sh-mini {
+  font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: #6f6d68;
+  background: none; border: 0; padding: 6px 8px; cursor: pointer; min-width: 0; transition: background-color .15s, color .15s;
+}
+.sh-mini:hover { background: #f1effa; color: var(--cb-black); }
+.sh-sub { font-size: 13px; }
+.sh-details {
+  margin: 6px 0 0; background: #fff; padding: 18px 22px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 24px;
+  animation: sh-up .25s ease-out both;
+}
+.sh-details div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sh-details dt { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--cb-black); }
+.sh-details dd { margin: 0; font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+@keyframes sh-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* The tabs: 1 Add comps · 2 Sort · 3 Findings · 4 Send, then what's left and the next button at the right. */
+.sh-steps { gap: 8px; border-bottom: 1px solid var(--cb-line-2); padding-bottom: 16px; min-height: 44px; }
+.sh-steps .sh-step {
+  font-size: 14px; font-weight: 400; color: #6f6d68; padding: 8px 12px; gap: 8px; border: 1px solid transparent; background: none;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.sh-steps .sh-step:hover:not([aria-disabled='true']) { color: var(--cb-black); background: #f1effa; }
+.sh-steps .sh-step .sh-step-n { width: 20px; height: 20px; background: transparent; color: currentColor; border: 1px solid currentColor; font-size: 11px; }
+.sh-steps .sh-step.done { color: #3a3a3a; }
+.sh-steps .sh-step.current { color: var(--cb-black); font-weight: 800; font-size: 14px; background: #fff; border-color: var(--cb-black); padding: 8px 12px; }
+.sh-steps .sh-step.current .sh-step-n { width: 20px; height: 20px; background: transparent; color: var(--cb-black); border-color: var(--cb-black); font-size: 11px; }
+.sh-steps .sh-step[aria-disabled='true'] { color: #a9a7a1; }
+.sh-steps-gap { flex: 1; }
+.sh-steps .sh-cta { margin-left: 0; }
+.sh-left { font-size: 12px; color: #6f6d68; }
+.sh-steps .btn.primary { height: 44px; padding: 0 18px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.sh-steps .btn.primary:not(:disabled):hover { background: var(--cb-deep); border-color: var(--cb-deep); }
+.sh-steps .btn.primary:disabled { background: #c9c7c1; border-color: #c9c7c1; color: #fff; }
+
+/* Content slides in from the right going forward, from the left going back (comps.md §5). */
+@keyframes sh-in-f { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes sh-in-b { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+.sh-screen.in-f { animation: sh-in-f .32s cubic-bezier(.2,.7,.2,1) both; }
+.sh-screen.in-b { animation: sh-in-b .32s cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .sh-screen.in-f, .sh-screen.in-b, .sh-details { animation: none; } .sh-page { transition: none; } }
+
+/* The thin white scrollbar with a black edge, on Hubert's panel (comps.md §5). */
+.nc-hub .hb, .nc-hub .hb * { scrollbar-width: thin; scrollbar-color: var(--cb-black) transparent; }
+.nc-hub ::-webkit-scrollbar { width: 9px; height: 0; }
+.nc-hub ::-webkit-scrollbar-thumb { background: #fff; border: 1px solid var(--cb-black); border-radius: 0; }

@@ -60,21 +60,21 @@ export const STEPS: GuideStep[] = [
   },
   {
     n: 4,
-    where: 'New comp · Add comps',
+    where: 'Workspace · 1 Add comps',
     title: 'Add your comps',
     todo: 'Bring in the sales you found on StreetEasy: drop the export or its PDF, paste listing links, or type a sale in.',
     points: [
-      'Recent sales close to the home, and like it, are best.',
-      'A comp read from a link asks you to confirm it before it counts.',
+      'Recent sales close to the home, and like it, are best: about three of each status.',
+      'Hubert flags a comp that doesn’t fit the guidance. You check each comp read from a link on Sort before it counts.',
     ],
     words: ['Comp', 'StreetEasy export', 'Sold', 'In contract', 'Active'],
     screens: ['new-report-comps'],
   },
   {
     n: 5,
-    where: 'Progress row · 1 Sort',
+    where: 'Workspace · 2 Sort',
     title: 'Sort the comps',
-    todo: 'Open each comp, compare it to the home, and give it a tier. Then say why, with tags and a short note.',
+    todo: 'Check each comp against its page, side by side with the home, and give it a tier. Then say why, with tags and a short note.',
     points: [
       '1st tier comps are the closest matches: only they set the range. 2nd tier is a check. Excluded stays out.',
       'Star the one comp closest to the home.',
@@ -85,7 +85,7 @@ export const STEPS: GuideStep[] = [
   },
   {
     n: 6,
-    where: 'Progress row · 2 Findings',
+    where: 'Workspace · 3 Findings',
     title: 'Give your number',
     todo: 'Before you see the range, write down what you think the home is worth. It’s your own read, and Hubert can’t help with it.',
     points: [
@@ -96,7 +96,7 @@ export const STEPS: GuideStep[] = [
   },
   {
     n: 7,
-    where: 'Progress row · 2 Findings',
+    where: 'Workspace · 3 Findings',
     title: 'Read the findings',
     todo: 'See the range your comps give, and check which comps set its low and high end.',
     points: [
@@ -109,7 +109,7 @@ export const STEPS: GuideStep[] = [
   },
   {
     n: 8,
-    where: 'Progress row · 3 Send',
+    where: 'Workspace · 4 Send',
     title: 'Send it to the client',
     todo: 'Write your lines, check the email, then copy it into Gmail and send it from there.',
     points: [

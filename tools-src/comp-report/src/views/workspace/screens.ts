@@ -5,7 +5,7 @@ import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
 import { isTag } from '../../../workspace/features.ts';
 import { noteOf, type Intake } from '../../../workspace/state.ts';
 
-export type ScreenId = 'sort' | 'gate' | 'findings' | 'send' | 'done';
+export type ScreenId = 'comps' | 'sort' | 'gate' | 'findings' | 'send' | 'done';
 
 /**
  * Every screen the app can show, for the activity log (Dispatch 22b): the workspace's, the new
@@ -18,19 +18,29 @@ export const SCREEN_IDS = [
 ] as const satisfies readonly string[];
 export type LoggedScreen = (typeof SCREEN_IDS)[number];
 
-/** The progress row: Sort → Findings → Send. The Gate sits under Findings; Done under Send. */
-export const PROGRESS: { id: 'sort' | 'findings' | 'send'; n: number; label: string }[] = [
-  { id: 'sort', n: 1, label: 'Sort' },
-  { id: 'findings', n: 2, label: 'Findings' },
-  { id: 'send', n: 3, label: 'Send' },
+/**
+ * The workspace's steps (design pass, comps.md, 2026-11-18): Add comps → Sort → Findings → Send. The Gate
+ * sits under Findings; Done under Send. Add comps left the New comp window to be the first of them.
+ */
+export type ProgressId = 'comps' | 'sort' | 'findings' | 'send';
+export const PROGRESS: { id: ProgressId; n: number; label: string }[] = [
+  { id: 'comps', n: 1, label: 'Add comps' },
+  { id: 'sort', n: 2, label: 'Sort' },
+  { id: 'findings', n: 3, label: 'Findings' },
+  { id: 'send', n: 4, label: 'Send' },
 ];
 
-export function progressStep(screen: ScreenId): 'sort' | 'findings' | 'send' {
+export function progressStep(screen: ScreenId): ProgressId {
   return screen === 'gate' ? 'findings' : screen === 'done' ? 'send' : screen;
 }
 
 export function isScreen(s: string | null): s is ScreenId {
-  return s === 'sort' || s === 'gate' || s === 'findings' || s === 'send' || s === 'done';
+  return s === 'comps' || s === 'sort' || s === 'gate' || s === 'findings' || s === 'send' || s === 'done';
+}
+
+/** The activity log's name for a screen: Add comps keeps the name it had as the window's last step. */
+export function loggedWorkspaceScreen(s: ScreenId): LoggedScreen {
+  return s === 'comps' ? 'new-report-comps' : s;
 }
 
 /** What a comp still needs before Findings unlocks: a tier, at least one tag, and a note for a practice agent. */
@@ -61,7 +71,7 @@ export interface SortReadiness {
   ready: boolean;
   /** The comps that still need something, in list order. */
   incomplete: { comp: WorkspaceComp; needs: Need[] }[];
-  /** Comps read from a link and not yet confirmed: confirm or remove them first. */
+  /** Comps read from a link and not yet checked on Sort (`unconfirmed`): check or remove them first. */
   toConfirm: WorkspaceComp[];
   /** Comps that can be sorted (a comp the engine can't sort doesn't count). */
   counted: number;
@@ -96,7 +106,7 @@ export function readinessLine(r: SortReadiness): string {
   const parts: string[] = [];
   const what = r.noteRequired ? 'a tier, note or tags' : 'a tier or tags';
   if (r.incomplete.length) parts.push(`${r.incomplete.length} comp${r.incomplete.length === 1 ? ' needs' : 's need'} ${what}`);
-  if (r.toConfirm.length) parts.push(`${r.toConfirm.length} to confirm`);
+  if (r.toConfirm.length) parts.push(`${r.toConfirm.length} to check`);
   return parts.join(' · ');
 }
 

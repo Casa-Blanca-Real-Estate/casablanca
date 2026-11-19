@@ -1,99 +1,35 @@
 // The New comp window (design pass, docs/comp-report/design-pass/new-comp.md, 2026-11-11; the canvas's
-// "New comp · round 1"): the target property in seven steps, on its own page. Reports goes; behind the window
+// "New comp · round 1"): the target property in six steps, on its own page. Client info's NEXT: ADD COMPS →
+// opens the workspace on its first step, Add comps (comps.md §1, 2026-11-18). Reports goes; behind the window
 // is the page colour and the Studio's top bar. Hubert's panel is on the left, open by default and resizable
 // (300–640px, the seam on its right edge); the window is centred in the space beside it.
 //
-// Top to bottom: TARGET PROPERTY (COMPS TO COMPARE on the last step) and ×; the home (its photo, address and
+// Top to bottom: TARGET PROPERTY and ×; the home (its photo, address and
 // what was read, the StreetEasy button, or the 0–100% counter while the page is read); the step rail; the
 // step's title; its fields and notes; the footer. Between steps only the step's content moves.
 //
 // The same window is Edit details, from a workspace's ✎: headed EDIT TARGET PROPERTY, the six steps of the
 // home, every one reachable, with today's Cancel and Save changes.
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cleanPhotoUrls, compRecordFromListing } from '../../../engine/index.ts';
 import { typeFromListing } from '../../../workspace/features.ts';
 import { checkListingLink } from '../../../workspace/links.ts';
 import { onMarket, onMarketLine } from '../../../workspace/on-market.ts';
 import { linksApi, type LinkReadView } from '../../api.ts';
-import { useDropTarget } from '../comp/AddBar.tsx';
-import { Hubert } from '../Hubert.tsx';
+import { HubertOpenTab, HubertPanel, useHubWidth } from '../shell/HubertPanel.tsx';
+import type { ScreenId } from '../workspace/screens.ts';
 import type { Workspace } from '../workspace/model.ts';
 import { useElapsed } from '../workspace/ReadingNotice.tsx';
 import { inFlight } from '../workspace/reads.ts';
 import { endNewReport, GuardContext, isNewReport } from './Frame.tsx';
 import { TYPE_LABEL, typeFromPageKey } from './Home.tsx';
 import { KIND_LABEL } from '../../../workspace/features.ts';
-import { AmenitiesStep, BasicsStep, BuildingStep, ClientStep, CompsStep, GeneralStep, SharedStep, StepNotes } from './StepBodies.tsx';
+import { AmenitiesStep, BasicsStep, BuildingStep, ClientStep, GeneralStep, SharedStep, StepNotes } from './StepBodies.tsx';
 import { EDIT_STEPS, STEPS, type StartScreen, type StepDef, type StepKey } from './steps.ts';
 import '../../styles/newcomp.css';
 import seLogo from '../../assets/streeteasy-logo.svg';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
-// ─── Hubert's panel, on the left ────────────────────────────────────────────
-
-const HUB_KEY = 'cr-nc-hubert-w';
-const HUB_DEFAULT = 400;
-const HUB_MIN = 300;
-const HUB_MAX = 640;
-const clampHub = (w: number) => Math.round(Math.min(HUB_MAX, Math.max(HUB_MIN, w)));
-
-function savedHub(): number {
-  try {
-    const n = Number(localStorage.getItem(HUB_KEY));
-    return n > 0 ? clampHub(n) : HUB_DEFAULT;
-  } catch {
-    return HUB_DEFAULT;
-  }
-}
-
-function HubertPanel({ ws, width, onWidth }: { ws: Workspace; width: number; onWidth: (w: number) => void }) {
-  const [dragging, setDragging] = useState(false);
-  function start(e: PointerEvent<HTMLDivElement>) {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(true);
-  }
-  function move(e: PointerEvent<HTMLDivElement>) {
-    if (dragging) onWidth(clampHub(e.clientX));
-  }
-  function stop(e: PointerEvent<HTMLDivElement>) {
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
-    setDragging(false);
-  }
-  function key(e: KeyboardEvent<HTMLDivElement>) {
-    const step = e.shiftKey ? 72 : 24;
-    if (e.key === 'ArrowRight') onWidth(clampHub(width + step));
-    else if (e.key === 'ArrowLeft') onWidth(clampHub(width - step));
-    else if (e.key === 'Home') onWidth(HUB_MIN);
-    else if (e.key === 'End') onWidth(HUB_MAX);
-    else return;
-    e.preventDefault();
-  }
-  return (
-    <aside className={`nc-hub${dragging ? ' resizing' : ''}`} style={{ width }}>
-      <div
-        className="nc-seam"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize Hubert"
-        aria-valuenow={width}
-        aria-valuemin={HUB_MIN}
-        aria-valuemax={HUB_MAX}
-        tabIndex={0}
-        title="Drag to resize · double-click to reset"
-        onPointerDown={start}
-        onPointerMove={move}
-        onPointerUp={stop}
-        onPointerCancel={stop}
-        onDoubleClick={() => onWidth(HUB_DEFAULT)}
-        onKeyDown={key}
-      />
-      <Hubert ws={ws} side="left" />
-    </aside>
-  );
-}
 
 // ─── The home, at the top of the window ─────────────────────────────────────
 
@@ -241,8 +177,8 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
   screen: StartScreen;
   /** A new report's step changes: the URL follows, so a reload lands back on it. */
   onScreen: (s: StartScreen) => void;
-  /** Open workspace →: the workspace, on Sort. */
-  onDone: () => void;
+  /** NEXT: ADD COMPS →: the workspace, on Add comps (the sample's fill: on Sort). */
+  onDone: (to?: ScreenId) => void;
   /** ✕ and ← Back on Basics: Reports. */
   onReports: () => void;
 }) {
@@ -255,25 +191,15 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
   const step = steps[index]!;
   const [reached, setReached] = useState(() => (editing ? steps.length - 1 : Math.max(readReached(ws.reportId), index)));
   const [dir, setDir] = useState<'f' | 'b'>('f');
-  const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [width, setWidth] = useState(savedHub);
+  const [width, setWidth] = useHubWidth();
   const body = useRef<HTMLDivElement>(null);
   const home = ws.reads.filter((r) => r.purpose === 'subject').at(-1) ?? null;
   const reading = Boolean(home && (home.status === 'queued' || home.status === 'running')) && !ws.readOnly;
-  const drop = useDropTarget(ws, setNote);
 
   // Hubert's get_view and his panel read the step from here.
   useEffect(() => { ws.setWindowStep(key); }, [key]);
   useEffect(() => { return () => ws.setWindowStep(null); }, []);
-  useEffect(() => {
-    try {
-      if (width === HUB_DEFAULT) localStorage.removeItem(HUB_KEY);
-      else localStorage.setItem(HUB_KEY, String(width));
-    } catch {
-      // Private mode: the width lasts as long as the page.
-    }
-  }, [width]);
   useEffect(() => {
     if (editing) return;
     try {
@@ -408,11 +334,8 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
   }, []);
 
   const last = index === steps.length - 1;
-  const toConfirm = ws.comps.filter((c) => c.unconfirmed).length;
-  const compsReading = inFlight(ws.reads.filter((r) => r.purpose === 'comp')).length;
-  const count = toConfirm ? `${toConfirm} to confirm` : compsReading ? `${compsReading} reading` : ws.comps.length ? 'All confirmed' : '';
   const hubOpen = ws.drawerOpen;
-  const head = editing ? 'EDIT TARGET PROPERTY' : key === 'comps' ? 'COMPS TO COMPARE' : 'TARGET PROPERTY';
+  const head = editing ? 'EDIT TARGET PROPERTY' : 'TARGET PROPERTY';
   const saved = error ? null : ws.busy ? ws.busy : reading ? 'The report is made: anything you type is kept.' : ws.readOnly ? 'Read only' : '✓ Saved as you go';
 
   let content: ReactNode;
@@ -426,26 +349,19 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
   else if (key === 'shared') content = <SharedStep ws={filling} />;
   else if (key === 'amenities') content = <AmenitiesStep ws={filling} />;
   else if (key === 'building') content = <BuildingStep ws={filling} />;
-  else if (key === 'client') content = <ClientStep ws={ws} />;
-  else content = <CompsStep ws={ws} note={note} onNote={setNote} />;
+  else content = <ClientStep ws={ws} />;
 
   return (
     <div className="nc-page" style={{ ['--nc-hub-w' as string]: hubOpen ? `${width}px` : '0px' }}>
-      {hubOpen ? <HubertPanel ws={ws} width={width} onWidth={setWidth} /> : (
-        <button type="button" className="nc-htab" aria-label="Open Hubert" onClick={() => ws.setDrawerOpen(true)}>
-          <span aria-hidden="true" className="nc-htab-spark">✦</span><span className="nc-htab-word">HUBERT</span>
-        </button>
-      )}
+      {hubOpen ? <HubertPanel ws={ws} width={width} onWidth={setWidth} /> : <HubertOpenTab ws={ws} />}
       <div className="nc-stage">
         <div
-          className={`nc-window${key === 'comps' ? ' comps' : ''}`}
+          className="nc-window"
           role="dialog"
           aria-label={editing ? 'Edit target property' : `New comp: ${step.title}`}
           data-testid={editing ? 'edit-details' : `new-comp-${key}`}
           ref={body}
-          {...(key === 'comps' ? drop.handlers : {})}
         >
-          {key === 'comps' && drop.veil}
           <div className="nc-head">
             <div className="nc-head-top">
               <span className="nc-k nc-label">{head}</span>
@@ -511,20 +427,19 @@ export function NewCompWindow({ ws, screen, onScreen, onDone, onReports }: {
                 className="link nc-sample"
                 disabled={Boolean(ws.busy)}
                 title="Fills the whole report with 100 Barclay #17L: the home, the sorted comps, the call, the terms and the email’s lines."
-                onClick={() => void ws.fillSample('all').then((ran) => ran && (endNewReport(ws.reportId), onDone()))}
+                onClick={() => void ws.fillSample('all').then((ran) => ran && (endNewReport(ws.reportId), onDone('sort')))}
               >
                 Fill the rest with the sample
               </button>
             )}
             <span className="nc-foot-gap" />
             {error ? <span className="nc-err" role="alert">{error}</span> : <span className="nc-saved" aria-live="polite">{saved}</span>}
-            {last && !editing && count && <span className="nc-count">{count}</span>}
             {editing ? (
               <button type="button" className="nc-bp" disabled={Boolean(ws.busy)} onClick={() => void confirmHome().then((ok) => ok && (stillReading(), ws.go(ws.screen)))}>
                 {ws.readOnly ? 'CLOSE' : 'SAVE CHANGES'}
               </button>
             ) : last ? (
-              <button type="button" className="nc-bp" disabled={Boolean(ws.busy)} onClick={() => void open()}>OPEN WORKSPACE →</button>
+              <button type="button" className="nc-bp" disabled={Boolean(ws.busy)} onClick={() => void open()}>NEXT: ADD COMPS →</button>
             ) : (
               <>
                 {step.optional && !reading && <button type="button" className="link nc-skip" onClick={() => move(index + 1)}>Skip for now</button>}

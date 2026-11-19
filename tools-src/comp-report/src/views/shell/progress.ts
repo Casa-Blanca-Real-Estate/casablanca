@@ -1,6 +1,6 @@
-// The 3-step progress row (the handoff): Sort, Findings, Send, with the Gate counted as Findings and
-// Done as Send. Where each step goes, which are locked, and what the CTA at the row's right does.
-import { PROGRESS, progressStep, type ScreenId } from '../workspace/screens.ts';
+// The 4-step progress row (comps.md, 2026-11-18): Add comps, Sort, Findings, Send, with the Gate counted as
+// Findings and Done as Send. Where each step goes, which are locked, and what the CTA at the row's right does.
+import { PROGRESS, progressStep, type ProgressId, type ScreenId } from '../workspace/screens.ts';
 
 export interface ProgressInput {
   screen: ScreenId;
@@ -10,10 +10,12 @@ export interface ProgressInput {
   ready: boolean;
   /** Another agent's report, open to an admin: nothing to finish, so nothing is locked. */
   readOnly: boolean;
+  /** Comps in the report (Add comps' NEXT: SORT → waits for one). */
+  comps?: number;
 }
 
 export interface StepView {
-  id: 'sort' | 'findings' | 'send';
+  id: ProgressId;
   n: number;
   label: string;
   /** Done shows a check; the current step its number, filled; the rest an outlined number. */
@@ -36,12 +38,13 @@ export function progressSteps(i: ProgressInput): StepView[] {
     label: p.label,
     state: index < current ? 'done' : index === current ? 'current' : 'todo',
     target: p.id === 'findings' ? (i.revealed ? 'findings' : 'gate') : p.id,
-    locked: p.id === 'sort' ? null : !sortOk ? LOCK_SORT : p.id === 'send' && !i.revealed && !i.readOnly ? LOCK_CALL : null,
+    locked: p.id === 'comps' || p.id === 'sort' ? null : !sortOk ? LOCK_SORT : p.id === 'send' && !i.revealed && !i.readOnly ? LOCK_CALL : null,
   }));
 }
 
-/** The row's CTA: Findings → on Sort (locked until sorted), Send → on Findings, none elsewhere. */
+/** The row's CTA: Next: Sort → on Add comps, Findings → on Sort (locked until sorted), Send → on Findings, none elsewhere. */
 export function rowCta(i: ProgressInput): { label: string; target: ScreenId; disabled: boolean } | null {
+  if (i.screen === 'comps') return { label: 'Next: Sort →', target: 'sort', disabled: !(i.comps ?? 0) };
   if (i.screen === 'sort') return { label: 'Findings →', target: i.revealed ? 'findings' : 'gate', disabled: !(i.ready || i.readOnly) };
   if (i.screen === 'findings') return { label: 'Send →', target: 'send', disabled: !((i.revealed && i.ready) || i.readOnly) };
   return null;

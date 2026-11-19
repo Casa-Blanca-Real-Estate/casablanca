@@ -20,7 +20,9 @@ import { greeting, intro, NEW_REPORT_CHIPS, NEW_REPORT_HINT, said, SUGGESTIONS_L
 import { reachedGuides, STEP_NOW } from './hubert/guides.ts';
 import type { GuideStep } from '../../workspace/state.ts';
 import { monthYear, shortPrice } from './sort/rows.ts';
-import { STATUS_LABEL } from './workspace/comps.tsx';
+import { compStatus, STATUS_LABEL, STATUS_ORDER } from './workspace/comps.tsx';
+import { guidanceFlags, whereOf } from './workspace/check.ts';
+import { checkListingLink, MAX_LINKS_PER_REQUEST } from '../../workspace/links.ts';
 import type { Workspace } from './workspace/model.ts';
 import { homeName } from './workspace/screens.ts';
 import { stepOf, type StepDef } from './newcomp/steps.ts';
@@ -183,6 +185,47 @@ function NewCompBubbles({ ws, step }: { ws: Workspace; step: StepDef }) {
   );
 }
 
+/** The StreetEasy listing links in the agent's words, added as comps: each is read like a pasted link. */
+async function addLinksFromWords(ws: Workspace, text: string) {
+  const urls = [...new Set(text.split(/\s+/).flatMap((w) => {
+    const c = checkListingLink(/^https?:\/\//i.test(w) ? w : `https://${w}`);
+    return /streeteasy/i.test(w) && c.ok ? [c.url] : [];
+  }))].slice(0, MAX_LINKS_PER_REQUEST);
+  if (!urls.length || ws.readOnly) return;
+  try {
+    const added = await linksApi.add(ws.reportId, urls);
+    ws.applyLinks(added);
+    ws.toast(`Reading ${urls.length === 1 ? 'that link' : `those ${urls.length} links`}: ${urls.length === 1 ? 'it lands' : 'they land'} on Add comps.`);
+  } catch (e) {
+    ws.toast(`Not added: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+/**
+ * Beside Add comps (comps.md §3, 2026-11-18): what to do, then the tally against about three of each status
+ * and the comps he flagged against the guidance. Written here from the comps as they stand, never generated.
+ */
+function AddCompsBubbles({ ws }: { ws: Workspace }) {
+  const home = homeName(ws.intake, ws.report.title);
+  const counts = STATUS_ORDER.map((s) => ({ s, n: ws.comps.filter((c) => compStatus(c) === s).length }));
+  const said = counts.map(({ s, n }) => (n ? `${n} ${STATUS_LABEL[s].toLowerCase()}` : `no ${s === 'active' ? 'actives' : STATUS_LABEL[s].toLowerCase()}`));
+  const outById = new Map((ws.output?.comps ?? []).map((c) => [c.id, c]));
+  const flagged = ws.comps
+    .map((c) => ({ c, flags: guidanceFlags(c, ws.intake, whereOf(ws, c, outById.get(c.id)), home, ws.propertyType, ws.today) }))
+    .filter((x) => x.flags.length);
+  return (
+    <>
+      <div className="hb-bubble">The target property is done. Paste links, drop the export, or tell me which to add. I check each against the guidance as it lands; you check its facts on Sort.</div>
+      {ws.comps.length > 0 && (
+        <div className="hb-bubble" aria-live="polite">
+          {`${said.join(', ')}; about three of each is the aim.`}
+          {flagged.length > 0 && ` I’ve flagged ${flagged.length === 1 ? 'one' : flagged.length}: ${flagged.slice(0, 3).map((x) => `${addressOf(x.c.record)} (${x.flags[0]!.short.toLowerCase()})`).join('; ')}${flagged.length > 3 ? '; and more, each marked on its row' : ''}.`}
+        </div>
+      )}
+    </>
+  );
+}
+
 /** "You're on / New comp · General": where the agent is in the window. */
 function NewCompNow({ step }: { step: StepDef }) {
   return (
@@ -193,7 +236,7 @@ function NewCompNow({ step }: { step: StepDef }) {
   );
 }
 
-/** Hubert's panel. On the right of the workspace; on the left of the New comp window (`side`). */
+/** Hubert's panel: on the left of the New comp window and of the workspace (comps.md §2); `side` turns its close arrow. */
 export function Hubert({ ws, side = 'right' }: { ws: Workspace; side?: 'left' | 'right' }) {
   const home = homeName(ws.intake, ws.report.title);
   const sent = Boolean(ws.send.sentAt);
@@ -214,7 +257,12 @@ export function Hubert({ ws, side = 'right' }: { ws: Workspace; side?: 'left' | 
   }
 
   // The New report window first: the workspace behind it is on Sort, but the agent is setting up the report.
-  const opening = windowStep ? <NewCompBubbles ws={ws} step={windowStep} /> : ws.starting ? <p className="hb-hint">{NEW_REPORT_HINT}</p> : ws.screen === 'sort' ? (
+  const opening = windowStep ? <NewCompBubbles ws={ws} step={windowStep} /> : ws.starting ? <p className="hb-hint">{NEW_REPORT_HINT}</p> : ws.screen === 'comps' ? (
+    <>
+      <AddCompsBubbles ws={ws} />
+      <Suggestions ws={ws} />
+    </>
+  ) : ws.screen === 'sort' ? (
     <>
       <div className="hb-bubble">{greeting(ws.agentFirstName)}</div>
       <div className="hb-bubble">{intro(ws.side)}</div>
@@ -244,6 +292,8 @@ export function Hubert({ ws, side = 'right' }: { ws: Workspace; side?: 'left' | 
         chips={s.chips}
         onAction={onAction}
         beforeAsk={ws.flush}
+        // On Add comps, StreetEasy links in what the agent tells him are read like pasted ones (comps.md §3).
+        onAsk={ws.screen === 'comps' && !ws.starting ? (text) => void addLinksFromWords(ws, text) : undefined}
         onEmailEdit={ws.queueHubertEdit}
         onHomeEdit={(edit) => {
           if (Object.keys(edit.set).length) ws.applyHomeSet(edit.set);
@@ -280,7 +330,7 @@ export function Hubert({ ws, side = 'right' }: { ws: Workspace; side?: 'left' | 
             const added = await linksApi.add(ws.reportId, [url], 'comp', 'hubert');
             ws.applyLinks(added);
             if (added.refused.length) throw new Error(added.refused[0]!.reason);
-            ws.toast('Added to Sort, untiered. It counts once you tier it.');
+            ws.toast('Added as Hubert’s find. Check it against its page on Sort; it counts once you tier it.');
           },
         }}
         onJump={(entry) => {

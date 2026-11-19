@@ -93,9 +93,10 @@ const ctx = await context(true);
   await shot(p, '04-new-details');
   await p.goto(url(id, 'start=comps'));
   await settle(p);
-  const type1 = p.getByRole('button', { name: /^type one in$/i }).first();
-  if (await type1.count()) await type1.click();
-  else errors.push('05: no "Type one in"');
+  // ?start=comps is the workspace's Add comps now (comps.md §1): typing an address opens the comp's form.
+  const ask = p.locator('.ac-ask');
+  if (await ask.count()) await ask.fill('245 East 19th Street #4B');
+  else errors.push('05: no Add comps paste field');
   await tall(p);
   await shot(p, '05-new-comps-add-form');
   await p.close();

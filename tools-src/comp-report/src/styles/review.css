@@ -3,7 +3,7 @@
    reasoning and Hubert on the right, the tier in the footer between Back and Next. Prefix rv-. */
 
 .rv-scrim {
-  /* Above Hubert's drawer (50), under the toast (60), as the new-report modal. */
+  /* Above Hubert’s panel (45), under the toast (60), as the new-report modal. */
   position: fixed; inset: 0; z-index: 58; overflow: auto; background: rgba(15, 15, 15, .55);
   /* Clear of the studio bar above it (nav.js), which stays on top. */
   padding: 64px 16px 24px; display: flex; justify-content: center; align-items: flex-start; box-sizing: border-box;

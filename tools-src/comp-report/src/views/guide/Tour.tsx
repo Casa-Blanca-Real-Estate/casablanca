@@ -50,11 +50,11 @@ function place(target: HTMLElement, cardH: number): Place {
   const below = r.bottom + pad + GAP + cardH <= innerHeight - 12 || r.top - pad - GAP - cardH < 12;
   const top = below ? r.bottom + pad + GAP : r.top - pad - GAP - cardH;
   const centre = r.left + Math.min(r.width, 420) / 2;
-  // Clear of Hubert's drawer when it's open, so the card never sits over his chat.
-  const drawer = document.querySelector('.hubert-drawer');
-  const dr = drawer && visible(drawer) ? drawer.getBoundingClientRect() : null;
-  const right = dr && dr.left > CARD_W + 24 ? dr.left : innerWidth;
-  const left = Math.max(12, Math.min(right - CARD_W - 12, centre - CARD_W / 2));
+  // Clear of Hubert's panel (on the left) when it's open, so the card never sits over his chat.
+  const panel = document.querySelector('.nc-hub');
+  const pr = panel && visible(panel) ? panel.getBoundingClientRect() : null;
+  const min = pr && pr.right + CARD_W + 24 < innerWidth ? pr.right + 12 : 12;
+  const left = Math.max(min, Math.min(innerWidth - CARD_W - 12, centre - CARD_W / 2));
   return { ring, card: { top: Math.max(12, top), left }, side: below ? 'below' : 'above', arrow: Math.max(18, Math.min(CARD_W - 18, centre - left)) };
 }
 

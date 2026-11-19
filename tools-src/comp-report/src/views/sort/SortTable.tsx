@@ -10,6 +10,7 @@ import type { CompOut, Tier } from '../../../engine/index.ts';
 import { Info } from '../newcomp/Frame.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { CompCard, type CardStart } from './CompCard.tsx';
+import { CheckCard } from './CheckCard.tsx';
 import { RowThumb } from './RowThumb.tsx';
 import { weakFlag } from '../../../workspace/review.ts';
 import {
@@ -29,19 +30,24 @@ const TIER_INFO = '1st: counts. Only 1st-tier comps set the range. 2nd: context,
 const stop = (e: MouseEvent) => e.stopPropagation();
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-export function SortGroup({ ws, id, rows, outById, sort, onSort }: {
+export function SortGroup({ ws, id, rows, outById, sort, onSort, checking = null, onCheck, jump = 0 }: {
   ws: Workspace;
   id: GroupId;
   rows: Row[];
   outById: Map<string, CompOut>;
   sort: SortState;
   onSort: (next: SortState) => void;
+  /** The comp whose check is open (comps.md §4), and how to open or close one, and move on once it's checked. */
+  checking?: string | null;
+  onCheck?: (id: string | null, after?: 'next') => void;
+  /** Counts each move to the next check, which scrolls it into view. */
+  jump?: number;
 }) {
   const cols: { key: SortKey; label: string }[] = [
     { key: 'price', label: PRICE_LABEL[id] },
     ...(ws.sf ? [{ key: 'ppsf' as const, label: '$/ft' }, { key: 'size' as const, label: 'Size' }] : []),
     { key: 'date', label: 'Date' },
-    { key: 'tier', label: 'Tier' },
+    { key: 'tier', label: 'Check, then tier' },
   ];
   return (
     <section className="so-group" aria-label={GROUP_LABEL[id]}>
@@ -69,7 +75,7 @@ export function SortGroup({ ws, id, rows, outById, sort, onSort }: {
           ) : button;
         })}
       </div>
-      {rows.map((r) => <SortRow key={r.c.id} ws={ws} row={r} out={outById.get(r.c.id)} />)}
+      {rows.map((r) => <SortRow key={r.c.id} ws={ws} row={r} out={outById.get(r.c.id)} checkOpen={checking === r.c.id} onCheck={onCheck} jump={checking === r.c.id ? jump : 0} />)}
     </section>
   );
 }
@@ -77,7 +83,14 @@ export function SortGroup({ ws, id, rows, outById, sort, onSort }: {
 /** What the agent checks before confirming a sale Hubert found (Kimani, 2026-10-29). */
 const FIND_CHECK = 'Hubert found this one on the web, and you approved it from his card after opening the link. It counts once you tier it.';
 
-function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | undefined }) {
+function SortRow({ ws, row, out, checkOpen = false, onCheck, jump = 0 }: {
+  ws: Workspace;
+  row: Row;
+  out: CompOut | undefined;
+  checkOpen?: boolean;
+  jump?: number;
+  onCheck?: (id: string | null, after?: 'next') => void;
+}) {
   const cardId = useId();
   // The ★ comp's card starts open, as the handoff draws it.
   const [open, setOpen] = useState(() => row.anchor);
@@ -119,6 +132,8 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
   }
 
   function toggle() {
+    // A comp still to check opens its check, side by side with the target (comps.md §4).
+    if (toCheck) return onCheck?.(checkOpen ? null : row.c.id);
     // Editing, the card decides: it closes with nothing changed, and asks to save otherwise (NW-043).
     if (editing) return setCollapseAsk((n) => n + 1);
     if (open) onCollapse();
@@ -208,22 +223,28 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
       });
   }
 
+  const toCheck = row.c.unconfirmed && sortable && !ws.readOnly;
+  // The open check scrolls into view, so CHECK THE NEXT → lands on it.
+  // Moving on to the next check brings it into view (not the first, which opens with Sort under the banner).
+  useEffect(() => {
+    if (checkOpen && jump > 0) requestAnimationFrame(() => wrapRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  }, [jump]);
   const weak = weakFlag(j?.review, ws.level);
   // A sale Hubert found on the web (HB-8): until it's confirmed, the agent is asked to check its link.
   const hubertFind = rcId ? ws.reads.find((r) => r.reportCompId === rcId && r.foundBy === 'hubert') : undefined;
   const needLinks = row.needs.filter((n): n is Exclude<RowNeed, 'confirm'> => n !== 'confirm');
 
   return (
-    <div ref={wrapRef} className={`so-row-wrap${incomplete ? ' incomplete' : ''}${flash ? ' hb-focus' : ''}`}>
+    <div ref={wrapRef} className={`so-row-wrap${incomplete ? ' incomplete' : ''}${toCheck ? ' to-check' : ''}${checkOpen ? ' checking' : ''}${flash ? ' hb-focus' : ''}`}>
       <div className={`so-row so-cols${ws.sf ? ' sf' : ''}`} onClick={toggle}>
-        <span className="so-caret" aria-hidden="true">{open ? '–' : '+'}</span>
+        <span className="so-caret" aria-hidden="true">{open || checkOpen ? '–' : '+'}</span>
         <div className="so-addr-cell">
           {!open && <RowThumb photo={j?.photos?.[0]} />}
           <span className="so-addr-line">
             <button
               type="button"
               className="so-addr"
-              aria-expanded={open}
+              aria-expanded={toCheck ? checkOpen : open}
               aria-controls={open ? cardId : undefined}
               onClick={(e) => {
                 stop(e);
@@ -239,7 +260,7 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
                 Hubert’s find ↗
               </a>
             )}
-            {incomplete && (row.needs.includes('confirm') || ws.readOnly ? (
+            {incomplete && !toCheck && (row.needs.includes('confirm') || ws.readOnly ? (
               <span className="so-need"><span className="so-need-sq" aria-hidden="true" />{needText(row.needs)}</span>
             ) : (
               <span className="so-need" onClick={stop}>
@@ -276,11 +297,17 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
         )}
         {!sortable ? <span /> : row.c.unconfirmed ? (
           <span className="so-confirm" onClick={stop}>
-            {ws.readOnly ? <span className="so-tier-ro">To confirm</span> : (
-              <>
-                <button type="button" className="so-confirm-btn" disabled={acting} title={hubertFind ? FIND_CHECK : 'Check it against the listing, then confirm: until then it counts in neither result'} onClick={confirm}>Confirm</button>
-                <button type="button" className="link so-remove-link" disabled={acting} onClick={remove}>Remove</button>
-              </>
+            {ws.readOnly ? <span className="so-tier-ro">To check</span> : (
+              <button
+                type="button"
+                className="so-check-btn"
+                aria-expanded={checkOpen}
+                disabled={acting}
+                title={hubertFind ? FIND_CHECK : 'Check it against its page, side by side with the target: until then it counts in neither result'}
+                onClick={() => onCheck?.(checkOpen ? null : row.c.id)}
+              >
+                CHECK
+              </button>
             )}
           </span>
         ) : (
@@ -314,7 +341,10 @@ function SortRow({ ws, row, out }: { ws: Workspace; row: Row; out: CompOut | und
           </span>
         )}
       </div>
-      {open && <CompCard ws={ws} row={row} out={out} id={cardId} onEditing={onEditing} start={start} collapseAsk={collapseAsk} onCollapse={onCollapse} />}
+      {checkOpen && toCheck && (
+        <CheckCard ws={ws} row={row} out={out} id={cardId} onChecked={() => onCheck?.(row.c.id, 'next')} onRemoved={() => onCheck?.(null)} />
+      )}
+      {open && !toCheck && <CompCard ws={ws} row={row} out={out} id={cardId} onEditing={onEditing} start={start} collapseAsk={collapseAsk} onCollapse={onCollapse} />}
     </div>
   );
 }

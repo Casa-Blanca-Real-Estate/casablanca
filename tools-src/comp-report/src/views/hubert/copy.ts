@@ -64,6 +64,8 @@ function sortChips(side: 'buyer' | 'seller', comps: WorkspaceComp[], home: strin
 export function said(screen: ScreenId, side: 'buyer' | 'seller', comps: WorkspaceComp[], home: string, sent: boolean): Said {
   const buyer = side === 'buyer';
   switch (screen) {
+    case 'comps':
+      return { hint: '', chips: [ask('What makes a good comp?'), ask('Where do I find the StreetEasy export?')] };
     case 'sort':
       return { hint: '', chips: sortChips(side, comps, home) };
     case 'gate':
