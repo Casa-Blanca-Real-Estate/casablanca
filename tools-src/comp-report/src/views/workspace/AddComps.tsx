@@ -14,7 +14,7 @@ import { CompForm, type CompPrefill } from '../comp/CompForm.tsx';
 import { RowThumb } from '../sort/RowThumb.tsx';
 import { compAddress, compPrice, compStatus, rowPsf, STATUS_LABEL, STATUS_ORDER } from './comps.tsx';
 import type { Workspace } from './model.ts';
-import { inFlight } from './reads.ts';
+import { inFlight, mayRetry, retryRead } from './reads.ts';
 import '../../styles/newreport.css';
 
 export const GUIDANCE = 'Same building first. Within a quarter mile. Sales from the last three to six months.';
@@ -128,6 +128,11 @@ export function FailedReadRows({ ws, onTypeItIn }: { ws: Workspace; onTypeItIn?:
             </span>
             {!ws.readOnly && (
               <>
+                {mayRetry(r) && (
+                  <button type="button" className="nr-act nr-act-link" disabled={Boolean(ws.busy)} onClick={() => void ws.run('Trying the link again…', () => retryRead(ws.reportId, r, ws.applyLinks))}>
+                    Try again
+                  </button>
+                )}
                 <button
                   type="button"
                   className="nr-act nr-act-link"
@@ -174,7 +179,7 @@ export function ReadRows({ ws, onTypeItIn }: { ws: Workspace; onTypeItIn?: (p: M
 function priceLine(c: WorkspaceComp): string {
   const p = compPrice(c).value;
   if (!p) return '—';
-  const short = p >= 1e6 ? `$${(p / 1e6).toFixed(2)}M` : `$${Math.round(p / 1e3).toLocaleString('en-US')}K`;
+  const short = p >= 1e6 ? `$${(Math.round(p / 1e4) / 100).toFixed(2)}M` : `$${Math.round(p / 1e3).toLocaleString('en-US')}K`;
   return `${short} ${compStatus(c) === 'sold' ? 'sale' : 'ask'}`;
 }
 

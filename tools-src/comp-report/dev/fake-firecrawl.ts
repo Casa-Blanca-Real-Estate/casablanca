@@ -38,6 +38,11 @@ const SUBJECT_17L: Record<string, unknown> = {
 
 /** Search results for local development: made up, on example.com, never a sale. */
 const SEARCH = (query: string) => [
+  // StreetEasy pages first, as the search leans to them: the chat shows the first three as listing cards (2026-11-06).
+  { url: 'https://streeteasy.com/building/60-collister-street-new_york/4a', title: '60 Collister Street #4A in Tribeca, Manhattan | StreetEasy', description: 'Made-up result: 5 beds, 5 baths, a private terrace.' },
+  { url: 'https://streeteasy.com/building/the-sugar-warehouse/5c', title: '275 Greenwich Street #5C in Tribeca, Manhattan | StreetEasy', description: 'Made-up result: sold.' },
+  { url: 'https://streeteasy.com/building/101-warren-street-new_york/7d', title: '101 Warren Street #7D in Tribeca, Manhattan | StreetEasy', description: 'Made-up result: in contract.' },
+  { url: 'https://streeteasy.com/building/150-charles-street-new_york/2n', title: '150 Charles Street #2N in West Village, Manhattan | StreetEasy', description: 'Made-up result: sold.' },
   { url: 'https://example.com/buildings/one-hundred-barclay', title: 'One Hundred Barclay: building facts (made up)', description: `Made-up result for “${query}”: full-time doorman, concierge, gym; built 1927; 158 units.` },
   { url: 'https://example.com/transit/tribeca', title: 'Subway lines near Tribeca (made up)', description: 'Made-up result: the A, C, E, 1, 2 and 3 run within a few blocks.' },
 ];
@@ -89,6 +94,11 @@ export async function startFakeFirecrawl(port = 0, opts: { delayMs?: number } = 
       calls.push(url);
       if (url.startsWith('https://example.com/')) {
         return reply(200, { success: true, data: { markdown: `# A made-up page\n\nThis page (${url}) is local development text: full-time doorman, pets allowed.`, metadata: { title: 'A made-up page', statusCode: 200 } } });
+      }
+      // A listing card's photo (server/web-search.ts thumb): the made-up search pages give a preview image.
+      if (url.startsWith('https://streeteasy.com/') && !PAGES[url] && SEARCH('').some((r) => r.url === url)) {
+        const slug = url.split('/').slice(-2).join('-');
+        return setTimeout(() => reply(200, { success: true, data: { markdown: '# A made-up listing', metadata: { title: 'StreetEasy', statusCode: 200, ogImage: `https://photos.zillowstatic.com/fp/dev-${slug}-se_large_800_400.webp` } } }), 1200);
       }
       const page = PAGES[url];
       setTimeout(() => {

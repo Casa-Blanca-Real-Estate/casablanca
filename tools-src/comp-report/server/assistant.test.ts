@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
-import { CURRENT_PROMPT, promptFor, PROMPTS } from './assistant.ts';
+import { CURRENT_PROMPT, promptFor, PROMPTS, withdrawnSeqs } from './assistant.ts';
 
 const fingerprint = (id: string) => createHash('sha256').update(JSON.stringify({ system: PROMPTS[id]!.system, tools: PROMPTS[id]!.tools })).digest('hex');
 
@@ -16,6 +16,7 @@ const SHIPPED: Record<string, string> = {
   'hb-listing-2026-10-28': '19c6a2619012d5d098719f2d1cf6564d5de61a797a7a6eecf98e1e5ec31b437e',
   'hb-trail-2026-10-28': '97e6142a581bc4de69e85f09dd1b05cce47df765c1c67dbd293dfee6f0e3d922',
   'hb-view-2026-10-29': 'bfd999e0d94998500314caf185d4de97795eb75cd4f84e61641fb91ca9acd9da',
+  'hb-home-2026-10-29': '8f826e81820bc315c395de0e02298d2d54e728746c7f1c74e781899958960424',
 };
 
 test('shipped prompt versions are unchanged, byte for byte', () => {
@@ -27,4 +28,43 @@ test('a conversation keeps the version it started on', () => {
   assert.equal(promptFor([{ prompt_version: null }, { prompt_version: 'cr3a-2026-09-29' }]).id, 'cr1-2026-09-25', 'recorded before versions: CR-1');
   assert.equal(promptFor([{ prompt_version: 'cr1-2026-09-25' }]).id, 'cr1-2026-09-25');
   assert.equal(promptFor([{ prompt_version: 'cr3a-2026-09-29' }, { prompt_version: null }]).id, 'cr3a-2026-09-29');
+});
+
+test('hb-voice (2026-11-06): hb-home with the chat voice, the step call-out and the calculator, its tools unchanged', () => {
+  const voice = PROMPTS['hb-voice-2026-11-06']!;
+  const home = PROMPTS['hb-home-2026-10-29']!;
+  assert.deepEqual(voice.tools, home.tools);
+  assert.ok(voice.system.startsWith(home.system.split('Be concise and plain-spoken')[0]!), 'everything before the old last line is kept');
+  for (const part of ['Your voice in the chat.', "Meet the agent's energy", 'Where the agent is.', 'The calculator.', 'Building the comps together', 'never call it one']) {
+    assert.ok(voice.system.includes(part), part);
+  }
+  assert.ok(!voice.system.includes('Be concise and plain-spoken'), 'the flat line is replaced');
+});
+
+test('hb-newcomp (2026-11-11): hb-voice with the New comp window, set_home_fact on its steps and set_client_fact', () => {
+  const next = PROMPTS['hb-newcomp-2026-11-11']!;
+  const voice = PROMPTS['hb-voice-2026-11-06']!;
+  assert.equal(CURRENT_PROMPT.id, next.id);
+  const names = (p: typeof next) => p.tools.map((t) => ('name' in t ? t.name : ''));
+  assert.deepEqual(names(next), [...names(voice), 'set_client_fact']);
+  // hb-home's set_home_fact is as it shipped: the new fields are only in the new version's.
+  const fields = (p: typeof next) => JSON.stringify(p.tools.find((t) => 'name' in t && t.name === 'set_home_fact'));
+  assert.ok(!fields(voice).includes('buildingLaundry') && !fields(voice).includes('notesGeneral'));
+  assert.ok(fields(next).includes('buildingLaundry') && fields(next).includes('notesGeneral') && fields(next).includes('noSharedOutdoor'));
+  for (const part of ['The New comp window.', 'set_client_fact', "The home's details. Use set_home_fact", 'Your voice in the chat.']) assert.ok(next.system.includes(part), part);
+});
+
+test('Stop: a withdraw marker takes its message and everything after it out, up to the marker', () => {
+  const t = (seq: number, role: string, content: Array<Record<string, unknown>>) => ({ seq, role, content });
+  const rows = [
+    t(1, 'user', [{ type: 'text', text: 'hi' }]),
+    t(2, 'assistant', [{ type: 'text', text: 'hey!' }]),
+    t(3, 'user', [{ type: 'text', text: 'oops' }]),
+    t(4, 'assistant', [{ type: 'tool_use', id: 'a', name: 'get_view', input: {} }]),
+    t(5, 'user', [{ type: 'tool_result', tool_use_id: 'a', content: '{}' }]),
+    t(6, 'user', [{ type: 'withdraw', from: 3 }]),
+    t(7, 'user', [{ type: 'text', text: 'fixed' }]),
+  ];
+  assert.deepEqual([...withdrawnSeqs(rows)].sort(), [3, 4, 5, 6]);
+  assert.equal(withdrawnSeqs(rows.slice(0, 5)).size, 0);
 });

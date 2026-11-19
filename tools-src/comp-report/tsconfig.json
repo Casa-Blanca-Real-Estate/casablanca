@@ -37,6 +37,7 @@
     "dev",
     "vite.config.ts",
     "../../netlify/functions/comp-report-*.mts",
-    "../../netlify/functions/identity-*.mts"
+    "../../netlify/functions/identity-*.mts",
+    "../../netlify/functions/studio-*.mts"
   ]
 }

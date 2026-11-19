@@ -228,7 +228,9 @@ export function numbersSummary(args: {
     } : {}),
     ...(args.removed?.length ? {
       removed_from_report: {
-        about: 'Sales from the agent’s StreetEasy export that the agent took out of the report. They count in nothing. They are the only other sales you may suggest looking at again; never name a listing that is not in this data.',
+        about: args.wide
+          ? 'Comps the agent took out of the report: from their StreetEasy export, a link, or typed in. They count in nothing until the agent puts one back. They are the only other sales you may suggest looking at again; never name a listing that is not in this data.'
+          : 'Sales from the agent’s StreetEasy export that the agent took out of the report. They count in nothing. They are the only other sales you may suggest looking at again; never name a listing that is not in this data.',
         comps: args.removed.map(removedRow),
       },
     } : {}),

@@ -9,13 +9,13 @@
 import type { HubertEmailEdit } from './hubert-email.ts';
 
 export interface TrailEntry {
-  /** What he changed: a comp on Sort or the email on Send; or a sale he found, shown as a card to approve (HB-8). */
-  kind: 'comp' | 'email' | 'find';
+  /** What he changed: a comp on Sort, the email on Send or the home's details; or a sale he found, shown as a card to approve (HB-8). */
+  kind: 'comp' | 'email' | 'home' | 'find';
   /** The comp's report comp id, for the jump to its row. */
   compId?: string;
-  /** "200 Chambers Street #10A", or "The email". */
+  /** "200 Chambers Street #10A", "The email" or "The home". */
   target: string;
-  /** The field, as the screens name it: tier, note, tags, price, size, date, floor; subject, headline, …, body. */
+  /** The field, as the screens name it: tier, note, tags, price, size, date, floor, anchor, removed; subject, headline, …, body; the home's intake key (areaSqft, beds, …). */
   field: string;
   /** "Tier", "Next step". */
   label: string;
@@ -27,6 +27,8 @@ export interface TrailEntry {
    * that puts the field back as it was, and the field's value as Hubert left
    * it. Undo shows only while the comp still reads that way
    * (workspace/trail-undo.ts): once it's undone, or changed since, it's gone.
+   * On a home entry, the edit is the intake's entries as they were
+   * (workspace/home-edit.ts), on the same rule.
    */
   undo?: { edit: Record<string, unknown>; left: unknown };
   /** A sale he found: its StreetEasy link, for the agent to open and check before approving. */
@@ -37,6 +39,8 @@ export interface TrailEntry {
 export interface TrailSource {
   title: string;
   url: string;
+  /** web_search's results or read_page's page. A search's StreetEasy listings show as cards (Kimani, 2026-11-06). */
+  kind?: 'search' | 'page';
 }
 
 const EMAIL_LABEL: Record<string, string> = {
@@ -75,11 +79,15 @@ export function trailOf(name: string, result: Record<string, unknown>): { change
   }
   if (!parsed || typeof parsed !== 'object') return none;
   if (name === 'edit_email' && parsed.edit) return { changes: emailTrail(parsed.edit as HubertEmailEdit), sources: [] };
-  if ((name === 'edit_comp' || name === 'show_comp_link') && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
+  if ((name === 'edit_comp' || name === 'show_comp_link' || name === 'set_home_fact' || name === 'set_client_fact') && Array.isArray(parsed.trail)) return { changes: parsed.trail as TrailEntry[], sources: [] };
   if ((name === 'web_search' || name === 'read_page') && Array.isArray(parsed.results)) {
     const sources = (parsed.results as Array<Record<string, unknown>>)
       .filter((r) => typeof r.url === 'string' && /^https:\/\//.test(r.url as string))
-      .map((r) => ({ title: typeof r.title === 'string' && r.title ? short(r.title, 90) : (r.url as string), url: r.url as string }));
+      .map((r) => ({
+        title: typeof r.title === 'string' && r.title ? short(r.title, 90) : (r.url as string),
+        url: r.url as string,
+        kind: name === 'web_search' ? 'search' as const : 'page' as const,
+      }));
     return { changes: [], sources };
   }
   return none;

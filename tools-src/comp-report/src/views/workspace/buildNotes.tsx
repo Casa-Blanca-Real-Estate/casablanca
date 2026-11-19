@@ -3,7 +3,8 @@
 // IDs, per-value sample marks — sit behind one switch, for admins only and off
 // by default. Agents never see them. The switch is per browser. A guest
 // (guest mode) gets it too, on by default: a guest is there to walk it through.
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { DEV_EVENT } from '../../dev-settings.ts';
 
 export const BuildNotesContext = createContext(false);
 
@@ -24,6 +25,15 @@ export function useBuildNotesSwitch(isAdmin: boolean, byDefault = false): [boole
       return byDefault;
     }
   });
+  // Settings (the name menu) flips it from outside the report.
+  useEffect(() => {
+    const onSetting = (e: Event) => {
+      const d = (e as CustomEvent<{ key: string; on: boolean }>).detail;
+      if (d?.key === KEY) setOn(d.on);
+    };
+    addEventListener(DEV_EVENT, onSetting);
+    return () => removeEventListener(DEV_EVENT, onSetting);
+  }, []);
   const set = useCallback((next: boolean) => {
     setOn(next);
     try {

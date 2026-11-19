@@ -233,7 +233,7 @@ export const COLUMNS: Record<string, Record<string, Spec>> = {
   },
   users: unread('email', 'name', 'identity_provider', 'identity_id', 'role', 'status', 'capability', 'unlocked_by',
     'unlocked_reason', 'unlocked_at', 'last_seen_at', 'is_test', 'created_at', 'created_by', 'updated_at', 'updated_by'),
-  allowlist: unread('email', 'role', 'note', 'revoked_at', 'revoked_by', 'created_at', 'created_by', 'updated_at', 'updated_by'),
+  allowlist: unread('email', 'role', 'note', 'studio_team', 'admin', 'revoked_at', 'revoked_by', 'created_at', 'created_by', 'updated_at', 'updated_by'),
   mentees: unread('mentor_email', 'agent_email', 'removed_at', 'created_at', 'created_by', 'updated_at', 'updated_by'),
   narratives: unread('id', 'report_id', 'parent_id', 'origin', 'status', 'length', 'result_kind', 'audience',
     'engine_version', 'house_method', 'inputs_hash', 'headline_facts', 'input', 'content', 'model', 'prompt_version',

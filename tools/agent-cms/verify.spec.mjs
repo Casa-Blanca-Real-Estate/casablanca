@@ -371,7 +371,7 @@ p1.on('console', (m) => { if (m.type() === 'error' && !/favicon|404/i.test(m.tex
 await p1.goto(BASE_DASH);
 await p1.waitForSelector('#toolList .trow');
 ok('dashboard renders signed out', (await p1.locator('#toolList .trow').count()) > 0);
-ok('Agent sites tab hidden signed out', await p1.locator('#webTab').isHidden());
+ok('CMS tab hidden signed out', await p1.locator('#webTab').isHidden());
 const outTxt = (await p1.locator('body').innerText()).toLowerCase();
 ok('CMS not offered to agents', !outTxt.includes('agent cms'));
 
@@ -389,15 +389,15 @@ p2.on('console', (m) => { if (m.type() === 'error' && !/favicon|404/i.test(m.tex
 await p2.addInitScript(() => localStorage.setItem('cb_auth', 'derek@casa-blanca.com'));
 await p2.goto(BASE_DASH + '#web');
 await p2.waitForSelector('#toolList .trow');
-ok('Agent sites tab visible signed in', await p2.locator('#webTab').isVisible());
+ok('CMS tab visible signed in', await p2.locator('#webTab').isVisible());
 const rows = await p2.locator('#toolList .rowtitle').allInnerTexts();
-ok('CMS is first in the Agent sites tab',
+ok('CMS is first in the CMS tab',
   rows.length === 2 && rows[0].toLowerCase() === 'agent cms' && rows[1].toLowerCase() === 'agent sites',
   JSON.stringify(rows));
 ok('CMS row links to the tool',
   (await p2.locator('#toolList .trow').first().getAttribute('href')) === 'tools/agent-cms/');
 ok('CMS row draws its motif', (await p2.locator('#toolList .trow').first().locator('.frame').count()) === 2);
-ok('tab note explains the token', (await p2.locator('#noteCell').innerText()).includes('CMS token'));
+ok('tab note says the sign-in opens it', (await p2.locator('#noteCell').innerText()).includes('Signed in as the team'));
 
 // every tab still renders with the new inventory entry
 for (const t of ['home', 'instagram', 'print', 'photos']) {

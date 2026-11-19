@@ -37,12 +37,12 @@ test('the template’s Full email reads back into its parts', () => {
   assert.deepEqual(p.consider, ['Newer towers nearby trade higher.']);
   assert.equal(p.table.length, output.results[result].price_table!.rows.length);
   assert.deepEqual(p.outro, ['List in October near the top of what the sales support.']);
-  assert.equal(p.signOff, 'Kimani');
+  assert.equal(p.signOff, 'Best,\nKimani', 'the closing word, then the name (the design pass)');
   assert.equal(p.disclaimer, DISCLAIMER);
   assert.equal(p.sample, false);
   // A name that ends in a period ("Kimani C.", from the roster) is the sign-off when it's the signer's, not a last sentence.
   const initial = buildEmail({ ...base, agentName: 'Kimani C.' }).text;
-  assert.equal(parseEmailText(initial, HEADLINE, 'Kimani C.').signOff, 'Kimani C.');
+  assert.equal(parseEmailText(initial, HEADLINE, 'Kimani C.').signOff, 'Best,\nKimani C.');
   assert.equal(parseEmailText(initial, HEADLINE).signOff, null);
 });
 
@@ -99,7 +99,7 @@ test('the HTML: the hosted wordmark, the range, the words, the comps, the discla
   const { anchor, others } = designedComps(rows, { parsed: p, homeStreet: '100 Barclay Street', sf: false });
   const input: DesignedInput = {
     origin: 'https://casa.example', preparedFor: 'Jordan & Sam', month: 'October 2026', title: '100 Barclay Street #17L',
-    sub: '3 bd · 3 ba · Floor 17', eyebrow: 'What the sales support', range: '$4.23M – $4.92M', perSqft: null, email: p, anchor, others,
+    sub: '3 bd, 3 ba · 2,000 SF', range: '$4.23M – $4.92M', perSqft: null, email: p, anchor, others,
     agent: { name: 'Kimani', office: 'Casa Blanca · 10 Hubert St, Tribeca', email: 'kimani@casa-blanca.com' }, cta: 'Talk it through',
     subject: '100 Barclay Street #17L: what the comps say',
   };
@@ -109,14 +109,14 @@ test('the HTML: the hosted wordmark, the range, the words, the comps, the discla
   assert.ok(html.includes('Prepared for Jordan &amp; Sam · October 2026'));
   assert.ok(html.includes('$4.23M – $4.92M'));
   assert.ok(html.includes(HEADLINE));
-  assert.ok(html.includes('The closest match') && html.includes('Other comps'));
+  assert.ok(html.includes('The closest match') && (html.includes('Also sold nearby') || html.includes('On the market now')));
   assert.ok(html.includes(anchor!.name));
   assert.ok(html.includes(DISCLAIMER));
   assert.ok(html.includes('href="mailto:kimani@casa-blanca.com?subject='));
-  assert.ok(!html.includes('a square foot'), 'no per-SF line');
+  assert.ok(!html.includes('/ SF)'), 'no per-SF line');
   assert.ok(!html.includes(HEADLINE_PLACEHOLDER));
-  const withSf = designedHtml({ ...input, perSqft: '$2,112 – $2,457 a square foot' });
-  assert.ok(withSf.includes('$2,112 – $2,457 a square foot'));
+  const withSf = designedHtml({ ...input, perSqft: '($2,112 – $2,457 / SF)' });
+  assert.ok(withSf.includes('($2,112 – $2,457 / SF)'));
   const hostile = designedHtml({ ...input, email: { ...p, intro: ['<script>alert(1)</script>'] } });
   assert.ok(!hostile.includes('<script>') && hostile.includes('&lt;script&gt;'));
 });
@@ -126,7 +126,7 @@ const designedInput = (over: Partial<DesignedInput> = {}): DesignedInput => {
   const { anchor, others } = designedComps(rows, { parsed: p, homeStreet: '100 Barclay Street', sf: false });
   return {
     origin: 'https://casa.example', preparedFor: 'Jordan and Sam', month: 'October 2026', title: '100 Barclay Street #17L',
-    sub: '3 bd · 3 ba · Floor 17', eyebrow: 'What the sales support', range: '$4.23M – $4.92M', perSqft: null, email: p, anchor, others,
+    sub: '3 bd, 3 ba · 2,000 SF', range: '$4.23M – $4.92M', perSqft: null, email: p, anchor, others,
     agent: { name: 'Kimani', office: 'Casa Blanca · 10 Hubert St, Tribeca', email: 'kimani@casa-blanca.com' }, cta: 'Talk it through',
     subject: '100 Barclay Street #17L: what the comps say', ...over,
   };
@@ -148,12 +148,12 @@ test('Designed pastes centred, upright and dark: the wrapper, every cell’s sty
   assert.ok(!/font-weight:800/.test(html), 'bold, not 800');
   assert.ok(!/italic|<em\b|<i\b/.test(html));
   // The title and the sub line in dark anchors to the home's page; a comp without a page in an anchor with no href.
-  assert.ok(html.includes('<a href="https://streeteasy.com/building/100-barclay/17l" style="font-size:30px;font-weight:bold;color:#0f0f0f;text-decoration:none;">100 Barclay Street #17L</a>'));
-  assert.ok(html.includes('color:#888680;color:#0f0f0f;text-decoration:none;">3 bd · 3 ba · Floor 17</a>') || html.includes('>3 bd · 3 ba · Floor 17</a>'));
+  assert.ok(html.includes('<a href="https://streeteasy.com/building/100-barclay/17l" style="font-size:32px;font-weight:bold;color:#0f0f0f;text-decoration:none;">100 Barclay Street #17L</a>'));
+  assert.ok(html.includes('>3 bd, 3 ba · 2,000 SF</a>'));
   const noPages = designedInput();
   const bare = designedHtml({ ...noPages, others: noPages.others.map((c) => ({ ...c, url: null })) });
-  assert.ok(bare.includes(`<a style="font-size:22px;font-weight:bold;color:#0f0f0f;text-decoration:none;">${noPages.others[0]!.name}</a>`), 'no page: an anchor with no href');
-  assert.ok(bare.includes('<a style="font-size:30px;font-weight:bold;color:#0f0f0f;text-decoration:none;">100 Barclay Street #17L</a>'));
+  assert.match(bare, new RegExp(`<a style="[^"]*text-decoration:none;">${noPages.others[0]!.name.replace(/[#.]/g, '\\$&')}</a>`), 'no page: an anchor with no href');
+  assert.ok(bare.includes('<a style="font-size:32px;font-weight:bold;color:#0f0f0f;text-decoration:none;">100 Barclay Street #17L</a>'));
 });
 
 /** The text a browser shows for some HTML: tags out, entities back. */
@@ -248,26 +248,47 @@ const withLines = comps.map((c, i) => (c.judgment ? {
 } : c)) as typeof comps;
 const lineRows = countedComps(output, result, withLines);
 
-test('one box per comp: the anchor first and marked, the address large, the photo or a neutral block, the paragraph or nothing', () => {
+test('a card per sale, a row per listing: the closest match first and marked, the address and price on the photo, the paragraph or nothing', () => {
   const p = parseEmailText(buildEmail({ ...base, comps: withLines }).text, HEADLINE);
   const shown = designedComps(lineRows, { parsed: p, homeStreet: '100 Barclay Street', sf: true, rate: () => 2112 });
   const html = designedHtml({ ...designedInput(), email: p, ...shown });
-  const boxes = html.match(/<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:/g) ?? [];
-  assert.equal(boxes.length, lineRows.length, 'a box for every comp the email lists');
-  assert.ok(html.indexOf('The closest match') < html.indexOf(shown.others[0]!.name), 'the anchor’s box first');
-  assert.match(html, /border:2px solid #0f0f0f;[^"]*"><tr><td[^>]*><table[^>]*><tr><td[^>]*>The closest match<\/td><td align="right"[^>]*font-size:34px[^>]*>★<\/td>/, 'the anchor marked, its star large in the top right');
-  assert.ok(html.includes(`<img src="${PHOTO}"`) && html.includes('width="494" height="330"'), 'the photo, one size for every box');
-  const withPhoto = [shown.anchor, ...shown.others].filter((c) => c?.photo).length;
-  const hatched = (html.match(/<div style="height:330px;background-color:#eeece7/g) ?? []).length;
-  assert.equal(withPhoto + hatched, lineRows.length, 'a comp without a photo keeps the neutral block, the same size');
-  assert.ok(html.includes('$2,112 a sq ft'), '$/sq ft where the type shows one');
+  const cards = html.match(/<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:/g) ?? [];
+  const sold = [shown.anchor, ...shown.others].filter((c) => c && (c === shown.anchor || c.status === 'sold')).length;
+  assert.equal(cards.length, sold, 'a card for the closest match and each sale nearby');
+  const listings = shown.others.filter((c) => c.status !== 'sold');
+  assert.equal((html.match(/<td width="137"/g) ?? []).length, listings.length, 'a row for each listing');
+  if (listings.length) assert.ok(html.includes('On the market now · asking, not sold'));
+  assert.ok(html.indexOf('The closest match') < html.indexOf(shown.others[0]!.name), 'the closest match first');
+  assert.match(html, /border:2px solid #0f0f0f;"><tr><td[^>]*><table[^>]*><tr><td[^>]*>The closest match<\/td><td align="right"[^>]*font-size:28px[^>]*>★<\/td>/, 'marked, its star in the top right');
+  // The photo is the cell's background, with the ink bgcolor under it (rule 7 relaxed: a blocked photo leaves white on black).
+  assert.ok(html.includes(`background="${PHOTO}" bgcolor="#0f0f0f" height="330"`), 'the closest match’s photo, 330px');
+  assert.ok(/bgcolor="#0f0f0f" height="190"/.test(html) || !shown.others.some((c) => c.status === 'sold'), 'a sale nearby at half size');
+  assert.ok(html.includes('$2,112<span style="font-weight:normal;">&nbsp;/ SF</span>'), '$/SF where the type shows one');
   const anchorRow = lineRows.find((r) => r.comp.judgment?.anchor)!;
-  const own = anchorRow.comp.judgment?.clientLine ? 'Written for Jordan and Sam.' : null;
-  if (own) assert.ok(html.includes(own), 'the client’s paragraph');
+  if (anchorRow.comp.judgment?.clientLine) assert.ok(html.includes('Written for Jordan and Sam.'), 'the client’s paragraph');
   const paragraphs = [shown.anchor, ...shown.others].filter((c) => c?.paragraph).length;
   assert.equal(paragraphs, withLines.filter((c) => c.judgment?.clientLine && lineRows.some((r) => r.comp.id === c.id)).length, 'only comps with one have a paragraph');
   assert.ok(!html.includes('Price per square foot'), 'no price table in the Designed email');
   for (const c of shown.others) assert.ok(c.name && html.includes(c.name));
+  // On Send's preview only, the agent's words are marked editable; never in what's copied.
+  assert.ok(!html.includes('data-edit'));
+  const editable = designedHtml({ ...designedInput(), email: p, ...shown, editable: true });
+  assert.ok(editable.includes('data-edit="headline"') && editable.includes('data-edit="comp"') && editable.includes('data-edit="closing"'));
+});
+
+test('the lead-in, then the range on white with $/SF on its line; the sign-off; the office in the footer', () => {
+  const lead = 'I looked at the closest recent sales to see where 17L stands. The three most like it put it at:';
+  const text = buildEmail({ ...base, headline: lead, closing: 'Thanks' }).text;
+  assert.ok(text.includes(`${lead.slice(0, -1)} $`), 'the plain text joins the lead-in and the range');
+  const p = parseEmailText(text, lead);
+  assert.equal(p.headline, lead, 'the lead-in reads back as written');
+  assert.equal(p.signOff, 'Thanks,\nKimani');
+  const html = designedHtml({ ...designedInput(), email: p, perSqft: '($2,112 – $2,457 / SF)' });
+  assert.ok(html.indexOf(lead) < html.indexOf('$4.23M – $4.92M'), 'the lead-in, then the range');
+  assert.match(html, /font-size:44px;[^"]*white-space:nowrap;">\$4\.23M – \$4\.92M<\/td><td align="right"[^>]*white-space:nowrap;[^>]*>\(\$2,112 – \$2,457 \/ SF\)<\/td>/);
+  assert.ok(!/bgcolor="#0f0f0f"[^>]*>\s*<div[^>]*>What/.test(html), 'no black range block');
+  assert.ok(html.includes('Thanks,<br>Kimani'));
+  assert.ok(html.indexOf('Casa Blanca · 10 Hubert St, Tribeca') > html.lastIndexOf('Talk it through'), 'the office in the footer, after the signature');
 });
 
 test('no $/sq ft on a co-op or a home without a size; the home’s photo fills the header; an off-site photo is never written', () => {
@@ -275,8 +296,8 @@ test('no $/sq ft on a co-op or a home without a size; the home’s photo fills t
   const noSf = designedComps(lineRows, { parsed: p, homeStreet: '100 Barclay Street', sf: false, rate: () => 2112 });
   assert.ok([noSf.anchor, ...noSf.others].every((c) => c?.perSqft === null));
   const html = designedHtml({ ...designedInput(), email: p, ...noSf, homePhoto: PHOTO });
-  assert.ok(!html.includes('a sq ft'));
-  assert.match(html, new RegExp(`<img src="${PHOTO.replace(/[.?]/g, '\\$&')}" alt="100 Barclay Street #17L" width="600" height="240"`));
+  assert.ok(!html.includes('/ SF'));
+  assert.ok(html.includes(`<td background="${PHOTO}" bgcolor="#0f0f0f" height="340"`), 'the hero: the home’s photo with the text on it');
   const off = designedComps(lineRows, { parsed: p, homeStreet: null, sf: false, photo: () => 'http://evil.example/x.jpg' });
   assert.ok([off.anchor, ...off.others].every((c) => c?.photo === null), 'only an https photo is written');
   const copied = designedComps(lineRows, { parsed: p, homeStreet: null, sf: false, photo: () => 'https://casa.example/api/comp-report/email-photo?k=abc' });
@@ -302,11 +323,12 @@ test('the sign-off: the roster’s headshot (absolute, on this site) and phone, 
     phone: '(212) 555-0101', photo: '/api/comp-report/email-photo?k=abc',
   } }));
   assert.ok(html.includes('>Creative Associate</div>'), 'the roster’s title under the name');
-  assert.ok(html.includes('<img src="https://casa.example/api/comp-report/email-photo?k=abc" alt="Kimani" width="56" height="56"'));
+  assert.ok(html.includes('<img src="https://casa.example/api/comp-report/email-photo?k=abc" alt="Kimani" width="92" height="92"'), 'a square headshot');
+  assert.ok(html.includes('>Casa Blanca Real Estate</div>') && html.includes('kimani@casa-blanca.com</a>'));
   assert.ok(html.includes('href="tel:+12125550101"') && html.includes('(212) 555-0101'));
   const bare = designedHtml(designedInput());
   assert.ok(!bare.includes('tel:') && !bare.includes('email-photo?k=') && !bare.includes('Creative Associate'));
-  assert.match(bare, /width:56px;height:56px;border-radius:50%;background-color:#eeece7/);
+  assert.match(bare, /width:92px;height:92px;background-color:#eeece7/);
   // A phone that isn't a US number shows as typed, linked nowhere; a photo that isn't https or this site isn't loaded.
   const odd = designedHtml(designedInput({ agent: { name: 'K', office: 'o', email: null, phone: 'ext. 12', photo: 'javascript:alert(1)' } }));
   assert.ok(odd.includes('ext. 12') && !odd.includes('tel:') && !odd.includes('javascript:'));

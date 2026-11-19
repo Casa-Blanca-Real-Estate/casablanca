@@ -14,7 +14,7 @@ import { clientPrice, countWord, pct, psf, sqft, usd } from '../../../workspace/
 import { answerResult, estimatesChangeTheAnswer } from '../../../workspace/reading.ts';
 import { noteOf } from '../../../workspace/state.ts';
 import { at, fixedAxis, span } from '../findings/axis.ts';
-import { engineWhy, hubertTake, statusTiles, stillNeeded, verdictLine, type TakeSegment } from '../findings/findings.ts';
+import { engineWhy, hubertTake, positionLine, statusTiles, stillNeeded, type TakeSegment } from '../findings/findings.ts';
 import { MoneyInput } from '../findings/MoneyInput.tsx';
 import { Info } from '../newcomp/Frame.tsx';
 import { compAddress, compPrice, compStatus, listingUrl, rowPsf, STATUS_LABEL, STATUS_ORDER } from './comps.tsx';
@@ -24,6 +24,7 @@ import { homeName } from './screens.ts';
 import { againstEstimate, ClientSection, PricingDetails, TargetSection, targetLabel } from './Terms.tsx';
 import { clientSub } from '../../../workspace/client.ts';
 import { TypeMismatch } from '../comp/TypeMismatch.tsx';
+import { StepCta } from '../shell/WorkspaceHeader.tsx';
 import '../../styles/findings.css';
 
 const KINDS: ResultKind[] = ['on_facts', 'with_estimates'];
@@ -70,6 +71,7 @@ function FindingsBody({ ws, o }: { ws: Workspace; o: EngineOutput }) {
       <TopCard ws={ws} o={o} kind={kind} both={both} take={take} />
       <Tiles ws={ws} o={o} kind={kind} />
       <Accordions ws={ws} o={o} kind={kind} both={both} />
+      <StepCta ws={ws} className="sh-cta fi-bottom-cta" />
     </div>
   );
 }
@@ -85,8 +87,9 @@ function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; 
   const n = range?.comp_ids.length ?? 0;
   const unitRate = r.lead.indicator.startsWith('unit_rate');
   const call = ws.call!;
-  const verdict = call.skipped ? 'You skipped your guess at the gate.' : verdictLine(o, kind);
-  const why = call.note?.trim() || (call.skipped ? 'You skipped this at the gate.' : 'You didn’t write a why at the gate.');
+  const yours = call.skipped || call.low === undefined || call.high === undefined ? null : rangeWords(call.low, call.high);
+  const where = call.skipped ? 'You skipped it before Findings' : positionLine(o, kind);
+  const why = call.note?.trim() || (call.skipped ? 'You skipped this before Findings.' : 'You didn’t write a why before Findings.');
   return (
     <section className="fi-card fi-top" aria-label="The true estimate">
       {range && (
@@ -95,17 +98,28 @@ function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; 
           {ws.sf && unitRate && <span className="fi-chip"><span className="fi-chip-dot" aria-hidden="true" />Uses your size</span>}
         </div>
       )}
+      <div className="fi-headline">
       <div className="fi-est">
         <span className="fi-eyebrow">True estimate{both && <span className="fi-eyebrow-sub"> · {r.label}</span>}</span>
         {range
           ? <span className="fi-big" title={`${usd(range.low.value)} – ${usd(range.high.value)}`}>{rangeWords(range.low.value, range.high.value)}</span>
           : <span className="fi-big fi-big-none">No range yet</span>}
-        {range && ws.sf && lowRate !== undefined && highRate !== undefined && <span className="fi-psf">{psf(lowRate)} – {psf(highRate)} / SF</span>}
+        {range && (
+          <span className="fi-psf">
+            {[ws.sf && lowRate !== undefined && highRate !== undefined ? `${psf(lowRate)} – ${psf(highRate)} / SF` : null, `${n} ${n === 1 ? 'sale' : 'sales'}`].filter(Boolean).join(' · ')}
+          </span>
+        )}
         {!range && <p className="fi-why">The comps can’t make one yet: {engineWhy(r.range_unavailable_because ?? 'the analysis needs more to go on')}.</p>}
+      </div>
+      {/* The agent's number beside the range, and where it sits (the design pass): the old verdict line, shorter. */}
+      <div className="fi-yournum">
+        <span className="fi-eyebrow">Your number</span>
+        <span className="fi-yournum-v">{yours ?? 'Skipped'}</span>
+        {where && <span className="fi-yournum-where">{where}</span>}
+      </div>
       </div>
       {both && <OtherResult o={o} kind={OTHER[kind]} />}
       {range && <Chart ws={ws} o={o} kind={kind} both={both} />}
-      {verdict && <div className="fi-verdict">{verdict}</div>}
       <div className="fi-compare">
         <div className="fi-col">
           <span className="fi-label"><span className="fi-spark" aria-hidden="true">✦</span>How Hubert got there</span>
@@ -114,7 +128,7 @@ function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; 
           </div>
         </div>
         <div className="fi-col fi-yours">
-          <span className="fi-label">Your reasoning <span className="fi-from">(from the gate)</span></span>
+          <span className="fi-label">Your reasoning <span className="fi-from">(before Findings)</span></span>
           <div className="fi-reason">{why}</div>
           {!ws.readOnly && (
             <button type="button" className="link fi-change" onClick={() => ws.go('gate')}>
@@ -170,7 +184,7 @@ function Chart({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: Re
   const summary = [
     `True estimate ${rangeWords(range.low.value, range.high.value)}`,
     alt && `${o.results[altKind].label} ${rangeWords(alt.low.value, alt.high.value)}`,
-    guess && `your guess ${rangeWords(guess.low, guess.high)}`,
+    guess && `your number ${rangeWords(guess.low, guess.high)}`,
     target && `${targetLabel(ws).toLowerCase()} ${clientPrice(target)}`,
     ask && `asking ${clientPrice(ask)}`,
   ].filter(Boolean).join('; ');
@@ -179,7 +193,7 @@ function Chart({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: Re
       <div className="fi-legend">
         <span className="fi-key"><span className="fi-sw fi-sw-est" aria-hidden="true" />True estimate {rangeWords(range.low.value, range.high.value)}</span>
         {alt && <span className="fi-key fi-key-alt"><span className="fi-sw fi-sw-alt" aria-hidden="true" />{o.results[altKind].label} {rangeWords(alt.low.value, alt.high.value)}</span>}
-        {guess && <span className="fi-key fi-key-guess"><span className="fi-sw fi-sw-guess" aria-hidden="true" />Your guess {rangeWords(guess.low, guess.high)}</span>}
+        {guess && <span className="fi-key fi-key-guess"><span className="fi-sw fi-sw-guess" aria-hidden="true" />Your number {rangeWords(guess.low, guess.high)}</span>}
         {target !== null && <span className="fi-key fi-key-target"><span className="fi-sw fi-sw-target" aria-hidden="true" />{targetLabel(ws)} {clientPrice(target)}</span>}
         {ask !== null && <span className="fi-key fi-key-ask"><span className="fi-sw fi-sw-ask" aria-hidden="true" />Asking {clientPrice(ask)}</span>}
       </div>
@@ -463,7 +477,7 @@ function WorkedOut({ ws, output, both, kind }: { ws: Workspace; output: EngineOu
         </Row>
       )}
       <Row k="Why your number" flag={!call?.note?.trim()}>
-        {call?.note?.trim() ? 'Written at the gate' : call?.skipped ? 'You skipped your number' : 'Not written yet'}
+        {call?.note?.trim() ? 'Written before Findings' : call?.skipped ? 'You skipped your number' : 'Not written yet'}
       </Row>
       <Row k="Left out">{leftOut ? leftOut.charAt(0).toUpperCase() + leftOut.slice(1) : 'Nothing'}</Row>
       {kinds.map((k) => {

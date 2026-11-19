@@ -76,8 +76,14 @@ NETLIFY_BUILD_HOOK=https://api.netlify.com/build_hooks/…   # optional
 ANTHROPIC_API_KEY=…                    # required for autofill
 ```
 
-The CMS prompts for the token once and the browser remembers it (`localStorage`), in every tab,
-until Lock in the CMS or the studio's sign-out. `security-model.md` §2 has the trade.
+Signed in to the Studio as the team (a comp report admin, or the old team list), the CMS gets the
+token from `/api/studio/keys` and never asks. Otherwise it prompts once and the browser remembers it
+(`localStorage`), in every tab, until the studio's sign-out. `security-model.md` §2 has the trade.
+
+**Faces.** The roster import of 2026-11-05 recorded who has a photo and which placements are done, but
+copied no files into the store: the photos are the studio's headshot library (`assets/agents/`). The
+CMS shows that library photo wherever an agent has no hero photo URL and no set saved from the
+generator (matched by slug, or by a former name's first-name-last-initial).
 The functions only run on Netlify — opening the file locally gets an honest "backend
 unreachable", not a hang.
 

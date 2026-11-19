@@ -9,11 +9,15 @@
 import type { EngineOutput } from '../engine/index.ts';
 import { derivedTags, withDerivedTags, type DerivedTag } from './derived-tags.ts';
 import type { WorkspaceComp } from './engine-input.ts';
-import { cleanFeatures } from './features.ts';
+import { cleanFeatures, isTag, tagGroupOf } from './features.ts';
 
 export interface SettledTags {
-  /** The comps whose stored tags change, with their new tags. */
-  edits: { reportCompId: string; tags: string[] }[];
+  /**
+   * The comps whose stored tags change, with their new tags and the tags they were worked out from. The
+   * server applies the difference to the comp's tags as they are when it lands (rebaseTags), so a tag the
+   * agent picked meanwhile (the review flow saves as the comp is confirmed) isn't overwritten.
+   */
+  edits: { reportCompId: string; tags: string[]; from: string[] }[];
   /** reports.state's `tagsOffered` after this: each comp's tags the data has offered, by report comp id. */
   offered: Record<string, string[]>;
   /** A practice agent's one-click chips, by report comp id (none for a full agent). */
@@ -46,7 +50,7 @@ export function settleTags(args: {
     const fresh = derived.supported.filter((d) => !before.includes(d.tag));
     const current = j.tags ?? [];
     const applied = withDerivedTags(current, { supported: args.level === 'full' ? fresh : [], contradicted: derived.contradicted }, 'full');
-    if (!same(applied.tags, current)) edits.push({ reportCompId: j.reportCompId, tags: applied.tags });
+    if (!same(applied.tags, current)) edits.push({ reportCompId: j.reportCompId, tags: applied.tags, from: [...current] });
     if (args.level === 'practice') {
       const chips = withDerivedTags(applied.tags, { supported: derived.supported, contradicted: derived.contradicted }, 'practice').suggested;
       if (chips.length) suggestions[j.reportCompId] = chips;
@@ -58,4 +62,28 @@ export function settleTags(args: {
     }
   }
   return { edits, offered, suggestions, offeredChanged };
+}
+
+/**
+ * The data's tag change (`from` → `to`), applied to the tags as they are now (the walk of 2026-11-10: in the
+ * review flow, a tag picked before Confirm was saved, then overwritten by the settle worked out before it).
+ * What the data took off comes off; what it added goes on, unless the agent has since picked another tag
+ * in the same one-choice group (Size, Multi-floor): theirs stands.
+ */
+export function rebaseTags(from: readonly string[], to: readonly string[], now: readonly string[]): string[] {
+  const removed = from.filter((t) => !to.includes(t));
+  let next = now.filter((t) => !removed.includes(t));
+  for (const t of to.filter((x) => !from.includes(x))) {
+    if (next.includes(t)) continue;
+    if (isTag(t)) {
+      const g = tagGroupOf(t);
+      if (g.single) {
+        const group = g.tags as readonly string[];
+        if (next.some((x) => group.includes(x) && !from.includes(x))) continue;
+        next = next.filter((x) => !group.includes(x));
+      }
+    }
+    next = [...next, t];
+  }
+  return next;
 }

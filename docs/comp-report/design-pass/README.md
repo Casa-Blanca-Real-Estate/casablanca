@@ -11,11 +11,39 @@ This file is meant to be enough on its own. Where it points elsewhere, it's for 
 **Read the code from `claude/main`, never `release`.** `claude/main` is where every PR merges; `release` is
 only what's live on production, and it runs behind. Anything this brief calls "built" is on `claude/main`.
 
+**Updated 2026-11-06: what the design pass has built so far** is in [section 0a](#0a-built-from-the-design-canvas-2026-11-06),
+and what landed before that in [section 0](#0-since-this-was-written-2026-11-05). Sections 1 to 12 still describe the
+tool as of #110; where 0a says a surface was rebuilt, 0a wins.
+
+**Standardize the design elements (Kimani, 2026-11-11).** His walk through the New comp window found the same piece
+looking different from one place to the next. One field heading was heavy and grey while its neighbours were regular
+and black. Typed numbers were grey while typed text was black. A tooltip was cut off by the window it sat in. These
+came from the old forms' base styles leaking into new screens, not from a design choice. The design track should
+define each element once and reuse it everywhere. The elements are:
+
+- the field heading (eyebrow)
+- the text input, the number input and the money input
+- the notes box
+- the chip, the segmented choice, and Yes/No
+- the ⓘ and its tooltip
+- the search dropdown (the neighborhood picker)
+- the primary, secondary and link buttons
+- the "filled from the listing" dot
+- the inline note
+
+A build should use those and not restyle them locally. Two rules for every element: typed text is ink, never grey,
+and only placeholders are grey. Every tooltip draws above everything, never clipped by a window or panel; the ⓘ's
+tip (`Info`, `src/views/newcomp/Frame.tsx`) already does. The New comp window (`src/styles/newcomp.css`) is the
+closest to the canvas today. Where an element differs between it and the older screens, the window's version is the
+one to standardize on, unless the design says otherwise.
+
 **Design for laptop and tablet widths only (Kimani, 2026-10-29).** Agents won't use the tool on phones for
 now; phone layouts get their own design later. Don't design phone breakpoints, and skip the phone screenshots.
 
 ## Contents
 
+0a. [Built from the design canvas (2026-11-06)](#0a-built-from-the-design-canvas-2026-11-06)
+0. [Since this was written (2026-11-05)](#0-since-this-was-written-2026-11-05)
 1. [What the tool is, in one minute](#1-what-the-tool-is-in-one-minute)
 2. [How to use this file](#2-how-to-use-this-file)
 3. [Rules a design can't change](#3-rules-a-design-cant-change)
@@ -31,6 +59,128 @@ now; phone layouts get their own design later. Don't design phone breakpoints, a
 10. [Open questions for Kimani](#10-open-questions-for-kimani)
 11. [Not in this pass](#11-not-in-this-pass)
 12. [Screenshots](#12-screenshots)
+
+---
+
+## 0a. Built from the design canvas (2026-11-06)
+
+Kimani's design canvas (https://claude.ai/artifact/1zFam3mkm1orxhCrLmhx8W) has been handed off in three build
+briefs beside this file, and all three are built and released:
+
+| Brief | What | Built in |
+|---|---|---|
+| `email-restyle.md` | The Designed email: hero text on the photo, lead-in headlines, the range on white, photo cards, market rows, "Best," and the square headshot | #139 |
+| `send.md` | Send: full width, the preview filling the window with edit in place, the rail, the one step button (Read → Copy & open in Gmail → Mark as sent), Ask Hubert to review | #139 |
+| `reports-and-workspace.md` | Reports, the shared top bar, Done, and a light pass on Sort, the Gate and Findings | the overnight build of 2026-11-06 (this round) |
+| `new-comp.md` | New comp: + NEW COMP morphs into the field and START; the target property in steps on its own page, Hubert on the left (2026-11-11) | built (the window, then #171's fixes); `comps.md` takes Add comps out of it |
+| `comps.md` | Comps: Add comps becomes the workspace's first step (masthead, paste and drop, tally, Hubert's checks and suggestions), Sort checks each comp side by side with the target; Hubert on the left across the workspace (2026-11-18) | not built yet |
+
+**What this round changed, surface by surface** (before and after screenshots at 1440 and 2400 wide are in
+Kimani's project files, `design-pass-2-before/` and `design-pass-2-after/`):
+
+- **The top bar** (`src/views/shell/TopBar.tsx`, `styles/shell.css`): one bar on every screen. The wordmark,
+  **‹ Studio** in lavender text (the bar draws it; the studio chrome's fixed button is hidden on this page), a dot
+  and **COMP REPORT** (left out on Reports, whose hero says it), then at the right: **Admin view** / **Mentor view**
+  (on Reports, and on another agent's report), **Sample** in yellow, **✦ Hubert** filled lavender (opens his
+  drawer), the account pill, and **Feedback** (the chrome's right dock, moved into the bar). The edge tab stays
+  (DP-14 is still open).
+- **Reports** (`src/views/Reports.tsx`, `shell/reports-list.ts`): the hero has **Pick up where you left off** (the
+  newest report not yet sent) and **Start with Hubert** (a link or an address: it opens the New report window
+  with it filled in; the read fills step 2 as before). The header row has "Your reports" or the tabs **Your
+  reports · Mentee reports**, the numbers (**reports · open · sent this month**; a mentor's Mentee reports: reports
+  · mentees · sent this month), **Edit mentees** on the numbers' line, the **search** button (address, client or
+  agent, as you type), and **+ New comp**. The table: the home's **photo** (206 × 150, from its StreetEasy read,
+  linked), Home (Sample badge, client; on others' reports the agent, their PRACTICE / FULL tag and "Read only"),
+  Side, **Range** (the true estimate as the report last showed it, "—" before the Gate), **Comps** ("6 comps · 3
+  untiered"), and **Stage · updated** ("Sent · Nov 4"). Every header sorts: ↑, ↓, then cleared. Archive and
+  Delete (samples only) are icons in the margin on hover. **Archived (N)** and Access stay below.
+- **The workspace header** (`shell/WorkspaceHeader.tsx`): one row on every screen: "← Reports", the address and ✎,
+  the sub line with the save status; then the step crumbs (compact, not stretched across the page); then the
+  forward action at the right (**Review comps (N) →** while comps wait for review, with Findings → as a quiet link
+  beside it; **Findings →**; **Send →**; or Send's step button). The page keeps clear of Hubert's edge tab.
+- **Sort:** the bar and the header row above. Its open comp card is today's (DP-17: the canvas's compact card
+  waits for Sort's full review).
+- **The Gate** (`workspace/Gate.tsx`): no eyebrow; "What do you think 17L is worth?" and one line under it,
+  "Commit a number before you see what your three first-tier comps say."; **Your low** and **Your high** (DP-18:
+  the canvas has one number); a practice agent's why is "Why: which comps, and how you weighed them"; the button
+  is **Lock it in · Show the range →**. A 760px card.
+- **Findings** (`workspace/Findings.tsx`): the range's sub-line is "$2,112 – $2,457 / SF · 3 sales"; **Your number**
+  sits beside it with where it lands ("Inside the range"; "Below the range, by about $25.4K"), replacing the
+  verdict line; the legend says "Your number"; the accordion headers tint on hover; **Send →** at the bottom too.
+- **Done** (`workspace/Done.tsx`): the canvas's screen. A black block ("Sent · Today", "Jordan and Sam have the
+  comps for 17L.", the range, your number, "saved, and locked as sent"), **What's next** (Follow up in two days ·
+  Plan the offer together; the ticks are saved on the report as `state.doneChecks`), **Back to reports** and
+  **Open the report**. Kept below: How did it go?, Copy the email again, Reopen to edit (DP-19: whether Done folds
+  into Send's sent state).
+
+**New data behind Reports** (`server/api/reports.ts`): each row now carries its comp count, the range
+(`state.range`, written by the browser after the reveal whenever the answer's range changes; older reports fall
+back to the reveal's pin), when it was sent, the home's photo (its latest StreetEasy read, through
+`cleanPhotoUrls`) and the owner's level. No migration.
+
+**Still not designed** (next, with Kimani; the canvas's versions are placeholders): Review comps and the client's
+words as one pattern (6.8, 6.12, 8.1), Hubert's drawer (6.15), the New report window with Hubert in it (6.5, 7.1),
+Edit details, Sort's compact card, and **onboarding and the full first-use flow** (7.2; Kimani designs it the week
+of 11-09). Those screens keep working exactly as before until then.
+
+Open questions from this round are on the Answer Sheet: DP-16 (an admin's tab name) to DP-20 (Start with Hubert).
+
+**Wired after the round (the wiring thread, 2026-11-06)**, what the screens needed beyond their design:
+
+- **Start with Hubert, the fuller version** (`newcomp/start-words.ts`): the hero's field reads the agent's words
+  first (a link or an address, and if said: buyer or seller, the client's name, Co-op or Condo, a budget or target),
+  makes the report and opens the window on step 2 with Hubert's drawer beside it. His note says what he took from
+  the words, offers Buyer / Seller when the side wasn't said, and once the listing is read, names what it couldn't
+  give. Plain rules, no model call. Without a usable home the window opens on step 1 with what was read. Beside the
+  New report window Hubert now shows his New report note, not Sort's greeting.
+- **Reports' Range** is worked out on the server from what's stored (as `get_numbers` runs the engine), so a
+  mentor's or admin's list is current, not the range the owner's browser last wrote. Before the Gate, "—".
+- **Reports' photos**: the home's own read; a sample's from the sample's stored photos (a comp in its building);
+  otherwise a comp read in the same building, marked "Same building"; with none, the address set in type.
+- **The sorts, audited**: Stage · updated now counts a comp's tier or note (they live on the comp's row) and sorts
+  by the date it shows (a sent report by when it was sent); Home sorts 1, 15, 100; Range ties go by the high end.
+  Sort lists each status group **newest first** (DP-22): the export's own order wasn't by date.
+- **What's next's ticks** feed Hubert's follow-up reminder (Reports' hero and a Follow up tag on the row two days
+  after sending, his note on Done) and the Access timeline (`report.next_ticked`, migration `20261110120000`).
+
+Left for Kimani: DP-16 to DP-18, DP-21 (the other Studio tools' top bar), DP-22.
+
+---
+
+## 0. Since this was written (2026-11-05)
+
+The screenshots in `screens/` are from #110. These landed on `claude/main` after it, and the design should cover them:
+
+- **Hubert beside the New report window** (#114). A rough version is built: his drawer sits beside the modal
+  (the window moves left), and he knows which step the agent is on. 7.1 is now "restyle what's there", not
+  "design from nothing".
+- **Hubert sees the screen and the open comp** (#114), so "this one" works; **Undo** on every change in his trail;
+  **web sources** under a reply. His full list of tools: `docs/comp-report/hubert-tools.md`.
+- **A sale Hubert finds on the web comes in as a card in his chat** (#114): the link, and an Approve that only
+  wakes once the agent has opened it. Approved, it lands on Sort untiered. Rough look; 7.5 is its design.
+- **Your client** (#118): pre-approval (yes or no, and the amount), how soon (ASAP or can wait), what's moving
+  them. Folded under "Your client" on step 2 of the New report window, and a "Your client" accordion on Findings
+  (`workspace/ClientFields.tsx`). Rudimentary on purpose; 7.3 places it. None of it moves the true estimate
+  (Kimani, DP-11 and NB-29): a client-adjusted view is its own layer beside it.
+- **One sign-in for the whole Studio** (#116, #123, #124): the sign-in page is now `/sign-in/` at the Studio's
+  root, not on the comp report; the account pill knows the agent from the roster (name, phone, headshot), which
+  also fills the email's sign-off. For now every Studio page opens without a sign-in (the comp report still asks).
+  The roster import ran on 2026-11-05: 144 agents, 135 with photos, so the sign-off has real faces now.
+- **The tool's name (DP-15, Kimani 2026-11-05):** "Comp report" under "Casa Blanca Studio". Settles 6.1 and
+  question 5 in section 10.
+
+**In review, not merged yet** (design for them, but they may still change): #122, Hubert fills in the home's
+details when dictated ("it's 1,850 feet, floor 12"), and stars, takes out and puts back comps, each with a trail
+entry and Undo; #121, the writer's four fixes from the real eval (the email's words, not its look).
+
+**Kimani's asks for the pass, gathered (2026-10-28 and 10-29):** Hubert's chat delineated into sections by the
+step guides as the agent moves through the flow; every field he fills shows in the chat as a trail entry; no raw
+text or JSON ever showing in his chat; the email's sign-off from the roster (works, restyle only); orientation for
+first-time practice agents, then a guide button in a bottom corner; the web-find card; client fields; and the
+Designed email first (the bosses judge the tool by it).
+
+Not part of the comp report, so not in this pass: the **Property Sign** builder (#129, its Studio hookup #130) and
+the In contract co-listing work (#128) are other Studio tools.
 
 ---
 
@@ -542,10 +692,10 @@ answers questions, flags weak comps, and changes a comp or the email when the ag
   centred eyebrow ("SORT", "YOUR NUMBER"). His messages are grey blocks; guides have a lavender left rule. The
   agent's messages are plain bubbles. Markdown renders (bold, lists, links).
 - **The trail:** every change he makes shows under his reply: the comp, the field, before → after, **Show**
-  (opens Sort at that comp and field), and **Undo** (#114, in review). **Web sources** show as links under a reply.
+  (opens Sort at that comp and field), and **Undo** (#114, merged). **Web sources** show as links under a reply.
 - **Two preset chips** per screen above the input ("How long has 17L been listed?"), an input ("Ask Hubert about
   the listings…") and a black send button.
-- He knows which screen and which comp is open (#114, in review), so "this one" works.
+- He knows which screen and which comp is open (#114, merged), so "this one" works.
 
 **Needs design.**
 - **NW-024 a: his look and presence.** A mark or avatar, bubbles, motion. Today he's grey boxes; the step guides
@@ -578,7 +728,7 @@ windows aren't laid out yet. Use a wider window for now."
 ### 7.1 Hubert in the New report window
 
 **Kimani, 2026-10-29:** put Hubert in the New report window now, "rudimentary, just so it's there", and refine it
-in the design pass, so there's an anchor to design against. A build thread is adding the rough version in
+in the design pass, so there's an anchor to design against. *Built since (#114): the rough version is on `claude/main`; restyle it.* A build thread was adding the rough version in
 parallel with this brief; check `claude/main` for it.
 
 **What it's for.**
@@ -616,6 +766,8 @@ per browser, if it's to follow them between laptop and phone (a build call).
 **Kimani, 2026-10-29:** "we need to add client fields … it does change the estimated range of what a buyer can
 offer, and how quickly a buyer client is trying to move." Pre-approval, yes or no plus the amount, is the
 example.
+
+*Since (#118): a rough "Your client" section is built on step 2 and on Findings; see section 0.*
 
 **Today (Dispatch 21, data only).** Inside Findings' **Pricing details** accordion (`Terms.tsx`): for a buyer,
 financing (cash or mortgage; cash hides rate, down payment and term), **pre-approved** and the amount, deposit,
@@ -697,7 +849,7 @@ These change what gets designed. Each goes on the Casa Answer Sheet.
 3. **Orientation:** a pointing tour, a first-run checklist, or a short video per screen? *Recommend: a pointing
    tour for practice agents' first report, behind the guide button after.*
 4. **One way to open Hubert,** the top-bar pill or the edge tab? *Recommend: the pill, and drop the tab.*
-5. **The tool's name on its own surfaces:** "Comp report" under "Casa Blanca Studio", or something new?
+5. ~~The tool's name on its own surfaces?~~ "Comp report" under "Casa Blanca Studio" (Kimani, DP-15, 2026-11-05).
 
 ## 11. Not in this pass
 

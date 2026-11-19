@@ -1,0 +1,6 @@
+{
+  // The Property Sign builder's backend: its function's code and the tests.
+  // Type-checking only — Netlify bundles the function, and Node runs the tests directly.
+  "extends": "../agent-pics/tsconfig.json",
+  "include": [".", "../../netlify/functions/property-signs.mts"]
+}

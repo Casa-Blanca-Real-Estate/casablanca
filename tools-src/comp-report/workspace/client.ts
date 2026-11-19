@@ -129,6 +129,8 @@ export function clientRows(args: {
   }
   const moving = client?.motivations?.value?.trim();
   if (moving) rows.push({ k: 'What’s moving them', v: moving });
+  const notes = client?.notes?.value?.trim();
+  if (notes) rows.push({ k: 'Notes', v: notes });
   return rows;
 }
 
@@ -163,6 +165,7 @@ export function clientForHubert(brief: Brief, terms: DealTermsState | null | und
   if (c.paysMoreFor?.value.trim()) facts.would_pay_more_for = c.paysMoreFor.value.trim();
   if (c.nonNegotiables?.value.trim()) facts.non_negotiables = c.nonNegotiables.value.trim();
   if (c.priorities?.length) facts.priorities = c.priorities;
+  if (c.notes?.value.trim()) facts.agent_notes = c.notes.value.trim();
   if (!Object.keys(facts).length) return null;
   return {
     about:

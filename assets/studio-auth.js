@@ -22,14 +22,31 @@
 
    Window.CBStudio:
      ready         Promise of the user, {email, name, role, guest}; never resolves when
-                   the visit is sent to sign in
+                   the visit is sent to sign in; null while OPEN lets a visit in without one
      user          the same, once ready
      isTeam()      the Studio's team (the old dev sign-in's list, a comp report admin, or a preview's guest):
                    the team-only tools, the CMS, the dev notebook
      token()       Promise of the access token, renewed when near its end
      profile()     Promise of the agent's profile from Casa's roster (name, firstName,
                    title, email, phone, photo) or null; /api/comp-report/agent-card
+     keys()        Promise of {cms, pics}: the agent CMS's and the profile-pic roster's tokens, for
+                   the team, from /api/studio/keys, remembered as cb_cms_token / cb_pics_token so
+                   nobody pastes them; null when this visit isn't signed in as the team
      signOut()     ends the session everywhere in this browser and goes to sign in
+
+   An admin page (the agent CMS, the profile-pic roster) loads it as
+     <script src="/assets/studio-auth.js" data-require="team"></script>
+   and is gated even while OPEN lets the creative tools in signed out: a signed-out visit goes to
+   sign in and comes back, and anyone signed in who isn't the team goes to the dashboard. Signed in as
+   the team, keys() hands the page its token, so a new device never asks for one (Kimani, 2026-11-06).
+
+   A tool page also names itself, data-tool="<key>" (the dashboard's key for it), and is held to the
+   level an admin set for it in the Access panel (/api/studio/tools: everyone, mentor, team or admin; Kimani,
+   2026-11-06, for tools under construction): signed out on a tool that isn't for everyone, the visit
+   goes to sign in; signed in below its level, to the dashboard. If the levels can't be read, the
+   page opens as it would without them.
+     tools()       Promise of {key: level} for every tool, or null when it couldn't be read
+     mayUse(level) whether this visit (CBStudio.user, or nobody) meets a level
 
    For the scripts written before it, a team member's email is also kept in
    localStorage "cb_auth" (dev-notebook.js, the CMS's edit log); anyone else's is
@@ -42,12 +59,15 @@
     return;
   }
 
-  var TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
+  var TEAM = ['creative@email.casa-blanca.com', 'derek@casa-blanca.com', 'd.prestly@casa-blanca.com', 'emma@casa-blanca.com', 'erez@casa-blanca.com'];
   var SIGN_IN = '/sign-in/';
   var ME_KEY = 'cb.studio.me';
   var ME_MS = 10 * 60 * 1000;
   var MARGIN_S = 60;
   var GUEST_KEY = 'cr-guest-key';
+  var me = document.currentScript;
+  var REQUIRE_TEAM = Boolean(me && me.getAttribute('data-require') === 'team');
+  var TOOL = (me && me.getAttribute('data-tool')) || null;
 
   // Hidden until the server answers, so nobody sees a page they'll be sent away from.
   var root = document.documentElement;
@@ -120,7 +140,42 @@
   }
 
   // A guest is only ever on a preview (server/guest.ts) and walks it as the team, as the comp report gives it the samples.
-  function isTeamUser(u) { return u.role === 'admin' || u.guest || TEAM.indexOf(String(u.email).toLowerCase()) !== -1; }
+  // u.team is the server's answer (/api/comp-report/me), which counts a team grant from the Access panel.
+  function isTeamUser(u) { return u.team === true || u.role === 'admin' || u.guest || TEAM.indexOf(String(u.email).toLowerCase()) !== -1; }
+  function meets(level, u) {
+    if (level === 'mentor') return Boolean(u && (u.role === 'mentor' || isTeamUser(u)));
+    if (level === 'team') return Boolean(u && isTeamUser(u));
+    if (level === 'admin') return Boolean(u && (u.role === 'admin' || u.guest));
+    return true; // everyone, or a level this script doesn't know yet
+  }
+  var toolsAsked = null;
+  function tools() {
+    toolsAsked = toolsAsked || fetch('/api/studio/tools', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (b) {
+        if (!b || !b.tools) return null;
+        var out = {};
+        b.tools.forEach(function (t) { out[t.key] = t.level; });
+        return out;
+      }, function () { return null; })
+      .then(function (m) { if (!m) toolsAsked = null; return m; });
+    return toolsAsked;
+  }
+  // This page's tool, held to its level before the page shows. null: let it in.
+  function toolGate(user) {
+    if (!TOOL) return Promise.resolve(null);
+    return tools().then(function (m) {
+      var level = m && m[TOOL];
+      if (!level || meets(level, user)) return null;
+      return user ? 'dashboard' : 'sign-in';
+    });
+  }
+  function leave(where) {
+    if (where === 'sign-in') return toSignIn();
+    location.replace('/');
+    return new Promise(function () {}); // the page is leaving
+  }
+
   function keepTeam(user) {
     var team = Boolean(user && isTeamUser(user));
     set(local, 'cb_auth', team ? String(user.email).toLowerCase() : null);
@@ -132,6 +187,8 @@
     ready: null,
     token: token,
     signInUrl: signInUrl,
+    tools: tools,
+    mayUse: function (level) { return meets(level, api.user); },
     isTeam: function () {
       if (api.user) return isTeamUser(api.user);
       return Boolean(get(local, 'cb_auth')); // before the answer: what this browser was last told
@@ -145,6 +202,24 @@
         return null;
       });
       return api._profile;
+    },
+    // Asked once a page, and only of the team: an agent's visit never calls it.
+    keys: function () {
+      if (api._keys) return api._keys;
+      api._keys = api.ready.then(function (user) {
+        if (!user || user.guest || !isTeamUser(user)) return null;
+        return token().then(function (t) {
+          if (!t) return null;
+          return fetch('/api/studio/keys', { headers: { 'X-Studio-Token': t }, cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; });
+        });
+      }).then(function (k) {
+        if (!k) return null;
+        if (k.cms) set(local, 'cb_cms_token', k.cms);
+        if (k.pics) set(local, 'cb_pics_token', k.pics);
+        return { cms: k.cms || null, pics: k.pics || null };
+      }, function () { api._keys = null; return null; });
+      return api._keys;
     },
     signOut: function () {
       var jwt = cookie('nf_jwt');
@@ -193,8 +268,19 @@
   }
 
   function admit(user, local) {
-    api.user = user;
+    if (REQUIRE_TEAM && !isTeamUser(user)) {
+      if (!local) keepTeam(user);
+      location.replace('/');
+      return new Promise(function () {}); // the page is leaving
+    }
     if (!local) keepTeam(user);
+    return toolGate(user).then(function (where) {
+      if (where) return leave(where);
+      return reveal(user);
+    });
+  }
+  function reveal(user) {
+    api.user = user;
     root.classList.remove('cb-gate');
     try { document.dispatchEvent(new CustomEvent('cb-studio-ready', { detail: user })); } catch (e) { /* old browser */ }
     return user;
@@ -213,6 +299,19 @@
 
   // Local work on the hand-written tools (a plain static server, no Identity): let it through. The old dev
   // sign-in's mark decides the team there, as it did before, so a local test can be either.
+  // TEMPORARY (Kimani, 2026-10-30): while new Google accounts can't get through Netlify Identity, the Studio's
+  // pages open without a sign-in. Signed out, refused, or the check failing: the page shows as before #116, with
+  // no user and no team tools. Set back to false to require the sign-in again.
+  var OPEN = true;
+  var LET_IN = OPEN && !REQUIRE_TEAM; // an admin page never opens signed out
+  function admitOpen() {
+    set(local, 'cb_auth', null);
+    return toolGate(null).then(function (where) {
+      if (where) return leave(where);
+      return reveal(null);
+    });
+  }
+
   var LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   function localUser() {
     var mark = (get(local, 'cb_auth') || '').trim().toLowerCase();
@@ -222,6 +321,7 @@
   function check() {
     return token().then(function (t) {
       if (!t) {
+        if (LET_IN) return admitOpen();
         if (!LOCAL) return toSignIn();
         return fetch('/.netlify/identity/settings').then(function (r) {
           return r.ok ? toSignIn() : localUser();
@@ -238,18 +338,19 @@
         if (r.status === 401 || r.status === 403) {
           // A guest key the server won't take (production, or out of date) is forgotten, as the comp report does.
           set(local, GUEST_KEY, null);
-          return toSignIn();
+          return LET_IN ? admitOpen() : toSignIn();
         }
         if (!r.ok) throw new Error('me ' + r.status);
         return r.json();
       }).then(function (body) {
         if (!body || !body.user) throw new Error('me: no user');
         var u = body.user;
-        var user = { email: u.email, name: u.name || null, role: u.role, guest: Boolean(u.guest) };
+        var user = { email: u.email, name: u.name || null, role: u.role, guest: Boolean(u.guest), team: Boolean(u.team) };
         set(session, ME_KEY, JSON.stringify({ who: who, at: Date.now(), user: user }));
         return admit(user);
       });
     }).catch(function () {
+      if (LET_IN) return admitOpen();
       return new Promise(function (resolve) { trouble(function () { resolve(check()); }); });
     });
   }

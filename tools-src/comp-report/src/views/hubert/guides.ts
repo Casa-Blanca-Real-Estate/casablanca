@@ -14,6 +14,22 @@ export interface Guide {
   text: string;
 }
 
+/**
+ * Where the agent is, in one line (Kimani, 2026-11-06): the step's name and the one thing to do there,
+ * shown at the top of Hubert's panel and flashed when the step changes.
+ */
+export const STEP_NOW: Record<GuideStep, { name: string; todo: string }> = {
+  home: { name: 'New report · The home', todo: 'Paste the home’s StreetEasy link, or type its address.' },
+  details: { name: 'New report · The details', todo: 'Check the home’s details: fix what’s wrong, add what’s missing.' },
+  comps: { name: 'New report · The comps', todo: 'Add your comps: the export, its PDF, or listing links.' },
+  sort: { name: 'Sort', todo: 'Open each comp, give it a tier, and say why.' },
+  review: { name: 'Sort · One comp at a time', todo: 'Look at the listing, compare it to the home, then tier it.' },
+  gate: { name: 'Your number', todo: 'Give your own read of the value before you see the range.' },
+  findings: { name: 'Findings', todo: 'Check what sets the low and the high end of the range.' },
+  send: { name: 'Send', todo: 'Write your lines, check the email, then copy it into Gmail.' },
+  done: { name: 'Done', todo: 'Mark it as sent once it’s gone. You can reopen it to edit.' },
+};
+
 const GUIDES: Record<GuideStep, (side: 'buyer' | 'seller') => Omit<Guide, 'step'>> = {
   home: () => ({
     title: 'New report · The home',

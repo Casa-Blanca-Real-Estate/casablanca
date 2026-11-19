@@ -45,7 +45,8 @@
 
     var dock = rightDock();
     if (S) S.ready.then(function (user) {
-      if (document.querySelector('.cb-whoami')) return;
+      // Signed out while the Studio is open to everyone (studio-auth.js OPEN): nobody to show.
+      if (!user || document.querySelector('.cb-whoami')) return;
       var who = document.createElement('button');
       who.type = 'button'; who.className = 'cb-whoami'; who.title = 'Click to sign out';
       who.textContent = '● ' + (user.name || user.email);
@@ -61,7 +62,7 @@
     // signed in to the notebook and to the studio as the team, so nobody else downloads it.
     try {
       var dn = JSON.parse(localStorage.getItem('cb.devNotebook') || 'null');
-      if (team() && dn && dn.token && Date.parse(dn.expiresAt) > Date.now() && !document.querySelector('script[data-cb-dev-notebook]')) {
+      if (team() && dn && dn.token && Date.parse(dn.expiresAt) > Date.now() && localStorage.getItem('cb.devNotebook.off') !== '1' && !document.querySelector('script[data-cb-dev-notebook]')) {
         var dns = document.createElement('script');
         dns.src = DN_SRC; dns.defer = true; dns.setAttribute('data-cb-dev-notebook', '1');
         document.head.appendChild(dns);

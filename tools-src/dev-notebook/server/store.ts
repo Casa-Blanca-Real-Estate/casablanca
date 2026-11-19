@@ -101,7 +101,8 @@ const SHOT_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as con
 export const MAX_SHOT_BYTES = 5 * 1024 * 1024;
 export const MAX_SHOTS = 8;
 export const MAX_EVENT_NOTE = 4000;
-export const SESSION_DAYS = 30;
+/** A notebook session lasts until it is turned off or signed out (Kimani, 2026-11-06: "that should just be unlimited"); ten years stands for that. */
+export const SESSION_DAYS = 3650;
 /** Making a key needs a sign-in this recent: a key outlives the session that made it. */
 export const FRESH_SIGN_IN_MS = 15 * 60_000;
 

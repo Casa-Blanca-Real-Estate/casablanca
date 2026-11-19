@@ -142,7 +142,9 @@ export async function queueReads(
   // One person's reads are counted one request at a time, so two pastes at once can't both slip under the limit.
   await tx.query(`select pg_advisory_xact_lock(hashtext('comp_report.link_reads:' || $1))`, [user.email]);
   const used = Number((await tx.query<{ n: string }>(
-    `select count(*) as n from comp_report.link_reads where created_by = $1 and created_at > now() - interval '24 hours'`,
+    // A read copied with a duplicated report finished before its row was made: it cost nothing today.
+    `select count(*) as n from comp_report.link_reads where created_by = $1 and created_at > now() - interval '24 hours'
+        and not (finished_at is not null and finished_at < created_at)`,
     [user.email],
   )).rows[0]?.n ?? 0);
   const existing = (await tx.query<{ id: string; url: string }>(

@@ -8,20 +8,24 @@
 // workspace; then three screens: Sort, Findings, Send (`02-screens.md`). Free
 // movement: the rail goes anywhere. The assistant is a drawer on all three.
 // Admins can switch on the build's own notes; agents never see them.
+import { DEV_EVENT } from '../../dev-settings.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compute, EngineInputError, parseExport, type EngineOutput } from '../../../engine/index.ts';
 import { agentCardApi, ApiError, clientWordsApi, geocodeApi, maySample, reviewApi, workspaceApi, type CompEdit, type HubertEmailEdit, type HubertView, type LinkReadView, type LinksState, type AgentCard, type Me, type WorkspaceData, type WorkspacePatch } from '../../api.ts';
 import { engineInput, locationsFrom, namedPrices, removedComps, removedExportComps, workspaceComps, type ParsedImport, type RecordCache } from '../../../workspace/engine-input.ts';
 import { cleanAllClientRounds } from '../../../workspace/client-words.ts';
 import { homeFeatures } from '../../../workspace/features.ts';
+import { applyClientSet, applyHomeSet } from '../../../workspace/home-edit.ts';
 import { settleTags } from '../../../workspace/settle-tags.ts';
 import { homeFromListing } from '../../../workspace/subject.ts';
+import { answerResult } from '../../../workspace/reading.ts';
 import {
   isRevealed, type Brief, type CallState, type DealTermsState, type GuideStep, type Intake, type Outcomes, type Reached, type RevealPin, type SendState, type TargetState, type WorkspaceState,
 } from '../../../workspace/state.ts';
 import { publishCaptureContext } from '../../capture-context.ts';
 import { ErrorBoundary } from '../../ErrorBoundary.tsx';
-import { StartFlow, type StartScreen } from '../newcomp/NewComp.tsx';
+import { guideStepOf, loggedScreen, startFromParam, type StartScreen, type StepKey } from '../newcomp/steps.ts';
+import { NewCompWindow } from '../newcomp/Window.tsx';
 import type { StepId } from './About.tsx';
 import { BuildNotesContext, useBuildNotesSwitch } from './buildNotes.tsx';
 import { Done } from './Done.tsx';
@@ -136,11 +140,11 @@ function readViewAsNew(): boolean {
   }
 }
 
-/** The new-comp modal's screen, from ?start= (and CR-3a's ?step=home and ?step=export, which it replaces). */
+/** The New comp window's step, from ?start= (and CR-3a's ?step=home and ?step=export, which it replaces). */
 function startFromUrl(): StartScreen | null {
   const q = new URLSearchParams(location.search);
-  const start = q.get('start');
-  if (start === 'home' || start === 'details' || start === 'comps') return start;
+  const start = startFromParam(q.get('start'));
+  if (start) return start;
   const step = q.get('step');
   return step === 'home' ? 'details' : step === 'export' ? 'comps' : null;
 }
@@ -169,11 +173,14 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [state, setStateState] = useState<WorkspaceState>({});
   const [screen, setScreen] = useState<ScreenId>(screenFromUrl);
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
-  // The activity log's screen line (Dispatch 22b): the new report's steps while its modal is open, else the screen.
+  // The step the New comp window shows (Edit details keeps its own, so it's set from the window).
+  const [windowStep, setWindowStep] = useState<StepKey | null>(null);
+  // The activity log's screen line (Dispatch 22b): the New comp window's steps while it's open, else the screen.
   useEffect(() => {
-    trackScreen(start === 'home' ? 'new-report' : start ? (`new-report-${start}` as const) : screen, reportId);
-  }, [start, screen, reportId]);
-  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work');
+    trackScreen(start ? loggedScreen(windowStep ?? start) : screen, reportId);
+  }, [start, windowStep, screen, reportId]);
+  // Hubert opens by default beside the New comp window (the design pass, 2026-11-11).
+  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work' || Boolean(startFromUrl()));
   // The drawer stays mounted for its slide out (shell.css), then goes (Kimani's notebook, 2026-10-27).
   const [drawerShown, setDrawerShown] = useState(drawerOpen);
   useEffect(() => {
@@ -186,12 +193,22 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   }, [drawerOpen]);
   const [propertyType, setPropertyTypeState] = useState<'condo' | 'coop'>('condo');
   const [viewAsNewAgent, setViewAsNewAgentState] = useState(readViewAsNew);
+  // Settings (the name menu) flips it from outside the report.
+  useEffect(() => {
+    const onSetting = (e: Event) => {
+      const d = (e as CustomEvent<{ key: string; on: boolean }>).detail;
+      if (d?.key === VIEW_AS_NEW_KEY) setViewAsNewAgentState(d.on);
+    };
+    addEventListener(DEV_EVENT, onSetting);
+    return () => removeEventListener(DEV_EVENT, onSetting);
+  }, []);
   const [sortFilter, setSortFilter] = useState<{ incomplete: boolean; tags: string[] }>({ incomplete: false, tags: [] });
   const [toastText, setToastText] = useState<{ text: string; action?: ToastAction } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
   const [hubertEdits, setHubertEdits] = useState<HubertEmailEdit[]>([]);
+  const [hubertQuestion, setHubertQuestion] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ at: string | null } | null>(null);
   const [focus, setFocus] = useState<{ reportCompId: string; field: string; n: number; at: number } | null>(null);
   // What the agent has open, for Hubert's get_view: refs, so a turn already under way reads it as it is now.
@@ -448,6 +465,18 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     });
   }, [settled, reportId, setState]);
 
+  // The range as the report shows it, kept on the report for the reports list (the design pass): after the
+  // reveal only, the owner's only, and only when it changes.
+  const revealedNow = isRevealed(call);
+  useEffect(() => {
+    if (!data || readOnlyRef.current || !revealedNow || !output) return;
+    const r = output.results[answerResult(output)].range;
+    const next = r ? { low: Math.round(r.low.value), high: Math.round(r.high.value) } : null;
+    const was = stateRef.current.range ?? null;
+    if ((was?.low ?? null) === (next?.low ?? null) && (was?.high ?? null) === (next?.high ?? null) && stateRef.current.range !== undefined) return;
+    setState({ ...stateRef.current, range: next });
+  }, [data, revealedNow, output, setState]);
+
   // The furthest screen reached, for the reports list's Stage.
   const reached: Reached = state.reached ?? 'sort';
   const goTo = useCallback((next: ScreenId) => {
@@ -462,14 +491,14 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const viewRef = useRef<() => HubertView>(() => ({ screen: 'sort', compId: null }));
   viewRef.current = () => {
     // The New report window sits over whatever screen is behind it: it's what the agent sees.
-    if (start) return { screen: 'new_report', compId: null, step: start };
+    if (start) return { screen: 'new_report', compId: null, step: windowStep ?? start };
     const inReview = Boolean(reviewing) && screen === 'sort';
     const at = inReview ? lookingRef.current.review : screen === 'sort' ? lookingRef.current.sort : null;
     return { screen: inReview ? 'review' : screen, compId: at, ...(screen === 'sort' ? { order: lookingRef.current.order } : {}) };
   };
   // Hubert's step guides (2026-10-28): the first time the agent reaches each step, it's noted, and his chat
   // shows that step's guide from then on. The owner's only: a mentor reading the report changes nothing.
-  const guideStep: GuideStep = start ?? (reviewing && screen === 'sort' ? 'review' : screen);
+  const guideStep: GuideStep = start ? guideStepOf(windowStep ?? start) : (reviewing && screen === 'sort' ? 'review' : screen);
   useEffect(() => {
     if (!data || readOnlyRef.current || stateRef.current.stepsAt?.[guideStep]) return;
     setState({ ...stateRef.current, stepsAt: { ...stateRef.current.stepsAt, [guideStep]: new Date().toISOString() } });
@@ -537,6 +566,20 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     setBrief: (next) => {
       setBriefState(next);
       save.queue('brief', next);
+      // The side changed on a report holding the sample's email lines: they follow the side, so a buyer's
+      // report never keeps a seller's "List in October…" (the design pass's bug, 2026-11-06). The agent's
+      // own lines stay as they are.
+      const side = next.audience?.value;
+      const lines = stateRef.current.send ?? {};
+      const sampled = (['chosen', 'consider', 'nextStep'] as const).filter((k) => lines[k]?.sample);
+      if (side && side !== brief.audience?.value && sampled.length && canSample) {
+        void workspaceApi.sample(propertyType, side).then((sample) => {
+          const now = stateRef.current.send ?? {};
+          const swap = { ...now };
+          for (const k of sampled) if (now[k]?.sample && sample.send[k]) swap[k] = sample.send[k];
+          setState({ ...stateRef.current, send: swap });
+        }).catch(() => undefined);
+      }
     },
     intake,
     setIntake: (next) => setState({ ...stateRef.current, intake: next }),
@@ -607,6 +650,7 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     homeFeatures: features,
     level,
     isAdmin: me.user.role === 'admin',
+    viewerRole: me.user.role,
     isGuest: Boolean(me.user.guest),
     viewAsNewAgent,
     setViewAsNewAgent: (on) => {
@@ -636,10 +680,13 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     suggestions,
     removed,
     starting: Boolean(start),
+    windowStep: start ? (windowStep ?? (start === 'details' ? 'basics' : start)) : null,
+    setWindowStep,
     drawerOpen,
     setDrawerOpen,
     reloadComps,
     stepsAt: state.stepsAt ?? {},
+    guideStep,
     focus,
     showComp: (reportCompId, field) => {
       // The row shows whatever Sort's filter was, and Sort opens if another screen was showing.
@@ -657,10 +704,32 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     },
     view: () => viewRef.current(),
     hubertEdits,
+    hubertQuestion,
+    askHubert: (question: string | null) => {
+      setHubertQuestion(question);
+      if (question) setDrawerOpen(true);
+    },
     queueHubertEdit: (edit) => setHubertEdits((list) => [...list, edit]),
     takeHubertEdits: (n) => setHubertEdits((list) => list.slice(n)),
+    // From the state as it stands, so two edits in a row both land; the autosave writes it like the agent's typing.
+    applyHomeSet: (set) => {
+      if (readOnlyRef.current) return;
+      setState({ ...stateRef.current, intake: applyHomeSet(stateRef.current.intake ?? {}, set) });
+    },
+    // Hubert's edit to the client's facts (set_client_fact), or its Undo: Client info's fields, as the agent's own typing writes them.
+    applyClientSet: (set) => {
+      if (readOnlyRef.current) return;
+      const next = applyClientSet(brief, stateRef.current.dealTerms ?? null, set);
+      if (JSON.stringify(next.brief) !== JSON.stringify(brief)) {
+        setBriefState(next.brief);
+        save.queue('brief', next.brief);
+      }
+      if (JSON.stringify(next.terms) !== JSON.stringify(stateRef.current.dealTerms ?? null)) setState({ ...stateRef.current, dealTerms: next.terms });
+    },
     outcomes: state.outcomes ?? {},
     setOutcomes: (next: Outcomes) => setState({ ...stateRef.current, outcomes: next }),
+    doneChecks: state.doneChecks ?? {},
+    setDoneChecks: (next: Record<string, boolean>) => setState({ ...stateRef.current, doneChecks: next }),
     reached,
     toast,
     back: onBack,
@@ -765,6 +834,42 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const sortLocked = !readOnly && !readiness.ready && (screen === 'gate' || screen === 'findings' || screen === 'send');
   const stepFor: Record<ScreenId, StepId> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
   const step = stepFor[screen];
+  const toastEl = toastText && (
+    <div className={`toast sh-toast${drawerOpen && !start ? ' with-drawer' : ''}`} role="status">
+      {toastText.text}
+      {toastText.action && (
+        <button
+          type="button"
+          className="sh-toast-action"
+          onClick={() => {
+            const run = toastText.action!.run;
+            setToastText(null);
+            run();
+          }}
+        >
+          {toastText.action.label}
+        </button>
+      )}
+    </div>
+  );
+  // The New comp window has the page to itself (the design pass, 2026-11-11): the top bar, the window, and
+  // Hubert's panel on its left. Over it, a save or a server call says what it's doing, and what went wrong.
+  if (start) {
+    return (
+      <BuildNotesContext.Provider value={buildNotes}>
+        <ReportBar ws={ws} setDevTools={setBuildNotes} />
+        <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
+          <NewCompWindow ws={ws} screen={start} onScreen={openStart} onDone={closeStart} onReports={onBack} />
+        </ErrorBoundary>
+        {(busy || actionError) && (
+          <div className="sh-modal-notes">
+            <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
+          </div>
+        )}
+        {toastEl}
+      </BuildNotesContext.Provider>
+    );
+  }
   return (
     <BuildNotesContext.Provider value={buildNotes}>
       <ReportBar ws={ws} setDevTools={setBuildNotes} />
@@ -774,8 +879,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
           ws={ws}
           onBack={onBack}
           saveLine={readOnly ? null : <SaveLine status={save.status} onRetry={() => void save.flush()} />}
+          steps={<ProgressRow ws={ws} />}
         />
-        <ProgressRow ws={ws} />
 
         {(busy || actionError || ws.canSample || ws.devTools) && (
           <div className="sh-aux">
@@ -799,42 +904,13 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
         </section>
       </div>
 
-      {start && (
-        <ErrorBoundary resetKey={`start:${start}`} onBack={closeStart}>
-          <StartFlow ws={ws} screen={start} onScreen={openStart} onDone={closeStart} />
-        </ErrorBoundary>
-      )}
-      {/* Over the modal, a save or a server call says what it's doing, and what went wrong, where it can be seen. */}
-      {start && (busy || actionError) && (
-        <div className="sh-modal-notes">
-          <Notes busy={busy} error={actionError} onDismiss={() => setActionError(null)} />
-        </div>
-      )}
-
       {reviewing && screen === 'sort' && (
         <ErrorBoundary resetKey={`review:${reviewing.at ?? ''}`} onBack={() => setReviewing(null)}>
           <ReviewFlow ws={ws} startAt={reviewing.at} onClose={() => setReviewing(null)} />
         </ErrorBoundary>
       )}
       {drawerShown && <HubertDrawer ws={ws} closing={!drawerOpen} />}
-      {toastText && (
-        <div className={`toast sh-toast${drawerOpen ? ' with-drawer' : ''}`} role="status">
-          {toastText.text}
-          {toastText.action && (
-            <button
-              type="button"
-              className="sh-toast-action"
-              onClick={() => {
-                const run = toastText.action!.run;
-                setToastText(null);
-                run();
-              }}
-            >
-              {toastText.action.label}
-            </button>
-          )}
-        </div>
-      )}
+      {toastEl}
     </BuildNotesContext.Provider>
   );
 }

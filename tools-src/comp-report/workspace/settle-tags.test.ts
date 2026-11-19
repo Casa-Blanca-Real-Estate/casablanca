@@ -8,7 +8,7 @@ import { compute, parseExport } from '../engine/index.ts';
 import { SAMPLE_EXPORT } from '../server/sample/barclay-17l-export.ts';
 import { SAMPLE_INTAKE, SAMPLE_TIERS } from '../server/sample/barclay-17l.ts';
 import { engineInput, workspaceComps } from './engine-input.ts';
-import { settleTags } from './settle-tags.ts';
+import { rebaseTags, settleTags } from './settle-tags.ts';
 
 const parsed = parseExport(new TextEncoder().encode(SAMPLE_EXPORT.csv), { as_of: SAMPLE_EXPORT.asOf });
 const make = (tags: (key: string) => string[]) => workspaceComps([{ importId: 'i', createdAt: '2026-09-29T00:00:00Z', parsed }], SAMPLE_TIERS.map((t, i) => ({
@@ -41,9 +41,22 @@ test('a full agent: a tag the data already offered isn’t put back after the ag
 
 test('a practice agent: nothing is added, the supported tags are chips, and a contradicted one still comes off', () => {
   const s = settle((k) => (k === CHAMBERS ? ['First floor'] : []), 'practice');
-  assert.deepEqual(s.edits, [{ reportCompId: rcOf(CHAMBERS), tags: [] }]);
+  assert.deepEqual(s.edits, [{ reportCompId: rcOf(CHAMBERS), tags: [], from: ['First floor'] }]);
   assert.deepEqual(s.suggestions[rcOf(CHAMBERS)]!.map((d) => d.tag), ['Bigger']);
   // A chip the agent took is not offered again.
   const taken = settle((k) => (k === CHAMBERS ? ['Bigger'] : []), 'practice');
   assert.equal(taken.suggestions[rcOf(CHAMBERS)], undefined);
+});
+
+test('rebaseTags: the data’s change lands on the tags as they are now, and the agent’s pick stands', () => {
+  // The walk of 2026-11-10: Same area picked and saved while the settle worked from no tags.
+  assert.deepEqual(rebaseTags([], ['Much smaller'], ['Same area']), ['Same area', 'Much smaller']);
+  // A contradicted tag still comes off.
+  assert.deepEqual(rebaseTags(['First floor'], [], ['First floor', 'Same area']), ['Same area']);
+  // The agent picked another size meanwhile: theirs stands in a one-choice group.
+  assert.deepEqual(rebaseTags([], ['Bigger'], ['Similar size']), ['Similar size']);
+  // A size the data replaces, with nothing picked since, is replaced.
+  assert.deepEqual(rebaseTags(['Similar size'], ['Bigger'], ['Similar size']), ['Bigger']);
+  // Nothing changed since: the same answer as the plain edit.
+  assert.deepEqual(rebaseTags(['Same area', 'First floor'], ['Same area', 'Bigger'], ['Same area', 'First floor']), ['Same area', 'Bigger']);
 });

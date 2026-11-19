@@ -2,17 +2,18 @@
 // it, what the agent has entered (saved as they go), and the engine's output,
 // recomputed in the browser whenever any of it changes (Dispatch 07).
 import type { CompRecord, EngineOutput } from '../../../engine/index.ts';
-import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, HubertView, LinkReadView, LinksState, ReviewReply, WorkspaceData } from '../../api.ts';
+import type { AgentCard, ClientWordsReply, CompEdit, GeocodeView, HubertEmailEdit, HubertHomeEdit, HubertView, LinkReadView, LinksState, ReviewReply, WorkspaceData, Role } from '../../api.ts';
 import type { ClientRound } from '../../../workspace/client-words.ts';
 import type { Location, ParsedImport, WorkspaceComp } from '../../../workspace/engine-input.ts';
 import type { DerivedTag } from '../../../workspace/derived-tags.ts';
 import type { Features } from '../../../workspace/features.ts';
+import type { ClientSet } from '../../../workspace/home-edit.ts';
 import type { CompJudgment, GuideStep, Outcomes, Reached, RevealPin } from '../../../workspace/state.ts';
 import type { ScreenId, SortReadiness } from './screens.ts';
 import type {
   Brief, CallState, DealTermsState, Entry, Intake, SendState, TargetState,
 } from '../../../workspace/state.ts';
-import type { StartScreen } from '../newcomp/NewComp.tsx';
+import type { StartScreen, StepKey } from '../newcomp/steps.ts';
 
 
 export interface Workspace {
@@ -61,7 +62,7 @@ export interface Workspace {
   geocodes: GeocodeView[];
   /** The located ones, by building key: what distance reads. */
   locations: ReadonlyMap<string, Location>;
-  /** Opens the new-comp modal on one of its screens: the home, its details, or adding comps. */
+  /** Opens the New comp window on one of its steps, or as Edit details ('details'). */
   openStart: (screen: StartScreen) => void;
 
   output: EngineOutput | null;
@@ -97,6 +98,8 @@ export interface Workspace {
   /** The agent's level for the Gate: practice (new) or full (graduated). An admin can view it as a new agent. */
   level: 'practice' | 'full';
   isAdmin: boolean;
+  /** The viewer's role, for the bar's team-view badge on another agent's report. */
+  viewerRole: Role;
   /** Signed in through guest mode: an agent, with dev tools and the sample data. */
   isGuest: boolean;
   viewAsNewAgent: boolean;
@@ -134,8 +137,11 @@ export interface Workspace {
   suggestions: { judgment: CompJudgment; record: CompRecord }[];
   /** Every comp the agent took out, for Sort's "Removed" fold (Dispatch 15): each can be put back. */
   removed: WorkspaceComp[];
-  /** The New report window is open (the home, its details, add comps): Hubert sits beside it. */
+  /** The New comp window is open (the target property in steps, then the comps): Hubert sits beside it, on the left. */
   starting: boolean;
+  /** The window's step showing, for Hubert's panel and get_view; null when it's closed. */
+  windowStep: StepKey | null;
+  setWindowStep: (step: StepKey | null) => void;
   /** Hubert's drawer. It opens by default on the first Sort visit. */
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
@@ -143,6 +149,8 @@ export interface Workspace {
   reloadComps: () => void;
   /** When the agent first reached each step, for Hubert's step guides (hubert/guides.ts). */
   stepsAt: Partial<Record<GuideStep, string>>;
+  /** The step the agent is on now, as Hubert's guides name it: the New report window's, or the screen's. */
+  guideStep: GuideStep;
   /** A trail entry's "Show" (Kimani, 2026-10-28): Sort opens on that comp's row, at the field he changed. `n` changes on each ask. */
   focus: { reportCompId: string; field: string; n: number; at: number } | null;
   showComp: (reportCompId: string, field: string) => void;
@@ -154,12 +162,22 @@ export interface Workspace {
   /** Sort's rows top to bottom, as they show now (its filter and order): "comp 2" is the second. */
   sortOrder: (reportCompIds: string[]) => void;
   view: () => HubertView;
+  /** A question for Hubert from the screen (Send's "Ask Hubert to review"): his drawer opens and asks it. Null: taken. */
+  hubertQuestion: string | null;
+  askHubert: (question: string | null) => void;
   /** Hubert's edits to the email, waiting for Send to apply them (server/hubert-email.ts). */
   hubertEdits: HubertEmailEdit[];
   queueHubertEdit: (edit: HubertEmailEdit) => void;
   takeHubertEdits: (n: number) => void;
+  /** Hubert's edit to the home's details (server/hubert-home.ts), or its Undo: the entries written into the intake. */
+  applyHomeSet: (set: HubertHomeEdit['set']) => void;
+  /** Hubert's edit to the client's facts (server/hubert-client.ts), or its Undo: the brief's and the deal terms' entries. */
+  applyClientSet: (set: ClientSet) => void;
   outcomes: Outcomes;
   setOutcomes: (next: Outcomes) => void;
+  /** Done's "What's next" ticks (the design pass). */
+  doneChecks: Record<string, boolean>;
+  setDoneChecks: (next: Record<string, boolean>) => void;
   reached: Reached;
   /** A short confirmation at the bottom of the screen: "Copied. Paste into Gmail." An action (Undo) shows beside it. */
   toast: (message: string, action?: ToastAction) => void;

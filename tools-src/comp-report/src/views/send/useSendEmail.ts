@@ -9,15 +9,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultKind } from '../../../engine/index.ts';
 import { cleanPhotoUrls } from '../../../engine/index.ts';
 import { ApiError, clientWordsApi, narrativesApi, type EmailPhotos, type HubertEmailEdit, type NarrativeView } from '../../api.ts';
-import { buildEmail, countedComps, hasHomeSize, headlineDrafts, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
-import { clientPrice, psf } from '../../../workspace/format.ts';
+import { buildEmail, countedComps, firstName, hasHomeSize, headlineDrafts, leadIn, rangeWords, type EmailDraft, type EmailLength, type WrittenSections } from '../../../workspace/email.ts';
+import { psf, sqft } from '../../../workspace/format.ts';
 import { draftChecks, ledgerFor, qaRecord, qaStatus, syncHeadline, type Acknowledgment } from '../../../workspace/qa.ts';
 import { answerResult, estimatesChangeTheAnswer, fact, homeName } from '../../../workspace/reading.ts';
 import { noteOf, type SendState } from '../../../workspace/state.ts';
 import { writerInputFrom, writerInputKey } from '../../../workspace/writer-input.ts';
 import { entry } from '../workspace/bits.tsx';
 import type { Workspace } from '../workspace/model.ts';
-import { designedCta, designedEyebrow, formatOf, homeSub, lengthOf, monthOf, OFFICE, type Format } from './copy.ts';
+import { designedCta, formatOf, lengthOf, OFFICE, type Format } from './copy.ts';
 import { designedComps, designedHtml, emailHtml, parseEmailText } from './designed.ts';
 import { afterCopy, bodyPrint, draftsOf, LENGTHS, sentState, setSubject, subjectOf, withDraft } from './drafts.ts';
 import { applyFixes, sendIssues, type SendIssue } from './issues.ts';
@@ -76,6 +76,17 @@ function copyByHand(text: string): boolean {
   return ok;
 }
 
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "2026-11-06" → "Nov 2026": the hero's line. */
+export const shortMonthOf = (isoDay: string) => `${SHORT_MONTHS[Number(isoDay.slice(5, 7)) - 1] ?? ''} ${isoDay.slice(0, 4)}`.trim();
+
+/** "3 bd, 3 ba · 2,000 SF": the hero's details; the size only where the report shows one (never a co-op). */
+export function heroSub(intake: { beds?: { value: number }; baths?: { value: number }; areaSqft?: { value: number } }, sf: boolean): string {
+  const rooms = [intake.beds ? `${intake.beds.value} bd` : null, intake.baths ? `${intake.baths.value} ba` : null].filter(Boolean).join(', ');
+  const size = sf && intake.areaSqft ? sqft(intake.areaSqft.value).replace(/ sq ft$/, ' SF') : null;
+  return [rooms || null, size].filter(Boolean).join(' · ');
+}
+
 /** The ack's text is the finding as it read: the part of the key after its kind ("number:$5.1M" → "$5.1M"). */
 const findingText = (key: string) => key.slice(key.indexOf(':') + 1) || key;
 
@@ -121,7 +132,8 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
 
   const homeLine = [ws.intake.address?.value.split(',')[0], ws.intake.unit?.value].filter(Boolean).join(' ') || ws.report.title;
   const home = homeName(ws.intake.unit?.value, ws.intake.address?.value.split(',')[0]);
-  const signedAs = send.signOff?.value ?? ws.agentName;
+  // The sign-off is the agent's first name (the design pass), unless they typed their own.
+  const signedAs = send.signOff?.value ?? (firstName(ws.agentCard?.firstName ?? ws.agentFirstName) || firstName(ws.agentName));
   const client = ws.brief.clientName?.value ?? send.clientName?.value;
   const emailFor = (len: EmailLength, headline: string | undefined = send.headline?.value): EmailDraft => buildEmail({
     homeLine,
@@ -135,6 +147,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     chosen: send.chosen?.value,
     consider: send.consider?.value,
     nextStep: send.nextStep?.value,
+    closing: send.closing?.value,
     length: len,
     sample: ws.report.sampleData,
     written: writtenFor(len)?.sections ?? null,
@@ -164,7 +177,9 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
   const issues = sendIssues({ checks, body: shown.text, headline, ledger, output: o, result, acks });
   const status = qaStatus(checks);
   const copyable = status.ready && issues.every((i) => !i.blocking);
-  const headlinePicks = written ? written.headlines : codeDrafts;
+  // The writer's headlines, cut to lead-ins (the design pass): the ones that don't lead into a price drop out.
+  const writerPicks = written ? written.headlines.map(leadIn).filter((x): x is string => Boolean(x)) : [];
+  const headlinePicks = writerPicks.length ? [...new Set(writerPicks)] : codeDrafts;
 
   const outById = new Map(o.comps.map((c) => [c.id, c]));
   const homeRead = ws.reads.filter((r) => r.purpose === 'subject' && r.status === 'done').at(-1);
@@ -179,7 +194,7 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
    * The designed email: the Full draft's words (the agent's, when they edited the Full one), laid out with a box
    * per comp. On screen its photos are the listings' own; `copies` swaps in the ones Casa keeps (at copy time).
    */
-  const designed = (copies?: EmailPhotos): string => {
+  const designed = (copies?: EmailPhotos, opts: { editable?: boolean } = {}): string => {
     const full = { subject, text: drafts.full ? drafts.full.body : emailFor('full').text };
     const parsed = parseEmailText(full.text, send.headline?.value, signedAs);
     const { anchor, others } = designedComps(countedComps(o, result, ws.comps), {
@@ -194,26 +209,25 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
         return kept ? `${location.origin}${kept}` : c.judgment?.photos?.[0] ?? null;
       },
     });
-    const range = o.results[result].range;
     const h = o.headline_facts[result];
     const lowSf = fact(h, 'range.low_per_sqft');
     const highSf = fact(h, 'range.high_per_sqft');
     return designedHtml({
       origin: location.origin,
       preparedFor: client?.trim() || 'you',
-      month: monthOf(ws.today),
+      month: shortMonthOf(ws.today),
       title: homeLine,
-      sub: homeSub(ws.intake),
-      eyebrow: designedEyebrow(ws.side, home),
-      range: range ? `${clientPrice(range.low.value)} – ${clientPrice(range.high.value)}` : null,
-      perSqft: ws.sf && lowSf && highSf ? `${psf(lowSf.value)} – ${psf(highSf.value)} a square foot` : null,
+      sub: heroSub(ws.intake, ws.sf),
+      range: rangeWords(o, result),
+      perSqft: ws.sf && lowSf && highSf ? `(${psf(lowSf.value)} – ${psf(highSf.value)} / SF)` : null,
       email: parsed,
       anchor,
       others,
-      agent: { name: signedAs, title: ws.agentCard?.title ?? null, office: OFFICE, email: ws.report.ownerEmail || null, phone: ws.agentCard?.phone ?? null, photo: ws.agentCard?.photo ?? null },
+      agent: { name: ws.agentCard?.name || ws.agentName, title: ws.agentCard?.title ?? null, office: OFFICE, email: ws.agentCard?.email || ws.report.ownerEmail || null, phone: ws.agentCard?.phone ?? null, photo: ws.agentCard?.photo ?? null },
       cta: designedCta(ws.side),
       subject: full.subject,
       homePhoto: copies ? (copies.home ? `${location.origin}${copies.home}` : homePhoto) : homePhoto,
+      editable: opts.editable,
     });
   };
 
@@ -373,15 +387,32 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
    * Full or Short as HTML, the plain text beside it; Text as plain. Designed's HTML is a promise: the photos are
    * copied first, and the clipboard item takes the promise so the copy keeps the click's permission.
    */
-  const clipboard = (): { html: Promise<string> | string | null; text: string } => ({
-    html: format === 'text' ? null : format === 'designed' ? photoCopies().then((copies) => designed(copies)) : emailHtml(shown.text, send.headline?.value),
-    text: shown.text,
-  });
+  const clipboard = (fmt: Format = format): { html: Promise<string> | string | null; text: string } => {
+    const len = lengthOf(fmt);
+    const text = len === length ? shown.text : drafts[len]?.body ?? emailFor(len).text;
+    return {
+      html: fmt === 'text' ? null : fmt === 'designed' ? photoCopies().then((copies) => designed(copies)) : emailHtml(text, send.headline?.value),
+      text,
+    };
+  };
 
-  /** Copies the shown format (clipboard()). Logged. */
-  async function copy(): Promise<boolean> {
-    if (!copyable) return false;
-    const { html, text } = clipboard();
+  /** The text message, as Send's rail shows it after the email is out: the agent's edit, else the draft. */
+  const textMessage = drafts.text ? drafts.text.body : emailFor('text').text;
+  const editText = (body: string) => {
+    if (off) return;
+    const basedOnText = bodyPrint(emailFor('text').text);
+    ws.setSend(withDraft(send, drafts, 'text', { body, basedOn: drafts.text?.basedOn ?? basedOnText, at: now(), parentId: drafts.text?.parentId ?? null }));
+  };
+
+  /**
+   * Copies a format (the shown one by default; Send's rail copies the designed email, the text message, and
+   * Full or Short as plain text from the same model). The email's copies wait for QA; the text and the plain
+   * fallbacks copy as they are. Logged.
+   */
+  async function copy(fmt: Format = format): Promise<boolean> {
+    const isEmail = fmt === 'designed' || fmt === length || lengthOf(fmt) === length;
+    if (isEmail && !copyable) return false;
+    const { html, text } = clipboard(fmt);
     let ok = true;
     try {
       if (!html) {
@@ -403,16 +434,17 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
       ws.toast('It didn’t copy. Select the text and copy it yourself.');
       return false;
     }
-    ws.toast(format === 'text' ? 'Copied. Paste it into your text.' : 'Copied. Paste into Gmail.');
+    ws.toast(fmt === 'text' ? 'Copied. Paste it into your text.' : 'Copied. Paste it into Gmail.');
     if (off) return true;
-    ws.setSend(afterCopy(send, format, now()));
+    // The text goes after the email: copying it records nothing about what was sent.
+    if (fmt !== 'text') ws.setSend(afterCopy(ws.send, fmt, now()));
     // The log: what went out, its checks and the agent's answers (§9.1). The same checks gate Copy here.
     const keys = new Set([...checks.flatMap((c) => c.items ?? []).map((i) => i.key), ...acks.filter((a) => a.key.startsWith('rounding:')).map((a) => a.key)]);
     try {
       await narrativesApi.copied(
         ws.reportId,
-        { parentId, length, result, headline, subject: shown.subject, text },
-        { ...qaRecord(checks), send: { format, issues: issues.map((i) => ({ key: i.key, text: i.text, blocking: i.blocking })) } },
+        { parentId, length: lengthOf(fmt), result, headline, subject: shown.subject, text },
+        { ...qaRecord(checks), send: { format: fmt, issues: issues.map((i) => ({ key: i.key, text: i.text, blocking: i.blocking })) } },
         acks.filter((a) => keys.has(a.key)),
       );
     } catch (e) {
@@ -420,6 +452,9 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     }
     return true;
   }
+
+  /** Gmail's compose window with the subject filled in (a link can't carry a formatted body: the agent pastes). */
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}`;
 
   /** The subject alone, as plain text. Not logged: the email's copy is. */
   async function copySubject(): Promise<boolean> {
@@ -480,6 +515,12 @@ export function useSendEmail(ws: Workspace, opts: { format?: Format } = {}) {
     loadError,
     designed,
     clipboard,
+    textMessage,
+    editText,
+    gmailUrl,
+    emailFor,
+    drafts,
+    basedOn,
     edit,
     editSubject,
     discard,

@@ -38,3 +38,15 @@ The one-agent mode set the pattern to copy:
   already re-labels every field from the mode — extend the same `setTxt` block.
 - Layout constants live in `TA` next to `T`; keep reusing `T.PHOTO_W/H`, `T.AGENT_W/H`
   and the 33/1047 margins so every mode stays on one grid.
+
+## 2026-11-05: co-listing is its own slide mode (issue #127)
+
+An agent asked to credit two agents on one deal. First pass (11-04) put two half-size agent
+squares on a pair slide; Kimani (11-05) wants both agents full size and one deal on the slide,
+with a bigger property photo. So it's a third mode, "Co-listing · one deal" (`coListing` on the
+top deal, the second agent in `agent2Src` / `agent2Name`); the slide's bottom slot stays empty
+(a bottom deal already there moves to the last slide). Two layouts are drafted, picked by
+`IC_CO_LAYOUT`: 'stack' (full-width photo, address and both agents in a row under it) and
+'column' (tall photo left, address and the agents stacked right). Kimani picks one; the other goes.
+Kimani also plans a Claude Design pass on this builder, and later to fold the deal carousel
+builders (In contract, Just closed, For sale) into one.

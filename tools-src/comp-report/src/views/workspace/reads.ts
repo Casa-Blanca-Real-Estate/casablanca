@@ -6,16 +6,11 @@
 // start is harmless.
 import { useEffect, useRef } from 'react';
 import { linksApi, type LinkReadView, type LinksState } from '../../api.ts';
+import { inFlight, RESTART_QUEUED_MS, startsDue } from './read-starts.ts';
+
+export { inFlight, MAX_READS_AT_ONCE, mayRetry, startsDue } from './read-starts.ts';
 
 const POLL_MS = 2500;
-/** A read still queued this long after its last start is started again. */
-const RESTART_QUEUED_MS = 20_000;
-/** The server treats a read running this long as dead (links.ts: 4 minutes); start it again a little after (the server fails it after its second try). */
-const RESTART_RUNNING_MS = 4.5 * 60_000;
-
-export function inFlight(reads: LinkReadView[]): LinkReadView[] {
-  return reads.filter((r) => r.status === 'queued' || r.status === 'running');
-}
 
 export function useLinkReads(reportId: string, reads: LinkReadView[], apply: (next: LinksState) => void, readOnly: boolean): void {
   const lastStart = useRef(new Map<string, number>());
@@ -27,16 +22,9 @@ export function useLinkReads(reportId: string, reads: LinkReadView[], apply: (ne
     if (readOnly) return;
     const tick = () => {
       const now = Date.now();
-      for (const r of pending) {
-        const last = lastStart.current.get(r.id);
-        const sinceLast = last === undefined ? Infinity : now - last;
-        const due = r.status === 'queued'
-          ? sinceLast > RESTART_QUEUED_MS
-          : now - Date.parse(r.startedAt ?? r.createdAt) > RESTART_RUNNING_MS && sinceLast > RESTART_QUEUED_MS;
-        if (due) {
-          lastStart.current.set(r.id, now);
-          void linksApi.start(reportId, r.id);
-        }
+      for (const r of startsDue(pending, lastStart.current, now)) {
+        lastStart.current.set(r.id, now);
+        void linksApi.start(reportId, r.id);
       }
     };
     tick();
@@ -65,4 +53,16 @@ export function useLinkReads(reportId: string, reads: LinkReadView[], apply: (ne
       clearInterval(timer);
     };
   }, [reportId, polling, apply]);
+}
+
+/**
+ * "Try again" on a failed read: the link is queued again (a failed read never stops that, links.ts) and the
+ * failed row is cleared once the new read is in. The messages already said "Try the link again"; until now
+ * that meant pasting it again.
+ */
+export async function retryRead(reportId: string, r: LinkReadView, apply: (next: LinksState) => void): Promise<void> {
+  const added = await linksApi.add(reportId, [r.url], r.purpose);
+  apply(added);
+  if (added.refused.length) throw new Error(added.refused[0]!.reason);
+  apply(await linksApi.dismiss(reportId, r.id));
 }

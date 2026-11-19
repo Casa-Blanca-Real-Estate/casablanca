@@ -108,6 +108,7 @@ credentials — the IG long-lived token, Make keys, and blob credentials are env
 | Tool | State |
 |---|---|
 | Business Card Generator | Shipped, audited. Pill selector ready for a 2nd card design. |
+| Property Sign (`tools/property-sign/`) | Shipped 2026-11-05 (PR #129), team only. The 24 × 36 For Sale lawn sign from Kimani's `TMPLTS - Property Signs V2.psd`: print PDF, PNG, order email to ALP Signs. Signed in as the team, the name searches the roster (CMS) and every download is saved (`/api/property-signs`, `tools-src/property-signs/`). |
 | Closed Carousel Builder | Shipped and deployed. AI features, agent photo library, StreetEasy autofill, session persistence. |
 | Profile Pic Generator | Shipped. Batch, in-browser background removal. **Dispatch 01** covers its cutout + outpainting work. |
 | Watermarker | Watermark-on and watermark-off merged into one tool. Redesign pending. |

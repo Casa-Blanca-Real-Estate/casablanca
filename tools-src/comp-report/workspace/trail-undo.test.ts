@@ -30,3 +30,12 @@ test('gone once it’s undone or changed since, on another comp, or taken out', 
   assert.equal(undoStands({ ...entry('tier', 'primary'), undo: undefined }, j()), false);
   assert.equal(undoStands(entry('anchor', null), j()), false, 'the star goes back with the tier');
 });
+
+test('the star, taking out and putting back: offered while they stand', () => {
+  assert.equal(undoStands(entry('anchor', true), j({ anchor: true })), true);
+  assert.equal(undoStands(entry('anchor', true), j()), false, 'the star moved on since');
+  assert.equal(undoStands(entry('anchor', false), j()), true);
+  assert.equal(undoStands(entry('removed', true), j({ removedAt: '2026-10-29' })), true, 'taken out: putting it back is the one undo');
+  assert.equal(undoStands(entry('removed', true), j()), false, 'already back');
+  assert.equal(undoStands(entry('removed', false), j()), true);
+});

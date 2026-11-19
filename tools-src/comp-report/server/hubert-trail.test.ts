@@ -21,5 +21,5 @@ test('errors and read-only tools leave no trail; the web leaves only https sourc
   assert.deepEqual(trailOf('edit_comp', { type: 'tool_result', is_error: true, content: 'No.' }), { changes: [], sources: [] });
   assert.deepEqual(trailOf('get_numbers', ok({ comps: [] })), { changes: [], sources: [] });
   const { sources } = trailOf('web_search', ok({ results: [{ title: 'A', url: 'https://a.example/' }, { title: 'B', url: 'javascript:alert(1)' }] }));
-  assert.deepEqual(sources, [{ title: 'A', url: 'https://a.example/' }]);
+  assert.deepEqual(sources, [{ title: 'A', url: 'https://a.example/', kind: 'search' }]);
 });

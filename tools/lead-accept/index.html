@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- The Studio sign-in (assets/studio-auth.js): first, so the page stays hidden until the server says who this is. Team only. -->
+<script src="/assets/studio-auth.js" data-require="team" data-tool="leadaccept"></script>
+<link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Casa Blanca — Lead auto-accept</title>
+<!-- Lead auto-accept (docs/lead-accept/README.md): the Studio's view of the StreetEasy referral-lead
+     service on Railway. Everything here comes through /api/lead-accept, which checks the team sign-in
+     and holds the service's key. This file is public like every static page, so it names no
+     addresses, keys or webhook URLs: those live in the doc and in Netlify's environment. -->
+<style>
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Object Sans';src:url('../../assets/fonts/ObjectSans-Heavy.otf') format('opentype');font-weight:800;font-style:normal;font-display:swap}
+  :root{--ink:#0f0f0f;--paper:#f4f3f0;--line:#dddbd5;--muted:#888680;--accent:#aaa3cf;--plum:#3c3654;--sand:#c0c2b5;--surface:#fff;
+        --ok:#2f6b45;--ok-bg:#e3efe6;--warn:#7a5a12;--warn-bg:#f5ecd6;--bad:#6b1f1f;--bad-bg:#f3e1e1;--gutter:clamp(18px,4vw,48px)}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font:400 13px/1.5 'Object Sans','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+  header{display:flex;align-items:center;gap:14px;background:var(--ink);color:#fff;padding:18px var(--gutter)}
+  header img{height:22px;width:auto;display:block}
+  header .stax{font-size:10px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
+  main{max-width:1180px;margin:0 auto;padding:24px var(--gutter) 64px}
+  h1{font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.02em;margin:6px 0 6px;text-wrap:balance}
+  h2{font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:34px 0 10px}
+  h3{font-size:14px;font-weight:800;margin:18px 0 6px}
+  p{margin:0 0 10px;max-width:72ch}
+  .muted{color:var(--muted)} .small{font-size:11px}
+  button{font:inherit;font-size:12px;font-weight:800;letter-spacing:.04em;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 12px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button:disabled{opacity:.45;cursor:default}
+  select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  select:focus,button:focus-visible,.row:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(170,163,207,.35)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .notice{background:var(--surface);border:1px solid var(--ink);border-radius:10px;padding:10px 12px;margin:10px 0}
+  .notice.bad{border-color:var(--bad);color:var(--bad)}
+  .lede{font-size:15px;max-width:68ch}
+
+  /* status strip */
+  .status{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:stretch;margin:18px 0 0}
+  @media(max-width:860px){.status{grid-template-columns:minmax(0,1fr)}}
+  .mode{display:flex;flex-direction:column;gap:10px}
+  .mode .big{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;letter-spacing:-.01em}
+  .dot{width:12px;height:12px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.live{background:var(--ok)} .dot.observe{background:var(--accent)} .dot.down{background:var(--bad)}
+  .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+  .counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
+  .count{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--paper)}
+  .count b{display:block;font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+  .count span{font-size:11px;color:var(--muted)}
+  .count.ok b{color:var(--ok)} .count.bad b{color:var(--bad)}
+  .facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12px;margin:12px 0 0}
+  .facts dt{color:var(--muted)} .facts dd{margin:0;overflow-wrap:anywhere}
+
+  /* run log */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+  .chip{font-size:11px;font-weight:800;border-radius:999px;padding:5px 10px}
+  .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .layout{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:16px;align-items:start}
+  @media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+  .runs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .row{width:100%;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-weight:400;letter-spacing:0;font-size:13px}
+  .row[aria-current="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .row .addr{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .meta{grid-column:1/-1;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pill{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);background:var(--surface);white-space:nowrap;align-self:start}
+  .pill.ok{background:var(--ok-bg);border-color:var(--ok-bg);color:var(--ok)}
+  .pill.bad{background:var(--bad-bg);border-color:var(--bad-bg);color:var(--bad)}
+  .pill.warn{background:var(--warn-bg);border-color:var(--warn-bg);color:var(--warn)}
+  .pill.observe{background:var(--accent);border-color:var(--accent);color:var(--plum)}
+  .detail{position:sticky;top:12px}
+  .detail .reason{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 12px}
+  .steps{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:11px;margin:4px 0 12px}
+  .steps span{border:1px dashed var(--line);border-radius:999px;padding:1px 7px}
+  .steps i{font-style:normal;color:var(--muted)}
+  .shots{display:flex;flex-direction:column;gap:10px}
+  .shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper)}
+  .shot figcaption{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .shot img{display:block;width:100%;height:auto;max-height:420px;object-fit:cover;object-position:top}
+  .shot a{display:block}
+  .empty{padding:18px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:11px}
+
+  /* agents */
+  .agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+  .agent{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 12px;font-size:12px}
+  .agent b{display:block;font-size:13px}
+  .agent .mono{color:var(--muted)}
+  .agent .acts{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px}
+  .agent .acts button{border:none;background:none;padding:0;border-bottom:1px solid var(--accent);border-radius:0;font-weight:400;letter-spacing:0;font-size:11px}
+  .agent form{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .agent form input{flex:1 1 140px;min-width:0;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+  .agent form button{padding:6px 10px;font-size:11px}
+  .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+  .tag.own{background:var(--accent);color:var(--plum)} .tag.rej{background:var(--bad-bg);color:var(--bad)}
+  .addbar{margin:0 0 10px}
+  .sessions{margin:-4px 0 14px;font-size:13px}
+  .sessions a{color:var(--plum);font-weight:800;text-decoration:none;border-bottom:1px solid var(--accent)}
+  /* run highlighted from an alert email's link */
+  .row.flash{animation:flash 2.4s ease-out 1;border-color:var(--ink);box-shadow:0 0 0 2px var(--accent)}
+  @keyframes flash{0%,40%{background:#efeaff}100%{background:var(--surface)}}
+  @media (prefers-reduced-motion:reduce){.row.flash{animation:none;background:#efeaff}}
+  /* alert emails */
+  .rgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin:0 0 6px}
+  .rgroup{display:flex;flex-direction:column;gap:8px}
+  .rgroup h3{margin:0;font-size:13px}
+  .rgroup .desc{font-size:12px;color:var(--muted);margin:0}
+  .rchips{display:flex;flex-wrap:wrap;gap:6px}
+  .rchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
+  .rchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rchip button{border:none;background:none;padding:0 6px;font-size:14px;line-height:1;color:var(--muted);border-radius:999px}
+  .rchip button:hover{color:var(--bad)}
+  .radd{display:flex;gap:6px}
+  .radd input{flex:1 1 auto;min-width:0;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:9px;padding:6px 8px}
+  .radd button{padding:6px 10px;font-size:11px}
+  .rwarn{font-size:12px;color:var(--bad);margin:0}
+  /* the guide */
+  .guidebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 10px}
+  .gintro{font-size:15px;max-width:70ch;margin:0 0 14px}
+  .gsteps{list-style:none;counter-reset:step;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:8px}
+  .gsteps>li{counter-increment:step;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .gsteps>li::before{content:counter(step);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:800}
+  .gsteps .gt{font-weight:800}
+  .gsteps p{margin:2px 0 0;max-width:80ch}
+  .gsteps details{margin-top:8px}
+  .gsteps summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--plum)}
+  .gsteps details ul{margin:8px 0 0;padding-left:18px;max-width:80ch}
+  .gsteps details li{margin:0 0 5px}
+  .gsec{margin:18px 0 0}
+  .gsec h3{margin:0 0 6px}
+  .gsec p{max-width:80ch}
+  .gsec ul{margin:0 0 10px;padding-left:18px;max-width:84ch} .gsec li{margin:0 0 5px}
+  a.ref{color:var(--plum);text-decoration:none;border-bottom:1px solid var(--accent);font-weight:800}
+  a.ref:hover{border-bottom-color:var(--plum)}
+  a.ref.email{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;font-weight:400;background:#efeaff;border:none;border-radius:5px;padding:0 4px;color:var(--plum)}
+  /* guide editor */
+  .gform{display:flex;flex-direction:column;gap:12px}
+  .gform fieldset{border:1px solid var(--line);border-radius:11px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;margin:0}
+  .gform legend{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+  .gform label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:800}
+  .gform input,.gform textarea{font:inherit;font-size:13px;font-weight:400;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0;width:100%}
+  .gform textarea{resize:vertical;min-height:54px}
+  .gform .lrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:6px;align-items:center}
+  .gform .rm{font-size:11px;padding:4px 8px;align-self:flex-start}
+  .gform .gactions{display:flex;flex-wrap:wrap;gap:8px;position:sticky;bottom:0;background:var(--surface);padding:8px 0 2px}
+  .gform .hint{font-size:11px;color:var(--muted);font-weight:400}
+  .addform{display:flex;flex-direction:column;gap:10px;margin:0 0 12px;max-width:760px}
+  .addform .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .addform label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800}
+  .addform label .muted{font-weight:400}
+  .addform input{font:inherit;font-size:13px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;overflow-wrap:anywhere}
+
+  /* how it works */
+  .flow{list-style:none;counter-reset:step;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .flow li{counter-increment:step;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;max-width:80ch}
+  .flow li::before{content:counter(step);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:800}
+  .where{display:grid;grid-template-columns:minmax(140px,auto) minmax(0,1fr);gap:6px 16px;font-size:12px;max-width:90ch}
+  .where dt{font-weight:800} .where dd{margin:0}
+  details.card>summary{cursor:pointer;font-weight:800}
+  details.card[open]>summary{margin-bottom:8px}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#ebe9e3;border-radius:5px;padding:1px 5px}
+  ul.plain{margin:0 0 10px;padding-left:18px;max-width:80ch} ul.plain li{margin:0 0 4px}
+  /* make */
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start}
+  .mcard{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .mcard.bad{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+  .mhead{display:flex;justify-content:space-between;align-items:start;gap:10px}
+  .mhead h3{margin:0;font-size:14px;overflow-wrap:anywhere}
+  .mhead .role{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+  .switch{display:inline-flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border-radius:999px;flex:none}
+  .switch .track{position:relative;width:34px;height:20px;border-radius:999px;background:var(--line);transition:background .15s}
+  .switch .track::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+  .switch[aria-checked="true"] .track{background:var(--ok)}
+  .switch[aria-checked="true"] .track::after{left:16px}
+  @media (prefers-reduced-motion:reduce){.switch .track,.switch .track::after{transition:none}}
+  .mruns{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:12px}
+  .mruns li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;border-top:1px solid var(--line);padding-top:4px}
+  .mruns .err{grid-column:1/-1;color:var(--bad);font-size:11px;overflow-wrap:anywhere}
+  .mwarn{margin:0;font-size:12px;color:var(--bad)}
+  a.btn{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 12px}
+  a.btn:hover{border-color:var(--accent)}
+  a.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  /* the client, in a run's detail */
+  .fmlog{margin-top:8px}
+  .fmrule{border:0;border-top:1px solid var(--line);margin:12px 0}
+  #fileMaker dd.bad{color:var(--bad)}
+  .fmlog summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--plum)}
+  .fmreqs{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px;display:flex;flex-direction:column;gap:3px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .fmreqs li.bad{color:var(--bad)}
+  .client{border:1px solid var(--line);border-radius:11px;background:var(--paper);padding:10px 12px;margin:0 0 12px}
+  .client h4{margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .client .facts{margin:0}
+  .client .facts dd.msg{white-space:pre-wrap}
+  .client a{color:var(--plum)}
+  .client details{margin-top:8px}
+  .client summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--plum)}
+  .client pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0 0;max-height:260px;overflow:auto}
+  .timing{font-size:11px;color:var(--muted);margin:8px 0 12px;font-variant-numeric:tabular-nums}
+  .row .who{color:var(--ink)}
+  /* filemaker */
+  .fm{display:flex;flex-direction:column;gap:10px;max-width:760px}
+  .fm .mhead h3{font-size:14px}
+  .fm .facts{margin:0}
+  /* client messages */
+  .msgs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .msgs li{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+  .msgs li.need{border-color:var(--bad)}
+  .msgs .mtop{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+  .msgs .mtop b{overflow-wrap:anywhere}
+  .msgs .mmeta{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+  .msgs .mtext{white-space:pre-wrap;overflow-wrap:anywhere;max-width:80ch}
+  .msgs a.ref{align-self:flex-start;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <a href="../../"><img src="../../assets/brand/casa-blanca-wordmark-white.png" alt="Casa Blanca"></a>
+  <span class="stax">Lead auto-accept</span>
+</header>
+<main>
+  <h1>StreetEasy lead auto-accept</h1>
+  <p class="lede">Referral leads land in the shared inbox with about 30 minutes to respond. This service opens each one in the right agent's StreetEasy account and clicks Respond Now, so nobody has to. Derek only hears about the ones it couldn't do.</p>
+  <!-- The chat this tool was built in (Kimani, 2026-11-10): changes to the service start there. Set data-href to its link; empty hides the line. -->
+  <p class="muted sessions" id="sessions" hidden></p>
+  <p id="notice" class="notice bad" role="alert" hidden></p>
+
+  <section class="status" aria-label="Status">
+    <div class="card mode">
+      <div class="big"><span class="dot" id="modeDot"></span><span id="modeText">Checking…</span></div>
+      <p class="muted" id="modeHelp" style="margin:0"></p>
+      <div><button type="button" id="modeBtn" disabled>Switch</button></div>
+      <div class="confirm" id="confirm" hidden>
+        <span id="confirmText"></span>
+        <button type="button" class="primary" id="confirmYes">Yes, switch</button>
+        <button type="button" id="confirmNo">Cancel</button>
+      </div>
+      <dl class="facts" id="facts"></dl>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0 0 10px">Last 24 hours</h3>
+        <button type="button" id="refresh">Refresh</button>
+      </div>
+      <div class="counts" id="counts"></div>
+      <p class="small muted" id="badPw" style="margin:10px 0 0" hidden></p>
+    </div>
+  </section>
+
+  <h2>Make</h2>
+  <p class="muted">The two Make scenarios on either side of the service, and the Gmail connection the alerts send through. The creative@ connection lapses about once a week; when it does, Make turns the alert scenario off and alerts wait in Make until it's reconnected and switched back on.</p>
+  <p id="makeNotice" class="notice bad" role="alert" hidden></p>
+  <div class="mgrid" id="make"><p class="muted">Loading…</p></div>
+
+  <h2>Run log</h2>
+  <div class="filters" role="group" aria-label="Filter runs">
+    <button type="button" class="chip" data-f="all" aria-pressed="true">All</button>
+    <button type="button" class="chip" data-f="person" aria-pressed="false">Needed a person</button>
+    <button type="button" class="chip" data-f="done" aria-pressed="false">Accepted</button>
+    <button type="button" class="chip" data-f="expired" aria-pressed="false">Expired</button>
+    <button type="button" class="chip" data-f="lookup" aria-pressed="false">Repeat inquiries</button>
+    <label class="small muted" for="agentFilter" style="margin-left:6px">Agent</label>
+    <select id="agentFilter"><option value="">Everyone</option></select>
+  </div>
+  <div class="layout">
+    <ul class="runs" id="runs" aria-label="Runs"></ul>
+    <article class="detail card" id="detail" aria-live="polite">
+      <p class="muted" style="margin:0">Pick a run to see what happened at each step, with its screenshots.</p>
+    </article>
+  </div>
+
+  <h2>Client messages</h2>
+  <p class="muted">What clients wrote through StreetEasy, and the replies sent, read from the emails that reach the shared inbox. Newest first.</p>
+  <ul class="msgs" id="msgs"><li class="empty">Loading…</li></ul>
+
+  <h2>Alert emails</h2>
+  <p class="muted">Who gets each kind of email. Changes apply to the next alert. casacalliste@gmail.com also gets a copy of every alert, so a Claude session can read them.</p>
+  <div class="rgroups" id="recipients"></div>
+
+  <h2>FileMaker</h2>
+  <p class="muted">Each lead's client details, for Casa's FileMaker database: sent as an email per lead, and readable by FileMaker directly with its own key.</p>
+  <div class="card fm" id="fileMaker"><p class="muted" style="margin:0">Shown once the service answers.</p></div>
+
+  <h2>Referral agents</h2>
+  <p class="muted">Every agent the service has seen. New ones are added the first time a lead or sign-in code arrives for them. They all use the shared StreetEasy password unless you set their own here. If a password is rejected, the service signs in with a one-time email code instead, which only works when that code reaches the shared inbox.</p>
+  <div class="addbar"><button type="button" id="addAgentBtn">Add an agent</button></div>
+  <form class="card addform" id="addAgentForm" hidden>
+    <h3 style="margin:0">Add an agent</h3>
+    <p class="small muted" style="margin:0">For an agent whose first lead hasn't come in yet, so their password is ready before it does.</p>
+    <div class="fields">
+      <label>StreetEasy email<input id="newEmail" type="email" required autocomplete="off" placeholder="j.doe@email.casa-blanca.com"></label>
+      <label>Name <span class="muted">(optional)</span><input id="newName" type="text" autocomplete="off" maxlength="80" placeholder="Jane Doe"></label>
+      <label>Own password <span class="muted">(optional; blank uses the shared one)</span><input id="newPw" type="password" autocomplete="new-password" maxlength="200"></label>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="submit" class="primary" id="addSave">Add agent</button>
+      <button type="button" id="addCancel">Cancel</button>
+    </div>
+  </form>
+  <div class="agents" id="agents"></div>
+
+  <h2>How it works</h2>
+  <div class="guidebar">
+    <span class="small muted" id="guideMeta"></span>
+    <button type="button" id="guideEditBtn" hidden>Edit</button>
+  </div>
+  <div id="guide"><p class="muted">Loading…</p></div>
+  <form id="guideForm" class="card gform" hidden></form>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var state={runs:[],agents:[],status:null,filter:'all',agent:'',selected:null};
+  var shotUrls={};
+
+  var OUT={
+    'accepted':{label:'Accepted',cls:'ok',group:'done'},
+    'already-accepted':{label:'Already accepted',cls:'ok',group:'done'},
+    'observed':{label:'Observe only',cls:'observe',group:'person'},
+    'failed':{label:'Failed',cls:'bad',group:'person'},
+    'blocked':{label:'Bot check',cls:'bad',group:'person'},
+    'unrouted':{label:'No agent match',cls:'warn',group:'person'},
+    'expired':{label:'Expired',cls:'',group:'expired'},
+    'looked-up':{label:'Looked up',cls:'ok',group:'lookup'},
+    'lookup-failed':{label:'Lookup failed',cls:'warn',group:'lookup'}
+  };
+  // What set a run off: a lead email, a client's message still waiting for a response, or a repeat inquiry
+  // from a client already connected (looked up only: nothing is clicked but the client's name).
+  var TRIG={'lead':'New lead','client-message':'Client message that needed a response','repeat-inquiry':'Repeat inquiry (look-up only)'};
+  var STEP={login:'Sign-up page','verify-method':'Text code','method-options':'Choose email','verify-code':'Email code',
+    'password-rejected':'Password rejected','agent-tools':'Connections',connections:'Connections',client:'Client panel','accept-modal':'Message pop-up','after-accept':'After sending',error:'Error'};
+
+  function api(q,init){
+    return CBStudio.token().then(function(t){
+      init=init||{};
+      init.headers=Object.assign({Authorization:'Bearer '+t},init.headers||{});
+      init.cache='no-store';
+      return fetch('/api/lead-accept'+(q||''),init);
+    });
+  }
+  function getJson(q){
+    return api(q).then(function(r){
+      return r.json().catch(function(){return {};}).then(function(b){
+        if(!r.ok) throw new Error(b.message||('The page’s server answered '+r.status+'.'));
+        return b;
+      });
+    });
+  }
+  function ny(iso,withDate){
+    if(!iso) return '—';
+    var o={timeZone:'America/New_York',hour:'numeric',minute:'2-digit'};
+    if(withDate!==false){o.month='short';o.day='numeric';}
+    return new Date(iso).toLocaleString('en-US',o);
+  }
+  function ago(iso){
+    var m=Math.round((Date.now()-Date.parse(iso))/60000);
+    if(m<1) return 'just now'; if(m<60) return m+' min ago';
+    var h=Math.round(m/60); if(h<36) return h+' hr ago';
+    return Math.round(h/24)+' days ago';
+  }
+  function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+  function showNotice(msg){var n=$('notice');n.textContent=msg||'';n.hidden=!msg;}
+
+  /* ---------- status ---------- */
+  function renderStatus(){
+    var s=state.status;
+    var dot=$('modeDot'), txt=$('modeText'), help=$('modeHelp'), btn=$('modeBtn');
+    if(!s){dot.className='dot down';txt.textContent='Not reachable';help.textContent='The page couldn’t reach the service. See the message above.';btn.disabled=true;return;}
+    dot.className='dot '+(s.observeMode?'observe':'live');
+    txt.textContent=s.observeMode?'Observe mode':'Live';
+    help.textContent=s.observeMode
+      ?'Opens each lead and reports what it would click, but doesn’t click. Derek gets every lead.'
+      :'Responds to each lead on its own. Derek only hears about the ones that need a person.';
+    btn.textContent=s.observeMode?'Go live':'Switch to observe mode';
+    btn.disabled=false;
+    var f=$('facts'); f.innerHTML='';
+    [['Last lead',s.lastRun?(ny(s.lastRun.at)+' · '+ago(s.lastRun.at)):'none yet'],
+     ['Agents known',String(s.agents)],
+     ['Running since',ny(s.runningSince)],
+     ['Version',s.version||'—']].forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
+
+    var c=s.last24h||{}, counts=$('counts'); counts.innerHTML='';
+    [['Accepted',(c.accepted||0)+(c.alreadyAccepted||0),'ok'],
+     ['Needed a person',(c.failed||0)+(c.unrouted||0)+(c.observed||0),((c.failed||0)+(c.unrouted||0))?'bad':''],
+     ['Failed',c.failed||0,c.failed?'bad':''],
+     ['Expired',c.expired||0,''],
+     ['Looked up',c.lookedUp||0,''],
+     ['Total',c.total||0,'']].forEach(function(x){
+      var d=el('div','count '+x[2]); d.appendChild(el('b',null,String(x[1]))); d.appendChild(el('span',null,x[0])); counts.appendChild(d);
+    });
+    var bad=s.agentsWithBadPassword||[], bp=$('badPw');
+    bp.hidden=!bad.length;
+    bp.textContent=bad.length?('Password rejected for '+bad.length+' agent'+(bad.length===1?'':'s')+' (using email codes instead): '+bad.join(', ')+'.'):'';
+  }
+
+  $('modeBtn').addEventListener('click',function(){
+    if(!state.status) return;
+    var toObserve=!state.status.observeMode;
+    $('confirmText').textContent=toObserve
+      ?'Stop clicking? Every lead will go to Derek until you go live again.'
+      :'Go live? The next lead will be responded to automatically.';
+    $('confirm').hidden=false; $('confirmYes').focus();
+  });
+  $('confirmNo').addEventListener('click',function(){$('confirm').hidden=true;});
+  $('confirmYes').addEventListener('click',function(){
+    var want=!state.status.observeMode, yes=$('confirmYes');
+    yes.disabled=true;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({observeMode:want})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t switch.');return b;});})
+      .then(function(b){state.status.observeMode=b.observeMode;$('confirm').hidden=true;showNotice('');renderStatus();})
+      .catch(function(e){showNotice(e.message);})
+      .then(function(){yes.disabled=false;});
+  });
+
+  /* ---------- runs ---------- */
+  function visibleRuns(){
+    return state.runs.filter(function(r){
+      var o=OUT[r.outcome]||{group:'person'};
+      if(state.filter!=='all'&&o.group!==state.filter) return false;
+      if(state.agent&&r.agent!==state.agent) return false;
+      return true;
+    });
+  }
+  function renderRuns(){
+    var list=$('runs'); list.innerHTML='';
+    var rows=visibleRuns();
+    if(!rows.length){var e=el('li','empty',state.runs.length?'No runs match this filter.':'No runs logged yet. The log starts with the first lead after this version of the service went live.');list.appendChild(e);return;}
+    rows.forEach(function(r){
+      var o=OUT[r.outcome]||{label:r.outcome,cls:''};
+      var li=el('li'), b=el('button','row'); b.type='button';
+      if(r.id) b.setAttribute('data-run',r.id);
+      if(state.selected===r) b.setAttribute('aria-current','true');
+      b.appendChild(el('span','addr',r.address||'(no address)'));
+      b.appendChild(el('span','pill '+o.cls,o.label));
+      var meta=el('span','meta');
+      if(r.trigger==='repeat-inquiry'){meta.appendChild(document.createTextNode('Repeat inquiry · '));}
+      else if(r.trigger==='client-message'){meta.appendChild(document.createTextNode('Client message · '));}
+      var who=(r.client&&r.client.name)||r.clientName;
+      if(who){meta.appendChild(el('span','who',who));meta.appendChild(document.createTextNode(' · '));}
+      meta.appendChild(document.createTextNode(ny(r.at)+' · '+(r.agentName||r.agent||'unknown agent')+(r.secs!=null?' · '+r.secs+'s':'')));
+      b.appendChild(meta);
+      b.addEventListener('click',function(){state.selected=r;renderRuns();renderDetail();});
+      li.appendChild(b); list.appendChild(li);
+    });
+  }
+  function renderAgentFilter(){
+    var sel=$('agentFilter'), keep=sel.value, seen={};
+    state.runs.forEach(function(r){if(r.agent)seen[r.agent]=r.agentName||r.agent;});
+    sel.innerHTML='<option value="">Everyone</option>';
+    Object.keys(seen).sort(function(a,b){return seen[a].localeCompare(seen[b]);}).forEach(function(k){
+      var o=el('option',null,seen[k]); o.value=k; sel.appendChild(o);
+    });
+    sel.value=seen[keep]?keep:'';
+  }
+  function renderDetail(){
+    var r=state.selected, d=$('detail'); d.innerHTML='';
+    if(!r){d.appendChild(el('p','muted','Pick a run to see what happened at each step, with its screenshots.'));return;}
+    var o=OUT[r.outcome]||{label:r.outcome,cls:''};
+    var top=el('div'); top.style.cssText='display:flex;justify-content:space-between;gap:10px;align-items:start';
+    top.appendChild(el('h3',null,r.address||'(no address)')); top.firstChild.style.margin='0';
+    top.appendChild(el('span','pill '+o.cls,o.label)); d.appendChild(top);
+    var f=el('dl','facts');
+    [['When',ny(r.at)],['Type',TRIG[r.trigger||'lead']||r.trigger],['Agent',(r.agentName?r.agentName+' · ':'')+(r.agent||'unknown')],['Deadline',r.trigger==='repeat-inquiry'?'None (nothing to answer)':ny(r.deadline)],
+     ['Took',r.secs!=null?r.secs+' seconds':'—'],['Email subject',r.subject||'—']].forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
+    d.appendChild(f);
+    var tl=timing(r); if(tl) d.appendChild(el('p','timing',tl));
+    if(r.client) d.appendChild(clientBlock(r.client));
+    if(r.listing) d.appendChild(propertyBlock(r.listing));
+    if(r.trigger==='repeat-inquiry'&&r.message) d.appendChild(el('p','small muted','Their message: '+r.message));
+    if(r.reason){d.appendChild(el('p','reason',r.reason));}
+    if(r.steps&&r.steps.length){
+      var st=el('div','steps');
+      r.steps.forEach(function(s,i){if(i)st.appendChild(el('i',null,'→'));st.appendChild(el('span',null,STEP[s]||s));});
+      d.appendChild(st);
+    }
+    var caps=r.captures||[];
+    if(!caps.length){d.appendChild(el('p','small muted','No screenshots for this run.'));return;}
+    var shots=el('div','shots'); d.appendChild(shots);
+    caps.slice().reverse().forEach(function(name){
+      var fig=el('figure','shot'); fig.style.margin='0';
+      var label=name.split('_').pop();
+      fig.appendChild(el('figcaption',null,STEP[label]||label));
+      var a=el('a'); a.target='_blank'; a.rel='noopener'; var img=el('img'); img.alt='Screenshot: '+(STEP[label]||label); img.loading='lazy';
+      a.appendChild(img); fig.appendChild(a); shots.appendChild(fig);
+      loadShot(name).then(function(u){img.src=u;a.href=u;},function(){fig.appendChild(el('p','small muted','Screenshot not available (kept 14 days).'));img.remove();});
+    });
+  }
+  /* "Sent → here 4 s · waited 0 s · ran 17 s · total 21 s", from whichever of the four the run has */
+  function timing(r){
+    var parts=[['Sent → here',r.forwardSecs],['waited',r.queueSecs],['ran',r.secs],['total',r.totalSecs]]
+      .filter(function(p){return typeof p[1]==='number'&&isFinite(p[1]);})
+      .map(function(p){return p[0]+' '+Math.round(p[1])+' s';});
+    return parts.length?parts.join(' · '):'';
+  }
+  function link(href,text){var a=el('a',null,text);a.href=href;return a;}
+  function clientBlock(c){
+    var box=el('section','client'); box.setAttribute('aria-label','Client');
+    box.appendChild(el('h4',null,'Client'));
+    var f=el('dl','facts');
+    function row(label,val,cls){
+      if(val==null||val==='') return;
+      f.appendChild(el('dt',null,label));
+      var dd=el('dd',cls||null); if(typeof val==='string') dd.textContent=val; else dd.appendChild(val); f.appendChild(dd);
+    }
+    var phoneDigits=c.phone?String(c.phone).replace(/[^\d+]/g,''):'';
+    var received=c.receivedOn&&!isNaN(Date.parse(c.receivedOn))&&/\d{4}-\d{2}-\d{2}T/.test(c.receivedOn)?ny(c.receivedOn):c.receivedOn;
+    row('Name',c.name);
+    row('Phone',c.phone?(phoneDigits?link('tel:'+phoneDigits,String(c.phone)):String(c.phone)):null);
+    row('Email',c.email?link('mailto:'+String(c.email).trim(),String(c.email)):null);
+    row('Role',c.role); row('Status',c.status); row('Price range',c.priceRange);
+    row('Searches in',Array.isArray(c.neighborhoods)&&c.neighborhoods.length?c.neighborhoods.join(', '):null);
+    row('Inquiries',c.inquiryCount!=null?String(c.inquiryCount):null);
+    row('Property',c.address); row('Tour request',c.tourRequest); row('Message',c.message,'msg'); row('Received',received);
+    if(!f.childNodes.length) f.appendChild(el('dd','muted','Nothing read for this lead.'));
+    box.appendChild(f);
+    var src=c.source==='card'?'Read from the lead card only (the panel didn’t open).':c.source==='panel+card'?'Read from the lead panel and card.':'';
+    if(src||c.note) box.appendChild(el('p','small muted',[src,c.note].filter(Boolean).join(' ')));
+    var raw=c.raw||{};
+    if(raw.panel||raw.card){
+      var det=el('details'); det.appendChild(el('summary',null,'What it read'));
+      if(raw.panel){det.appendChild(el('div','small muted','Panel'));det.appendChild(el('pre',null,String(raw.panel)));}
+      if(raw.card){det.appendChild(el('div','small muted','Card'));det.appendChild(el('pre',null,String(raw.card)));}
+      box.appendChild(det);
+    }
+    return box;
+  }
+  // The listing as the service filled it for FileMaker, and where each place name came from.
+  var HOOD_FROM={'streeteasy':'StreetEasy’s email (“You’ve done deals in …”)','streeteasy-address':'the client’s address in StreetEasy’s email','postal-name':'the zip’s postal name (Queens)','nyc-geosearch':'NYC GeoSearch (its names can differ from StreetEasy’s)'};
+  var BORO_FROM={"zip in the client's message":'the zip in the client’s message','only match':'the only address match','hint':'the zip, listing link or neighborhood','streeteasy neighborhood':'StreetEasy’s neighborhood (the address is in two boroughs)',"client's address":'the client’s address','listing link':'the listing link'};
+  function propertyBlock(l){
+    var box=el('section','client'); box.setAttribute('aria-label','Property');
+    box.appendChild(el('h4',null,'Property'));
+    var f=el('dl','facts');
+    function row(label,val){ if(val==null||val==='') return; f.appendChild(el('dt',null,label)); var dd=el('dd'); if(typeof val==='string') dd.textContent=val; else dd.appendChild(val); f.appendChild(dd); }
+    row('Address',l.address);
+    row('Type',l.propertyType);
+    row('Price',l.price!=null?'$'+Number(l.price).toLocaleString('en-US')+(l.isRental?' / month':''):null);
+    row('Bedrooms',l.bedrooms===0?'Studio':l.bedrooms!=null?String(l.bedrooms):null);
+    row('Bathrooms',l.bathrooms!=null?String(l.bathrooms):null);
+    row('Size',l.sqft?Number(l.sqft).toLocaleString('en-US')+' ft²':null);
+    row('Neighborhood',l.neighborhood?l.neighborhood+(HOOD_FROM[l.neighborhoodFrom]?' · from '+HOOD_FROM[l.neighborhoodFrom]:''):'— (not known for sure)');
+    row('City',l.city||'— (not known for sure)');
+    row('Borough',l.borough?l.borough+(BORO_FROM[l.boroughFrom]?' · from '+BORO_FROM[l.boroughFrom]:''):null);
+    row('Zip',l.zip||'—');
+    row('Postal city',l.postalCity&&l.postalCity!==l.city?l.postalCity:null);
+    if(l.url){var a=link(l.url,'Open on StreetEasy');a.target='_blank';a.rel='noopener';row('Listing',a);}
+    row('Listed by',l.listedBy);
+    box.appendChild(f);
+    box.appendChild(el('p','small muted','This is what FileMaker gets as AI_Address … AI_Zip. Empty means the service couldn’t be sure, so it didn’t guess.'));
+    return box;
+  }
+  function loadShot(name){
+    if(shotUrls[name]) return Promise.resolve(shotUrls[name]);
+    return api('?capture='+encodeURIComponent(name)).then(function(r){
+      if(!r.ok) throw new Error('gone');
+      return r.blob();
+    }).then(function(b){return (shotUrls[name]=URL.createObjectURL(b));});
+  }
+  [].forEach.call(document.querySelectorAll('.chip'),function(c){
+    c.addEventListener('click',function(){
+      state.filter=c.getAttribute('data-f');
+      [].forEach.call(document.querySelectorAll('.chip'),function(x){x.setAttribute('aria-pressed',String(x===c));});
+      renderRuns();
+    });
+  });
+  $('agentFilter').addEventListener('change',function(e){state.agent=e.target.value;renderRuns();});
+
+  /* ---------- agents ---------- */
+  function renderAgents(){
+    var box=$('agents'); box.innerHTML='';
+    var bad=(state.status&&state.status.agentsWithBadPassword)||[];
+    if(!state.agents.length){box.appendChild(el('p','muted','No agents yet.'));return;}
+    state.agents.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).forEach(function(a){
+      var c=el('div','agent'), name=el('b',null,a.name||a.email);
+      if(a.hasOwnPassword) name.appendChild(el('span','tag own','Own password'));
+      if(a.passwordRejected||bad.indexOf(a.email)!==-1) name.appendChild(el('span','tag rej','Password rejected'));
+      c.appendChild(name);
+      c.appendChild(el('div','mono',a.email));
+      c.appendChild(el('div','small muted',a.autoAdded?('Added automatically '+ny(a.autoAdded)):a.addedByHand?('Added by hand '+ny(a.addedByHand)):'On the starting list'));
+      var acts=el('div','acts');
+      var setBtn=el('button',null,a.hasOwnPassword?'Change password':'Set own password'); setBtn.type='button';
+      acts.appendChild(setBtn);
+      if(a.hasOwnPassword){
+        var clr=el('button',null,'Use shared password'); clr.type='button';
+        clr.addEventListener('click',function(){savePassword(a.email,null,clr);});
+        acts.appendChild(clr);
+      }
+      c.appendChild(acts);
+      setBtn.addEventListener('click',function(){
+        if(c.querySelector('form')) return;
+        var f=el('form'), inp=el('input'), save=el('button','primary','Save'), cancel=el('button',null,'Cancel');
+        inp.type='password'; inp.autocomplete='new-password'; inp.placeholder='Their StreetEasy password'; inp.required=true; inp.maxLength=200;
+        inp.setAttribute('aria-label','StreetEasy password for '+(a.name||a.email));
+        save.type='submit'; cancel.type='button';
+        f.appendChild(inp); f.appendChild(save); f.appendChild(cancel);
+        cancel.addEventListener('click',function(){f.remove();});
+        f.addEventListener('submit',function(e){e.preventDefault(); if(inp.value) savePassword(a.email,inp.value,save);});
+        c.appendChild(f); inp.focus();
+      });
+      box.appendChild(c);
+    });
+  }
+  $('addAgentBtn').addEventListener('click',function(){$('addAgentForm').hidden=false;$('addAgentBtn').hidden=true;$('newEmail').focus();});
+  function closeAdd(){var f=$('addAgentForm');f.reset();f.hidden=true;$('addAgentBtn').hidden=false;}
+  $('addCancel').addEventListener('click',closeAdd);
+  $('addAgentForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var btn=$('addSave'); btn.disabled=true;
+    var body={addAgent:{email:$('newEmail').value.trim(),name:$('newName').value.trim(),password:$('newPw').value||null}};
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t add the agent.');return b;});})
+      .then(function(b){closeAdd();showNotice('');return load().then(function(){
+        if(!b.added) showNotice((b.name||b.email)+' was already on the list. Updated.');
+      });})
+      .catch(function(err){showNotice(err.message);})
+      .then(function(){btn.disabled=false;});
+  });
+  function savePassword(email,password,btn){
+    btn.disabled=true;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agentPassword:{email:email,password:password}})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the password.');return b;});})
+      .then(function(){showNotice('');return load();})
+      .catch(function(e){showNotice(e.message);btn.disabled=false;});
+  }
+
+  /* ---------- a run linked from an alert email: #run-<id> ---------- */
+  var wantRun=null;
+  function readHash(){var m=/^#run-([a-f0-9]+)$/i.exec(location.hash||'');wantRun=m?m[1]:null;}
+  function focusLinkedRun(){
+    if(!wantRun||!state.runs.length) return;
+    var r=state.runs.filter(function(x){return x.id===wantRun;})[0];
+    if(!r){showNotice('That run isn’t in the log shown here. It may be older than the last 300 leads.');wantRun=null;return;}
+    wantRun=null;
+    state.filter='all'; state.agent=''; $('agentFilter').value='';
+    [].forEach.call(document.querySelectorAll('.chip'),function(x){x.setAttribute('aria-pressed',String(x.getAttribute('data-f')==='all'));});
+    state.selected=r; renderRuns(); renderDetail();
+    var row=document.querySelector('.row[data-run="'+r.id+'"]');
+    if(row){row.classList.add('flash');row.scrollIntoView({block:'center',behavior:'smooth'});row.focus({preventScroll:true});}
+  }
+  window.addEventListener('hashchange',function(){readHash();focusLinkedRun();});
+  readHash();
+
+  /* ---------- alert emails ---------- */
+  var GROUPS=[
+    {key:'failures',title:'Needs a person',desc:'“ACTION NEEDED” emails: a lead someone has to answer before its deadline.'},
+    {key:'successes',title:'Accepted',desc:'A lead the service answered on its own, or found already answered.'},
+    {key:'notices',title:'Notices',desc:'A new agent was added, or an agent’s password was rejected.'}
+  ];
+  function renderRecipients(){
+    var box=$('recipients'); box.innerHTML='';
+    var rec=(state.status&&state.status.recipients)||null;
+    if(!rec){box.appendChild(el('p','muted','Shown once the service answers.'));return;}
+    GROUPS.forEach(function(g){
+      var list=rec[g.key]||[], card=el('div','card rgroup');
+      card.appendChild(el('h3',null,g.title)); card.appendChild(el('p','desc',g.desc));
+      var chips=el('div','rchips');
+      list.forEach(function(addr){
+        var c=el('span','rchip'), t=el('span',null,addr), x=el('button',null,'×'); x.type='button';
+        x.setAttribute('aria-label','Remove '+addr+' from '+g.title);
+        x.addEventListener('click',function(){saveRecipients(g.key,list.filter(function(e){return e!==addr;}),x);});
+        c.appendChild(t); c.appendChild(x); chips.appendChild(c);
+      });
+      card.appendChild(chips);
+      if(!list.length) card.appendChild(el('p','rwarn','Nobody gets these right now.'));
+      var f=el('form','radd'), inp=el('input'), add=el('button',null,'Add'); add.type='submit';
+      inp.type='email'; inp.placeholder='name@casa-blanca.com'; inp.required=true; inp.autocomplete='off';
+      inp.setAttribute('aria-label','Add an address to '+g.title);
+      f.appendChild(inp); f.appendChild(add);
+      f.addEventListener('submit',function(e){e.preventDefault();var v=inp.value.trim().toLowerCase();if(!v)return;
+        if(list.indexOf(v)!==-1){inp.value='';return;} saveRecipients(g.key,list.concat([v]),add);});
+      card.appendChild(f);
+      box.appendChild(card);
+    });
+  }
+  function saveRecipients(key,list,btn){
+    btn.disabled=true;
+    var body={recipients:{}}; body.recipients[key]=list;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the recipients.');return b;});})
+      .then(function(b){if(state.status&&b.recipients)state.status.recipients=b.recipients;showNotice('');renderRecipients();})
+      .catch(function(e){showNotice(e.message);btn.disabled=false;});
+  }
+
+  /* ---------- filemaker ---------- */
+  var fmBusy=false;
+  function renderFileMaker(){
+    var box=$('fileMaker');
+    if(!fmBusy&&box.contains(document.activeElement)&&document.activeElement.tagName==='INPUT') return;   // don't wipe an address being typed
+    box.innerHTML='';
+    var fm=state.status&&state.status.fileMaker;
+    if(!fm){box.appendChild(el('p','muted',state.status?'This version of the service doesn’t have the FileMaker settings yet.':'Shown once the service answers.'));box.lastChild.style.margin='0';return;}
+    var guest=isGuest();
+    if('pushReady' in fm){
+      // The push: each lead becomes a record in FileMaker (InCasaLeads › Emails), through its Data API.
+      var ph=el('div','mhead'), pt=el('h3',null,'Add each lead to FileMaker');
+      pt.appendChild(el('span','role',fm.pushReady?'Each lead becomes a record in '+fm.pushTarget+', with the AI_ fields filled.'
+        :fm.pushHost?'Server: '+fm.pushHost+'. Still needs the Claude account’s password: FM_PASSWORD in Railway.'
+        :'Needs FileMaker’s address and the Claude account’s password: FM_HOST and FM_PASSWORD in Railway.'));
+      ph.appendChild(pt);
+      var psw=el('button','switch'); psw.type='button'; psw.setAttribute('role','switch'); psw.setAttribute('aria-checked',String(!!fm.pushOn));
+      psw.setAttribute('aria-label','Add each lead to FileMaker: '+(fm.pushOn?'on':'off'));
+      psw.appendChild(el('span','track')); psw.appendChild(el('span',null,fm.pushOn?'On':'Off'));
+      psw.disabled=guest||fmBusy||(!fm.pushReady&&!fm.pushOn);
+      if(guest) psw.title='A preview guest can look but not switch.'; else if(!fm.pushReady) psw.title='Set FM_HOST and FM_PASSWORD in Railway first.';
+      psw.addEventListener('click',function(){saveFileMaker({pushOn:!fm.pushOn});});
+      ph.appendChild(psw); box.appendChild(ph);
+      if(fm.pushHost&&!guest){
+        // Can the service reach the server at all? Needs only the address.
+        var cb=el('button',null,'Check the connection'); cb.type='button'; cb.style.alignSelf='flex-start';
+        cb.addEventListener('click',function(){
+          cb.disabled=true; cb.textContent='Checking…';
+          api('?view=filemaker-check').then(function(r){return r.json();})
+            .then(function(b){showNotice(b.ok?'Reached FileMaker at '+fm.pushHost+' ('+b.server+').'+(b.passwordSet?'':' Next: FM_PASSWORD in Railway.'):(b.error||'Couldn’t reach FileMaker.'));})
+            .catch(function(){showNotice('Couldn’t run the check.');})
+            .then(function(){cb.disabled=false;cb.textContent='Check the connection';});
+        });
+        box.appendChild(cb);
+      }
+      if(fm.pushReady){
+        var pf=el('dl','facts');
+        pf.appendChild(el('dt',null,'Last added')); pf.appendChild(el('dd',null,fm.lastPushAt?(ny(fm.lastPushAt)+' · '+fm.pushes24h+' in the last 24 hours'):'None yet'));
+        if(fm.pushErrors24h){pf.appendChild(el('dt',null,'Not added')); pf.appendChild(el('dd','bad',fm.pushErrors24h+' in the last 24 hours. Last reason: '+(fm.lastPushError||'unknown')));}
+        box.appendChild(pf);
+        if(!guest){
+          var tb=el('button',null,'Send a test record'); tb.type='button'; tb.disabled=fmBusy; tb.style.alignSelf='flex-start';
+          tb.addEventListener('click',function(){
+            tb.disabled=true; tb.textContent='Sending…';
+            api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileMakerTestPush:true})})
+              .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t send the test record.');return b;});})
+              .then(function(b){showNotice(b.ok?'Test record added to FileMaker (record '+b.recordId+'). It says “TEST record … Safe to delete.”':'FileMaker didn’t take the test record: '+b.error);})
+              .catch(function(e){showNotice(e.message);})
+              .then(function(){tb.disabled=false;tb.textContent='Send a test record';});
+          });
+          box.appendChild(tb);
+        }
+      }
+      box.appendChild(el('hr','fmrule'));
+    }
+    var head=el('div','mhead'), h=el('h3',null,'Email each lead to FileMaker');
+    h.appendChild(el('span','role','One email per lead to the address below, with the client’s details as “Field: value” lines and as JSON.'));
+    head.appendChild(h);
+    var sw=el('button','switch'); sw.type='button'; sw.setAttribute('role','switch'); sw.setAttribute('aria-checked',String(!!fm.emailOn));
+    sw.setAttribute('aria-label','Email each lead to FileMaker: '+(fm.emailOn?'on':'off'));
+    sw.appendChild(el('span','track')); sw.appendChild(el('span',null,fm.emailOn?'On':'Off'));
+    sw.disabled=guest||fmBusy; if(guest) sw.title='A preview guest can look but not switch.';
+    sw.addEventListener('click',function(){
+      if(!fm.emailOn&&!fm.emailTo){showNotice('Set FileMaker’s address first.');return;}
+      saveFileMaker({emailOn:!fm.emailOn});
+    });
+    head.appendChild(sw); box.appendChild(head);
+    var f=el('dl','facts');
+    f.appendChild(el('dt',null,'Sends to')); f.appendChild(el('dd','mono',fm.emailTo||'no address set'));
+    f.appendChild(el('dt',null,'Pull access'));
+    var pa=el('dd'); pa.appendChild(el('span','pill '+(fm.pullKeySet?'ok':''),fm.pullKeySet?'Key set':'Not set'));
+    if(!fm.pullKeySet) pa.appendChild(el('span','small muted',' FILEMAKER_KEY in Railway'));
+    f.appendChild(pa);
+    if(fm.pullKeySet&&'requests24h' in fm){
+      f.appendChild(el('dt',null,'FileMaker’s requests'));
+      f.appendChild(el('dd',null,fm.lastRequestAt
+        ?('Last '+ny(fm.lastRequestAt)+' · '+fm.requests24h+' in the last 24 hours'+(fm.refused24h?' · '+fm.refused24h+' refused (wrong key)':''))
+        :'None yet'));
+    }
+    box.appendChild(f);
+    if(fm.pullKeySet&&fm.lastRequestAt){
+      var det=el('details','fmlog'); det.appendChild(el('summary',null,'Show FileMaker’s recent requests'));
+      var ul=el('ul','fmreqs'); ul.appendChild(el('li','muted','Loading…')); det.appendChild(ul);
+      det.addEventListener('toggle',function(){
+        if(!det.open) return;
+        api('?view=filemaker-log&limit=50').then(function(r){return r.json();}).then(function(rows){
+          ul.innerHTML='';
+          if(!Array.isArray(rows)||!rows.length){ul.appendChild(el('li','muted','No requests yet.'));return;}
+          rows.forEach(function(x){
+            var q=Object.keys(x.query||{}).map(function(k){return k+'='+x.query[k];}).join(' · ');
+            ul.appendChild(el('li',x.status>=400?'bad':null,ny(x.at)+' · '+x.endpoint+(q?' · '+q:'')+' · '+(x.status===200?(x.count!=null?x.count+' item'+(x.count===1?'':'s'):'OK'):x.status===401?'refused (wrong key)':x.status===404?'nothing matched':'error '+x.status)));
+          });
+        }).catch(function(){ul.innerHTML='';ul.appendChild(el('li','bad','Couldn’t load the requests.'));});
+      });
+      box.appendChild(det);
+    }
+    if(!guest){
+      var form=el('form','radd'), inp=el('input'), save=el('button',null,fm.emailTo?'Change':'Set'); save.type='submit';
+      inp.type='email'; inp.required=true; inp.autocomplete='off'; inp.placeholder='filemaker@casa-blanca.com'; inp.value=fm.emailTo||'';
+      inp.setAttribute('aria-label','FileMaker’s email address'); save.disabled=fmBusy;
+      form.appendChild(inp); form.appendChild(save);
+      form.addEventListener('submit',function(e){e.preventDefault();var v=inp.value.trim().toLowerCase();if(!v||v===fm.emailTo)return;saveFileMaker({emailTo:v});});
+      box.appendChild(form);
+    }
+    if(fm.emailOn&&!fm.emailTo) box.appendChild(el('p','rwarn','On, but with no address: nothing is sent.'));
+  }
+  function saveFileMaker(change){
+    fmBusy=true; renderFileMaker();
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileMaker:change})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the FileMaker setting.');return b;});})
+      .then(function(b){if(state.status&&b.fileMaker)state.status.fileMaker=b.fileMaker;showNotice('');})
+      .catch(function(e){showNotice(e.message);})
+      .then(function(){fmBusy=false;renderFileMaker();});
+  }
+
+  /* ---------- client messages (the inbox, kind=other) ---------- */
+  var inbox=null, inboxErr='';
+  var MSGTYPE={'client-message':{label:'Client wrote',cls:''},'our-reply':{label:'Our reply',cls:'ok'}};
+  function agentLabel(a){
+    if(!a) return '';
+    var m=state.agents.filter(function(x){return x.email===a;})[0];
+    return m&&m.name?m.name:a;
+  }
+  function renderInbox(){
+    var ul=$('msgs'); ul.innerHTML='';
+    if(!inbox){ul.appendChild(el('li','empty',inboxErr||'Loading…'));return;}
+    var rows=inbox.filter(function(x){return x&&x.message;});
+    if(!rows.length){ul.appendChild(el('li','empty','No client messages yet.'));return;}
+    rows.forEach(function(x){
+      var m=x.message, t=MSGTYPE[m.type]||{label:m.type||'Message',cls:''};
+      var li=el('li',m.needsResponse?'need':null), top=el('div','mtop');
+      top.appendChild(el('span','pill '+t.cls,t.label));
+      if(m.needsResponse) top.appendChild(el('span','pill bad','Needs a response'));
+      top.appendChild(el('b',null,m.clientName||'Client'));
+      li.appendChild(top);
+      li.appendChild(el('div','mmeta',[ny(x.sentAt||x.at),agentLabel(x.agent),m.address,m.tourRequest?'Tour: '+m.tourRequest:'',m.price||''].filter(Boolean).join(' · ')));
+      if(m.message) li.appendChild(el('div','mtext',m.message));
+      if(x.leadId){
+        var a=el('a','ref','See the lead’s run'); a.href='#run-'+x.leadId;
+        a.addEventListener('click',function(e){e.preventDefault();history.replaceState(null,'','#run-'+x.leadId);wantRun=x.leadId;focusLinkedRun();});
+        li.appendChild(a);
+      }
+      ul.appendChild(li);
+    });
+  }
+  function loadInbox(){
+    return getJson('?view=inbox&limit=40&kind=other').then(function(b){inbox=Array.isArray(b)?b:(b&&Array.isArray(b.emails)?b.emails:[]);inboxErr='';},function(e){
+      inbox=null; inboxErr=/doesn’t have/.test(e.message)?'This version of the service doesn’t log client messages yet.':e.message;
+    }).then(renderInbox);
+  }
+
+  /* ---------- how it works (the editable guide) ---------- */
+  var guide=null;
+  function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function reEsc(t){return t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+  function safeUrl(u){return /^(https?:\/\/|mailto:)/i.test(u)?u:null;}
+  /* Plain text in, formatted HTML out: emails highlighted, link names linked, **bold**. Escaped first. */
+  function fmt(text){
+    var links=((guide&&guide.links)||[]).filter(function(l){return l.name&&safeUrl(l.url);})
+      .sort(function(a,b){return b.name.length-a.name.length;});
+    var byName={}; links.forEach(function(l){byName[l.name]=l.url;});
+    var names=links.map(function(l){return reEsc(esc(l.name));}).join('|');
+    var re=new RegExp('([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})|\\*\\*(.+?)\\*\\*'+(names?'|(?<![\\w@.])('+names+')(?![\\w])':''),'g');
+    function run(src,inBold){
+      return src.replace(re,function(m,email,bold,name){
+        if(email) return '<a class="ref email" href="mailto:'+email+'">'+email+'</a>';
+        if(bold!=null) return inBold?bold:'<b>'+run(bold,true)+'</b>';
+        var raw=name.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        var u=byName[raw]; return u?'<a class="ref" href="'+esc(u)+'" target="_blank" rel="noopener">'+name+'</a>':name;
+      });
+    }
+    return run(esc(text),false);
+  }
+  function blockHtml(body){
+    var out='', list=null;
+    String(body||'').split('\n').forEach(function(line){
+      var l=line.trim();
+      if(/^-\s+/.test(l)){ if(!list){list=[];} list.push('<li>'+fmt(l.replace(/^-\s+/,''))+'</li>'); return; }
+      if(list){out+='<ul>'+list.join('')+'</ul>';list=null;}
+      if(l) out+='<p>'+fmt(l)+'</p>';
+    });
+    if(list) out+='<ul>'+list.join('')+'</ul>';
+    return out;
+  }
+  function renderGuide(){
+    var box=$('guide');
+    if(!guide){box.innerHTML='<p class="muted">The guide couldn’t be loaded.</p>';return;}
+    var h='';
+    if(guide.intro) h+='<p class="gintro">'+fmt(guide.intro)+'</p>';
+    h+='<ol class="gsteps">'+guide.steps.map(function(st){
+      var d=(st.details||[]).filter(Boolean);
+      return '<li><div><div class="gt">'+fmt(st.title)+'</div>'+(st.summary?'<p>'+fmt(st.summary)+'</p>':'')+
+        (d.length?'<details><summary>Step by step ('+d.length+')</summary><ul>'+d.map(function(x){return '<li>'+fmt(x)+'</li>';}).join('')+'</ul></details>':'')+
+        '</div></li>';
+    }).join('')+'</ol>';
+    (guide.sections||[]).forEach(function(sec){h+='<section class="gsec"><h3>'+fmt(sec.title)+'</h3>'+blockHtml(sec.body)+'</section>';});
+    box.innerHTML=h;
+    renderSessions();
+    $('guideMeta').textContent=guide.isDefault?'The starting version. Edit it to make it yours.':('Last edited '+ny(guide.updatedAt)+(guide.updatedBy?' by '+guide.updatedBy:''));
+    $('guideEditBtn').hidden=!!(window.CBStudio.user&&window.CBStudio.user.guest);
+  }
+  /* The Claude sessions that work on this tool: the first is the current one. Edited with the guide. */
+  function renderSessions(){
+    var p=$('sessions'), list=((guide&&guide.sessions)||[]).filter(function(x){return /^https:\/\/claude\.ai\//.test(x.url);});
+    p.innerHTML=''; p.hidden=!list.length; if(!list.length) return;
+    p.appendChild(document.createTextNode('For changes to the service, use the current Claude session: '));
+    function a(x){var l=el('a',null,x.label);l.href=x.url;l.target='_blank';l.rel='noopener';return l;}
+    p.appendChild(a(list[0])); p.appendChild(document.createTextNode('.'));
+    if(list.length>1){
+      p.appendChild(document.createTextNode(' Earlier: '));
+      list.slice(1).forEach(function(x,i){if(i)p.appendChild(document.createTextNode(', '));p.appendChild(a(x));});
+      p.appendChild(document.createTextNode('.'));
+    }
+  }
+  function loadGuide(){
+    return getJson('?view=guide').then(function(g){guide=g;renderGuide();},function(e){guide=null;renderGuide();showNotice(e.message);});
+  }
+
+  function gField(label,value,multi,hint){
+    var l=el('label'); l.appendChild(document.createTextNode(label));
+    if(hint) l.appendChild(el('span','hint',hint));
+    var i=el(multi?'textarea':'input'); i.value=value||''; if(!multi) i.type='text';
+    if(multi) i.rows=Math.min(10,Math.max(2,String(value||'').split('\n').length+1));
+    l.appendChild(i); return {label:l,input:i};
+  }
+  function openEditor(){
+    var f=$('guideForm'); f.innerHTML='';
+    var draft=JSON.parse(JSON.stringify(guide||{intro:'',steps:[],sections:[],links:[]}));
+    f.appendChild(el('p','small muted','Plain text. Email addresses are highlighted, any name listed under Links becomes a link wherever it appears, and **double asterisks** make bold. In a section, a line starting “- ” is a bullet.'));
+    var intro=gField('Introduction',draft.intro,true); f.appendChild(intro.label);
+
+    var stepsBox=el('div'); stepsBox.style.cssText='display:flex;flex-direction:column;gap:10px';
+    f.appendChild(el('h3',null,'Steps')); f.appendChild(stepsBox);
+    var stepRows=[];
+    function addStep(st){
+      var fs=el('fieldset'), lg=el('legend',null,'Step'); fs.appendChild(lg);
+      var t=gField('Title',st.title), su=gField('Summary',st.summary,true), de=gField('Step-by-step details',(st.details||[]).join('\n'),true,'One beat per line. Shown collapsed under the step.');
+      var rm=el('button','rm','Remove step'); rm.type='button';
+      fs.appendChild(t.label); fs.appendChild(su.label); fs.appendChild(de.label); fs.appendChild(rm);
+      var row={fs:fs,t:t.input,su:su.input,de:de.input}; stepRows.push(row);
+      rm.addEventListener('click',function(){stepRows.splice(stepRows.indexOf(row),1);fs.remove();});
+      stepsBox.appendChild(fs);
+    }
+    draft.steps.forEach(addStep);
+    var addS=el('button',null,'Add a step'); addS.type='button'; addS.addEventListener('click',function(){addStep({title:'',summary:'',details:[]});}); f.appendChild(addS);
+
+    var secBox=el('div'); secBox.style.cssText='display:flex;flex-direction:column;gap:10px';
+    f.appendChild(el('h3',null,'Sections')); f.appendChild(secBox);
+    var secRows=[];
+    function addSec(sc){
+      var fs=el('fieldset'); fs.appendChild(el('legend',null,'Section'));
+      var t=gField('Title',sc.title), b=gField('Text',sc.body,true);
+      var rm=el('button','rm','Remove section'); rm.type='button';
+      fs.appendChild(t.label); fs.appendChild(b.label); fs.appendChild(rm);
+      var row={t:t.input,b:b.input}; secRows.push(row);
+      rm.addEventListener('click',function(){secRows.splice(secRows.indexOf(row),1);fs.remove();});
+      secBox.appendChild(fs);
+    }
+    (draft.sections||[]).forEach(addSec);
+    var addC=el('button',null,'Add a section'); addC.type='button'; addC.addEventListener('click',function(){addSec({title:'',body:''});}); f.appendChild(addC);
+
+    var sesFs=el('fieldset'); sesFs.appendChild(el('legend',null,'Claude sessions'));
+    sesFs.appendChild(el('p','hint','Shown at the top of the page. The first one is the current session; put a new one first. claude.ai links only.'));
+    var sesRows=[];
+    function addSes(x,first){
+      var r=el('div','lrow'), n=el('input'), u=el('input'), rm=el('button','rm','×'); rm.type='button';
+      n.value=x.label||''; n.placeholder='e.g. Claude Code session, from Nov 12'; n.setAttribute('aria-label','Session label');
+      u.value=x.url||''; u.placeholder='https://claude.ai/…'; u.setAttribute('aria-label','Session link');
+      rm.setAttribute('aria-label','Remove session');
+      r.appendChild(n); r.appendChild(u); r.appendChild(rm);
+      var row={n:n,u:u,r:r};
+      if(first){sesRows.unshift(row); sesFs.insertBefore(r,sesFs.querySelector('.lrow')||addSs);} else {sesRows.push(row); sesFs.insertBefore(r,addSs);}
+      rm.addEventListener('click',function(){sesRows.splice(sesRows.indexOf(row),1);r.remove();});
+      return row;
+    }
+    var addSs=el('button',null,'Add the current session'); addSs.type='button';
+    addSs.addEventListener('click',function(){addSes({},true).n.focus();});
+    sesFs.appendChild(addSs);
+    (draft.sessions||[]).forEach(function(x){addSes(x,false);});
+    f.appendChild(sesFs);
+
+    var linkFs=el('fieldset'); linkFs.appendChild(el('legend',null,'Links'));
+    linkFs.appendChild(el('p','hint','A name here becomes a link everywhere it appears in the guide. Longer names win, so “StreetEasy Lead Alerts → Email” links to the scenario, not to Make.'));
+    var linkRows=[];
+    function addLink(lk){
+      var r=el('div','lrow'), n=el('input'), u=el('input'), rm=el('button','rm','×'); rm.type='button';
+      n.value=lk.name||''; n.placeholder='Name as written'; n.setAttribute('aria-label','Link name');
+      u.value=lk.url||''; u.placeholder='https://…'; u.setAttribute('aria-label','Link address');
+      rm.setAttribute('aria-label','Remove link');
+      r.appendChild(n); r.appendChild(u); r.appendChild(rm);
+      var row={n:n,u:u}; linkRows.push(row);
+      rm.addEventListener('click',function(){linkRows.splice(linkRows.indexOf(row),1);r.remove();});
+      linkFs.insertBefore(r,addL);
+    }
+    var addL=el('button',null,'Add a link'); addL.type='button'; addL.addEventListener('click',function(){addLink({});});
+    linkFs.appendChild(addL);
+    (draft.links||[]).forEach(addLink);
+    f.appendChild(linkFs);
+
+    var acts=el('div','gactions'), save=el('button','primary','Save guide'), cancel=el('button',null,'Cancel');
+    save.type='submit'; cancel.type='button'; acts.appendChild(save); acts.appendChild(cancel); f.appendChild(acts);
+    cancel.addEventListener('click',closeEditor);
+    f.onsubmit=function(e){
+      e.preventDefault(); save.disabled=true;
+      var g={intro:intro.input.value,
+        steps:stepRows.map(function(r){return {title:r.t.value,summary:r.su.value,details:r.de.value.split('\n').map(function(x){return x.trim();}).filter(Boolean)};}),
+        sections:secRows.map(function(r){return {title:r.t.value,body:r.b.value};}),
+        links:linkRows.map(function(r){return {name:r.n.value.trim(),url:r.u.value.trim()};}).filter(function(l){return l.name||l.url;}),
+        sessions:sesRows.map(function(r){return {label:r.n.value.trim(),url:r.u.value.trim()};}).filter(function(x){return x.label||x.url;})};
+      api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guide:g})})
+        .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t save the guide.');return b;});})
+        .then(function(b){guide=b;closeEditor();showNotice('');renderGuide();})
+        .catch(function(err){showNotice(err.message);save.disabled=false;});
+    };
+    f.hidden=false; $('guide').hidden=true; $('guideEditBtn').hidden=true; intro.input.focus();
+  }
+  function closeEditor(){$('guideForm').hidden=true;$('guideForm').innerHTML='';$('guide').hidden=false;renderGuide();}
+  $('guideEditBtn').addEventListener('click',openEditor);
+
+  /* ---------- make ---------- */
+  var make=null, makeAsk=null;
+  var MROLE={intake:{title:'Lead intake',desc:'Inbox → the service. Off means no lead gets answered, automatically or by alert.'},
+    alerts:{title:'Lead alerts',desc:'The service → email from creative@. Off means alerts wait in Make.'}};
+  var MRUN={success:{label:'OK',cls:'ok'},warning:{label:'Warning',cls:'warn'},error:{label:'Error',cls:'bad'},running:{label:'Running',cls:''},paused:{label:'Paused',cls:''},unknown:{label:'—',cls:''}};
+  function until(iso){var h=Math.round((Date.parse(iso)-Date.now())/3600000);return h<1?'within the hour':h<36?'in '+h+' hr':'in '+Math.round(h/24)+' days';}
+  function isGuest(){return !!(window.CBStudio.user&&window.CBStudio.user.guest);}
+  function renderMake(){
+    var box=$('make'); box.innerHTML='';
+    if(!make){box.appendChild(el('p','muted','Shown once Make answers.'));return;}
+    make.scenarios.forEach(function(sc){
+      var r=MROLE[sc.role]||{title:'Scenario',desc:''};
+      var card=el('div','card mcard'+(sc.isActive===false||sc.isinvalid?' bad':''));
+      var head=el('div','mhead'), h=el('h3',null,sc.name||('Scenario '+sc.id));
+      h.appendChild(el('span','role',r.title+' · '+r.desc)); head.appendChild(h);
+      if(sc.isActive!=null){
+        var sw=el('button','switch'); sw.type='button'; sw.setAttribute('role','switch'); sw.setAttribute('aria-checked',String(!!sc.isActive));
+        sw.setAttribute('aria-label',(sc.name||r.title)+': '+(sc.isActive?'on':'off'));
+        sw.appendChild(el('span','track')); sw.appendChild(el('span',null,sc.isActive?'On':'Off'));
+        sw.disabled=isGuest()||makeAsk!==null;
+        if(isGuest()) sw.title='A preview guest can look but not switch.';
+        sw.addEventListener('click',function(){
+          var want=!sc.isActive;
+          if(!want&&sc.role==='intake'){makeAsk=sc.id;renderMake();return;}
+          switchScenario(sc,want,sw);
+        });
+        head.appendChild(sw);
+      }
+      card.appendChild(head);
+      if(makeAsk===sc.id){
+        var c=el('div','confirm'), yes=el('button','primary','Yes, turn it off'), no=el('button',null,'Cancel');
+        yes.type='button'; no.type='button';
+        c.appendChild(el('span',null,'Turn off lead intake? Lead emails stop reaching the service: nothing gets accepted and nobody is alerted until it’s back on.'));
+        c.appendChild(yes); c.appendChild(no); card.appendChild(c);
+        no.addEventListener('click',function(){makeAsk=null;renderMake();});
+        yes.addEventListener('click',function(){yes.disabled=true;switchScenario(sc,false,yes);});
+        setTimeout(function(){no.focus();},0);
+      }
+      if(sc.problem){card.appendChild(el('p','mwarn',sc.problem));box.appendChild(card);return;}
+      if(sc.isActive===false) card.appendChild(el('p','mwarn',sc.role==='alerts'?'Off. If the Gmail connection lapsed, reconnect it first, then switch this back on.':'Off. Leads aren’t reaching the service.'));
+      if(sc.isinvalid) card.appendChild(el('p','mwarn','Make marks this scenario invalid. Open it in Make to see why.'));
+      var last=sc.runs[0], f=el('dl','facts'); f.style.margin='0';
+      [['Last run',last&&last.at?(ny(last.at)+' · '+ago(last.at)):'none recently'],
+       ['Incomplete runs',sc.dlqCount==null?'—':String(sc.dlqCount)],
+       ['Last edited',sc.lastEdit?ny(sc.lastEdit):'—']].concat(sc.isPaused?[['Paused','yes']]:[])
+       .forEach(function(p){f.appendChild(el('dt',null,p[0]));f.appendChild(el('dd',null,p[1]));});
+      card.appendChild(f);
+      if(sc.runs.length){
+        var ul=el('ul','mruns');
+        sc.runs.forEach(function(run){
+          var m=MRUN[run.status]||MRUN.unknown, li=el('li');
+          li.appendChild(el('span',null,ny(run.at)+(run.duration!=null?' · '+(run.duration/1000).toFixed(1)+'s':'')));
+          li.appendChild(el('span','pill '+m.cls,m.label));
+          if(run.error) li.appendChild(el('span','err',run.error));
+          ul.appendChild(li);
+        });
+        card.appendChild(ul);
+      }
+      var open=el('a','ref small','Open in Make'); open.href=sc.url; open.target='_blank'; open.rel='noopener'; open.style.alignSelf='flex-start';
+      card.appendChild(open);
+      box.appendChild(card);
+    });
+    var cn=make.connection, alertsOff=make.scenarios.some(function(s){return s.role==='alerts'&&s.isActive===false;});
+    var cc=el('div','card mcard'+(cn.expired?' bad':'')), ch=el('div','mhead'), ct=el('h3',null,cn.name||('Connection '+cn.id));
+    ct.appendChild(el('span','role','Gmail connection · the alerts send through it'+(cn.account?' ('+cn.account+')':'')));
+    ch.appendChild(ct);
+    ch.appendChild(el('span','pill '+(cn.expired?'bad':cn.expired===false?'ok':''),cn.expired?'Needs reconnecting':cn.expired===false?'Working':'Unknown'));
+    cc.appendChild(ch);
+    if(cn.problem) cc.appendChild(el('p','mwarn',cn.problem));
+    else {
+      var cf=el('dl','facts'); cf.style.margin='0';
+      cf.appendChild(el('dt',null,'Last alert sent')); cf.appendChild(el('dd',null,cn.lastWorked?(ny(cn.lastWorked)+' · '+ago(cn.lastWorked)):'None in the recent runs'));
+      cc.appendChild(cf);
+      if(alertsOff) cc.appendChild(el('p','mwarn','Lead alerts is off, which usually means this connection lapsed (it does about weekly). Reconnect it in Make, then switch Lead alerts back on.'));
+      else if(cn.expired) cc.appendChild(el('p','mwarn','The last alert failed on this connection: alerts can’t be sent. Reconnect it in Make.'));
+      cc.appendChild(el('p','small muted','Read from the alerts scenario: Make’s own expiry date for this connection is months out and doesn’t show the weekly lapse.'));
+    }
+    var rc=el('a','btn'+(cn.expired||alertsOff?' primary':''),'Reconnect in Make'); rc.href=cn.reconnectUrl; rc.target='_blank'; rc.rel='noopener'; rc.style.alignSelf='flex-start';
+    cc.appendChild(rc);
+    box.appendChild(cc);
+  }
+  function switchScenario(sc,want,btn){
+    btn.disabled=true;
+    api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({makeScenario:{id:sc.id,active:want}})})
+      .then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.message||'Couldn’t switch the scenario.');return b;});})
+      .then(function(b){sc.isActive=b.isActive;makeAsk=null;$('makeNotice').hidden=true;renderMake();return loadMake();})
+      .catch(function(e){makeAsk=null;var n=$('makeNotice');n.textContent=e.message;n.hidden=false;renderMake();});
+  }
+  function loadMake(){
+    return getJson('?view=make').then(function(m){make=m;$('makeNotice').hidden=true;},function(e){
+      make=null; var n=$('makeNotice'); n.textContent=e.message; n.hidden=false;
+    }).then(renderMake);
+  }
+
+  /* ---------- load ---------- */
+  function load(){
+    $('refresh').disabled=true;
+    return Promise.all([getJson('?view=status'),getJson('?view=runs&limit=300'),getJson('?view=agents')])
+      .then(function(x){
+        state.status=x[0]; state.runs=Array.isArray(x[1])?x[1]:[]; state.agents=Array.isArray(x[2])?x[2]:[];
+        if(state.selected){state.selected=state.runs.filter(function(r){return r.at===state.selected.at&&r.subject===state.selected.subject;})[0]||null;}
+        showNotice('');
+      },function(e){state.status=null;showNotice(e.message);})
+      .then(function(){renderStatus();renderAgentFilter();renderRuns();renderDetail();renderAgents();renderRecipients();renderFileMaker();renderInbox();focusLinkedRun();$('refresh').disabled=false;});
+  }
+  $('refresh').addEventListener('click',function(){load();loadMake();loadInbox();});
+
+  window.CBStudio.ready.then(function(user){
+    if(!user) return;
+    load();
+    loadMake();
+    loadInbox();
+    loadGuide();
+    setInterval(function(){if(!document.hidden&&$('confirm').hidden){load();loadInbox();}if(!document.hidden&&makeAsk===null)loadMake();},60000);
+  });
+})();
+</script>
+<script src="../../assets/studio-header.js" defer></script>
+</body>
+</html>

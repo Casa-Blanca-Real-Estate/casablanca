@@ -26,8 +26,9 @@
 //         clientLine {text, by} or null (Dispatch 26): the comp's paragraph for
 //         the client, from Send's client step; `at` is stamped here
 //   POST  {reportId, manual, note?, tags?, features?}: a typed-in comp saves its note, tags and features with it
-//   PATCH {reportId, tagEdits: [{reportCompId, tags}]}: several comps' tags at once, for the tags the
-//         data settles (NB-9 C, Dispatch 20)
+//   PATCH {reportId, tagEdits: [{reportCompId, tags, from?}]}: several comps' tags at once, for the tags the
+//         data settles (NB-9 C, Dispatch 20). With `from`, the change from it to `tags` is applied to the
+//         comp's tags as stored now (rebaseTags), so an agent's pick saved meanwhile stays
 // Each returns the whole workspace. Only the report's owner can change it.
 import { compRecordFromManual, FACT_CHECKS, ParseError, PARSER_VERSION, type ManualCompFields } from '../../engine/index.ts';
 import { withActor, type Queryable } from '../db.ts';
@@ -38,6 +39,7 @@ import { appendReview } from '../reviews.ts';
 import { samplePhotos } from '../sample/photos.ts';
 import { mayUseSample, requireUser, type SessionUser } from '../session.ts';
 import { cleanFeatures, isTag } from '../../workspace/features.ts';
+import { rebaseTags } from '../../workspace/settle-tags.ts';
 import { freeTagHardTerm, isFreeTag, MAX_FREE_TAG, MAX_TAGS, normalizeFreeTag } from '../../workspace/free-tags.ts';
 import { MAX_CLIENT_LINE, type ClientLine } from '../../workspace/client-words.ts';
 import { NO_NOTE_YET, OVERRIDE_KEYS, type FactOverride, type OverrideKey } from '../../workspace/state.ts';
@@ -411,15 +413,23 @@ export function handleComps(req: Request, deps: SamplePhotoDeps): Promise<Respon
         const one = e && typeof e === 'object' && !Array.isArray(e) ? (e as Record<string, unknown>) : {};
         const id = typeof one.reportCompId === 'string' && UUID.test(one.reportCompId) ? one.reportCompId : null;
         if (!id) throw new HttpError(400, 'bad_comp', 'Which comp?');
-        return { id, tags: cleanTags(one.tags) };
+        return { id, tags: cleanTags(one.tags), from: one.from === undefined ? null : cleanTags(one.from) };
       });
       return json(await withActor(pool, asUser(user), async (tx) => {
         await reportFor(tx, user, reportId, true);
         for (const e of edits) {
+          let tags = e.tags;
+          if (e.from) {
+            const now = await tx.query<{ tags: string[] | null }>(
+              'select tags from comp_report.report_comps where report_id = $1 and id = $2 for update',
+              [reportId, e.id],
+            );
+            tags = rebaseTags(e.from, e.tags, now.rows[0]?.tags ?? []).slice(0, MAX_TAGS);
+          }
           // A removed comp keeps its tags as they were.
           await tx.query(
             'update comp_report.report_comps set tags = $3::text[] where report_id = $1 and id = $2 and removed_at is null',
-            [reportId, e.id, e.tags],
+            [reportId, e.id, tags],
           );
         }
         return loadWorkspace(tx, user, reportId);

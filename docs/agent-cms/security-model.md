@@ -47,12 +47,25 @@ and out of scope here, but they are the reason "the dashboard has sign-in" must 
 - Reads are gated too, not just writes. The records hold agents' direct phone numbers and email
   addresses; an unauthenticated roster read would be a contact-list scrape.
 
-The token is typed by the human into the CMS and held in **`localStorage`**: the browser remembers
-it across tabs and visits until **Lock** in the CMS, a rejected request, or the studio's sign-out
-forgets it. It is never in the URL and never in the committed HTML. (Until 2026-10-28 it lived in
+The token is held in **`localStorage`**: the browser remembers it across tabs and visits until a
+rejected request or the studio's sign-out forgets it. **Since 2026-11-05 nobody types it** when signed
+in to the Studio as the team: `GET /api/studio/keys` (`tools-src/comp-report/server/api/studio-keys.ts`)
+checks the Studio's Identity session the way every comp report call does, and hands `CB_CMS_TOKEN`
+and `CB_PICS_TOKEN` to a comp report admin (`CR_ADMIN_EMAILS`) or one of the four old team emails,
+and to nobody else: never a guest, the test user or an agent. Kimani asked for it ("I do not want to
+put in a CMS token every single time"). It widens who can hold the tokens from "whoever was told
+them" to "whoever can sign in as an admin", which is the same set of people. **Since 2026-11-06 the CMS
+and the profile-pic roster are admin pages** (`data-require="team"` on their `studio-auth.js` tag): even
+while the creative tools open signed out, a signed-out visit goes to the Studio sign-in and back, and a
+signed-in non-team visit goes to the dashboard, so a new device never shows the token box (Kimani, for
+Derek). The box stays only as a fallback, when the server has no token to hand. **Since 2026-11-06 an admin adds anyone to the team from the comp report's Access panel** (Reports →
+Access · admins only → "Studio team", stored as `comp_report.allowlist.studio_team`), with no PR; the
+built-in list (`STUDIO_TEAM` in `tools-src/comp-report/server/access.ts`) stays. The team is never admin. Admin is grantable there too (the Admin tick, `allowlist.admin`), on top of the root list
+`CR_ADMIN_EMAILS`, which the panel can't change. The corner offers to forget it behind a confirm (it used to lock on
+one click, which read as the sign-in button). It is never in the URL and never in the committed HTML. (Until 2026-10-28 it lived in
 `sessionStorage` and died with the tab. Kimani asked for it to stay — "this ain't Guantanamo Bay" —
 since he is the one user and was re-pasting it in every tab. The cost is that the token now sits on
-that machine's disk; a shared or borrowed computer should use Lock.) The roster token,
+that machine's disk; a shared or borrowed computer should sign out of the Studio.) The roster token,
 `CB_PICS_TOKEN`, is held the same way in the profile pic generator.
 
 **The CMS token reads one thing from the photo side.** `agent-pics` takes `CB_CMS_TOKEN` for a

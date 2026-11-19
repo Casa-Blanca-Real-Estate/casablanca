@@ -5,3 +5,6 @@ node_modules/
 # Netlify builds it on every deploy. The hand-written tools in tools/ are not
 # generated and stay committed as normal source.
 tools/comp-report/
+
+# Dev walks and local screenshots.
+tools-src/comp-report/dev/out/

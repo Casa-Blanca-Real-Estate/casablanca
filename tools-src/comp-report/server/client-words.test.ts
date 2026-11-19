@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ClientCompInput, ClientOverviewInput } from '../workspace/client-words.ts';
-import { clientWordsRequest, parseClientWords, type ClientWordsInput } from './client-words.ts';
+import { clientWordsRequest, CURRENT_CLIENT_WORDS_PROMPT, parseClientWords, type ClientWordsInput } from './client-words.ts';
 
 const comp: ClientCompInput = {
   home: { name: '100 Barclay #17L', address: '100 Barclay Street', unit: '17L' },
@@ -57,6 +57,18 @@ test('feedback on the overview reads the agent’s lines for fair housing', () =
   };
   const r = parseClientWords(JSON.stringify({ works: [], unclear: [], unsupported: [], off_voice: [] }), { job: 'feedback', target: 'overview', input })!;
   assert.match(r.text, /^Fair housing:\n- “Ideal for empty nesters” reads as a preference/);
+});
+
+test('feedback asks for more of the agent’s thinking when their points are thin (Kimani, 2026-11-06)', () => {
+  const input: ClientOverviewInput = {
+    home: comp.home, audience: 'buyer', client_first_name: 'Sam', headline_facts: [], comps: [],
+    agent_overview: { headline: 'The closest sales.', how_the_comps_were_chosen: 'Same line.', things_to_consider: '', next_step: '' },
+  };
+  const w: ClientWordsInput = { job: 'feedback', target: 'overview', input };
+  const r = parseClientWords(JSON.stringify({ works: [], unclear: [], unsupported: [], off_voice: [], more_thinking: ['What do you make of the longer sales?'] }), w)!;
+  assert.equal(r.text, 'Tell me more:\n- What do you make of the longer sales?');
+  assert.equal(CURRENT_CLIENT_WORDS_PROMPT.feedback.id, 'client-feedback-2026-11-06');
+  assert.ok(CURRENT_CLIENT_WORDS_PROMPT.feedback.system.includes('don\'t supply the points yourself'));
 });
 
 test('the request: Opus 5.5 at low effort, structured output, fallbacks; no target, number or deal terms', () => {

@@ -29,6 +29,8 @@ async function send(name: string, reportId: string | null): Promise<void> {
 
 /** A screen shown. The same screen of the same report twice in a row is one event. */
 export function trackScreen(screen: LoggedScreen, reportId: string | null = null): void {
+  // The guide's presenter mode follows the screen too (views/guide/presenter.ts): a page event, nothing sent.
+  if (typeof dispatchEvent === 'function') dispatchEvent(new CustomEvent('cr:screen', { detail: screen }));
   const key = `${screen}|${reportId ?? ''}`;
   if (key === last) return;
   last = key;

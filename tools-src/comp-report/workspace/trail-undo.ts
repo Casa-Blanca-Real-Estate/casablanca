@@ -13,13 +13,17 @@ function current(field: string, j: CompJudgment): unknown {
   if (field === 'tier') return j.tier;
   if (field === 'note') return noteOf(j);
   if (field === 'tags') return j.tags ?? [];
+  if (field === 'anchor') return Boolean(j.anchor);
+  if (field === 'removed') return Boolean(j.removedAt);
   if ((OVERRIDE_KEYS as readonly string[]).includes(field)) return j.factOverrides?.[field as OverrideKey]?.value ?? null;
   return undefined;
 }
 
 /** Whether the entry's Undo still applies to this comp. */
 export function undoStands(entry: TrailEntry, j: CompJudgment | null | undefined): boolean {
-  if (!entry.undo || entry.kind !== 'comp' || !j || j.reportCompId !== entry.compId || j.removedAt) return false;
+  if (!entry.undo || entry.kind !== 'comp' || !j || j.reportCompId !== entry.compId) return false;
+  // A comp taken out has only its putting back to undo: the rest waits until it's back.
+  if (j.removedAt && entry.field !== 'removed') return false;
   const now = current(entry.field, j);
   return now !== undefined && same(now, entry.undo.left);
 }

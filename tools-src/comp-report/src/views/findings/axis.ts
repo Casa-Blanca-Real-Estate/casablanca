@@ -34,7 +34,7 @@ export function axisStep(mid: number): number {
 /** A tick's label: $2M, $2.5M, $750K (the prototype's short form). */
 export function tickLabel(n: number): string {
   if (n === 0) return '$0';
-  if (n >= 1_000_000) return `$${Number((n / 1_000_000).toFixed(2))}M`;
+  if (n >= 1_000_000) return `$${(Math.round(n / 10_000) / 100)}M`;
   return `$${Math.round(n / 1_000)}K`;
 }
 

@@ -36,7 +36,11 @@ export function identityName(c: CompOut | undefined): string {
 /** The engine's reasons speak of "primary" comps; the screens call them 1st tier. */
 export function engineWhy(reason: string): string {
   // The engine's method label carries a note for the build ("the default method, pending Noble"): agents don't need it.
-  return reason.replace(/\s+—\s+the default method, pending Noble/, '').replace(/\bprimary\b/g, '1st-tier').replace(/\s+—\s+/g, ': ');
+  return reason.replace(/\s+—\s+the default method, pending Noble/, '').replace(/\bprimary\b/g, '1st-tier').replace(/\s+—\s+/g, ': ')
+    // The engine's words for the home's size; an agent says square footage, and "the home".
+    .replace(/no implied values without the subject's interior area/, 'there’s no known square footage for the home')
+    .replace(/\bthe subject's area\b/g, 'the home’s square footage')
+    .replace(/\bthe subject\b/g, 'the home');
 }
 
 export interface TakeArgs {
@@ -216,6 +220,23 @@ export function verdictLine(output: EngineOutput, kind: ResultKind): string | nu
   if (!a?.position || !output.results[kind].range) return null;
   const gap = a.facts.find((f) => f.id === 'agent.below_range_by' || f.id === 'agent.above_range_by');
   return `Your guess ${POSITION[a.position]}${gap ? `, by about ${clientPrice(gap.value)}` : ''}.`;
+}
+
+const POSITION_SHORT: Record<AgentNumberPosition, string> = {
+  below: 'Below the range',
+  within: 'Inside the range',
+  above: 'Above the range',
+  overlaps_low: 'Starts below the range',
+  overlaps_high: 'Runs above the range',
+  spans: 'Wider than the range',
+};
+
+/** Under the agent's number beside the range (the design pass): "Inside the range"; "Below the range, by about $25.4K". */
+export function positionLine(output: EngineOutput, kind: ResultKind): string | null {
+  const a = output.headline_facts[kind].agent_number;
+  if (!a?.position || !output.results[kind].range) return null;
+  const gap = a.facts.find((f) => f.id === 'agent.below_range_by' || f.id === 'agent.above_range_by');
+  return `${POSITION_SHORT[a.position]}${gap ? `, by about ${clientPrice(gap.value)}` : ''}`;
 }
 
 export interface StatusTile {

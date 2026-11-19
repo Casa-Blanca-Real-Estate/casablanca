@@ -1,0 +1,280 @@
+// /api/lead-accept — the Studio's window onto the StreetEasy lead auto-accept service.
+//
+// The service runs on Railway (repo Casa-Blanca-Real-Estate/se-autoaccept): Make forwards each
+// StreetEasy lead email from blancacasa1002 to it, it logs into the referral agent's account,
+// clicks Respond Now and sends the pre-filled message, and emails Derek when a person is needed.
+// Its admin endpoints are guarded by one shared secret, so this function holds that secret
+// (Netlify env SE_AUTOMATION_SECRET) and the browser never sees it.
+//
+//   GET  ?view=status         observe mode, counts for the last 24 hours, the last run
+//   GET  ?view=runs&limit=N   the run log, newest first (N up to 500)
+//   GET  ?view=agents         the referral agents the service knows (passwords never leave Railway)
+//   GET  ?capture=<name>      one run's screenshot, as PNG
+//   POST {observeMode: bool}  switch observe mode; takes effect on the next lead
+//   POST {agentPassword: {email, password | null}}  set or clear one agent's own StreetEasy password
+//   POST {addAgent: {email, name?, password?}}      add an agent by hand (or update one that exists)
+//   POST {recipients: {failures?, successes?, notices?: string[]}}  who gets each kind of alert email
+//   GET  ?view=guide          the "How it works" guide (Blobs; the default in guide.ts until first saved)
+//   POST {guide: Guide}       save an edited guide
+//   GET  ?view=make           the two Make scenarios (state, recent runs, errors) and the alerts' Gmail connection
+//   POST {makeScenario: {id, active}}  start or stop one of those two scenarios (no other id)
+//   POST {fileMaker: {emailOn?: bool, emailTo?: email, pushOn?: bool}}  the FileMaker email, and the push into FileMaker
+//   POST {fileMakerTestPush: true}   send one invented record into FileMaker (the service's /admin/filemaker/test-push)
+//   GET  ?view=filemaker-check          can the service reach FileMaker Server (address only, no password)?
+//   GET  ?view=filemaker-log&limit=N   FileMaker's requests to the service, newest first (N up to 500)
+//   GET  ?view=inbox&limit=N&kind=lead|sign-in-code|other  the emails Make posted, newest first (N up to 500);
+//        kind=other carries StreetEasy's client messages, parsed. Client details pass through, never logged.
+//
+// SECURITY
+//   Every request needs the Studio sign-in, and the user must be the Studio's team (the same rule as
+//   the Property Sign builder). A preview's guest can read but not switch observe mode. Screenshots
+//   show clients' names and inquiries, which is why they're fetched through here, not linked.
+//   The Make token (Netlify env MAKE_API_TOKEN) is held the same way: it goes only to Make's API,
+//   never to the browser or a log (make.ts).
+import { isTeam, type SignUser } from '../property-signs/api.ts';
+import { cleanGuide, DEFAULT_GUIDE, type Guide } from './guide.ts';
+import { MakeError, makeView, setScenarioActive } from './make.ts';
+
+export const GUIDE_STORE = 'cb-lead-accept';
+const GUIDE_KEY = 'guide';
+/** The part of a Blobs store the guide uses. */
+export interface GuideBlobs {
+  get(key: string, opts: { type: 'json' }): Promise<unknown>;
+  setJSON(key: string, value: unknown): Promise<unknown>;
+}
+const RECIPIENT_GROUPS = ['failures', 'successes', 'notices'] as const;
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const INBOX_KINDS = ['lead', 'sign-in-code', 'other'] as const;
+
+export interface LeadAcceptDeps {
+  /** The signed-in user; throws the comp report's HttpError(401/403/503) when there's none. */
+  user(req: Request): Promise<SignUser>;
+  /** The service's base URL, e.g. https://casablanca-production-e067.up.railway.app */
+  baseUrl: string | undefined;
+  secret: string | undefined;
+  fetch: typeof fetch;
+  /** Where the edited guide is kept. */
+  guideStore: GuideBlobs;
+  /** A Make user API token (scenarios:read, scenarios:write, connections:read), for the Make panel. */
+  makeToken?: string | undefined;
+}
+
+export class LeadAcceptError extends Error {
+  readonly status: number;
+  readonly code: string;
+  constructor(status: number, code: string, message?: string) { super(message ?? code); this.status = status; this.code = code; }
+}
+
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+});
+
+/** A capture name as the service writes them: <ISO time>_<agent id>_<step>. */
+export const CAPTURE_NAME = /^[0-9TZ-]+_[a-z0-9-]+_[a-z0-9-]+$/i;
+
+export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Promise<Response> {
+  try {
+    const user = await deps.user(req);
+    if (!isTeam(user)) throw new LeadAcceptError(403, 'not_team', 'The lead auto-accept page is for the Studio team.');
+
+    // The guide is the Studio's own (Blobs), so it works even when the service isn't reachable.
+    const gurl = new URL(req.url);
+    if (req.method === 'GET' && gurl.searchParams.get('view') === 'guide') {
+      const saved = await deps.guideStore.get(GUIDE_KEY, { type: 'json' }).catch(() => null) as Guide | null;
+      // A guide saved before session links existed shows the default ones until it's edited.
+      return json(saved && Array.isArray(saved.steps) ? { ...saved, sessions: saved.sessions ?? DEFAULT_GUIDE.sessions, isDefault: false } : { ...DEFAULT_GUIDE, isDefault: true });
+    }
+    // Make is its own API, so the panel works whether or not the service is reachable.
+    const needMake = () => {
+      if (!deps.makeToken) throw new LeadAcceptError(503, 'not_configured', 'Set MAKE_API_TOKEN in Netlify to show the Make scenarios here.');
+      return deps.makeToken;
+    };
+    if (req.method === 'GET' && gurl.searchParams.get('view') === 'make') {
+      return json(await makeView(deps.fetch, needMake()));
+    }
+    if (req.method === 'POST') {
+      const peek = await req.clone().json().catch(() => null) as { guide?: unknown; makeScenario?: { id?: unknown; active?: unknown } } | null;
+      if (peek && 'makeScenario' in peek) {
+        if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
+        const m = peek.makeScenario;
+        if (!m || typeof m !== 'object' || typeof m.active !== 'boolean' || typeof m.id !== 'number') {
+          throw new LeadAcceptError(400, 'bad_body', 'Send { makeScenario: { id, active: true | false } }.');
+        }
+        const out = await setScenarioActive(deps.fetch, needMake(), m.id, m.active);
+        console.log(`lead-accept: Make scenario ${m.id} ${m.active ? 'started' : 'stopped'} by ${user.email}`);
+        return json(out);
+      }
+      if (peek && 'guide' in peek) {
+        if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
+        const guide = cleanGuide(peek.guide);
+        if (!guide) throw new LeadAcceptError(400, 'bad_guide', 'The guide needs at least one step with a title.');
+        const saved = { ...guide, updatedAt: new Date().toISOString(), updatedBy: user.email };
+        if (JSON.stringify(saved).length > 100_000) throw new LeadAcceptError(400, 'too_long', 'The guide is too long to save.');
+        await deps.guideStore.setJSON(GUIDE_KEY, saved);
+        console.log(`lead-accept: guide saved by ${user.email}`);
+        return json({ ...saved, isDefault: false });
+      }
+    }
+    if (!deps.baseUrl || !deps.secret) {
+      throw new LeadAcceptError(503, 'not_configured', 'Set SE_AUTOMATION_URL and SE_AUTOMATION_SECRET in Netlify to connect this page to the service.');
+    }
+    const base = deps.baseUrl.replace(/\/+$/, '');
+    const call = async (path: string, init: RequestInit = {}) => {
+      let res: Response;
+      try {
+        res = await deps.fetch(base + path, {
+          ...init, headers: { 'x-casa-secret': deps.secret!, ...(init.headers as Record<string, string> | undefined) },
+          signal: AbortSignal.timeout(15000),
+        });
+      } catch {
+        throw new LeadAcceptError(502, 'unreachable', 'The auto-accept service didn’t answer. Check that it’s running in Railway.');
+      }
+      if (res.status === 401) throw new LeadAcceptError(502, 'secret_mismatch', 'The service refused the key. SE_AUTOMATION_SECRET in Netlify must match CASA_SECRET in Railway.');
+      if (res.status === 404) throw new LeadAcceptError(404, 'not_found', 'The service doesn’t have that.');
+      if (!res.ok) throw new LeadAcceptError(502, 'service_error', `The service answered ${res.status}.`);
+      return res;
+    };
+    const url = new URL(req.url);
+
+    if (req.method === 'GET') {
+      const capture = url.searchParams.get('capture');
+      if (capture !== null) {
+        if (!CAPTURE_NAME.test(capture)) throw new LeadAcceptError(400, 'bad_capture');
+        const res = await call(`/captures/${encodeURIComponent(capture)}.png`);
+        return new Response(await res.arrayBuffer(), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, max-age=3600' } });
+      }
+      const view = url.searchParams.get('view') ?? 'status';
+      if (view === 'status') return json(await (await call('/admin/status')).json());
+      if (view === 'runs') {
+        const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit')) || 200));
+        return json(await (await call(`/admin/runs?limit=${limit}`)).json());
+      }
+      if (view === 'agents') return json(await (await call('/agents')).json());
+      if (view === 'filemaker-check') return json(await (await call('/admin/filemaker/check')).json());
+      if (view === 'filemaker-log') {
+        const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit')) || 50));
+        return json(await (await call(`/admin/filemaker-log?limit=${limit}`)).json());
+      }
+      if (view === 'inbox') {
+        const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit')) || 50));
+        const kind = url.searchParams.get('kind');
+        if (kind !== null && !(INBOX_KINDS as readonly string[]).includes(kind)) {
+          throw new LeadAcceptError(400, 'bad_kind', 'kind is lead, sign-in-code or other.');
+        }
+        return json(await (await call(`/admin/inbox?limit=${limit}${kind ? `&kind=${kind}` : ''}`)).json());
+      }
+      throw new LeadAcceptError(400, 'bad_view');
+    }
+
+    if (req.method === 'POST') {
+      if (user.guest) throw new LeadAcceptError(403, 'guest', 'A preview guest can look but not change anything.');
+      const body = await req.json().catch(() => null) as { observeMode?: unknown; agentPassword?: { email?: unknown; password?: unknown };
+        addAgent?: { email?: unknown; name?: unknown; password?: unknown };
+        recipients?: Record<string, unknown>; fileMaker?: unknown; fileMakerTestPush?: unknown } | null;
+
+      // One invented record into FileMaker, to check the push end to end.
+      if (body?.fileMakerTestPush !== undefined) {
+        if (body.fileMakerTestPush !== true) throw new LeadAcceptError(400, 'bad_test_push', 'Send { fileMakerTestPush: true }.');
+        const res = await call('/admin/filemaker/test-push', { method: 'POST' });
+        console.log(`lead-accept: FileMaker test record sent by ${user.email}`);
+        return json(await res.json());
+      }
+
+      // The FileMaker email: { fileMaker: { emailOn?: bool, emailTo?: email } } (either or both).
+      if (body?.fileMaker !== undefined) {
+        const fm = body.fileMaker as Record<string, unknown> | null;
+        if (!fm || typeof fm !== 'object' || Array.isArray(fm)) throw new LeadAcceptError(400, 'bad_filemaker', 'Send { fileMaker: { emailOn?, emailTo?, pushOn? } }.');
+        const extra = Object.keys(fm).filter((k) => k !== 'emailOn' && k !== 'emailTo' && k !== 'pushOn');
+        if (extra.length) throw new LeadAcceptError(400, 'bad_filemaker', `Unknown FileMaker setting: ${extra.join(', ')}.`);
+        const out: { emailOn?: boolean; emailTo?: string; pushOn?: boolean } = {};
+        if (fm.pushOn !== undefined) {
+          if (typeof fm.pushOn !== 'boolean') throw new LeadAcceptError(400, 'bad_filemaker', 'pushOn is true or false.');
+          out.pushOn = fm.pushOn;
+        }
+        if (fm.emailOn !== undefined) {
+          if (typeof fm.emailOn !== 'boolean') throw new LeadAcceptError(400, 'bad_filemaker', 'emailOn is true or false.');
+          out.emailOn = fm.emailOn;
+        }
+        if (fm.emailTo !== undefined) {
+          const to = typeof fm.emailTo === 'string' ? fm.emailTo.trim().toLowerCase() : '';
+          if (!EMAIL.test(to)) throw new LeadAcceptError(400, 'bad_email', `Not an email address: ${String(fm.emailTo)}`);
+          out.emailTo = to;
+        }
+        if (!Object.keys(out).length) throw new LeadAcceptError(400, 'bad_filemaker', 'Send emailOn, emailTo or pushOn.');
+        const res = await call('/admin/settings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileMaker: out }),
+        });
+        console.log(`lead-accept: FileMaker ${out.pushOn !== undefined ? `push ${out.pushOn ? 'on' : 'off'}` : `email ${out.emailOn === undefined ? 'settings' : out.emailOn ? 'on' : 'off'}`} changed by ${user.email}`);
+        return json(await res.json());
+      }
+
+      // Who gets each kind of alert: { recipients: { failures: [...], ... } } (any subset).
+      if (body?.recipients !== undefined) {
+        if (!body.recipients || typeof body.recipients !== 'object') throw new LeadAcceptError(400, 'bad_recipients');
+        const out: Record<string, string[]> = {};
+        for (const [group, list] of Object.entries(body.recipients)) {
+          if (!(RECIPIENT_GROUPS as readonly string[]).includes(group)) throw new LeadAcceptError(400, 'bad_group', `Unknown alert type: ${group}.`);
+          if (!Array.isArray(list) || list.length > 20) throw new LeadAcceptError(400, 'bad_list', 'Up to 20 addresses per alert type.');
+          const clean = list.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
+          const bad = clean.filter((e) => !EMAIL.test(e));
+          if (bad.length) throw new LeadAcceptError(400, 'bad_email', `Not an email address: ${bad.join(', ')}`);
+          out[group] = [...new Set(clean)];
+        }
+        const res = await call('/admin/settings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipients: out }),
+        });
+        console.log(`lead-accept: alert recipients changed by ${user.email}`);
+        return json(await res.json());
+      }
+
+      // One agent's own StreetEasy password: { agentPassword: { email, password } }, or password null
+      // to go back to the shared one. Passed straight to the service; never logged or returned.
+      // Add an agent by hand: { addAgent: { email, name?, password? } }. The password, if any,
+      // goes straight to the service and is never logged or returned.
+      if (body?.addAgent) {
+        const { email, name, password } = body.addAgent;
+        if (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) throw new LeadAcceptError(400, 'bad_email', 'Enter the agent’s StreetEasy email.');
+        if (name != null && typeof name !== 'string') throw new LeadAcceptError(400, 'bad_name');
+        if (password != null && password !== '' && (typeof password !== 'string' || password.length > 200)) {
+          throw new LeadAcceptError(400, 'bad_password', 'The password must be text, up to 200 characters.');
+        }
+        const res = await call('/admin/agents', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), name: typeof name === 'string' ? name.trim() : '', password: password || null }),
+        });
+        console.log(`lead-accept: agent ${email.trim()} added or updated by ${user.email}${password ? ' (own password)' : ''}`);
+        return json(await res.json(), res.status);
+      }
+
+      if (body?.agentPassword) {
+        const { email, password } = body.agentPassword;
+        if (typeof email !== 'string' || !email.includes('@')) throw new LeadAcceptError(400, 'bad_email', 'Which agent? Send their StreetEasy email.');
+        if (!(password === null || (typeof password === 'string' && password.length > 0 && password.length <= 200))) {
+          throw new LeadAcceptError(400, 'bad_password', 'Send a password, or null to use the shared one.');
+        }
+        const res = await call('/admin/agents/password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
+        });
+        console.log(`lead-accept: own password ${password === null ? 'cleared' : 'set'} for ${email} by ${user.email}`);
+        return json(await res.json());
+      }
+
+      if (typeof body?.observeMode !== 'boolean') throw new LeadAcceptError(400, 'bad_body', 'Send { observeMode: true | false }.');
+      const res = await call('/admin/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ observeMode: body.observeMode }),
+      });
+      console.log(`lead-accept: observe mode ${body.observeMode ? 'on' : 'off'} by ${user.email}`);
+      return json(await res.json());
+    }
+
+    throw new LeadAcceptError(405, 'method');
+  } catch (e) {
+    if (e instanceof LeadAcceptError || e instanceof MakeError) return json({ error: e.code, message: e.message }, e.status);
+    if (e && typeof e === 'object' && 'status' in e && 'code' in e && typeof (e as { status: unknown }).status === 'number') {
+      const h = e as { status: number; code: string; message?: string };   // the comp report's HttpError, from the sign-in check
+      return json({ error: h.code, message: h.message }, h.status);
+    }
+    console.error('lead-accept: unhandled error', e);
+    return json({ error: 'internal', message: 'Something went wrong on our side.' }, 500);
+  }
+}

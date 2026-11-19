@@ -1,0 +1,687 @@
+{
+ "note": "The design pass's checklist (Kimani, 2026-11-10): every page of the comp report and the Studio's new pages, each with what opens from it. status: designed | light | not. Ticks save to the sheet's db, collection \"design\", one doc per id.",
+ "asOf": "2026-11-10",
+ "pages": [
+  {
+   "id": "chrome",
+   "name": "Studio chrome",
+   "sub": "on every screen",
+   "status": "designed",
+   "desc": "The top bar: wordmark, ‹ Studio, COMP REPORT, Admin view, Sample, ✦ Hubert, account pill, Feedback docked in.",
+   "code": "shell/TopBar.tsx",
+   "children": [
+    {
+     "id": "account-menu",
+     "name": "Account menu",
+     "kind": "drop-down",
+     "status": "not",
+     "desc": "The name pill's menu: Settings, Sign out, an admin's switches.",
+     "code": "shell/TopBar.tsx, ReportBar.tsx"
+    },
+    {
+     "id": "settings",
+     "name": "Settings",
+     "kind": "dialog",
+     "status": "not",
+     "desc": "Who you're signed in as, your roster card, the team's dev switches.",
+     "code": "shell/Settings.tsx"
+    },
+    {
+     "id": "feedback",
+     "name": "Feedback box",
+     "kind": "pop-up",
+     "status": "light",
+     "desc": "Moved into the bar in round 2; the box is the Studio's shared one.",
+     "code": "assets/studio-header.js"
+    },
+    {
+     "id": "hubert-tab",
+     "name": "Hubert's edge tab",
+     "kind": "tab",
+     "status": "not",
+     "desc": "The vertical HUBERT tab beside the bar's ✦ Hubert pill (DP-14).",
+     "code": "shell/Pieces.tsx"
+    },
+    {
+     "id": "states-lines",
+     "name": "Loading, busy and error lines",
+     "kind": "state",
+     "status": "not",
+     "desc": "\"Loading…\" and the lines under a server call.",
+     "code": "shell/Pieces.tsx"
+    }
+   ]
+  },
+  {
+   "id": "sign-in",
+   "name": "Sign in",
+   "sub": "/sign-in/",
+   "status": "light",
+   "desc": "Google first, email behind a link. Ported from the handoff.",
+   "code": "SignIn.tsx",
+   "children": [
+    {
+     "id": "sign-in-states",
+     "name": "Invitation, new password, refusal, Identity off",
+     "kind": "state",
+     "status": "not",
+     "desc": "The states around the card.",
+     "code": "SignIn.tsx"
+    }
+   ]
+  },
+  {
+   "id": "reports",
+   "name": "Reports",
+   "sub": "the home screen",
+   "status": "designed",
+   "desc": "Hero (Pick up where you left off, Start with Hubert), the table, tabs, numbers, search, sorting.",
+   "code": "Reports.tsx",
+   "children": [
+    {
+     "id": "follow-up",
+     "name": "Follow-up reminder",
+     "kind": "banner",
+     "status": "not",
+     "desc": "Hubert's reminder on the hero and a Follow up tag, two days after sending (#143).",
+     "code": "workspace/next-steps.ts"
+    },
+    {
+     "id": "reports-empty",
+     "name": "No reports yet; mentees with none; no match",
+     "kind": "empty state",
+     "status": "light",
+     "desc": "The squares illustration and one line each.",
+     "code": "Reports.tsx"
+    },
+    {
+     "id": "duplicate",
+     "name": "Duplicate report",
+     "kind": "dialog",
+     "status": "not",
+     "desc": "Copy a report, with or without Hubert's chat.",
+     "code": "Reports.tsx"
+    },
+    {
+     "id": "archived",
+     "name": "Archived (N)",
+     "kind": "list",
+     "status": "not",
+     "desc": "The fold under the table, and \"Nothing archived\".",
+     "code": "Reports.tsx"
+    },
+    {
+     "id": "mentees",
+     "name": "Edit mentees",
+     "kind": "picker",
+     "status": "not",
+     "desc": "Tick agents by name, search, Save.",
+     "code": "Mentees.tsx"
+    },
+    {
+     "id": "new-here",
+     "name": "\"New here?\" card",
+     "kind": "pop-up",
+     "status": "not",
+     "desc": "One-time card: Walk me through it, Read the steps.",
+     "code": "guide/Launcher.tsx"
+    }
+   ]
+  },
+  {
+   "id": "access",
+   "name": "Access panel",
+   "sub": "admins only",
+   "status": "not",
+   "desc": "Below Reports: who's on the Studio team, who's an admin.",
+   "code": "Access.tsx",
+   "children": [
+    {
+     "id": "access-tools",
+     "name": "Studio tools: who sees each",
+     "kind": "panel",
+     "status": "not",
+     "desc": "Everyone / Mentors / Studio team / Admins only per tool.",
+     "code": "Access.tsx"
+    },
+    {
+     "id": "access-logs",
+     "name": "Levels, sign-ins, one report's timeline",
+     "kind": "panel",
+     "status": "not",
+     "desc": "Practice / Full, the sign-in log, the activity timeline.",
+     "code": "AccessLog.tsx"
+    }
+   ]
+  },
+  {
+   "id": "new-report",
+   "name": "New report window",
+   "sub": "3-step modal",
+   "status": "not",
+   "desc": "820px card on the scrim, three bars, N of 3, ✕; asks before dropping a half-typed comp.",
+   "code": "newcomp/Frame.tsx",
+   "children": [
+    {
+     "id": "nr-home",
+     "name": "1 of 3: the home",
+     "kind": "step",
+     "status": "not",
+     "desc": "Link or address, matched home, Buyer or Seller, client, Co-op or Condo, target.",
+     "code": "newcomp/Home.tsx"
+    },
+    {
+     "id": "nr-details",
+     "name": "2 of 3: details, photo header, read progress",
+     "kind": "step",
+     "status": "not",
+     "desc": "Photo header and the read's big progress; size, floor, features.",
+     "code": "newcomp/Details.tsx, HomeHero.tsx"
+    },
+    {
+     "id": "nr-client",
+     "name": "Your client (in step 2)",
+     "kind": "fold",
+     "status": "not",
+     "desc": "Cash or mortgage, pre-approval, how soon, what's moving them (brief 7.3).",
+     "code": "workspace/ClientFields.tsx"
+    },
+    {
+     "id": "nr-comps",
+     "name": "3 of 3: add comps",
+     "kind": "step",
+     "status": "not",
+     "desc": "Paste bar, drop the export or PDF, choose the file, rows by status.",
+     "code": "workspace/AddComps.tsx, comp/AddBar.tsx"
+    },
+    {
+     "id": "nr-read-failed",
+     "name": "Reading… and a failed read",
+     "kind": "state",
+     "status": "not",
+     "desc": "A link's row while read, and Type it in / Clear.",
+     "code": "workspace/AddComps.tsx"
+    },
+    {
+     "id": "comp-form",
+     "name": "Type one in / Edit comp",
+     "kind": "form",
+     "status": "not",
+     "desc": "Address, photo, status, price, size, floor, date, why, tags, features.",
+     "code": "comp/CompForm.tsx, Pickers.tsx"
+    },
+    {
+     "id": "nr-hubert",
+     "name": "Hubert beside the window",
+     "kind": "drawer",
+     "status": "not",
+     "desc": "His drawer next to the modal with his New report note (brief 7.1).",
+     "code": "Hubert.tsx"
+    },
+    {
+     "id": "edit-details",
+     "name": "Edit details (✎ from a report)",
+     "kind": "modal",
+     "status": "not",
+     "desc": "Step 2 reused.",
+     "code": "newcomp/Details.tsx"
+    }
+   ]
+  },
+  {
+   "id": "workspace",
+   "name": "Workspace frame",
+   "sub": "around Sort, Findings, Send",
+   "status": "designed",
+   "desc": "The header: ← Reports, address, ✎, save status, step crumbs, the forward action.",
+   "code": "shell/WorkspaceHeader.tsx",
+   "children": [
+    {
+     "id": "ws-locked",
+     "name": "A step reached too early",
+     "kind": "state",
+     "status": "not",
+     "desc": "\"What's left\" before Sort is done.",
+     "code": "workspace/SortFirst.tsx"
+    },
+    {
+     "id": "ws-reading",
+     "name": "A StreetEasy page being read",
+     "kind": "banner",
+     "status": "not",
+     "desc": "The thick bar, the part it's on, Takes 1–2 min.",
+     "code": "workspace/ReadingNotice.tsx"
+    },
+    {
+     "id": "ws-readonly",
+     "name": "Someone else's report (read only)",
+     "kind": "state",
+     "status": "not",
+     "desc": "A mentor's or admin's view.",
+     "code": "workspace/Workspace.tsx"
+    }
+   ]
+  },
+  {
+   "id": "sort",
+   "name": "Sort",
+   "sub": "step 1",
+   "status": "light",
+   "desc": "Status groups, ★ · 1st · 2nd · ✕, the yellow edge, N to finish.",
+   "code": "sort/SortTable.tsx",
+   "children": [
+    {
+     "id": "sort-card",
+     "name": "A comp's open card",
+     "kind": "card",
+     "status": "not",
+     "desc": "Photos, facts with locks, features, tags, note, ✎ Edit (DP-17).",
+     "code": "sort/CompCard.tsx"
+    },
+    {
+     "id": "sort-more",
+     "name": "Checks, sources and history",
+     "kind": "fold",
+     "status": "not",
+     "desc": "Under the card.",
+     "code": "sort/More.tsx"
+    },
+    {
+     "id": "lightbox",
+     "name": "Photo lightbox",
+     "kind": "modal",
+     "status": "not",
+     "desc": "A comp's photos full screen.",
+     "code": "sort/CompCard.tsx"
+    },
+    {
+     "id": "type-mismatch",
+     "name": "Co-op or condo warning",
+     "kind": "banner",
+     "status": "not",
+     "desc": "Names the comps of the other type, one-click fix.",
+     "code": "comp/TypeMismatch.tsx"
+    },
+    {
+     "id": "sort-add",
+     "name": "+ Add comps on Sort",
+     "kind": "panel",
+     "status": "not",
+     "desc": "The paste bar, links being read, failed reads.",
+     "code": "sort/Reads.tsx"
+    },
+    {
+     "id": "sort-empty",
+     "name": "No comps yet",
+     "kind": "empty state",
+     "status": "not",
+     "desc": "\"Same building first · ¼ mile · last 3–6 months\".",
+     "code": "workspace/SortStep.tsx"
+    }
+   ]
+  },
+  {
+   "id": "review",
+   "name": "Review comps",
+   "sub": "modal over Sort",
+   "status": "not",
+   "desc": "One comp per step, 3 of 11, Back and Next (brief 6.8).",
+   "code": "review/ReviewFlow.tsx",
+   "children": [
+    {
+     "id": "review-full",
+     "name": "Full agent: Hubert's take first",
+     "kind": "variant",
+     "status": "not",
+     "desc": "Take, then the tier.",
+     "code": "review/ReviewFlow.tsx"
+    },
+    {
+     "id": "review-practice",
+     "name": "Practice agent: write first, feedback rounds",
+     "kind": "variant",
+     "status": "not",
+     "desc": "What works / What's unclear.",
+     "code": "review/ReviewFlow.tsx"
+    },
+    {
+     "id": "review-empty",
+     "name": "Every comp taken out",
+     "kind": "empty state",
+     "status": "not",
+     "desc": "The one line.",
+     "code": "review/ReviewFlow.tsx"
+    }
+   ]
+  },
+  {
+   "id": "gate",
+   "name": "The Gate",
+   "sub": "step 2, before the range",
+   "status": "light",
+   "desc": "What do you think it's worth? Your low, your high, the why, Lock it in (DP-18).",
+   "code": "workspace/Gate.tsx",
+   "children": [
+    {
+     "id": "gate-full",
+     "name": "Full agent's Gate (can skip)",
+     "kind": "variant",
+     "status": "light",
+     "desc": "Why optional, Skip.",
+     "code": "workspace/Gate.tsx"
+    }
+   ]
+  },
+  {
+   "id": "findings",
+   "name": "Findings",
+   "sub": "step 2, after the reveal",
+   "status": "light",
+   "desc": "Range with $/SF, your number and where it lands, the bar.",
+   "code": "workspace/Findings.tsx",
+   "children": [
+    {
+     "id": "findings-accordions",
+     "name": "Price table, statuses, what's needed",
+     "kind": "fold",
+     "status": "not",
+     "desc": "Header tint only.",
+     "code": "workspace/Findings.tsx"
+    },
+    {
+     "id": "findings-terms",
+     "name": "Target and pricing details",
+     "kind": "fold",
+     "status": "not",
+     "desc": "The client's budget or target (display only), deal terms.",
+     "code": "workspace/Terms.tsx"
+    },
+    {
+     "id": "findings-client",
+     "name": "Your client on Findings",
+     "kind": "fold",
+     "status": "not",
+     "desc": "Where they're shown is brief 7.3.",
+     "code": "workspace/ClientFields.tsx"
+    },
+    {
+     "id": "findings-layer",
+     "name": "Client-adjusted view",
+     "kind": "not built",
+     "status": "not",
+     "desc": "DP-11: its own layer, never moving the true estimate. Needs your design first.",
+     "code": "—"
+    }
+   ]
+  },
+  {
+   "id": "send",
+   "name": "Send",
+   "sub": "step 3",
+   "status": "designed",
+   "desc": "Rail, preview with edit in place, Read → Copy & open in Gmail → Mark as sent.",
+   "code": "workspace/SendStep.tsx",
+   "children": [
+    {
+     "id": "send-issues",
+     "name": "Before you send (QA's issues)",
+     "kind": "panel",
+     "status": "designed",
+     "desc": "N to fix, Show, Fix both.",
+     "code": "send/IssuesPanel.tsx"
+    },
+    {
+     "id": "send-plain",
+     "name": "Plain text and Short versions",
+     "kind": "panel",
+     "status": "light",
+     "desc": "The fallbacks, with marked issues.",
+     "code": "send/AnnotatedText.tsx"
+    },
+    {
+     "id": "client-overview",
+     "name": "Write it for the client: overview",
+     "kind": "modal",
+     "status": "not",
+     "desc": "Headline, your lines, Draft from notes, Tidy (6.12).",
+     "code": "send/ClientOverview.tsx"
+    },
+    {
+     "id": "client-steps",
+     "name": "Write it for the client: one step per comp",
+     "kind": "modal",
+     "status": "not",
+     "desc": "The comp's box beside your note and Hubert's take; feedback rounds.",
+     "code": "send/ClientFlow.tsx"
+    }
+   ]
+  },
+  {
+   "id": "email",
+   "name": "The Designed email",
+   "sub": "what the client gets",
+   "status": "designed",
+   "desc": "Hero on photo, lead-ins, range on white, photo cards, market rows, square headshot. Check with real photos.",
+   "code": "#139",
+   "children": []
+  },
+  {
+   "id": "done",
+   "name": "Done",
+   "sub": "after Mark as sent",
+   "status": "designed",
+   "desc": "The black block, What's next, Back to reports.",
+   "code": "workspace/Done.tsx",
+   "children": [
+    {
+     "id": "done-below",
+     "name": "How did it go?, Copy again, Reopen",
+     "kind": "panel",
+     "status": "light",
+     "desc": "Kept below (DP-19).",
+     "code": "workspace/Done.tsx"
+    },
+    {
+     "id": "done-empty",
+     "name": "Not sent yet",
+     "kind": "empty state",
+     "status": "not",
+     "desc": "\"This report isn't marked as sent yet.\"",
+     "code": "workspace/Done.tsx"
+    }
+   ]
+  },
+  {
+   "id": "hubert",
+   "name": "Hubert",
+   "sub": "the drawer on every screen",
+   "status": "not",
+   "desc": "Greeting, messages, preset questions, input (6.15).",
+   "code": "Hubert.tsx, Chat.tsx",
+   "children": [
+    {
+     "id": "hubert-sections",
+     "name": "Chat split by the step guides",
+     "kind": "drawer",
+     "status": "not",
+     "desc": "Your ask: sections as the agent moves.",
+     "code": "hubert/guides.ts"
+    },
+    {
+     "id": "hubert-trail",
+     "name": "Trail entries with Show and Undo",
+     "kind": "card",
+     "status": "not",
+     "desc": "Every field he fills or comp he changes.",
+     "code": "Chat.tsx"
+    },
+    {
+     "id": "hubert-web",
+     "name": "A sale he found on the web",
+     "kind": "card",
+     "status": "not",
+     "desc": "Link, Approve once opened (7.5).",
+     "code": "Chat.tsx"
+    },
+    {
+     "id": "hubert-calc",
+     "name": "Calculator and review cards",
+     "kind": "card",
+     "status": "light",
+     "desc": "Restyled in #147, not from the canvas.",
+     "code": "Chat.tsx"
+    }
+   ]
+  },
+  {
+   "id": "guide",
+   "name": "Guide and glossary",
+   "sub": "#152",
+   "status": "not",
+   "desc": "The guide window: 8 steps, large type, ← and →.",
+   "code": "guide/Guide.tsx",
+   "children": [
+    {
+     "id": "glossary",
+     "name": "Glossary: 47 terms and search",
+     "kind": "tab",
+     "status": "not",
+     "desc": "Plus \"Nothing matches\".",
+     "code": "guide/glossary.ts"
+    },
+    {
+     "id": "guide-button",
+     "name": "Guide button and the ? key",
+     "kind": "button",
+     "status": "not",
+     "desc": "In the top bar; 7.2 wanted a bottom corner.",
+     "code": "guide/Launcher.tsx"
+    },
+    {
+     "id": "presenter",
+     "name": "Presenter mode",
+     "kind": "overlay",
+     "status": "not",
+     "desc": "Step badge, cursor ring, click ripples.",
+     "code": "guide/presenter.ts"
+    },
+    {
+     "id": "tour",
+     "name": "Pointing tour (QW-3)",
+     "kind": "overlay",
+     "status": "not",
+     "desc": "Ring and card on the thing to click, Reports to Done. Rough (#159).",
+     "code": "guide/Tour.tsx"
+    }
+   ]
+  },
+  {
+   "id": "lead-accept",
+   "name": "Lead auto-accept",
+   "sub": "Studio page, team only (#160)",
+   "status": "not",
+   "desc": "Status: Live or Observe with the switch (confirmed in the page), last-24-hour counts.",
+   "code": "tools/lead-accept/",
+   "children": [
+    {
+     "id": "la-dashboard",
+     "name": "Its tile and the Automations tab",
+     "kind": "dashboard",
+     "status": "not",
+     "desc": "New tab on the Studio dashboard, hidden unless something in it is visible.",
+     "code": "index.html"
+    },
+    {
+     "id": "la-switch",
+     "name": "Observe mode switch and its confirm",
+     "kind": "dialog",
+     "status": "not",
+     "desc": "Takes effect on the next lead.",
+     "code": "tools/lead-accept/"
+    },
+    {
+     "id": "la-rejected",
+     "name": "Agents whose StreetEasy password was rejected",
+     "kind": "panel",
+     "status": "not",
+     "desc": "Who needs a new password.",
+     "code": "tools/lead-accept/"
+    },
+    {
+     "id": "la-runs",
+     "name": "Run log, filtered by outcome and agent",
+     "kind": "list",
+     "status": "not",
+     "desc": "Newest first.",
+     "code": "tools/lead-accept/"
+    },
+    {
+     "id": "la-run",
+     "name": "One run's steps and screenshots",
+     "kind": "panel",
+     "status": "not",
+     "desc": "Screenshots come through the server (they show clients).",
+     "code": "tools/lead-accept/"
+    },
+    {
+     "id": "la-agents",
+     "name": "Referral agents",
+     "kind": "list",
+     "status": "not",
+     "desc": "The agents the service knows.",
+     "code": "tools/lead-accept/"
+    },
+    {
+     "id": "la-how",
+     "name": "How it works",
+     "kind": "panel",
+     "status": "not",
+     "desc": "The flow in words.",
+     "code": "tools/lead-accept/"
+    },
+    {
+     "id": "la-states",
+     "name": "Not connected, unreachable, empty log",
+     "kind": "state",
+     "status": "not",
+     "desc": "\"Set SE_AUTOMATION_URL…\" and the service's errors.",
+     "code": "tools/lead-accept/"
+    }
+   ]
+  },
+  {
+   "id": "across",
+   "name": "Across every screen",
+   "sub": "brief section 8",
+   "status": "not",
+   "desc": "Review comps and the client's words as one pattern (8.1).",
+   "code": "",
+   "children": [
+    {
+     "id": "x-practice",
+     "name": "A quiet Practice marker",
+     "kind": "pattern",
+     "status": "not",
+     "desc": "Why a practice agent's take is hidden (8.2).",
+     "code": ""
+    },
+    {
+     "id": "x-chips",
+     "name": "Tags vs features vs checks",
+     "kind": "pattern",
+     "status": "not",
+     "desc": "One look each (8.3).",
+     "code": ""
+    },
+    {
+     "id": "x-coop",
+     "name": "Every screen's co-op version",
+     "kind": "pattern",
+     "status": "light",
+     "desc": "No $/SF, sizes unreliable (8.5).",
+     "code": ""
+    }
+   ]
+  }
+ ]
+}

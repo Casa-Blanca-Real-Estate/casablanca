@@ -21,7 +21,7 @@ import { latest, reviewOrder, stepDone, takeUnlocked, weakFlag, type ReviewEntry
 import { TagPicker } from '../comp/Pickers.tsx';
 import { Info } from '../newcomp/Frame.tsx';
 import { compFeatures, Photos } from '../sort/CompCard.tsx';
-import { countText, groupRows, monthYear, PRICE_LABEL, shortPrice, sizeText, TAG_INFO, toRow, type Row } from '../sort/rows.ts';
+import { countText, groupRows, monthYear, PRICE_LABEL, shortPrice, sizeText, sortRows, TAG_INFO, toRow, type Row } from '../sort/rows.ts';
 import { compStatus, STATUS_LABEL } from '../workspace/comps.tsx';
 import type { Workspace } from '../workspace/model.ts';
 import { homeName } from '../workspace/screens.ts';
@@ -48,7 +48,8 @@ interface Draft {
 export function ReviewFlow({ ws, startAt, onClose }: { ws: Workspace; startAt: string | null; onClose: () => void }) {
   const outById = useMemo(() => new Map<string, CompOut>((ws.output?.comps ?? []).map((c) => [c.id, c])), [ws.output]);
   const rows = useMemo(
-    () => groupRows(ws.comps.map((c) => toRow(c, outById.get(c.id), ws.level))).flatMap((g) => g.rows).filter((r) => r.group !== 'unsortable' && r.rcId),
+    // Sort's own order within each group (newest first: sort/table.ts), so the walk matches the screen behind it.
+    () => groupRows(ws.comps.map((c) => toRow(c, outById.get(c.id), ws.level))).flatMap((g) => sortRows(g.rows, { key: null, dir: 1 })).filter((r) => r.group !== 'unsortable' && r.rcId),
     [ws.comps, outById, ws.level],
   );
   // The order is set when the flow opens: tiering a comp doesn't move it under the agent's feet.

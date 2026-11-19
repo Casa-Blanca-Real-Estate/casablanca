@@ -160,7 +160,13 @@ article.q.st-default { border-left: 4px solid color-mix(in srgb, var(--accent) 4
 .p-type { background: var(--surface-2); color: var(--muted); }
 .p-flag { background: var(--flag-soft); color: var(--flag); }
 .p-new { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
-.since { margin: 10px 0 0; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; max-width: 72ch; }
+.since-btn { margin: 12px 0 0; }
+.since-d { color: var(--muted); margin-left: 6px; }
+#changesDlg { max-height: min(80vh, 720px); overflow: auto; }
+.ch-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+#changesBody h3 { font: 700 14px/1.3 var(--body); margin: 14px 0 4px; }
+#changesBody ul { margin: 0; padding-left: 18px; font-size: 14px; }
+#changesBody li { margin-bottom: 4px; }
 .p-status { margin-left: auto; font-weight: 500; }
 .st-answered .p-status { background: var(--ok-soft); color: var(--ok); }
 .st-needs .p-status { background: var(--warn-soft); color: var(--warn); }
@@ -244,7 +250,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10
   table { min-width: 460px; }
 }
 /* The Reading list tab: the documents Kimani reads before he decides, newest first; an item is done when its questions are. */
-.bar[hidden], .layout[hidden], .reading[hidden], .since[hidden] { display: none !important; }
+.bar[hidden], .layout[hidden], .reading[hidden], .design[hidden], .since[hidden] { display: none !important; }
 .tabs { margin: 0 0 14px; align-self: flex-start; width: max-content; max-width: 100%; }
 .tabs button { font-size: 14px; padding: 6px 14px; }
 .tabs .tabn { margin-left: 6px; font-variant-numeric: tabular-nums; color: var(--warn); font-weight: 600; }
@@ -275,17 +281,53 @@ details.donegrp .ri { margin-bottom: 10px; }
   .ri { grid-template-columns: 1fr; }
   .ri .rs { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
 }
+/* The Design pass tab (2026-11-10): every page of the comp report, with what opens from it nested under it. */
+.design { max-width: 960px; margin: 0 auto; padding-top: 8px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 12px; }
+.design .rnote { color: var(--muted); font-size: 14px; margin: 0 0 4px; max-width: 72ch; }
+.dsum { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dpg { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.dpg.done { box-shadow: none; }
+.drow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 16px; align-items: start; }
+.dpg > .drow { padding: 14px 16px; }
+.dkids { border-top: 1px solid var(--rule); background: var(--surface-2); }
+.dkids .drow { padding-left: 44px; border-top: 1px solid var(--rule); }
+.dkids .drow:first-child { border-top: 0; }
+.drow input[type=checkbox] { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--accent); cursor: pointer; }
+.drow .dn { font-weight: 600; font-size: 15px; }
+.dpg > .drow .dn { font-size: 17px; font-weight: 700; }
+.drow .dk { font-weight: 400; font-size: 12.5px; color: var(--muted); margin-left: 6px; }
+.drow .dd { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin-top: 2px; }
+.drow .dc { font: 500 11.5px/1.4 "JetBrains Mono", ui-monospace, monospace; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
+.drow.ticked .dn { text-decoration: line-through; color: var(--muted); }
+.drow .dside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.dst { border-radius: 99px; padding: 2px 10px; font-size: 12px; line-height: 20px; white-space: nowrap; font-weight: 600; }
+.dst.designed { background: var(--ok-soft); color: var(--ok); }
+.dst.light { background: var(--warn-soft); color: var(--warn); }
+.dst.not { background: var(--flag-soft); color: var(--flag); }
+.dcount { font: 500 12px/1.4 var(--mono); color: var(--muted); white-space: nowrap; }
+.dnote { grid-column: 2 / -1; width: 100%; font: inherit; font-size: 13px; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--ink); padding: 6px 8px; min-height: 32px; resize: vertical; }
+.dtog { font: inherit; font-size: 13px; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+/* The To-do tab (2026-11-10): each to-do under the job it belongs to; question cards move in from Questions. */
+.todo .tphase { font: 600 11.5px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 12px 16px 4px 44px; border-top: 1px solid var(--rule); }
+.todo .dkids > .tphase:first-child { border-top: 0; }
+.todo .dkids > article.q { margin: 8px 16px 8px 44px; }
+.todo .tlink { font-size: 13px; }
+.todo .tdone { font-size: 12.5px; color: var(--ok); }
+@media (max-width: 640px) { .todo .dkids > article.q { margin: 8px 12px; } .todo .tphase { padding-left: 16px; } }
+@media (max-width: 640px) { .drow { grid-template-columns: 24px minmax(0, 1fr); } .drow .dside { grid-column: 2; align-items: flex-start; flex-direction: row; } .dkids .drow { padding-left: 24px; } }
 </style>
 
 <header class="top gutter">
   <div class="seg tabs" role="group" aria-label="View" id="tabs">
     <button type="button" data-tab="questions" aria-pressed="true">Questions</button>
     <button type="button" data-tab="reading" aria-pressed="false">Reading list<span class="tabn" id="readingN"></span></button>
+    <button type="button" data-tab="todo" aria-pressed="false">To-do<span class="tabn" id="todoN"></span></button>
+    <button type="button" data-tab="design" aria-pressed="false">Design pass<span class="tabn" id="designN"></span></button>
   </div>
   <p class="eyebrow">Casa Blanca Studio</p>
   <h1 id="pageTitle">Your open questions</h1>
   <p class="lede" id="lede">Pick an answer and it saves as you go. A question you leave alone keeps its default. When you're done, tell me in chat and I'll read your answers back and record them.</p>
-  <p class="since" id="since" hidden></p>
+  <button type="button" class="btn since-btn" id="since" hidden aria-haspopup="dialog">What's changed<span class="since-d" id="sinceD"></span></button>
 </header>
 
 <div class="bar">
@@ -322,7 +364,13 @@ details.donegrp .ri { margin-bottom: 10px; }
 </div>
 
 <section class="reading gutter" id="readingView" hidden aria-label="Reading list"></section>
+<section class="design todo gutter" id="todoView" hidden aria-label="To-do"></section>
+<section class="design gutter" id="designView" hidden aria-label="Design pass"></section>
 
+<dialog id="changesDlg" aria-labelledby="changesH">
+  <div class="ch-head"><strong id="changesH">What's changed</strong><button type="button" class="btn" id="changesClose">Close</button></div>
+  <div id="changesBody"></div>
+</dialog>
 <dialog id="copyDlg">
   <strong>Your answers, as text</strong>
   <p style="margin:6px 0 10px;font-size:13px;color:var(--muted)">Copy this and paste it into chat if you'd rather send it that way.</p>
@@ -343,6 +391,8 @@ details.donegrp .ri { margin-bottom: 10px; }
   const LS_KEY = "casa-answer-sheet-local-v1";
   const SYNTH = new Set(["default", "other", "accept-all", "accept-except"]); // keys this page adds itself
   const PREF_KEY = "casa-answer-sheet-prefs-v1";
+  const TODO = DATA.todo || { groups: [] };
+  const TODO_QS = new Set(TODO.groups.flatMap((g) => g.items.filter((it) => it.q).map((it) => it.q))); // cards shown on the To-do tab
 
   // ---------- model ----------
   const all = [];
@@ -607,12 +657,14 @@ details.donegrp .ri { margin-bottom: 10px; }
 
   function paintTotals() {
     queueMicrotask(paintReading);
+    queueMicrotask(paintTodo);
     let ans = 0, def = 0, needs = 0;
-    for (const q of all) {
+    const qall = all.filter((q) => !TODO_QS.has(q.id));
+    for (const q of qall) {
       const s = statusOf(q);
       if (s === "answered") ans++; else if (s === "default") def++; else needs++;
     }
-    const n = all.length;
+    const n = qall.length || 1;
     $("#mAns").style.width = (ans / n * 100) + "%";
     $("#mDef").style.width = (def / n * 100) + "%";
     $("#legend").innerHTML =
@@ -621,8 +673,10 @@ details.donegrp .ri { margin-bottom: 10px; }
       `<span><i class="dot" style="background:var(--warn)"></i><b>${needs}</b> <span class="long">still </span>need you</span>`;
     for (const t of DATA.topics) {
       let a = 0, nd = 0, untouchedDefaults = 0;
-      for (const q of t.questions) { const s = statusOf(q); if (s === "answered") a++; if (s === "needs") nd++; if (s === "default") untouchedDefaults++; }
-      const total = t.questions.length;
+      const tq = t.questions.filter((q) => !TODO_QS.has(q.id));
+      for (const q of tq) { const s = statusOf(q); if (s === "answered") a++; if (s === "needs") nd++; if (s === "default") untouchedDefaults++; }
+      const total = tq.length;
+      t._nav.hidden = total === 0;
       t._meta.textContent = `${a} of ${total} answered${nd ? ` · ${nd} still need you` : ""}`;
       t._nav.querySelector(".n").innerHTML = `${a}/${total}${nd ? ` · <span class="w">${nd}</span>` : ""}`;
       t._acc.disabled = readOnly || untouchedDefaults === 0;
@@ -640,6 +694,7 @@ details.donegrp .ri { margin-bottom: 10px; }
     for (const t of DATA.topics) {
       let any = false;
       for (const q of t.questions) {
+        if (TODO_QS.has(q.id)) continue; // shown on the To-do tab, unfiltered
         const s = statusOf(q);
         let ok = f === "all" || (f === "quick" && q.quick) || (f === "needs" && q.needsYou && s !== "answered") || (f === "open" && s !== "answered") || (f === "answered" && s === "answered");
         if (ok && term) ok = (q.id.toLowerCase() + " " + q.question.toLowerCase() + " " + q.short.toLowerCase()).includes(term);
@@ -659,13 +714,14 @@ details.donegrp .ri { margin-bottom: 10px; }
   $("#search").addEventListener("input", () => { clearTimeout(searchT); searchT = setTimeout(applyFilter, 120); });
   $("#compact").addEventListener("change", (e) => {
     prefs.compact = e.target.checked; saveJSON(PREF_KEY, prefs);
-    for (const c of cards.values()) c.ctx.open = !prefs.compact;
+    for (const [id, c] of cards) if (!TODO_QS.has(id)) c.ctx.open = !prefs.compact;
   });
   // An in-page link to a hidden card clears the filter first.
   document.addEventListener("click", (e) => {
     const a = e.target.closest('a[href^="#q-"]'); if (!a) return;
     const id = a.getAttribute("href").slice(3);
     const c = cards.get(id); if (!c) return;
+    if (TODO_QS.has(id)) { setTab("todo", true); return; }
     if (c.art.hidden) { prefs.filter = "all"; $("#search").value = ""; applyFilter(); }
   });
 
@@ -764,7 +820,7 @@ details.donegrp .ri { margin-bottom: 10px; }
   }
   async function acceptDefaults(t, btn) {
     if (readOnly) return;
-    const todo = t.questions.filter((q) => statusOf(q) === "default" && q.defaultOpt);
+    const todo = t.questions.filter((q) => !TODO_QS.has(q.id) && statusOf(q) === "default" && q.defaultOpt);
     if (!todo.length) return;
     btn.disabled = true;
     let done = 0;
@@ -928,24 +984,236 @@ details.donegrp .ri { margin-bottom: 10px; }
     }
   }
 
+  // ---------- the design pass ----------
+  // Pages with what opens from them nested under each. A page's own tick means the whole page is done, and
+  // everything under it counts as done with it. Ticks and notes save to the db, collection "design".
+  const DESIGN = DATA.design || { pages: [] };
+  const DESIGN_LS = "casa-answer-sheet-design-v1";
+  const designMarks = new Map();
+  const pendingDesign = new Map();
+  const STATUS = { designed: "Designed", light: "Lightly touched", not: "Not yet designed" };
+  const designOpen = new Set(loadJSON("casa-answer-sheet-design-open-v1") || []);
+  const isDone = (id) => !!(designMarks.get(id) || {}).done;
+  function kidsDone(p) { return isDone(p.id) ? p.children.length : p.children.filter((c) => isDone(c.id)).length; }
+
+  async function saveDesign(id, patch) {
+    if (readOnly) return;
+    const next = Object.assign({}, designMarks.get(id), patch, { at: new Date().toISOString() });
+    designMarks.set(id, next);
+    paintDesign();
+    if (mode === "db") {
+      pendingDesign.set(id, true);
+      try { await db.collection("design").doc(id).set(next); }
+      catch (e) { toast("That didn't save. Try again in a moment."); }
+      finally { pendingDesign.delete(id); }
+    } else saveJSON(DESIGN_LS, Object.fromEntries(designMarks));
+  }
+
+  function designRow(item, page) {
+    const row = el("div", "drow");
+    const implied = page && isDone(page.id);
+    const done = isDone(item.id) || implied;
+    if (done) row.classList.add("ticked");
+    const cb = el("input"); cb.type = "checkbox"; cb.id = "dp-" + item.id; cb.checked = done; cb.disabled = readOnly || implied;
+    cb.setAttribute("aria-label", (page ? "Done: " : "Whole page done: ") + item.name);
+    cb.addEventListener("change", () => saveDesign(item.id, { done: cb.checked }));
+    const mid = el("div"); mid.style.minWidth = "0";
+    const name = el("label", "dn"); name.htmlFor = cb.id; name.textContent = item.name;
+    const kind = el("span", "dk"); kind.textContent = item.kind || item.sub || ""; name.append(kind);
+    const desc = el("div", "dd"); desc.textContent = item.desc;
+    mid.append(name, desc);
+    if (item.code) { const c = el("div", "dc"); c.textContent = item.code; mid.append(c); }
+    const side = el("div", "dside");
+    const st = el("span", "dst " + item.status); st.textContent = STATUS[item.status] || item.status; side.append(st);
+    if (!page && item.children.length) { const n = el("span", "dcount"); n.textContent = `${kidsDone(item)} of ${item.children.length} inside`; side.append(n); }
+    row.append(cb, mid, side);
+    const note = el("textarea", "dnote"); note.id = "dn-" + item.id; note.rows = 1; note.placeholder = "A note for the build (optional)";
+    note.value = (designMarks.get(item.id) || {}).note || ""; note.disabled = readOnly;
+    let t; note.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => saveDesign(item.id, { note: note.value }), 700); });
+    if (note.value) row.append(note);
+    else if (!readOnly) {
+      const add = el("button", "dtog"); add.type = "button"; add.textContent = "Add a note";
+      add.addEventListener("click", () => { add.remove(); row.append(note); note.focus(); });
+      side.append(add);
+    }
+    return row;
+  }
+
+  function paintDesign() {
+    const host = $("#designView");
+    if (!host) return;
+    const pages = DESIGN.pages;
+    const left = pages.filter((p) => !isDone(p.id)).length;
+    $("#designN").textContent = left ? String(left) : "";
+    if (host.hidden) return;
+    const focus = document.activeElement && document.activeElement.id && host.contains(document.activeElement) ? document.activeElement.id : null;
+    if (focus && focus.startsWith("dn-")) return; // a note being typed: don't repaint under it
+    host.textContent = "";
+    const all = pages.flatMap((p) => [p, ...p.children]);
+    const count = (s) => all.filter((x) => x.status === s).length;
+    const ticked = all.filter((x) => isDone(x.id) || pages.some((p) => isDone(p.id) && p.children.includes(x))).length;
+    const sum = el("div", "dsum");
+    for (const [s, label] of [["not", `${count("not")} not yet designed`], ["light", `${count("light")} lightly touched`], ["designed", `${count("designed")} designed`]]) {
+      const b = el("span", "dst " + s); b.textContent = label; sum.append(b);
+    }
+    const tk = el("span", "dcount"); tk.textContent = `${ticked} of ${all.length} ticked off · ${pages.length - left} of ${pages.length} pages done`; sum.append(tk);
+    host.append(el("p", "rnote", "Tick a page to mark the whole page done, or tick the pieces inside it as you go. <strong>Designed</strong> means built from your canvas; <strong>Lightly touched</strong> means the round restyled its frame, not its inside."), sum);
+    for (const p of pages) {
+      const card = el("article", "dpg" + (isDone(p.id) ? " done" : ""));
+      card.id = "dpg-" + p.id;
+      card.append(designRow(p, null));
+      if (p.children.length) {
+        const open = designOpen.has(p.id) || !isDone(p.id);
+        const tog = el("button", "dtog"); tog.type = "button";
+        tog.textContent = open ? `Hide the ${p.children.length} inside` : `Show the ${p.children.length} inside`;
+        tog.setAttribute("aria-expanded", String(open));
+        tog.addEventListener("click", () => {
+          if (open) designOpen.delete(p.id); else designOpen.add(p.id);
+          if (isDone(p.id) && !open) designOpen.add(p.id);
+          saveJSON("casa-answer-sheet-design-open-v1", [...designOpen]);
+          paintDesign();
+        });
+        card.querySelector(".dside").append(tog);
+        if (open) { const kids = el("div", "dkids"); for (const c of p.children) kids.append(designRow(c, p)); card.append(kids); }
+      }
+      host.append(card);
+    }
+    if (DESIGN.asOf) host.append(el("p", "rnote", `Checked against the code on ${DESIGN.asOf}. Before and after screenshots are in your project files (design-pass-2-before, design-pass-2-after, pointing-tour).`));
+    if (focus) { const f = document.getElementById(focus); if (f) f.focus(); }
+  }
+
+  // ---------- the to-do list ----------
+  // Each to-do under the job it belongs to. Question items are the Questions tab's own cards, moved here once, so
+  // they paint and save as before ("answers"). Plain items tick and take a note, saved to the db, collection "todo".
+  const TODO_LS = "casa-answer-sheet-todo-v1";
+  const TODO_OPEN_LS = "casa-answer-sheet-todo-open-v1";
+  const todoMarks = new Map();
+  const pendingTodo = new Map();
+  const todoShut = new Set(loadJSON(TODO_OPEN_LS) || []);
+  const todoRows = new Map(); // id -> {row, cb, item}
+  const itemDone = (it) => it.q ? statusOf(byId.get(it.q)) === "answered" : !!(it.done || (todoMarks.get(it.id) || {}).done);
+  async function saveTodo(id, patch) {
+    if (readOnly) return;
+    const next = Object.assign({}, todoMarks.get(id), patch, { at: new Date().toISOString() });
+    todoMarks.set(id, next);
+    paintTodo();
+    if (mode === "db") {
+      pendingTodo.set(id, true);
+      try { await db.collection("todo").doc(id).set(next); }
+      catch (e) { toast("That didn't save. Try again in a moment."); }
+      finally { pendingTodo.delete(id); }
+    } else saveJSON(TODO_LS, Object.fromEntries(todoMarks));
+  }
+  function todoRow(it) {
+    const row = el("div", "drow");
+    const cb = el("input"); cb.type = "checkbox"; cb.id = "td-" + it.id;
+    cb.setAttribute("aria-label", "Done: " + it.name);
+    cb.addEventListener("change", () => saveTodo(it.id, { done: cb.checked }));
+    const mid = el("div"); mid.style.minWidth = "0";
+    const name = el("label", "dn"); name.htmlFor = cb.id; name.textContent = it.name;
+    const desc = el("div", "dd"); desc.textContent = it.desc || "";
+    mid.append(name, desc);
+    if (it.done) { const d = el("div", "tdone"); d.textContent = "✓ " + it.done; mid.append(d); }
+    const side = el("div", "dside");
+    if (it.link) {
+      const a = el("a", "tlink"); a.href = it.link; a.textContent = "Open it";
+      a.addEventListener("click", (e) => { e.preventDefault(); setTab(it.link.slice(1)); window.scrollTo(0, 0); });
+      side.append(a);
+    }
+    row.append(cb, mid, side);
+    const note = el("textarea", "dnote"); note.id = "tn-" + it.id; note.rows = 1; note.placeholder = "A note (optional)";
+    note.value = (todoMarks.get(it.id) || {}).note || "";
+    let t; note.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => saveTodo(it.id, { note: note.value }), 700); });
+    const add = el("button", "dtog"); add.type = "button"; add.textContent = "Add a note";
+    add.addEventListener("click", () => { add.hidden = true; note.hidden = false; note.focus(); });
+    side.append(add);
+    row.append(note);
+    todoRows.set(it.id, { row, cb, note, add, it });
+    return row;
+  }
+  function buildTodo() {
+    const host = $("#todoView");
+    host.append(el("p", "rnote", "Every to-do, under the job it belongs to. Tick the small ones; the cards are the same questions as before, and answering one marks it done. A group counts as done when everything in it is."));
+    for (const g of TODO.groups) {
+      const card = el("article", "dpg");
+      card.id = "tg-" + g.id;
+      const head = el("div", "drow");
+      head.style.gridTemplateColumns = "minmax(0, 1fr) auto";
+      const mid = el("div"); mid.style.minWidth = "0";
+      const name = el("div", "dn", escapeText(g.name)); if (g.sub) name.append(el("span", "dk", escapeText(g.sub)));
+      mid.append(name, el("div", "dd", escapeText(g.desc)));
+      const side = el("div", "dside");
+      const n = el("span", "dcount");
+      const tog = el("button", "dtog"); tog.type = "button";
+      side.append(n, tog);
+      head.append(mid, side);
+      const kids = el("div", "dkids");
+      let phase = null;
+      for (const it of g.items) {
+        if (it.phase && it.phase !== phase) { phase = it.phase; kids.append(el("div", "tphase", escapeText(phase))); }
+        if (it.q) { const c = cards.get(it.q); if (c) { c.ctx.open = false; kids.append(c.art); } } // context folded: the list stays scannable
+        else kids.append(todoRow(it));
+      }
+      tog.addEventListener("click", () => {
+        if (kids.hidden) todoShut.delete(g.id); else todoShut.add(g.id);
+        saveJSON(TODO_OPEN_LS, [...todoShut]);
+        paintTodo();
+      });
+      card.append(head, kids);
+      host.append(card);
+      g._card = card; g._n = n; g._tog = tog; g._kids = kids;
+    }
+  }
+  function paintTodo() {
+    let open = 0;
+    for (const g of TODO.groups) {
+      if (!g._card) continue;
+      const done = g.items.filter(itemDone).length, total = g.items.length;
+      open += total - done;
+      const all = done === total;
+      g._card.classList.toggle("done", all);
+      g._n.textContent = all ? `All ${total} done` : `${done} of ${total} done`;
+      g._kids.hidden = todoShut.has(g.id);
+      g._tog.textContent = g._kids.hidden ? `Show the ${total} inside` : `Hide the ${total} inside`;
+      g._tog.setAttribute("aria-expanded", String(!g._kids.hidden));
+    }
+    for (const { row, cb, note, add, it } of todoRows.values()) {
+      const done = itemDone(it);
+      row.classList.toggle("ticked", done);
+      cb.checked = done;
+      cb.disabled = readOnly || !!it.done;
+      const v = (todoMarks.get(it.id) || {}).note || "";
+      if (document.activeElement !== note && note.value !== v) note.value = v;
+      note.disabled = readOnly;
+      note.hidden = !note.value && document.activeElement !== note;
+      add.hidden = readOnly || !note.hidden;
+    }
+    $("#todoN").textContent = open ? String(open) : "";
+  }
+
   // ---------- tabs ----------
   const LEDES = {
     questions: { title: "Your open questions", lede: document.getElementById("lede").innerHTML },
     reading: { title: "Your reading list", lede: "The documents that ask you something, newest first. Each one is read when you've answered its questions here." },
+    todo: { title: "Your to-do list", lede: "Everything that's waiting on you, grouped by the job it's part of. Answers and ticks save as you go." },
+    design: { title: "The design pass", lede: "Every page of the comp report, and the Studio's new pages, with what opens from each one nested under it. Tick a whole page or the pieces inside it, and leave a note for the build." },
   };
   function setTab(tab, fromHash) {
-    if (tab !== "reading") tab = "questions";
+    if (!["reading", "design", "todo"].includes(tab)) tab = "questions";
     prefs.tab = tab; saveJSON(PREF_KEY, prefs);
-    const reading = tab === "reading";
-    document.querySelector(".bar").hidden = reading;
-    document.querySelector(".layout").hidden = reading;
+    const reading = tab === "reading", design = tab === "design", todo = tab === "todo", other = reading || design || todo;
+    document.querySelector(".bar").hidden = other;
+    document.querySelector(".layout").hidden = other;
     $("#readingView").hidden = !reading;
-    $("#since").hidden = reading || !DATA.sinceHtml;
+    $("#designView").hidden = !design;
+    $("#todoView").hidden = !todo;
+    $("#since").hidden = other || !DATA.changes.length;
     $("#pageTitle").textContent = LEDES[tab].title;
     $("#lede").innerHTML = LEDES[tab].lede;
     for (const b of $("#tabs").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
-    if (!fromHash) { try { history.replaceState(null, "", reading ? "#reading" : location.pathname + location.search); } catch {} }
+    if (!fromHash) { try { history.replaceState(null, "", other ? "#" + tab : location.pathname + location.search); } catch {} }
     if (reading) paintReading();
+    if (design) paintDesign();
   }
   $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
   // A question id on the reading list opens the Questions tab at that question.
@@ -955,9 +1223,19 @@ details.donegrp .ri { margin-bottom: 10px; }
   }, true);
 
   // ---------- boot ----------
-  if (DATA.sinceHtml) { $("#since").innerHTML = DATA.sinceHtml; $("#since").hidden = false; }
+  if (DATA.changes.length) {
+    $("#sinceD").textContent = "· " + DATA.changes[0].label;
+    $("#changesBody").innerHTML = DATA.changes.map((c) => `<h3>${c.label}</h3><ul>${c.items.map((i) => `<li>${i}</li>`).join("")}</ul>`).join("");
+    $("#since").hidden = false;
+    $("#since").addEventListener("click", () => { const d = $("#changesDlg"); if (d.showModal) d.showModal(); else d.setAttribute("open", ""); });
+    $("#changesClose").addEventListener("click", () => { const d = $("#changesDlg"); if (d.close) d.close(); else d.removeAttribute("open"); });
+  }
   renderAll();
-  setTab(location.hash === "#reading" ? "reading" : (location.hash ? "questions" : prefs.tab || "questions"), true);
+  buildTodo();
+  const hashTab = { "#reading": "reading", "#design": "design", "#todo": "todo" }[location.hash];
+  const hashQ = location.hash.startsWith("#q-") && TODO_QS.has(location.hash.slice(3));
+  setTab(hashTab || (hashQ ? "todo" : location.hash ? "questions" : prefs.tab || "questions"), true);
+  paintDesign();
   $("#compact").checked = !!prefs.compact;
   paintTotals();
   applyFilter();
@@ -967,6 +1245,9 @@ details.donegrp .ri { margin-bottom: 10px; }
   function useLocal(msg) {
     mode = "local";
     for (const [k, v] of Object.entries(loadJSON(READ_LS) || {})) if (v && v.read) readMarks.set(k, v);
+    for (const [k, v] of Object.entries(loadJSON(DESIGN_LS) || {})) if (v) designMarks.set(k, v);
+    for (const [k, v] of Object.entries(loadJSON(TODO_LS) || {})) if (v) todoMarks.set(k, v);
+    paintDesign();
     const saved = loadJSON(LS_KEY) || {};
     for (const [k, v] of Object.entries(saved)) if (byId.has(k)) answers.set(k, v);
     for (const q of all) paintCard(q);
@@ -990,6 +1271,20 @@ details.donegrp .ri { margin-bottom: 10px; }
     if (user) {
       try { if ((await user.canEdit()) === false) setReadOnly("You can read these questions, but only Kimani's answers are saved here."); } catch {}
     }
+    db.collection("design").limit(1000).onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        if (ch.type === "removed") designMarks.delete(ch.doc.id);
+        else if (!pendingDesign.has(ch.doc.id)) designMarks.set(ch.doc.id, ch.doc.data());
+      }
+      paintDesign();
+    }, () => {});
+    db.collection("todo").limit(1000).onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        if (ch.type === "removed") todoMarks.delete(ch.doc.id);
+        else if (!pendingTodo.has(ch.doc.id)) todoMarks.set(ch.doc.id, ch.doc.data());
+      }
+      paintTodo();
+    }, () => {});
     db.collection("reading").limit(1000).onSnapshot((snap) => {
       for (const ch of snap.docChanges()) {
         if (ch.type === "removed") readMarks.delete(ch.doc.id);

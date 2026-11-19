@@ -10,7 +10,8 @@
 //                 figures). An unmatched one is listed; the agent attributes
 //                 it, edits it, or acknowledges it, and the acknowledgment is
 //                 logged. Then Copy proceeds (§9.1).
-//   range         a point value ("worth $3.5M") is flagged; a list-price
+//   range         a point value ("worth $3.5M", "would put #17L at about
+//                 $4.23M") is flagged; a list-price
 //                 recommendation isn't (§9.2). A warning only.
 //   appraisal     "appraisal" and "appraised value": the hard block (§9.3, D-2)
 //   fair housing  a term on the fixed list is a hard block; a word near one
@@ -28,7 +29,7 @@ import { numbersIn, unmatchedNumbers, type Known, type KnownUnit, type Ledger } 
 import type { Intake } from './state.ts';
 import type { WriterInput } from './writer-input.ts';
 
-export const QA_VERSION = `qa-2026-10-14+${FAIR_HOUSING_LIST_VERSION}`;
+export const QA_VERSION = `qa-2026-10-29+${FAIR_HOUSING_LIST_VERSION}`;
 
 // ─── The ledger: what a draft may cite ───────────────────────────────────────
 
@@ -164,6 +165,8 @@ const POINT_VALUE = new RegExp(
   [
     String.raw`\b(?:worth|valued? at|(?:fair )?market value (?:is|of|at)|a value of|values? (?:it|the home|the apartment|the unit) at)\s+${HEDGE}${MONEY}`,
     String.raw`\b(?:it'?s|it’s|is) an? ${MONEY}\s+(?:home|apartment|unit|property|condo|co-?op)\b`,
+    // "which would put #17L at about $4.23M": one comp's rate carried to the home (the 2026-10-29 eval).
+    String.raw`\b(?:puts?|putting|places?|placing)\s+(?:it|the (?:home|apartment|unit|place)|#[\w-]+|unit [\w-]+)\s+at\s+${HEDGE}${MONEY}`,
   ].join('|'),
   'gi',
 );

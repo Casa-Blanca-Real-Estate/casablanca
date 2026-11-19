@@ -105,7 +105,7 @@ its removal half used to hard-redirect, which the redesigned dashboard contradic
 
 Allowlist (identical in `index.html`, `assets/studio-header.js`, and
 `tools/carousel/cb_editorial.html`):
-`creative@email.casa-blanca.com`, `derek@casa-blanca.com`, `emma@casa-blanca.com`,
+`creative@email.casa-blanca.com`, `derek@casa-blanca.com`, `d.prestly@casa-blanca.com` (Derek's Google sign-in), `emma@casa-blanca.com`,
 `erez@casa-blanca.com`.
 
 ### localStorage keys in play

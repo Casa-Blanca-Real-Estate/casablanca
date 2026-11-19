@@ -17,7 +17,7 @@ export const NEED_WORD: Record<Exclude<RowNeed, 'confirm'>, string> = { tier: 't
 /** $4.45M, $850K: the way the handoff writes prices in a row. */
 export function shortPrice(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v) || v <= 0) return '—';
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1_000_000) return `$${(Math.round(v / 10_000) / 100).toFixed(2)}M`;
   if (v >= 1_000) return `$${Math.round(v / 1_000)}K`;
   return `$${Math.round(v)}`;
 }
@@ -78,10 +78,14 @@ function sortValue(r: Sortable, key: SortKey): number | null {
   }
 }
 
-/** Sorted within a group; a missing value goes last either way. Ties keep the list order. */
+/**
+ * Sorted within a group; a missing value goes last either way. Ties keep the list order. With no header
+ * sort, newest first (the audit, 2026-11-06): the export's own order isn't by date (Hannah's sold rows run
+ * Aug 27, Aug 24, Sep 17, Sep 15, Sep 2), and comps added from links landed last whatever their date.
+ */
 export function sortRows<T extends Sortable>(rows: T[], s: SortState): T[] {
-  if (!s.key) return rows;
-  const key = s.key;
+  const key = s.key ?? 'date';
+  if (!s.key) return sortRows(rows, { key, dir: -1 });
   const missing = (v: number | null) => v === null || Number.isNaN(v);
   return rows
     .map((r, i) => ({ r, i, v: sortValue(r, key) }))

@@ -7,7 +7,7 @@ import { linksApi, type LinkReadView } from '../../api.ts';
 import { titleFromLink } from '../../../workspace/links.ts';
 import { CompForm, type CompPrefill } from '../comp/CompForm.tsx';
 import type { Workspace } from '../workspace/model.ts';
-import { inFlight } from '../workspace/reads.ts';
+import { inFlight, mayRetry, retryRead } from '../workspace/reads.ts';
 import { ReadingNotice } from '../workspace/ReadingNotice.tsx';
 
 function readTitle(r: LinkReadView): string {
@@ -55,6 +55,11 @@ export function Reads({ ws }: { ws: Workspace }) {
             <span className="so-read-state">{r.errorMessage ?? 'That page couldn’t be read.'}</span>
             {!ws.readOnly && (
               <span className="so-read-actions">
+                {mayRetry(r) && (
+                  <button type="button" className="link" disabled={Boolean(ws.busy)} onClick={() => void ws.run('Trying the link again…', () => retryRead(ws.reportId, r, ws.applyLinks))}>
+                    Try again
+                  </button>
+                )}
                 <button type="button" className="link" onClick={() => setTyping({ readId: r.id, prefill: prefillFrom(r) })}>Type it in</button>
                 <button
                   type="button"

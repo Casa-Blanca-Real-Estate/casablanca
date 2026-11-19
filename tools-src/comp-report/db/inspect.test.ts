@@ -89,6 +89,14 @@ function suite(label: string, ownerCanCreateRoles: boolean) {
       }
     });
 
+    test('the key works as a bearer token too (how Network secrets send it), and a wrong one is still a 401', async () => {
+      const bearer = (key: string) => handleInspect(new Request('https://site.example/api/comp-report/inspect?view=reports', {
+        headers: { authorization: `Bearer ${key}` },
+      }), deps());
+      assert.equal((await bearer(KEY)).status, 200);
+      assert.equal((await bearer('x'.repeat(40))).status, 401);
+    });
+
     test('comp facts that are numbers or dates pass; the rest is redacted', async () => {
       const body = await (await call(`view=comps&report=${fx.reportId}`)).json() as { comps: Record<string, any>[] };
       const facts = body.comps[0]!.observation.facts;

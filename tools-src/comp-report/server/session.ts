@@ -8,7 +8,7 @@
 // every request, and users.role mirrors the result. So granting or revoking a
 // role means changing the allowlist, and it takes effect on the next request —
 // not at the next sign-in, as roles inside the Identity token would.
-import { decide, type AccessConfig } from './access.ts';
+import { decide, isStudioTeam, type AccessConfig } from './access.ts';
 import { withActor, type PoolLike, type Role } from './db.ts';
 import { HttpError } from './http.ts';
 import { GUEST_EMAIL, GUEST_NAME, guestKeyMatches, isGuestToken, type GuestConfig } from './guest.ts';
@@ -31,6 +31,8 @@ export interface SessionUser {
   guest: boolean;
   /** The test user (server/test-user.ts), signed in with CR_TEST_KEY: its AI calls use the eval key only. */
   test?: boolean;
+  /** On the Studio's team (server/access.ts isStudioTeam): its team tools, the CMS and the roster. */
+  team?: boolean;
 }
 
 /** The sample data (Dispatch 07) is for admins, and for a guest walking a preview through. */
@@ -157,19 +159,22 @@ async function requireIdentityUser(token: string, deps: AuthDeps, seen: Verified
       provider: identity.provider,
       persisted: false,
       guest: false,
+      team: isStudioTeam({ email, role: decision.role }),
     };
   }
 
+  let teamGrant = false;
   const row = await withActor(deps.pool, { kind: 'system', does: 'sign-in' }, async (tx) => {
     // A lock held by a stalled transaction fails this check with an error, rather than stalling it until
     // the function is killed and the browser gets a bare 500.
     await tx.query("set local lock_timeout = '3s'");
     await tx.query("set local statement_timeout = '8s'");
-    const grant = await tx.query<{ role: Role }>(
-      'select role from comp_report.allowlist where email = $1 and revoked_at is null',
+    const grant = await tx.query<{ role: Role; studio_team: boolean; admin: boolean }>(
+      'select role, studio_team, admin from comp_report.allowlist where email = $1 and revoked_at is null',
       [email],
     );
-    const decision = decide(email, deps.access, grant.rows[0]?.role ?? null);
+    teamGrant = grant.rows[0]?.studio_team === true;
+    const decision = decide(email, deps.access, grant.rows[0]?.role ?? null, grant.rows[0]?.admin === true);
     if (!decision.allowed || !decision.role) throw new HttpError(403, 'not_authorised', NOT_AUTHORISED);
 
     const existing = (await tx.query<UserRow>(
@@ -241,6 +246,7 @@ async function requireIdentityUser(token: string, deps: AuthDeps, seen: Verified
     provider: identity.provider,
     persisted: true,
     guest: false,
+    team: isStudioTeam({ email: row.email, role: row.role }, teamGrant),
   };
 }
 
@@ -255,7 +261,7 @@ async function requireGuest(token: string, deps: AuthDeps): Promise<SessionUser>
   }
   const user: SessionUser = {
     email: GUEST_EMAIL, name: GUEST_NAME, role: 'agent', capability: 'full',
-    identityId: 'guest', provider: 'guest', persisted: false, guest: true,
+    identityId: 'guest', provider: 'guest', persisted: false, guest: true, team: true,
   };
   if (!deps.pool) return user;
   const row = await withActor(deps.pool, { kind: 'system', does: 'sign-in' }, async (tx) => {

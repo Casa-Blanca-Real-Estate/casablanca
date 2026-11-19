@@ -187,7 +187,7 @@ export function sharedCount(home: Features, comp: Features): number {
 /** The ⓘ beside the condition scale. "Well kept" is Kimani's word for the stored `good` state (NB-4 B). */
 export const CONDITION_INFO = 'Original: never redone, as built. Well kept: looked after, not redone. Needs work: dated or worn, a fixer-upper or gut.';
 
-const CONDITION_TO_LABEL: Record<Condition, string> = {
+export const CONDITION_TO_LABEL: Record<Condition, string> = {
   needs_work: 'Needs work', original: 'Original', good: 'Well kept', updated: 'Updated', renovated: 'Renovated', mint: 'Mint',
 };
 const LABEL_TO_CONDITION = Object.fromEntries(Object.entries(CONDITION_TO_LABEL).map(([k, v]) => [v, k])) as Record<string, Condition>;
@@ -265,7 +265,7 @@ function featuresFromTags(tags: CompRecord['tags']): Features {
 
 // ─── The home's features, in its intake ─────────────────────────────────────
 
-const OUTDOOR_TO_LABEL: Record<string, string> = {
+export const OUTDOOR_TO_LABEL: Record<string, string> = {
   none: 'None', balcony: 'Balcony', terrace: 'Terrace', roof_deck: 'Private roof', garden: 'Garden', patio: 'Patio',
 };
 const LABEL_TO_OUTDOOR: Record<string, OutdoorChoice> = {

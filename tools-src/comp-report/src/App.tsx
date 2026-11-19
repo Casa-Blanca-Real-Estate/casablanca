@@ -9,10 +9,13 @@ import { AcceptInvite, NotAuthorised, SetNewPassword, SignIn, Unavailable } from
 import { Reports } from './views/Reports.tsx';
 import { Workspace } from './views/workspace/Workspace.tsx';
 import type { ScreenId } from './views/workspace/screens.ts';
+import type { StartScreen } from './views/newcomp/steps.ts';
 import { Center, StateLine } from './views/shell/Pieces.tsx';
 import { Shell } from './views/shell/TopBar.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
 import { STUDIO_SIGN_IN, studioSignInUrl } from './studio-sign-in.ts';
+import { offerDevNotebook } from './dev-notebook.ts';
+import { GuideLauncher } from './views/guide/Launcher.tsx';
 
 function currentReportId(): string | null {
   return new URLSearchParams(location.search).get('report');
@@ -68,6 +71,7 @@ export function App() {
     const id = currentReportId();
     prefetch(id ? `/api/comp-report/workspace?report=${id}` : '/api/comp-report/reports');
     api<Me>('/api/comp-report/me').then((m) => {
+      offerDevNotebook(m, session.guest ? undefined : () => session.token());
       const next = takeNext();
       if (next) location.replace(next);
       else if (STUDIO_SIGN_IN) location.replace('/'); // signed in at the Studio's sign-in page: on to the dashboard
@@ -110,9 +114,9 @@ export function App() {
     setState({ status: 'signed-out' });
   }, []);
 
-  // A new comp opens straight into its modal's next screen (?start=details); a report from the list
+  // A new comp opens straight into the New comp window (?start=basics); a report from the list
   // opens on the screen its stage reached (?step=send).
-  const open = useCallback((id: string | null, start?: 'details', step?: ScreenId) => {
+  const open = useCallback((id: string | null, start?: StartScreen, step?: ScreenId) => {
     const query = id ? `?report=${id}${start ? `&start=${start}` : ''}${step ? `&step=${step}` : ''}` : location.pathname;
     history.pushState(null, '', query);
     setReportId(id);
@@ -137,7 +141,9 @@ export function App() {
     body = <Reports me={me} onOpen={open} />;
   }
 
-  const account = state.status === 'signed-in' ? { email: state.email, role: me?.user.role, dev: session.dev, guest: session.guest } : null;
+  const account = state.status === 'signed-in'
+    ? { email: state.email, role: me?.user.role, dev: session.dev, guest: session.guest, me, identityToken: session.guest ? undefined : () => session.token() }
+    : null;
 
   return (
     <Shell account={account} onSignOut={() => void signOut()}>
@@ -146,6 +152,8 @@ export function App() {
           {framed ? <Center>{body}</Center> : body}
         </ErrorBoundary>
       </div>
+      {/* The guide: its top bar button, the ? key, ?guide= links and presenter mode (views/guide/). */}
+      {state.status === 'signed-in' && me && !refusal && <GuideLauncher me={me} onReports={!reportId} />}
     </Shell>
   );
 }

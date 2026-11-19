@@ -90,7 +90,7 @@ export function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
     }
   }
 
-  const setText = (key: LineKey | 'signOff') => (v: Entry<string> | undefined) => {
+  const setText = (key: LineKey | 'signOff' | 'closing') => (v: Entry<string> | undefined) => {
     const next = { ...m.send };
     if (v) next[key] = v;
     else delete next[key];
@@ -208,6 +208,10 @@ export function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
           <span className="fh">Signed</span>
           <TextInput label="Signed" value={m.send.signOff} onChange={setText('signOff')} today={ws.today} disabled={locked} placeholder={ws.agentName || 'Your name'} />
         </label>
+        <label className="se-field">
+          <span className="fh">Closing</span>
+          <TextInput label="Closing" value={m.send.closing} onChange={setText('closing')} today={ws.today} disabled={locked} placeholder="Best," />
+        </label>
       </div>
       {line('chosen', 'e.g. I focused on lower floors and homes close in size.', 2)}
       {line('consider', 'Buildings that trade higher or lower, carrying costs, recent activity in the building. One a line.', 3)}
@@ -227,7 +231,7 @@ export function YourLines({ ws, m }: { ws: Workspace; m: SendModel }) {
           <button type="button" className={`btn small-btn${practice ? ' primary' : ''}`} disabled={locked || asking} onClick={() => void feedback()}>
             {asking ? 'Reading…' : latestRound(rounds, 'feedback') ? 'Feedback again' : 'Get Hubert’s feedback'}
           </button>
-          <span className="cw-quiet">{practice && !draftOpen ? 'What’s unclear, unsupported or off-voice. Draft from notes opens after it.' : 'What’s unclear, unsupported or off-voice, for the client.'}</span>
+          <span className="cw-quiet">{practice && !draftOpen ? 'What’s unclear, unsupported or off-voice, and where he’d like more of your thinking. Draft from notes opens after it.' : 'What’s unclear, unsupported or off-voice, and where he’d like more of your thinking.'}</span>
         </div>
       )}
       {problem && <p className="rv-err" role="alert">{problem}</p>}

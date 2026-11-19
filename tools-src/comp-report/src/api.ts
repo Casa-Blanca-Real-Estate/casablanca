@@ -69,7 +69,7 @@ async function request<T>(path: string, init: { method?: string; body?: unknown 
 export type Role = 'agent' | 'mentor' | 'admin' | 'external';
 
 export interface Me {
-  user: { email: string; name: string | null; role: Role; capability: 'practice' | 'full'; persisted: boolean; guest?: boolean };
+  user: { email: string; name: string | null; role: Role; capability: 'practice' | 'full'; persisted: boolean; guest?: boolean; team?: boolean };
   database: 'ready' | 'not_configured';
 }
 
@@ -95,12 +95,27 @@ export interface Report {
   side?: 'buyer' | 'seller' | null;
   stage?: 'sort' | 'findings' | 'send' | 'sent';
   unsorted?: number;
+  /** The reports list (the design pass, 2026-11-06): comps on the report, its range once revealed, when it was sent, the home's photo, the owner's level. */
+  comps?: number;
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
+  sentAt?: string | null;
+  photo?: string | null;
+  /** Where the photo came from: the home's own read, the sample's stored photos, or another unit in the same building. */
+  photoFrom?: 'read' | 'sample' | 'building' | null;
+  ownerLevel?: 'practice' | 'full' | null;
+  /** Done's What's next items ticked (state.doneChecks), by key: "follow-up", "plan-offer". */
+  doneChecks?: string[];
+  /** When it was last worked on: the report or any of its comps changed. Stage · updated shows and sorts by it. */
+  workedAt?: string;
 }
 
 export interface AllowlistEntry {
   email: string;
   role: Role;
   note: string | null;
+  studioTeam: boolean;
+  admin: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -125,6 +140,7 @@ export interface ShownMessage {
 }
 
 export type { HubertEmailEdit } from '../server/hubert-email.ts';
+export type { HubertHomeEdit } from '../workspace/home-edit.ts';
 export type { TrailEntry, TrailSource } from '../server/hubert-trail.ts';
 export type { HubertView } from '../server/hubert-view.ts';
 type HubertView = import('../server/hubert-view.ts').HubertView;
@@ -133,6 +149,7 @@ type TrailSource = import('../server/hubert-trail.ts').TrailSource;
 
 export type TurnEvent =
   | { type: 'email_edit'; edit: import('../server/hubert-email.ts').HubertEmailEdit }
+  | { type: 'home_edit'; edit: import('../workspace/home-edit.ts').HubertHomeEdit }
   | { type: 'change'; entry: TrailEntry }
   | { type: 'comps_changed' }
   | { type: 'start'; model: string }
@@ -143,14 +160,16 @@ export type TurnEvent =
   | { type: 'done'; stopReason: string; model: string; ms: number }
   | { type: 'refused'; category: string | null }
   | { type: 'interrupted'; reason: string; ms: number }
-  | { type: 'error'; code: string; status: number | null };
+  | { type: 'error'; code: string; status: number | null }
+  | { type: 'withdrawn' };
 
 /** One assistant turn, as a stream of events (server/api/turn.ts). */
-export async function* streamTurn(reportId: string, message?: string, view?: HubertView | null): AsyncGenerator<TurnEvent> {
+export async function* streamTurn(reportId: string, message?: string, view?: HubertView | null, signal?: AbortSignal): AsyncGenerator<TurnEvent> {
   const res = await fetch('/api/comp-report/turn', {
     method: 'POST',
     headers: await headers(),
     body: JSON.stringify({ reportId, message, ...(view ? { view } : {}) }),
+    signal,
   });
   if (!res.ok || !res.body) await fail(res);
   const reader = res.body!.getReader();
@@ -168,6 +187,16 @@ export async function* streamTurn(reportId: string, message?: string, view?: Hub
     }
   }
 }
+
+/** Hubert's chat beyond the turn (2026-11-06): Stop, and a listing card's photo. */
+export const chatApi = {
+  /** Takes the agent's last message back; the reply still being written stops. */
+  stop: (reportId: string, text: string) =>
+    api<{ stopped: number; text: string }>('/api/comp-report/messages', { method: 'POST', body: { reportId, stop: true, text } }),
+  /** A StreetEasy result's preview photo, or null. */
+  thumb: (reportId: string, url: string) =>
+    api<{ image: string | null }>(`/api/comp-report/messages?report=${reportId}&thumb=${encodeURIComponent(url)}`),
+};
 
 // ─── The walkthrough (CR-3a) ────────────────────────────────────────────────
 
@@ -252,7 +281,7 @@ export const workspaceApi = {
   editComp: (reportId: string, reportCompId: string, edit: CompEdit) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, reportCompId, ...edit } }),
   /** Several comps' tags at once: the tags the data settles (NB-9 C). */
-  setTags: (reportId: string, tagEdits: { reportCompId: string; tags: string[] }[]) =>
+  setTags: (reportId: string, tagEdits: { reportCompId: string; tags: string[]; from?: string[] }[]) =>
     api<WorkspaceData>('/api/comp-report/comps', { method: 'PATCH', body: { reportId, tagEdits } }),
 };
 

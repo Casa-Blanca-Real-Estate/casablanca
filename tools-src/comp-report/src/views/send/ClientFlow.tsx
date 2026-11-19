@@ -14,7 +14,7 @@
 // leave each step, with who wrote it: the agent, the writer, or both.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  clientSteps, latestRound, lineBy, MAX_CLIENT_LINE, OVERVIEW, overviewDone, versionUnlocked, type ClientRound,
+  clientSteps, latestRound, lineBy, MAX_CLIENT_LINE, MAX_LISTING_LINE, OVERVIEW, overviewDone, versionUnlocked, type ClientRound,
 } from '../../../workspace/client-words.ts';
 import { countedComps } from '../../../workspace/email.ts';
 import type { WorkspaceComp } from '../../../workspace/engine-input.ts';
@@ -23,7 +23,7 @@ import { noteOf } from '../../../workspace/state.ts';
 import type { Workspace } from '../workspace/model.ts';
 import { YourLines } from './ClientOverview.tsx';
 import { ClientRounds, RoundText } from './ClientRounds.tsx';
-import { compBox, designedComps, NO_PARSED, type DesignedComp } from './designed.ts';
+import { compCard, designedComps, NO_PARSED, type DesignedComp } from './designed.ts';
 import type { SendModel } from './useSendEmail.ts';
 import '../../styles/review.css';
 
@@ -235,6 +235,8 @@ function CompStep({ ws, m, comp, box, draft, onDraft, save, saving, nav }: {
   }, [practice, canEdit, lastDraft]);
 
   const preview: DesignedComp | null = box ? { ...box.box, paragraph: draft.text.trim() || null } : null;
+  // A listing's note is four lines at most in the email (the design pass, item 8): 200 characters.
+  const limit = box && box.box.status !== 'sold' && !box.anchor ? MAX_LISTING_LINE : MAX_CLIENT_LINE;
   const versionDiffers = lastDraft && lastDraft.text.trim() !== draft.text.trim();
 
   return (
@@ -242,7 +244,7 @@ function CompStep({ ws, m, comp, box, draft, onDraft, save, saving, nav }: {
       <div className="rv-body cw-body">
         <section className="rv-comp cw-box" aria-label={preview?.name ?? 'The comp'}>
           <p className="cw-label">As the client will see it</p>
-          {preview && <div className="cw-email" dangerouslySetInnerHTML={{ __html: compBox(preview, box!.anchor) }} />}
+          {preview && <div className="cw-email" dangerouslySetInnerHTML={{ __html: compCard(preview, box!.anchor) }} />}
         </section>
 
         <section className="rv-work">
@@ -264,7 +266,7 @@ function CompStep({ ws, m, comp, box, draft, onDraft, save, saving, nav }: {
               className="rv-note cw-para"
               aria-label="For the client"
               rows={5}
-              maxLength={MAX_CLIENT_LINE}
+              maxLength={limit}
               value={draft.text}
               disabled={!canEdit}
               placeholder={practice
@@ -276,8 +278,8 @@ function CompStep({ ws, m, comp, box, draft, onDraft, save, saving, nav }: {
               <div className="rv-notebar">
                 <span className="rv-tagline cw-who">{whoLine(draft, j.clientLine?.by)}</span>
                 <span className="rv-notebar-r">
-                  <span className={`rv-tagline cw-count${draft.text.trim().length > MAX_CLIENT_LINE ? ' over' : ''}`} aria-live="polite">
-                    {draft.text.trim().length}/{MAX_CLIENT_LINE}
+                  <span className={`rv-tagline cw-count${draft.text.trim().length > limit ? ' over' : ''}`} aria-live="polite">
+                    {draft.text.trim().length}/{limit}
                   </span>
                   {practice && !(showVersion && lastDraft) && (
                     <button
