@@ -444,7 +444,13 @@ test('FileMaker push: pushOn passes through; the test record passes through; gue
   const t = await handleLeadAccept(post({ fileMakerTestPush: true }), deps(KIMANI));
   assert.equal((await t.json()).recordId, '101');
   assert.equal(seen.at(-1)!.url, 'https://svc.test/admin/filemaker/test-push');
+  const r = await handleLeadAccept(post({ fileMakerTestPush: { runId: '5e009988f7' } }), deps(KIMANI));
+  assert.equal(r.status, 200);
+  assert.equal(seen.at(-1)!.url, 'https://svc.test/admin/filemaker/test-push');
+  assert.deepEqual(JSON.parse(seen.at(-1)!.body!), { runId: '5e009988f7' });
   const n = seen.length;
+  assert.equal((await handleLeadAccept(post({ fileMakerTestPush: { runId: '../x' } }), deps(KIMANI))).status, 400);
+  assert.equal((await handleLeadAccept(post({ fileMakerTestPush: { runId: '5e009988f7' } }), deps(GUEST))).status, 403);
   assert.equal((await handleLeadAccept(post({ fileMaker: { pushOn: 'yes' } }), deps(KIMANI))).status, 400);
   assert.equal((await handleLeadAccept(post({ fileMakerTestPush: true }), deps(GUEST))).status, 403);
   assert.equal(seen.length, n, 'refused requests never reach the service');

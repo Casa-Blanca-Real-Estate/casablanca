@@ -139,6 +139,11 @@ that doesn't have these yet (no `client` on a run, no `fileMaker` in status, `/a
   address (`POST {fileMaker: {emailOn?, emailTo?}}` → the service's `POST /admin/settings`, kept in
   `/data/settings.json`). **Off by default.** On, the service sends one email per lead to that inbox with the
   client's details as `Field: value` lines and as JSON. Guests see it read-only.
+- **Send this lead to FileMaker** (Nov 19), on each run with a client: shows the run's **Client ID** and whether
+  it's flagged to **stack**, and a button that sends that real lead into FileMaker now, whether the push is on or
+  off (`POST {fileMakerTestPush: {runId}}` → the service's `POST /admin/filemaker/test-push {runId}`). It asks
+  first, and warns if FileMaker's log shows the lead went already. For David to watch a real record fill in. The
+  push's own On/Off switch and the invented test record are in the FileMaker section.
 - **FileMaker pulling** instead: the service has `GET /filemaker/leads` and `GET /filemaker/messages`, guarded by
   Railway's `FILEMAKER_KEY` (sent as the `x-filemaker-key` header or `Authorization: Bearer <key>`), with
   `?since=<ISO time>` for only what's new. The page shows *Pull access: key set / not set* from
