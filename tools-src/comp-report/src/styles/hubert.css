@@ -169,3 +169,20 @@
 .hb-card-where { font-size: 12px; color: var(--cb-mid); }
 .hb-card-go { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--cb-deep); margin-top: 2px; }
 .hb-cards-check { margin: 0 !important; font-size: 11px; color: var(--cb-mid); line-height: 1.45; }
+
+/* His suggestion card (comps.md §3, 2026-11-18): the address, StreetEasy ↗ in the corner (an outline only on
+   hover), then Not this one and + ADD. It stacks to fit the panel at its narrowest (300px). */
+.hb-sug { border: 1px solid #e4e2dc; background: #fff; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: stretch; transition: border-color .15s; }
+.hb-sug:hover { border-color: var(--cb-lavender); }
+.hb-sug-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.hb-sug-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hb-sug-addr { font-size: 14px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+.hb-sug-line { font-size: 12px; color: #6f6d68; }
+.hb-selink { display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent; padding: 4px 6px; font-size: 11px; color: var(--cb-black); text-decoration: none; white-space: nowrap; }
+.hb-selink img { height: 10px; display: block; }
+.hb-selink:hover { border-color: #032765; background: #f2f5fa; }
+.hb-sug-acts { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.hb-mini { font: inherit; background: none; border: 0; font-size: 12px; color: #6f6d68; padding: 6px 8px; cursor: pointer; }
+.hb-mini:hover { background: #f1effa; color: var(--cb-black); }
+.hb-sug .hb-find-ok { border-radius: 0; height: 34px; font-size: 11px; padding: 0 14px; letter-spacing: .06em; }
+.hb-sug .hb-find-ok:hover:not(:disabled) { background: var(--cb-deep); border-color: var(--cb-deep); }

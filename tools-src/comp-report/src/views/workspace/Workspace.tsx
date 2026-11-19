@@ -34,11 +34,13 @@ import { Gate } from './Gate.tsx';
 import { fromBase64, localToday, type ToastAction, type Workspace as WorkspaceModel } from './model.ts';
 import { useLinkReads } from './reads.ts';
 import { SendStep } from './SendStep.tsx';
-import { hasSF, isScreen, sortReadiness, type Level, type ScreenId } from './screens.ts';
+import { hasSF, isScreen, loggedWorkspaceScreen, sortReadiness, type Level, type ScreenId } from './screens.ts';
+import { AddCompsScreen } from './AddCompsScreen.tsx';
 import { SortFirst } from './SortFirst.tsx';
 import { SortStep } from './SortStep.tsx';
 import { ReviewFlow } from '../review/ReviewFlow.tsx';
-import { Center, DevStrip, DRAWER_SLIDE_MS, HubertDrawer, HubertTab, Notes, StateLine } from '../shell/Pieces.tsx';
+import { Center, DevStrip, Notes, StateLine } from '../shell/Pieces.tsx';
+import { HubertOpenTab, HubertPanel, useHubWidth } from '../shell/HubertPanel.tsx';
 import { ReportBar } from '../shell/ReportBar.tsx';
 import { trackScreen } from '../../activity.ts';
 import { ProgressRow, WorkspaceHeader } from '../shell/WorkspaceHeader.tsx';
@@ -122,12 +124,18 @@ const SAMPLE_FILLS: Record<StepId, string> = {
 
 /** CR-3a's steps map onto the screens: the reveal and "work it through" are Findings now. */
 function screenFromUrl(): ScreenId {
-  const s = new URLSearchParams(location.search).get('step');
+  const q = new URLSearchParams(location.search);
+  // ?start=comps and the older ?step=export: Add comps, the workspace's first step since comps.md §1.
+  if (q.get('start') === 'comps' || q.get('step') === 'export') return 'comps';
+  const s = q.get('step');
   if (s === 'reveal' || s === 'work') return 'findings';
   return isScreen(s) ? s : 'sort';
 }
 
-const REACH: Record<ScreenId, Reached> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
+/** The screens in order, for which way the content slides (comps.md §5). */
+const SCREEN_ORDER: ScreenId[] = ['comps', 'sort', 'gate', 'findings', 'send', 'done'];
+
+const REACH: Record<ScreenId, Reached> = { comps: 'sort', sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
 const REACH_ORDER: Reached[] = ['sort', 'findings', 'send'];
 
 /** An admin can view the Gate as a new (practice) agent, to show it (Dispatch 14). Per browser. */
@@ -146,7 +154,7 @@ function startFromUrl(): StartScreen | null {
   const start = startFromParam(q.get('start'));
   if (start) return start;
   const step = q.get('step');
-  return step === 'home' ? 'details' : step === 'export' ? 'comps' : null;
+  return step === 'home' ? 'details' : null;
 }
 
 const NO_READS: LinkReadView[] = [];
@@ -172,25 +180,20 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   const [target, setTargetState] = useState<TargetState | null>(null);
   const [state, setStateState] = useState<WorkspaceState>({});
   const [screen, setScreen] = useState<ScreenId>(screenFromUrl);
+  // Content slides in from the right going forward and from the left going back (comps.md §5).
+  const screenRef = useRef<ScreenId>(screen);
+  const [paneDir, setPaneDir] = useState<'f' | 'b'>('f');
   const [start, setStart] = useState<StartScreen | null>(startFromUrl);
   // The step the New comp window shows (Edit details keeps its own, so it's set from the window).
   const [windowStep, setWindowStep] = useState<StepKey | null>(null);
   // The activity log's screen line (Dispatch 22b): the New comp window's steps while it's open, else the screen.
   useEffect(() => {
-    trackScreen(start ? loggedScreen(windowStep ?? start) : screen, reportId);
+    trackScreen(start ? loggedScreen(windowStep ?? start) : loggedWorkspaceScreen(screen), reportId);
   }, [start, windowStep, screen, reportId]);
   // Hubert opens by default beside the New comp window (the design pass, 2026-11-11).
-  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work' || Boolean(startFromUrl()));
-  // The drawer stays mounted for its slide out (shell.css), then goes (Kimani's notebook, 2026-10-27).
-  const [drawerShown, setDrawerShown] = useState(drawerOpen);
-  useEffect(() => {
-    if (drawerOpen) {
-      setDrawerShown(true);
-      return;
-    }
-    const t = window.setTimeout(() => setDrawerShown(false), DRAWER_SLIDE_MS);
-    return () => window.clearTimeout(t);
-  }, [drawerOpen]);
+  // Hubert's panel is on the left across the workspace too (comps.md §2): open on Add comps, as beside the window.
+  const [drawerOpen, setDrawerOpen] = useState(() => new URLSearchParams(location.search).get('step') === 'work' || Boolean(startFromUrl()) || screenFromUrl() === 'comps');
+  const [hubWidth, setHubWidth] = useHubWidth();
   const [propertyType, setPropertyTypeState] = useState<'condo' | 'coop'>('condo');
   const [viewAsNewAgent, setViewAsNewAgentState] = useState(readViewAsNew);
   // Settings (the name menu) flips it from outside the report.
@@ -241,7 +244,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
 
   useEffect(() => {
     const onPop = () => {
-      setScreen(screenFromUrl());
+      screenRef.current = screenFromUrl();
+      setScreen(screenRef.current);
       setStart(startFromUrl());
     };
     addEventListener('popstate', onPop);
@@ -253,6 +257,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     params.set('report', reportId);
     params.set('step', next);
     params.delete('start');
+    setPaneDir(SCREEN_ORDER.indexOf(next) < SCREEN_ORDER.indexOf(screenRef.current) ? 'b' : 'f');
+    screenRef.current = next;
     history.pushState(null, '', `?${params}`);
     setScreen(next);
     setStart(null);
@@ -268,7 +274,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
     history.replaceState(null, '', `?${params}`);
     setStart(screen);
   }, [reportId]);
-  const closeStart = useCallback(() => go('sort'), [go]);
+  // The window's last step opens the workspace on Add comps (comps.md §1); the sample's fill goes on to Sort.
+  const closeStart = useCallback((to: ScreenId = 'comps') => go(to), [go]);
 
   // Each stored export, read with the engine's parser, once per import.
   const parseCache = useRef(new Map<string, ParsedImport | { error: string }>());
@@ -492,6 +499,8 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   viewRef.current = () => {
     // The New report window sits over whatever screen is behind it: it's what the agent sees.
     if (start) return { screen: 'new_report', compId: null, step: windowStep ?? start };
+    // Add comps was the window's last step: get_view still names it that way ("Add comps: the export and links").
+    if (screen === 'comps') return { screen: 'new_report', compId: null, step: 'comps' };
     const inReview = Boolean(reviewing) && screen === 'sort';
     const at = inReview ? lookingRef.current.review : screen === 'sort' ? lookingRef.current.sort : null;
     return { screen: inReview ? 'review' : screen, compId: at, ...(screen === 'sort' ? { order: lookingRef.current.order } : {}) };
@@ -832,10 +841,10 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   // Findings stays locked until every comp has a tier, a note and a tag (Dispatch 14): whatever the way in —
   // the Gate's button, a typed ?step=, the browser's Back — not only the progress row and its button.
   const sortLocked = !readOnly && !readiness.ready && (screen === 'gate' || screen === 'findings' || screen === 'send');
-  const stepFor: Record<ScreenId, StepId> = { sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
+  const stepFor: Record<ScreenId, StepId> = { comps: 'sort', sort: 'sort', gate: 'findings', findings: 'findings', send: 'send', done: 'send' };
   const step = stepFor[screen];
   const toastEl = toastText && (
-    <div className={`toast sh-toast${drawerOpen && !start ? ' with-drawer' : ''}`} role="status">
+    <div className="toast sh-toast" role="status">
       {toastText.text}
       {toastText.action && (
         <button
@@ -873,8 +882,12 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
   return (
     <BuildNotesContext.Provider value={buildNotes}>
       <ReportBar ws={ws} setDevTools={setBuildNotes} />
-      <div className={`sh-page${drawerOpen ? ' with-drawer' : ''}`}>
-        <HubertTab ws={ws} />
+      {/* Hubert on the left (comps.md §2): the same panel as beside the New comp window; the page centres beside him. */}
+      {drawerOpen ? <HubertPanel ws={ws} width={hubWidth} onWidth={setHubWidth} className="sh-hubleft" /> : <HubertOpenTab ws={ws} className="sh-htab" />}
+      <div
+        className={`sh-page${drawerOpen ? ' with-hub' : ''}${screen === 'comps' || screen === 'sort' ? ' narrow' : ''}`}
+        style={{ ['--sh-hub-w' as string]: drawerOpen ? `${hubWidth}px` : '0px' }}
+      >
         <WorkspaceHeader
           ws={ws}
           onBack={onBack}
@@ -889,8 +902,9 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
           </div>
         )}
 
-        <section className="sh-screen">
+        <section className={`sh-screen in-${paneDir}`} key={screen}>
           <ErrorBoundary resetKey={screen} onBack={onBack}>
+            {screen === 'comps' && <AddCompsScreen ws={ws} />}
             {screen === 'sort' && <SortStep ws={ws} />}
             {sortLocked ? <SortFirst ws={ws} /> : (
               <>
@@ -909,7 +923,6 @@ export function Workspace({ reportId, me, onBack, onOpen }: { reportId: string; 
           <ReviewFlow ws={ws} startAt={reviewing.at} onClose={() => setReviewing(null)} />
         </ErrorBoundary>
       )}
-      {drawerShown && <HubertDrawer ws={ws} closing={!drawerOpen} />}
       {toastEl}
     </BuildNotesContext.Provider>
   );

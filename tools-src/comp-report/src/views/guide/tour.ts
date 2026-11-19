@@ -50,14 +50,14 @@ export const TIPS: TourTip[] = [
     body: 'Outdoor space, amenities and the client help too. Skip for now leaves them for later.',
   },
   {
-    id: 'comps-paste', screen: 'new-report-comps', targets: ['.paste-bar', '.add-bar'],
+    id: 'comps-paste', screen: 'new-report-comps', targets: ['.ac-paste', '.add-bar'],
     title: 'Bring in your comps',
-    body: 'Drop the StreetEasy export or its PDF on this step, paste listing links here, or Type one in.',
+    body: 'Paste listing links here, or drop the StreetEasy export or its PDF just below. About three of each status is the aim.',
   },
   {
-    id: 'comps-next', screen: 'new-report-comps', targets: ['.nc-foot .nc-bp'],
+    id: 'comps-next', screen: 'new-report-comps', targets: ['.ac-foot .ac-next', '.sh-steps .sh-next'],
     title: 'On to Sort',
-    body: 'A comp read from a link asks you to confirm it. When they’re in, Open workspace takes you to Sort.',
+    body: 'Comps keep reading after you move on. On Sort you check each one against its page, then give it a tier.',
   },
   {
     id: 'sort-row', screen: 'sort', targets: ['.so-row-wrap.incomplete .so-row', '.so-row'],

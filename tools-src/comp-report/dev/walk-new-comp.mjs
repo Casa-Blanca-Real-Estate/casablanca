@@ -1,4 +1,5 @@
-// DEV ONLY — the New comp window's walk (design pass, new-comp.md, 2026-11-11): + NEW COMP morphs into the
+// DEV ONLY — the New comp window's walk (design pass, new-comp.md, 2026-11-11; Add comps and Sort's check from
+// comps.md, 2026-11-18): + NEW COMP morphs into the
 // field and START, a StreetEasy link read into the window on its own page with Hubert on the left, the seven
 // steps (Basics → General → Own or shared → Home amenities → Building amenities → Client info → Add comps),
 // then a typed address, and Edit details from the workspace's ✎. Against the local dev server and the fakes
@@ -99,18 +100,58 @@ await next(); await settle(500);
 await p.getByRole('group', { name: 'Pre-approved' }).getByRole('button', { name: 'Yes' }).click();
 await p.waitForTimeout(300);
 await shot('09-client-info');
-await next(); await settle(500);
+// NEXT: ADD COMPS → (comps.md §1): the window ends at Client info; the workspace opens on Add comps.
+check(/ADD COMPS/.test(await p.locator('.nc-foot .nc-bp').innerText()), 'Client info’s button is NEXT: ADD COMPS →');
+await next();
+await p.waitForURL(/step=comps/, { timeout: 20000 });
+await settle();
+check(await p.locator('.nc-hub.sh-hubleft').count() === 1, 'Hubert is on the left in the workspace');
+check(/Add comps/.test(await p.locator('.sh-step.current').innerText()), 'the tabs open on 1 Add comps');
 await shot('10-add-comps');
-// Hubert closed: the tab on the left edge, the window centred again.
+// Paste links: three read, one StreetEasy won't let be read.
+await p.locator('.ac-ask').fill([
+  'https://streeteasy.com/building/200-chambers-street-new_york/10a',
+  'https://streeteasy.com/building/5-franklin-place-new_york/14a',
+  'https://streeteasy.com/building/111-fulton-street-new_york/315',
+  'https://streeteasy.com/building/20-pine-street-new_york/617',
+  'https://streeteasy.com/building/blocked-street-new_york/1a',
+].join(' '));
+await p.locator('.ac-ask').press('Enter');
+await p.waitForTimeout(1500);
+await shot('10b-add-comps-reading');
+await p.waitForFunction(() => !document.querySelector('.ac-row.reading'), null, { timeout: 60000 }).catch(() => errors.push('the comps never finished reading'));
+await settle(900);
+await shot('10c-add-comps-in');
+check(await p.locator('.ac-row.bad').count() === 1, 'the failed read is a red row');
+check(await p.locator('.ac-vs').count() >= 3, 'each comp says how it compares with the target');
+// All details drops every fact open under the address.
+await p.locator('.sh-alldet').click();
+await p.waitForTimeout(300);
+await shot('10d-all-details');
+await p.locator('.sh-alldet').click();
+// Hubert closed: the tab on the left edge, the page centred again.
 await p.locator('.nc-hub .hb-close').click();
 await p.waitForTimeout(500);
 await shot('11-add-comps-hubert-closed');
 await p.locator('.nc-htab').click();
 await p.waitForTimeout(400);
-await p.getByRole('button', { name: 'OPEN WORKSPACE →' }).click();
+await p.locator('.ac-next').click();
 await p.waitForURL(/step=sort/, { timeout: 20000 });
 await settle();
-await shot('12-workspace-sort');
+check(await p.locator('.ck-card').count() === 1, 'the first unchecked comp opens by itself on Sort');
+await shot('12-sort-check');
+await p.locator('.ck-bo').click();
+await p.waitForTimeout(300);
+await shot('12b-sort-fix-a-fact');
+await p.locator('.ck-bo').click();
+const before = await p.locator('.so-row-wrap.to-check').count();
+await p.locator('.ck-bp').click();
+await settle(900);
+check(await p.locator('.so-row-wrap.to-check').count() === before - 1, 'Looks right marks it checked');
+await shot('12c-sort-next-check');
+// Check the rest.
+for (let k = 0; k < 6 && await p.locator('.ck-bp').count(); k++) { await p.locator('.ck-bp').click(); await settle(700); }
+await shot('12d-sort-all-checked');
 
 // Edit details from the ✎: the window, headed EDIT TARGET PROPERTY, with every step of the home.
 await p.getByRole('button', { name: 'Edit details' }).click();

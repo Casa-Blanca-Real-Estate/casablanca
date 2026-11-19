@@ -27,7 +27,7 @@ const NOTES: Record<StepId, Note> = {
     forWhat: 'Deciding which comps count, and saying why: a tier (1st, 2nd or ✕), a note and at least one tag for every comp. The note is the reason.',
     implements: 'the handoff’s Sort screen (design-port README, 6) and Dispatch 14, item 6',
     real: [
-      'Findings stays locked until every comp has a tier, a note and a tag. Comps still to confirm must be confirmed or removed; comps that can’t be sorted don’t count.',
+      'Findings stays locked until every comp has a tier, a note and a tag. Comps read from a link are checked first, side by side with the home (Looks right, or Fix a fact), or removed; comps that can’t be sorted don’t count.',
       'One ★ anchor per report, on any status; starring another moves it.',
       'Notes, tags and features are saved with the comp, and the writer and QA read them where they read tiers.',
       'With no square footage, $/ft and Size are hidden here and on every other screen.',

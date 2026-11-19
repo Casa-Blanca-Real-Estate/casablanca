@@ -6,29 +6,30 @@ const at = (screen: ProgressInput['screen'], extra: Partial<ProgressInput> = {})
 const states = (i: ProgressInput) => progressSteps(i).map((s) => s.state);
 
 test('the current step is marked; the Gate counts as Findings and Done as Send', () => {
-  assert.deepEqual(states(at('sort')), ['current', 'todo', 'todo']);
-  assert.deepEqual(states(at('gate')), ['done', 'current', 'todo']);
-  assert.deepEqual(states(at('findings')), ['done', 'current', 'todo']);
-  assert.deepEqual(states(at('send')), ['done', 'done', 'current']);
-  assert.deepEqual(states(at('done')), ['done', 'done', 'done']);
+  assert.deepEqual(states(at('comps')), ['current', 'todo', 'todo', 'todo']);
+  assert.deepEqual(states(at('sort')), ['done', 'current', 'todo', 'todo']);
+  assert.deepEqual(states(at('gate')), ['done', 'done', 'current', 'todo']);
+  assert.deepEqual(states(at('findings')), ['done', 'done', 'current', 'todo']);
+  assert.deepEqual(states(at('send')), ['done', 'done', 'done', 'current']);
+  assert.deepEqual(states(at('done')), ['done', 'done', 'done', 'done']);
 });
 
 test('Findings goes to the Gate until the call is given', () => {
-  assert.equal(progressSteps(at('sort', { ready: true }))[1]!.target, 'gate');
-  assert.equal(progressSteps(at('sort', { ready: true, revealed: true }))[1]!.target, 'findings');
+  assert.equal(progressSteps(at('sort', { ready: true }))[2]!.target, 'gate');
+  assert.equal(progressSteps(at('sort', { ready: true, revealed: true }))[2]!.target, 'findings');
 });
 
 test('Findings and Send stay locked until every comp is sorted; Send also waits for the call', () => {
   const unsorted = progressSteps(at('sort'));
-  assert.deepEqual(unsorted.map((s) => s.locked), [null, LOCK_SORT, LOCK_SORT]);
+  assert.deepEqual(unsorted.map((s) => s.locked), [null, null, LOCK_SORT, LOCK_SORT]);
   const sorted = progressSteps(at('sort', { ready: true }));
-  assert.deepEqual(sorted.map((s) => s.locked), [null, null, LOCK_CALL]);
+  assert.deepEqual(sorted.map((s) => s.locked), [null, null, null, LOCK_CALL]);
   const called = progressSteps(at('findings', { ready: true, revealed: true }));
-  assert.deepEqual(called.map((s) => s.locked), [null, null, null]);
+  assert.deepEqual(called.map((s) => s.locked), [null, null, null, null]);
 });
 
 test('an admin reading someone else’s report can go anywhere', () => {
-  assert.deepEqual(progressSteps(at('sort', { readOnly: true })).map((s) => s.locked), [null, null, null]);
+  assert.deepEqual(progressSteps(at('sort', { readOnly: true })).map((s) => s.locked), [null, null, null, null]);
 });
 
 test('the CTA: Findings on Sort (locked until sorted), Send on Findings, none on the rest', () => {
@@ -38,6 +39,8 @@ test('the CTA: Findings on Sort (locked until sorted), Send on Findings, none on
   assert.deepEqual(rowCta(at('findings', { revealed: true, ready: true })), { label: 'Send →', target: 'send', disabled: false });
   // A comp untagged after the reveal locks Send again, as the row does.
   assert.deepEqual(rowCta(at('findings', { revealed: true })), { label: 'Send →', target: 'send', disabled: true });
+  assert.deepEqual(rowCta(at('comps')), { label: 'Next: Sort →', target: 'sort', disabled: true });
+  assert.deepEqual(rowCta(at('comps', { comps: 3 })), { label: 'Next: Sort →', target: 'sort', disabled: false });
   assert.equal(rowCta(at('gate')), null);
   assert.equal(rowCta(at('send')), null);
   assert.equal(rowCta(at('done')), null);

@@ -21,8 +21,8 @@ export interface Guide {
 export const STEP_NOW: Record<GuideStep, { name: string; todo: string }> = {
   home: { name: 'New report · The home', todo: 'Paste the home’s StreetEasy link, or type its address.' },
   details: { name: 'New report · The details', todo: 'Check the home’s details: fix what’s wrong, add what’s missing.' },
-  comps: { name: 'New report · The comps', todo: 'Add your comps: the export, its PDF, or listing links.' },
-  sort: { name: 'Sort', todo: 'Open each comp, give it a tier, and say why.' },
+  comps: { name: 'Add comps', todo: 'Paste listing links or drop the export: about three of each status.' },
+  sort: { name: 'Sort', todo: 'Check each comp against its page, then give it a tier and say why.' },
   review: { name: 'Sort · One comp at a time', todo: 'Look at the listing, compare it to the home, then tier it.' },
   gate: { name: 'Your number', todo: 'Give your own read of the value before you see the range.' },
   findings: { name: 'Findings', todo: 'Check what sets the low and the high end of the range.' },
@@ -40,12 +40,12 @@ const GUIDES: Record<GuideStep, (side: 'buyer' | 'seller') => Omit<Guide, 'step'
     text: 'Check the home’s details. What the listing gave is filled in: fix what’s wrong and add what’s missing, like the size, the floor and outdoor space. Every comp is compared against these.',
   }),
   comps: () => ({
-    title: 'New report · The comps',
-    text: 'Add the comps: drop your StreetEasy export or its PDF, paste listing links, or type a sale in. Recent sales close to the home are best. You sort them next.',
+    title: 'Add comps',
+    text: 'Add the comps: drop your StreetEasy export or its PDF, paste listing links, or type a sale in. Recent sales close to the home are best, about three of each status. I check each one against the guidance as it lands; you check its facts on Sort.',
   }),
   sort: () => ({
     title: 'Sort',
-    text: 'Go through each comp: open it, tier it (1st is closest, 2nd is a check, Excluded stays out of the numbers), and say why in a note and tags. Star the closest one. Tell me what to change and I’ll do it: every change I make shows here, with a link to it.',
+    text: 'First check each comp read from its page against the target, side by side: Looks right, or Fix a fact. Then go through each comp: open it, tier it (1st is closest, 2nd is a check, Excluded stays out of the numbers), and say why in a note and tags. Star the closest one. Tell me what to change and I’ll do it: every change I make shows here, with a link to it.',
   }),
   review: () => ({
     title: 'Sort · One comp at a time',

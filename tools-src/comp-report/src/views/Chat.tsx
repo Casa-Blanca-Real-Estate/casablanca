@@ -2,6 +2,7 @@
 // asked, the messages, two preset questions and the input. CR-1's turn
 // endpoint: one model call per request, the server owns the transcript (§8.3
 // rule 6). The conversation is the report's, the same on every screen.
+import seLogo from '../assets/streeteasy-logo.svg';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError, chatApi, streamTurn, type HubertEmailEdit, type HubertHomeEdit, type HubertView, type ShownMessage, type TrailEntry, type TrailSource } from '../api.ts';
 import type { Chip } from './hubert/copy.ts';
@@ -108,40 +109,50 @@ export interface TrailFinds {
 }
 
 /**
- * His card for a find (Kimani, 2026-10-29): the StreetEasy link, and Approve,
- * which only wakes once the agent has opened the link to check it. Approved,
- * it's read and lands on Sort untiered: it counts toward nothing until the
- * agent tiers it.
+ * His card for a find (Kimani, 2026-10-29; restyled for Add comps, comps.md §3, 2026-11-18): the address, the
+ * StreetEasy ↗ link in the card's corner, then Not this one and + ADD. Added, it's read and lands marked
+ * "Hubert's find", and is checked on Sort against its page like any other comp before it counts: that check is
+ * the double-check Kimani asked for (2026-10-29), so + ADD no longer waits for the link to be opened.
  */
 function FindCard({ entry, finds }: { entry: TrailEntry; finds?: TrailFinds }) {
-  const [opened, setOpened] = useState(false);
-  const [state, setState] = useState<'idle' | 'busy' | 'failed'>('idle');
+  const [state, setState] = useState<'idle' | 'busy' | 'failed' | 'skipped'>('idle');
   const url = entry.url ?? entry.after ?? '';
   const added = finds?.added(url) ?? false;
+  let words: { address: string; where: string | null };
+  try {
+    words = cardWords('', url);
+  } catch {
+    words = { address: url, where: null };
+  }
+  if (state === 'skipped') return <p className="hb-find-done">Left out: {words.address}</p>;
   return (
-    <div className="hb-find">
-      <a className="hb-md-link" href={url} target="_blank" rel="noopener noreferrer nofollow" onClick={() => setOpened(true)}>
-        {url.replace(/^https:\/\/(www\.)?/, '')} ↗
-      </a>
-      {added ? (
-        <span className="hb-find-done">Added to Sort, untiered</span>
-      ) : finds ? (
-        <>
-          <span className="hb-find-ask">{opened ? 'Right unit, a sale (not an asking price), and current?' : 'Open the link and check it first.'}</span>
+    <div className="hb-find hb-sug">
+      <div className="hb-sug-top">
+        <span className="hb-sug-text">
+          <span className="hb-sug-addr">{words.address}</span>
+          <span className="hb-sug-line">{added ? 'Hubert’s find · added: you check it on Sort' : 'Hubert’s find · check it on Sort once added'}</span>
+        </span>
+        <a className="hb-selink" href={url} target="_blank" rel="noopener noreferrer nofollow" aria-label="Open on StreetEasy">
+          <img src={seLogo} alt="" aria-hidden="true" />↗
+        </a>
+      </div>
+      {!added && finds && (
+        <span className="hb-sug-acts">
+          <button type="button" className="hb-mini" onClick={() => setState('skipped')}>Not this one</button>
           <button
             type="button"
             className="hb-find-ok"
-            disabled={!opened || state === 'busy'}
-            title={opened ? 'Add it to Sort, untiered' : 'Open the link first'}
+            disabled={state === 'busy'}
+            title="Add it: it's read, and you check it against its page on Sort"
             onClick={() => {
               setState('busy');
               finds.approve(url).then(() => setState('idle'), () => setState('failed'));
             }}
           >
-            {state === 'busy' ? 'Adding…' : state === 'failed' ? 'Not added. Retry' : 'Checked: add it'}
+            {state === 'busy' ? 'Adding…' : state === 'failed' ? 'Not added. Retry' : '+ ADD'}
           </button>
-        </>
-      ) : null}
+        </span>
+      )}
     </div>
   );
 }
@@ -254,7 +265,7 @@ function GuideNote({ guide }: { guide: Guide }) {
   );
 }
 
-export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onEmailEdit, onHomeEdit, onCompsChanged, onJump, undo, finds, view, guides = [], queued, onQueuedTaken }: {
+export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], onAction, beforeAsk, onAsk, onEmailEdit, onHomeEdit, onCompsChanged, onJump, undo, finds, view, guides = [], queued, onQueuedTaken }: {
   reportId: string;
   readOnly?: boolean;
   /** How many messages the agent has sent, after each load. */
@@ -266,6 +277,8 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
   onAction?: (chip: Chip) => void;
   /** Before each request: the screen's unsaved edits are saved, so Hubert reads what the agent sees. */
   beforeAsk?: () => Promise<void>;
+  /** What the agent asked, as they send it (Add comps reads the StreetEasy links in it, as if pasted). */
+  onAsk?: (text: string) => void;
   /** An edit Hubert made to the email: Send applies it. */
   onEmailEdit?: (edit: HubertEmailEdit) => void;
   /** An edit Hubert made to the home's details: the workspace writes it into the intake. */
@@ -341,6 +354,7 @@ export function Chat({ reportId, readOnly = false, onCount, intro, chips = [], o
     setError(null);
     setNotice(null);
     setMessages((prev) => [...prev, { seq: -1, role: 'user', text, progress: [], tools: [], toolResultsOnly: false, stopReason: null, inContext: true, createdAt: new Date().toISOString() }]);
+    onAsk?.(text);
     let message: string | undefined = text;
     let lastNote: string | null = null;
     const abort = new AbortController();

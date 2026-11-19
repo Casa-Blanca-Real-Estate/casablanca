@@ -19,7 +19,7 @@ const MAX_PDF_BYTES = 100 * 1024 * 1024;
 const LINKISH = /^(https?:\/\/|www\.|streeteasy)/i;
 
 /** Pastes, links and the export: what the bar and a drop both do. */
-async function addLinks(ws: Workspace, text: string): Promise<string | null> {
+export async function addLinks(ws: Workspace, text: string): Promise<string | null> {
   const lines = text.split(/\s+/).map((l) => l.trim()).filter(Boolean);
   const checked = lines.map((l) => ({ raw: l, check: checkListingLink(/^https?:\/\//i.test(l) ? l : `https://${l}`) }));
   const good = [...new Set(checked.flatMap((c) => (c.check.ok ? [c.check.url] : [])))];
@@ -40,7 +40,7 @@ async function addLinks(ws: Workspace, text: string): Promise<string | null> {
   return note;
 }
 
-async function addExport(ws: Workspace, file: File): Promise<string | null> {
+export async function addExport(ws: Workspace, file: File): Promise<string | null> {
   if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') return addPdf(ws, file);
   if (file.size > MAX_EXPORT_BYTES) return 'That file is larger than a StreetEasy export should be (2 MB). A StreetEasy PDF can be dropped too.';
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -207,6 +207,96 @@ export function AddBar({ ws, note, onNote }: { ws: Workspace; note: string | nul
           }}
         />
       </div>
+      {note && <p className="paste-note" role="status">{note}</p>}
+      {form && (
+        <CompForm
+          key={form.key}
+          ws={ws}
+          hideAddress={form.typed}
+          prefill={form.typed ? { address: paste } : form.prefill}
+          onCancel={() => setForm(null)}
+          onDone={() => {
+            if (form.typed) setPaste('');
+            setForm(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Add comps' paste block (comps.md §3, 2026-11-18): a white block with the paste field and ADD (Enter adds),
+ * and right under it the drop zone: big while there are no comps ("Drop StreetEasy's export here"), one line
+ * once one is in. Clicking the zone chooses the file. Typing an address opens the comp's form, as the bar does.
+ */
+export function PasteBlock({ ws, note, onNote, compact }: { ws: Workspace; note: string | null; onNote: (note: string | null) => void; compact: boolean }) {
+  const [paste, setPaste] = useState('');
+  const [form, setForm] = useState<null | { typed: boolean; prefill: CompPrefill | null; key: number }>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  if (ws.readOnly) return null;
+  const hasPaste = LINKISH.test(paste.trim());
+  const onType = (v: string) => {
+    setPaste(v);
+    onNote(null);
+    if (LINKISH.test(v.trim()) || v.trim().length < 3) {
+      if (form?.typed) setForm(null);
+      return;
+    }
+    if (!form) setForm({ typed: true, prefill: null, key: Date.now() });
+  };
+  const add = async () => {
+    if (!paste.trim()) return;
+    if (!hasPaste) {
+      if (!form) setForm({ typed: true, prefill: null, key: Date.now() });
+      return;
+    }
+    const said = await addLinks(ws, paste);
+    onNote(said);
+    setPaste('');
+  };
+  return (
+    <div className="ac-paste add-bar">
+      <div className="ac-paste-row paste-bar">
+        <input
+          className="ac-ask"
+          aria-label="Paste StreetEasy links, or type an address"
+          value={paste}
+          placeholder="Paste StreetEasy links, or type an address"
+          onChange={(e) => onType(e.target.value)}
+          onPaste={(e) => {
+            const el = e.currentTarget;
+            const next = `${el.value.slice(0, el.selectionStart ?? el.value.length)}${e.clipboardData.getData('text')}${el.value.slice(el.selectionEnd ?? el.value.length)}`;
+            const clean = cleanLinks(next);
+            if (clean === null || clean === next) return;
+            e.preventDefault();
+            onType(clean);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void add();
+            }
+          }}
+        />
+        <button type="button" className="ac-bo" disabled={!paste.trim() || Boolean(ws.busy)} onClick={() => void add()}>ADD</button>
+      </div>
+      <button type="button" className={`ac-drop${compact ? ' compact' : ''}`} onClick={() => picker.current?.click()}>
+        <span className="ac-drop-main"><span aria-hidden="true" className="ac-drop-arrow">↓</span>{compact ? 'Drop another export or more screenshots' : 'Drop StreetEasy’s export here'}</span>
+        {!compact && <span className="ac-drop-sub">The export as CSV, XLSX or its PDF, or listing screenshots · or <u>browse</u></span>}
+      </button>
+      <input
+        ref={picker}
+        type="file"
+        hidden
+        accept=".csv,.xlsx,.pdf,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        aria-label="Choose the StreetEasy export"
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = '';
+          if (file) void addExport(ws, file).then(onNote);
+        }}
+      />
       {note && <p className="paste-note" role="status">{note}</p>}
       {form && (
         <CompForm
