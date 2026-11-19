@@ -70,7 +70,7 @@ function FindingsBody({ ws, o }: { ws: Workspace; o: EngineOutput }) {
       <TypeMismatch ws={ws} />
       <TopCard ws={ws} o={o} kind={kind} both={both} take={take} />
       <Tiles ws={ws} o={o} kind={kind} />
-      <Accordions ws={ws} o={o} kind={kind} both={both} />
+      <Accordions ws={ws} o={o} kind={kind} both={both} take={take} />
       <StepCta ws={ws} className="sh-cta fi-bottom-cta" />
     </div>
   );
@@ -78,7 +78,7 @@ function FindingsBody({ ws, o }: { ws: Workspace; o: EngineOutput }) {
 
 // ─── The top card ────────────────────────────────────────────────────────────
 
-function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean; take: TakeSegment[] }) {
+function TopCard({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean; take: TakeSegment[] }) {
   const r = o.results[kind];
   const range = r.range;
   const facts = o.headline_facts[kind].facts;
@@ -89,55 +89,58 @@ function TopCard({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; 
   const call = ws.call!;
   const yours = call.skipped || call.low === undefined || call.high === undefined ? null : rangeWords(call.low, call.high);
   const where = call.skipped ? 'You skipped it before Findings' : positionLine(o, kind);
-  const why = call.note?.trim() || (call.skipped ? 'You skipped this before Findings.' : 'You didn’t write a why before Findings.');
+  // The design pass (2026-11-06), ported 2026-11-19: one black block, what the 1st-tier comps say beside your number,
+  // then where the comps, you and the client sit on one scale. How Hubert got there moves to the accordions.
   return (
-    <section className="fi-card fi-top" aria-label="The true estimate">
-      {range && (
-        <div className="fi-a">
-          <span className="fi-closest">{n === 1 ? 'The closest sale' : `The ${n} closest sales`}</span>
-          {ws.sf && unitRate && <span className="fi-chip"><span className="fi-chip-dot" aria-hidden="true" />Uses your size</span>}
+    <section className="fi-hero" aria-label="What the 1st-tier comps say">
+      <div className="fi-hero-head">
+        <div className="fi-hero-est">
+          <span className="fi-hero-eyebrow">What the 1st-tier comps say{both && <span className="fi-hero-sub"> · {r.label}</span>}</span>
+          {range
+            ? <span className="fi-hero-big" title={`${usd(range.low.value)} – ${usd(range.high.value)}`}>{rangeWords(range.low.value, range.high.value)}</span>
+            : <span className="fi-hero-big fi-big-none">No range yet</span>}
+          {range && (
+            <span className="fi-hero-line">
+              {[ws.sf && lowRate !== undefined && highRate !== undefined ? `${psf(lowRate)} – ${psf(highRate)} / SF` : null, `${n} ${n === 1 ? 'sale' : 'sales'}`].filter(Boolean).join(' · ')}
+              {ws.sf && unitRate && <span className="fi-hero-chip">Uses your size</span>}
+            </span>
+          )}
+          {!range && <p className="fi-hero-line">The comps can’t make one yet: {engineWhy(r.range_unavailable_because ?? 'the analysis needs more to go on')}.</p>}
         </div>
-      )}
-      <div className="fi-headline">
-      <div className="fi-est">
-        <span className="fi-eyebrow">True estimate{both && <span className="fi-eyebrow-sub"> · {r.label}</span>}</span>
-        {range
-          ? <span className="fi-big" title={`${usd(range.low.value)} – ${usd(range.high.value)}`}>{rangeWords(range.low.value, range.high.value)}</span>
-          : <span className="fi-big fi-big-none">No range yet</span>}
-        {range && (
-          <span className="fi-psf">
-            {[ws.sf && lowRate !== undefined && highRate !== undefined ? `${psf(lowRate)} – ${psf(highRate)} / SF` : null, `${n} ${n === 1 ? 'sale' : 'sales'}`].filter(Boolean).join(' · ')}
-          </span>
-        )}
-        {!range && <p className="fi-why">The comps can’t make one yet: {engineWhy(r.range_unavailable_because ?? 'the analysis needs more to go on')}.</p>}
-      </div>
-      {/* The agent's number beside the range, and where it sits (the design pass): the old verdict line, shorter. */}
-      <div className="fi-yournum">
-        <span className="fi-eyebrow">Your number</span>
-        <span className="fi-yournum-v">{yours ?? 'Skipped'}</span>
-        {where && <span className="fi-yournum-where">{where}</span>}
-      </div>
-      </div>
-      {both && <OtherResult o={o} kind={OTHER[kind]} />}
-      {range && <Chart ws={ws} o={o} kind={kind} both={both} />}
-      <div className="fi-compare">
-        <div className="fi-col">
-          <span className="fi-label"><span className="fi-spark" aria-hidden="true">✦</span>How Hubert got there</span>
-          <div className="fi-take">
-            {take.map((seg, i) => ('text' in seg ? <Fragment key={i}>{seg.text}</Fragment> : <span key={i} className="fi-take-comp" title={seg.title || undefined}>{seg.name}</span>))}
-          </div>
-        </div>
-        <div className="fi-col fi-yours">
-          <span className="fi-label">Your reasoning <span className="fi-from">(before Findings)</span></span>
-          <div className="fi-reason">{why}</div>
+        <div className="fi-hero-yours">
+          <span className="fi-hero-eyebrow">Your number</span>
+          <span className="fi-hero-mid">{yours ?? 'Skipped'}</span>
+          {where && <span className="fi-hero-line">{where}</span>}
           {!ws.readOnly && (
-            <button type="button" className="link fi-change" onClick={() => ws.go('gate')}>
+            <button type="button" className="fi-hero-link" onClick={() => ws.go('gate')}>
               {call.skipped ? 'Give your number after all' : 'Change your number'}
             </button>
           )}
         </div>
       </div>
+      {both && <OtherResult o={o} kind={OTHER[kind]} />}
+      {range && <Chart ws={ws} o={o} kind={kind} both={both} />}
     </section>
+  );
+}
+
+/** How Hubert got there, beside the agent's own reasoning (an accordion now; the design pass's "Hubert's take"). */
+function TakeSection({ ws, take }: { ws: Workspace; take: TakeSegment[] }) {
+  const call = ws.call!;
+  const why = call.note?.trim() || (call.skipped ? 'You skipped this before Findings.' : 'You didn’t write a why before Findings.');
+  return (
+    <div className="fi-compare">
+      <div className="fi-col">
+        <span className="fi-label"><span className="fi-spark" aria-hidden="true">✦</span>How Hubert got there</span>
+        <div className="fi-take">
+          {take.map((seg, i) => ('text' in seg ? <Fragment key={i}>{seg.text}</Fragment> : <span key={i} className="fi-take-comp" title={seg.title || undefined}>{seg.name}</span>))}
+        </div>
+      </div>
+      <div className="fi-col fi-yours">
+        <span className="fi-label">Your reasoning <span className="fi-from">(before Findings)</span></span>
+        <div className="fi-reason">{why}</div>
+      </div>
+    </div>
   );
 }
 
@@ -166,7 +169,10 @@ function divergenceWords(o: EngineOutput): string {
   return 'Compare the two.';
 }
 
-/** The legend and the range bar on the fixed axis (the handoff, "Findings axis"). */
+/**
+ * Where the comps, you, the client and the asking price sit on one fixed scale (the design pass, 2026-11-06):
+ * a row each, on the black block. The client's figure is for the agent only: it never moves the range.
+ */
 function Chart({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean }) {
   const range = o.results[kind].range!;
   const altKind = OTHER[kind];
@@ -180,37 +186,49 @@ function Chart({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: Re
   const est = span(axis, range.low.value, range.high.value);
   const altBar = alt ? span(axis, alt.low.value, alt.high.value) : null;
   const guessBar = guess ? span(axis, guess.low, guess.high) : null;
-  const pctStyle = (b: { left: number; width: number }) => ({ left: `${b.left}%`, width: `${b.width}%` });
+  const bar = (b: { left: number; width: number }) => ({ left: `${b.left}%`, width: `${b.width}%` });
   const summary = [
-    `True estimate ${rangeWords(range.low.value, range.high.value)}`,
+    `The comps ${rangeWords(range.low.value, range.high.value)}`,
     alt && `${o.results[altKind].label} ${rangeWords(alt.low.value, alt.high.value)}`,
-    guess && `your number ${rangeWords(guess.low, guess.high)}`,
+    guess && `you ${rangeWords(guess.low, guess.high)}`,
     target && `${targetLabel(ws).toLowerCase()} ${clientPrice(target)}`,
     ask && `asking ${clientPrice(ask)}`,
   ].filter(Boolean).join('; ');
+  const client = (ws.brief.clientName?.value ?? '').trim();
+  const targetName = ws.side === 'buyer' && client ? `${client}’s budget` : targetLabel(ws);
   return (
-    <div className="fi-chart">
-      <div className="fi-legend">
-        <span className="fi-key"><span className="fi-sw fi-sw-est" aria-hidden="true" />True estimate {rangeWords(range.low.value, range.high.value)}</span>
-        {alt && <span className="fi-key fi-key-alt"><span className="fi-sw fi-sw-alt" aria-hidden="true" />{o.results[altKind].label} {rangeWords(alt.low.value, alt.high.value)}</span>}
-        {guess && <span className="fi-key fi-key-guess"><span className="fi-sw fi-sw-guess" aria-hidden="true" />Your number {rangeWords(guess.low, guess.high)}</span>}
-        {target !== null && <span className="fi-key fi-key-target"><span className="fi-sw fi-sw-target" aria-hidden="true" />{targetLabel(ws)} {clientPrice(target)}</span>}
-        {ask !== null && <span className="fi-key fi-key-ask"><span className="fi-sw fi-sw-ask" aria-hidden="true" />Asking {clientPrice(ask)}</span>}
+    <div className="fi-scale" role="img" aria-label={`On a scale from ${clientPrice(axis.low)} to ${clientPrice(axis.high)}: ${summary}.`}>
+      <span className="fi-scale-k">The comps</span>
+      <div className="fi-scale-track"><div className="fi-scale-bar" style={bar(est)} title={rangeWords(range.low.value, range.high.value)} /></div>
+      {altBar && (
+        <>
+          <span className="fi-scale-k">{o.results[altKind].label}</span>
+          <div className="fi-scale-track"><div className="fi-scale-bar fi-scale-alt" style={bar(altBar)} /></div>
+        </>
+      )}
+      {guessBar && (
+        <>
+          <span className="fi-scale-k">You</span>
+          <div className="fi-scale-track fi-scale-open"><div className="fi-scale-bar fi-scale-you" style={bar(guessBar)} /><span className="fi-scale-v" style={{ left: `calc(${guessBar.left + guessBar.width}% + 8px)` }}>{rangeWords(guess!.low, guess!.high)}</span></div>
+        </>
+      )}
+      {target !== null && (
+        <>
+          <span className="fi-scale-k">{targetName}</span>
+          <div className="fi-scale-track fi-scale-open"><div className="fi-scale-mark fi-scale-target" style={{ left: `${at(axis, target)}%` }} /><span className="fi-scale-v" style={{ left: `calc(${at(axis, target)}% + 10px)` }}>{clientPrice(target)}</span></div>
+        </>
+      )}
+      {ask !== null && (
+        <>
+          <span className="fi-scale-k">Asking</span>
+          <div className="fi-scale-track fi-scale-open"><div className="fi-scale-mark fi-scale-ask" style={{ left: `${at(axis, ask)}%` }} /><span className="fi-scale-v" style={{ left: `calc(${at(axis, ask)}% + 10px)` }}>{clientPrice(ask)}</span></div>
+        </>
+      )}
+      <span />
+      <div className="fi-scale-axis">
+        {axis.ticks.map((t) => <span key={t.value} className={`fi-scale-tick fi-tl-${t.align}`} style={{ left: `${t.left}%` }}>{t.label}</span>)}
       </div>
-      <div className={`fi-track${altBar ? ' fi-track-alt' : ''}`} role="img" aria-label={`On a scale from ${clientPrice(axis.low)} to ${clientPrice(axis.high)}: ${summary}.`}>
-        <div className="fi-band" />
-        <div className="fi-bar fi-bar-est" style={pctStyle(est)} />
-        {altBar && <div className="fi-bar fi-bar-alt" style={pctStyle(altBar)} />}
-        {guessBar && <div className="fi-bar fi-bar-guess" style={pctStyle(guessBar)} />}
-        {target !== null && <div className="fi-mark fi-mark-target" style={{ left: `${at(axis, target)}%` }} />}
-        {ask !== null && <div className="fi-mark fi-mark-ask" style={{ left: `${at(axis, ask)}%` }} />}
-        {axis.ticks.map((t) => (
-          <Fragment key={t.value}>
-            <div className="fi-tick" style={{ left: `${t.left}%` }} />
-            <div className={`fi-tick-label fi-tl-${t.align}`} style={{ left: `${t.left}%` }}>{t.label}</div>
-          </Fragment>
-        ))}
-      </div>
+      {target !== null && <p className="fi-scale-note">{targetName} is shown for you only. It never moves the range and never goes in the email.</p>}
     </div>
   );
 }
@@ -255,8 +273,9 @@ interface Item {
   body: ReactNode;
 }
 
-function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean }) {
-  const [open, setOpen] = useState<Record<string, boolean>>({});
+function Accordions({ ws, o, kind, both, take }: { ws: Workspace; o: EngineOutput; kind: ResultKind; both: boolean; take: TakeSegment[] }) {
+  // The design pass: the comps that set the range open first.
+  const [open, setOpen] = useState<Record<string, boolean>>({ cc: true });
   const outById = useMemo(() => new Map<string, CompOut>(o.comps.map((c) => [c.id, c])), [o]);
   const counted = ws.comps.filter((c) => outById.get(c.id)?.per_result[kind].included);
   const target = ws.target?.price.value ?? null;
@@ -268,21 +287,25 @@ function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kin
   const table = ws.sf && area !== null && r.evidence.sold.counts.included >= 2;
   const needed = stillNeeded(o.gaps);
   const items: Item[] = [
+    {
+      key: 'cc', title: 'The comps that set the range', sub: `${counted.length} · 1st tier`, body: <CountingComps ws={ws} outById={outById} kind={kind} counted={counted} />,
+      info: 'The comps the numbers use: your 1st tier. Change a tier on Sort and this list follows.',
+    },
+    {
+      key: 'take', title: 'Hubert’s take', sub: 'after your number', body: <TakeSection ws={ws} take={take} />,
+      info: 'How Hubert read your 1st-tier comps, beside the reasoning you wrote before you saw the range.',
+    },
+    {
+      key: 'yc', title: 'The client', sub: clientSub(ws.side, ws.brief.client, ws.dealTerms), body: <ClientSection ws={ws} kind={kind} />,
+      info: 'What you know about your client: financing and the pre-approval, how soon they need to move, what’s moving them. Set against the range, never in it.',
+    },
     ...(table ? [{
       key: 'pt', title: 'Price table', sub: area ? sqft(area) : '', body: <PriceTable ws={ws} r={r} />,
       info: 'What the home comes to at each $/sq ft across your closest sales. The calculator tries any price or rate; nothing in it is saved.',
     }] : []),
     {
-      key: 'cc', title: 'Comps that count', sub: String(counted.length), body: <CountingComps ws={ws} outById={outById} kind={kind} counted={counted} />,
-      info: 'The comps the numbers use: your 1st tier. Change a tier on Sort and this list follows.',
-    },
-    {
       key: 'tp', title: targetLabel(ws), sub: target ? clientPrice(target) : '—', body: <TargetSection ws={ws} />,
       info: 'A number to hold against the range. It never goes into the calculation and isn’t in the email.',
-    },
-    {
-      key: 'yc', title: 'Your client', sub: clientSub(ws.side, ws.brief.client, ws.dealTerms), body: <ClientSection ws={ws} kind={kind} />,
-      info: 'What you know about your client: financing and the pre-approval, how soon they need to move, what’s moving them. Set against the range, never in it.',
     },
     {
       key: 'pd', title: 'Pricing details', sub: ws.side === 'buyer' ? (ask ? `Asking ${clientPrice(ask)}` : '') : timing, body: <PricingDetails ws={ws} kind={kind} />,
@@ -295,7 +318,7 @@ function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kin
   ];
   return (
     <section className="fi-acc" aria-label="The details">
-      {items.map((item, i) => {
+      {items.map((item) => {
         const isOpen = Boolean(open[item.key]);
         const id = `fi-acc-${item.key}`;
         return (
@@ -303,7 +326,6 @@ function Accordions({ ws, o, kind, both }: { ws: Workspace; o: EngineOutput; kin
             {/* The ⓘ is its own button, so it sits beside the header's, not inside it. */}
             <div className="fi-acc-row">
               <button type="button" className="fi-acc-head" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen({ ...open, [item.key]: !isOpen })}>
-                <span className="fi-acc-n">{String(i + 3).padStart(2, '0')}</span>
                 {item.title}
               </button>
               <span className="fi-info"><Info label={`About ${item.title.toLowerCase()}`} text={item.info} align="left" /></span>
