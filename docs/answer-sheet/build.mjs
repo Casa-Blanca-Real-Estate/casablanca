@@ -27,6 +27,7 @@ const topics = src.topics.map((t) => ({
   num: t.num,
   title: t.title,
   prefix: t.prefix,
+  tab: t.tab === 'leads' ? 'leads' : '', // "leads": shown on the Lead accept tab, not on Questions
   url: t.url ? t.url.replace('{repo}', `${repo}/blob/claude/main`) : '',
   linkLabel: t.linkLabel || 'Open the source',
   introHtml: links(t.intro),

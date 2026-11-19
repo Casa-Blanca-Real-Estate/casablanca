@@ -12,7 +12,8 @@ Casanova, 2026-10-14.
   updatedAt, …}`). Reading-list marks go to `reading`. Only the owner (admin level) can read or write.
 - A question he leaves alone keeps its default. One with no default shows as **Needs you**.
 - The ids are per topic: `CR` comp report, `PP` profile pics, `FB` team feedback, `AC` the account move
-  (D-26), `TD` his to-dos, `QW` what comes back next. Decisions keep their `D-` numbers in
+  (D-26), `TD` his to-dos, `QW` what comes back next. `LA` and `LT` are the lead auto-accept's questions and to-dos (2026-11-19):
+  topics with `"tab": "leads"` show on the **Lead accept** tab instead of Questions. Decisions keep their `D-` numbers in
   `docs/decisions.md`; the sheet points at them.
 
 ## Casanova's loop, each block
