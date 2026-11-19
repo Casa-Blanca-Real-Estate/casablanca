@@ -233,3 +233,46 @@ label.fi-target-whose { max-width: 520px; }
 .fi-yournum-where { font-size: 13px; color: var(--cb-mid); }
 .fi-acc-row:hover { background: #faf9f7; }
 .sh-cta.fi-bottom-cta { margin-left: 0;  display: flex; justify-content: flex-end; }
+
+/* The design pass (2026-11-06), ported 2026-11-19: field labels in regular caps, black; the why fills a bar. */
+label.gt-field, .gt-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--cb-black); }
+.gt-meter { flex: 1; height: 4px; background: var(--cb-line); position: relative; overflow: hidden; }
+.gt-meter span { position: absolute; inset: 0 auto 0 0; background: var(--cb-yellow); transition: width .3s ease; }
+.gt-count-done .gt-meter span { background: var(--cb-black); }
+.gt-count { gap: 10px; }
+
+/* ─── The design pass (2026-11-06), ported 2026-11-19: the black block ──────── */
+.fi-hero { background: var(--cb-black); color: #ffffff; padding: 28px 32px 26px; display: flex; flex-direction: column; gap: 26px; }
+.fi-hero-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 40px; }
+.fi-hero-est, .fi-hero-yours { display: flex; flex-direction: column; gap: 6px; }
+.fi-hero-yours { border-left: 1px solid #3a3a3a; padding-left: 24px; }
+.fi-hero-eyebrow { color: var(--cb-lavender); font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+.fi-hero-sub { color: #c0c2b5; }
+.fi-hero-big { font-size: 48px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.fi-hero-mid { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+.fi-hero-line { color: #c0c2b5; font-size: 13px; line-height: 1.5; margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.fi-hero-chip { border: 1px solid #3a3a3a; padding: 2px 8px; font-size: 11px; color: #ffffff; }
+.fi-hero-link { align-self: flex-start; background: none; border: 0; padding: 2px 0; font: inherit; font-size: 12px; color: #c0c2b5; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.fi-hero-link:hover { color: #ffffff; }
+.fi-hero .fi-other { border-top: 1px solid #3a3a3a; padding-top: 16px; color: #c0c2b5; }
+.fi-hero .fi-other-v { color: #ffffff; }
+.fi-scale { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 12px 16px; align-items: center; font-size: 12px; }
+.fi-scale-k { color: #c0c2b5; }
+.fi-scale-track { position: relative; height: 14px; background: #262626; }
+.fi-scale-open { background: transparent; border-top: 1px dashed #333; height: 14px; }
+.fi-scale-bar { position: absolute; top: 0; bottom: 0; background: #ffffff; }
+.fi-scale-alt { background: transparent; border: 1px solid #c0c2b5; }
+.fi-scale-you { background: var(--cb-lavender); top: 2px; bottom: 2px; }
+.fi-scale-mark { position: absolute; top: -3px; width: 3px; height: 20px; }
+.fi-scale-target { background: var(--cb-yellow); }
+.fi-scale-ask { background: #c0c2b5; }
+.fi-scale-v { position: absolute; top: -1px; font-weight: 800; color: #ffffff; white-space: nowrap; }
+.fi-scale-axis { position: relative; height: 16px; font-size: 11px; color: #888680; }
+.fi-scale-tick { position: absolute; top: 0; white-space: nowrap; transform: translateX(-50%); }
+.fi-scale-tick.fi-tl-start { transform: none; }
+.fi-scale-tick.fi-tl-end { transform: translateX(-100%); }
+.fi-scale-note { grid-column: 1 / -1; margin: 4px 0 0; font-size: 11px; color: #c0c2b5; }
+.fi-acc-head:hover, .fi-acc-rest:hover { background: #faf9f7; }
+.fi-hero .fi-other { border-left-color: var(--cb-lavender); }
+.fi-hero .fi-other-note, .fi-hero .fi-plain, .fi-hero .fi-other-none { color: #c0c2b5; }
+.fi-hero .fi-eyebrow-mid { color: var(--cb-lavender); }

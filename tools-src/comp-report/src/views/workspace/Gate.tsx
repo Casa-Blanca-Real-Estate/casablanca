@@ -103,7 +103,8 @@ export function Gate({ ws }: StepProps) {
           />
           {practice && (
             <div className={`gt-count${whyLen >= WHY_MIN ? ' gt-count-done' : ''}`} aria-live="polite">
-              <span className="gt-dot" aria-hidden="true" />
+              {/* The design pass: a bar that fills to the minimum, yellow until it's met. */}
+              <span className="gt-meter" aria-hidden="true"><span style={{ width: `${Math.min(100, (whyLen / WHY_MIN) * 100)}%` }} /></span>
               {whyLen >= WHY_MIN ? `${whyLen} characters` : `${whyLen} / ${WHY_MIN} minimum`}
             </div>
           )}

@@ -337,3 +337,7 @@
 .so-row-wrap.hb-focus { animation: hb-focus 2.4s ease-out; }
 @keyframes hb-focus { 0%, 40% { box-shadow: inset 4px 0 0 var(--cb-lavender); background: color-mix(in srgb, var(--cb-lavender) 18%, transparent); } 100% { box-shadow: none; background: transparent; } }
 @media (prefers-reduced-motion: reduce) { .so-row-wrap.hb-focus { animation: none; box-shadow: inset 4px 0 0 var(--cb-lavender); } }
+
+/* The design pass (2026-11-06), the compact card: the note first, the features as one row of chips. */
+.so-notesec { display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--cb-line); }
+.so-fflat { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
