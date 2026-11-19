@@ -73,7 +73,7 @@ A lavender dot after a field's **label** (never on the value) marks what came fr
 | 4 | Home amenities | Condition, Views, Exposure, Corner, Dishwasher, Central air, Working fireplace. |
 | 5 | Building amenities | Neighborhood, Year built, Resale or new development, Services and facilities (laundry has moved to step 3), Wellness and recreation, Policies. |
 | 6 | Client info | Buyer: Financing; Pre-approved Yes \| Not yet, with **For how much? $** on the same row only once it's Yes; How soon (**Ready to buy now** \| **Can wait for the right one**); What's moving them. Seller: How soon (**Needs to sell soon** \| **Can wait for the right price**); What's moving them. |
-| 7 | Comps | **Add comps**: the paste field and ADD, then a dashed drop zone ("Drop StreetEasy's export here" · "The export as CSV, XLSX or its PDF, or listing screenshots · or browse"). Once comps are in, it shrinks to one line under them ("Drop another export or more screenshots"). **This step is a stand-in:** today's step 3 (reading each link, confirming each comp) moves in as it is, inside this frame. |
+| 7 | ~~Comps~~ | **Moved out (2026-11-18, `comps.md` §1):** the window ends at Client info with NEXT: ADD COMPS →, and Add comps is the workspace's first step.
 
 **Nothing is picked by default.** None is a choice the agent clicks, not a default: a blank means nobody said, and
 a pre-picked None would tell the numbers "no washer/dryer" for a home that may have one (Kimani, 2026-11-11).
