@@ -20,6 +20,7 @@
 //   POST {makeScenario: {id, active}}  start or stop one of those two scenarios (no other id)
 //   POST {fileMaker: {emailOn?: bool, emailTo?: email, pushOn?: bool}}  the FileMaker email, and the push into FileMaker
 //   POST {fileMakerTestPush: true}   send one invented record into FileMaker (the service's /admin/filemaker/test-push)
+//   POST {fileMakerTestPush: {runId}} send that run's real lead into FileMaker, now, whether the push is on or off
 //   GET  ?view=filemaker-check          can the service reach FileMaker Server (address only, no password)?
 //   GET  ?view=filemaker-log&limit=N   FileMaker's requests to the service, newest first (N up to 500)
 //   GET  ?view=inbox&limit=N&kind=lead|sign-in-code|other  the emails Make posted, newest first (N up to 500);
@@ -172,11 +173,18 @@ export async function handleLeadAccept(req: Request, deps: LeadAcceptDeps): Prom
         addAgent?: { email?: unknown; name?: unknown; password?: unknown };
         recipients?: Record<string, unknown>; fileMaker?: unknown; fileMakerTestPush?: unknown } | null;
 
-      // One invented record into FileMaker, to check the push end to end.
+      // One invented record into FileMaker, to check the push end to end; or, with a run id, that run's real lead.
       if (body?.fileMakerTestPush !== undefined) {
-        if (body.fileMakerTestPush !== true) throw new LeadAcceptError(400, 'bad_test_push', 'Send { fileMakerTestPush: true }.');
-        const res = await call('/admin/filemaker/test-push', { method: 'POST' });
-        console.log(`lead-accept: FileMaker test record sent by ${user.email}`);
+        const t = body.fileMakerTestPush as { runId?: unknown } | boolean;
+        const runId = t && typeof t === 'object' ? t.runId : undefined;
+        if (t !== true && !(typeof runId === 'string' && /^[0-9a-f]{6,16}$/.test(runId))) {
+          throw new LeadAcceptError(400, 'bad_test_push', 'Send { fileMakerTestPush: true } or { fileMakerTestPush: { runId } }.');
+        }
+        const res = await call('/admin/filemaker/test-push', runId
+          ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ runId }) }
+          : { method: 'POST' });
+        console.log(`lead-accept: ${runId ? `run ${runId} sent` : 'test record sent'} to FileMaker by ${user.email}`);
+        if (res.status === 404) throw new LeadAcceptError(404, 'no_run', 'The service no longer has that run (it keeps the last 1000).');
         return json(await res.json());
       }
 

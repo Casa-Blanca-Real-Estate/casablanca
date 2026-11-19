@@ -472,6 +472,7 @@
     var tl=timing(r); if(tl) d.appendChild(el('p','timing',tl));
     if(r.client) d.appendChild(clientBlock(r.client));
     if(r.listing) d.appendChild(propertyBlock(r.listing));
+    if(r.client||r.trigger==='repeat-inquiry') d.appendChild(fileMakerBlock(r));
     if(r.trigger==='repeat-inquiry'&&r.message) d.appendChild(el('p','small muted','Their message: '+r.message));
     if(r.reason){d.appendChild(el('p','reason',r.reason));}
     if(r.steps&&r.steps.length){
@@ -490,6 +491,42 @@
       a.appendChild(img); fig.appendChild(a); shots.appendChild(fig);
       loadShot(name).then(function(u){img.src=u;a.href=u;},function(){fig.appendChild(el('p','small muted','Screenshot not available (kept 14 days).'));img.remove();});
     });
+  }
+  // FileMaker for one run: its Client ID and stack flag, and a button that sends this lead into FileMaker now,
+  // whether the push is on or off (Kimani, Nov 19: so David can watch a real record fill in). Warns if it went already.
+  var SENT={}; // run id → what FileMaker answered, this visit
+  function fileMakerBlock(r){
+    var box=el('section','client'); box.setAttribute('aria-label','FileMaker');
+    box.appendChild(el('h4',null,'FileMaker'));
+    var f=el('dl','facts');
+    f.appendChild(el('dt',null,'Client ID')); f.appendChild(el('dd',null,r.clientSerial?String(r.clientSerial):'Given when it’s sent'));
+    f.appendChild(el('dt',null,'Stack')); f.appendChild(el('dd',null,r.clientSerial?(r.stacked?'Yes: this agent already had this client':'No: a new lead for this agent'):'—'));
+    box.appendChild(f);
+    var fm=state.status&&state.status.fileMaker||{};
+    var row=el('div'); row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px';
+    var b=el('button','btn','Send this lead to FileMaker'); b.type='button';
+    b.disabled=isGuest()||!fm.pushReady;
+    var out=el('span','small muted',fm.pushReady?(fm.pushOn?'The push is on, so new leads go by themselves.':'The push is off; this sends just this one.'):'Needs FM_HOST and FM_PASSWORD in Railway.');
+    var sent=SENT[r.id]; if(sent){out.textContent='Sent just now: record '+sent.recordId+'.';out.style.color='var(--ok)';}
+    row.appendChild(b); row.appendChild(out); box.appendChild(row);
+    b.addEventListener('click',function(){
+      b.disabled=true; out.textContent='Checking whether it went already…';
+      api('?view=filemaker-log&limit=500').then(function(x){return x.json();}).catch(function(){return [];}).then(function(rows){
+        var prev=(Array.isArray(rows)?rows:[]).filter(function(e){return e.runId===r.id&&e.status===200&&e.recordId;});
+        var msg=prev.length?'This lead already went to FileMaker as record '+prev[0].recordId+' ('+ny(prev[0].at)+'). Send it again as a second record?':'Send '+(r.client&&r.client.name||'this lead')+' at '+(r.address||'this address')+' to FileMaker now?';
+        if(!confirm(msg)){b.disabled=false;out.textContent='';return null;}
+        out.textContent='Sending…';
+        return api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileMakerTestPush:{runId:r.id}})})
+          .then(function(x){return x.json().then(function(j){if(!x.ok)throw new Error(j.message||'The service refused it.');return j;});})
+          .then(function(j){
+            if(!j.ok){out.textContent='FileMaker didn’t take it: '+(j.error||'no reason given');out.style.color='var(--bad)';b.disabled=false;return;}
+            if(j.clientId){r.clientSerial=j.clientId;r.stacked=!!j.stacked;}
+            SENT[r.id]=j; renderDetail();
+            showNotice('Sent to FileMaker: record '+j.recordId+(j.clientId?', Client ID '+j.clientId+(j.stacked?', flagged to stack':''):'')+'.');
+          });
+      }).catch(function(e){out.textContent=e.message;out.style.color='var(--bad)';b.disabled=false;});
+    });
+    return box;
   }
   /* "Sent → here 4 s · waited 0 s · ran 17 s · total 21 s", from whichever of the four the run has */
   function timing(r){
