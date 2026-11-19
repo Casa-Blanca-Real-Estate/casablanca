@@ -3,7 +3,20 @@
   "newIds": [
     "CR-15",
     "CR-16",
-    "CR-17"
+    "CR-17",
+    "LA-1",
+    "LA-3",
+    "LA-4",
+    "LA-5",
+    "LA-6",
+    "LA-7",
+    "LT-3",
+    "LT-4",
+    "LT-5",
+    "LT-6",
+    "LT-7",
+    "LT-8",
+    "LT-9"
   ],
   "topics": [
     {
@@ -1244,6 +1257,279 @@
       "settled": [
         "<strong>QW-3 · First-run pointing tour</strong>: kept. A rough version is being built in \"Finish the comp tool design pass\" for you to design over, 2026-11-10."
       ]
+    },
+    {
+      "num": "10",
+      "title": "Lead auto-accept: questions",
+      "prefix": "LA",
+      "tab": "leads",
+      "url": "https://github.com/Casa-Blanca-Real-Estate/se-autoaccept/blob/main/README.md",
+      "linkLabel": "Open the service's README",
+      "intro": "<p>The StreetEasy lead service (Railway, repo <code>se-autoaccept</code>) and its push into FileMaker. From the call with David, Erez and Derek on Nov 19 and the work after it. Each question has a default; the push stays off until you and David switch it on.</p>",
+      "questions": [
+        {
+          "id": "LA-1",
+          "q": "What does the service do with a \"New message from <name>\" email (a client's DM)?",
+          "short": "DMs: what the service does",
+          "quick": false,
+          "needsYou": false,
+          "context": "<p><strong>What this is about.</strong> StreetEasy's third kind of email: a private message from a client in StreetEasy's Inbox, with a first name only and no address (Derek's example: Thida for M. Consamus, Nov 17). Today these go straight to Derek, not to 1002 or 1004, because he answers DMs himself; so the service never sees them. If they start going to 1002, 1002's filter gets a rule to forward them to Make, and the service handles them as below.</p><p><strong>On the call:</strong> the service reads the message and sends it to FileMaker as a message: <code>AI_Message_Lead</code>, <code>AI_flag_message</code> = 1 and the client's <code>AI_ClientID</code>, so FileMaker adds it to the inquiry's notes. To build it, I sign in as the agent once, read-only, to see the Inbox page.</p>",
+          "options": [
+            [
+              "A",
+              "Read it and send it to FileMaker as a message, no reply",
+              "What the call agreed.",
+              true
+            ],
+            [
+              "B",
+              "The same, and reply on StreetEasy when it holds back the contact details",
+              "Only if StreetEasy gates DMs like leads."
+            ],
+            [
+              "C",
+              "Only alert Derek",
+              "A person reads it in StreetEasy."
+            ]
+          ],
+          "source": "The Nov 19 call · Derek's forward of Thida's email"
+        },
+        {
+          "id": "LA-3",
+          "q": "When the push goes on, which leads does FileMaker get?",
+          "short": "Switch-on: which leads",
+          "quick": true,
+          "needsYou": false,
+          "context": "<p>FileMaker stops reading Gmail at the same moment the push goes on. Leads before that moment are already in FileMaker from Gmail. Leads in a gap between the two would be missed, and leads in an overlap would come in twice.</p>",
+          "options": [
+            [
+              "A",
+              "Only leads after the switch; David and I switch together",
+              "The plan from the call.",
+              true
+            ],
+            [
+              "B",
+              "Also re-send leads from a time David names",
+              "Covers a gap if the two switches aren't at the same moment; a few may come in twice."
+            ]
+          ],
+          "source": "The Nov 19 call"
+        },
+        {
+          "id": "LA-4",
+          "q": "Give past leads a Client ID?",
+          "short": "Backfill Client IDs",
+          "quick": true,
+          "needsYou": false,
+          "context": "<p>Numbering starts with the first lead after the push goes on. On the call, Erez suggested exporting every lead from FileMaker so the service can number them, and David sending the numbers back. Not a priority; going live comes first.</p>",
+          "options": [
+            [
+              "A",
+              "Later, after go-live",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Now, before go-live",
+              "Needs David's export first."
+            ],
+            [
+              "C",
+              "Never",
+              ""
+            ]
+          ],
+          "source": "The Nov 19 call"
+        },
+        {
+          "id": "LA-5",
+          "q": "StreetEasy's connection number (AI_SE_ConnectionID): keep it?",
+          "short": "Connection number field",
+          "quick": true,
+          "needsYou": false,
+          "context": "<p>The service reads StreetEasy's own number for each client–agent connection. It isn't on Emails_API, and the call settled on Client ID and the stack flag instead. It's still kept on each run in the service.</p>",
+          "options": [
+            [
+              "A",
+              "Leave it out of FileMaker",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Ask David to add it",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "LA-6",
+          "q": "Remove the service's unused \"email each lead to 1004\" option?",
+          "short": "Remove the 1004 email option",
+          "quick": true,
+          "needsYou": false,
+          "context": "<p>Built before the push and always off. 1004 is being retired, so it's dead weight.</p>",
+          "options": [
+            [
+              "A",
+              "Remove it",
+              "",
+              true
+            ],
+            [
+              "B",
+              "Keep it as a fallback",
+              ""
+            ]
+          ]
+        },
+        {
+          "id": "LA-7",
+          "q": "What happens to the emails in 1002 once they're handled?",
+          "short": "1002 inbox: clean up?",
+          "quick": true,
+          "needsYou": false,
+          "context": "<p>On the call: FileMaker trashed 1004's emails after reading them, and once it stops, that inbox would fill up. 1004 is being retired. 1002 has always kept its mail; the service never touches the inbox (Gmail forwards to Make).</p>",
+          "options": [
+            [
+              "A",
+              "Leave 1002 as it is",
+              "",
+              true
+            ],
+            [
+              "B",
+              "A Gmail filter archives StreetEasy's emails as they arrive",
+              "Out of the inbox, still searchable."
+            ]
+          ],
+          "source": "The Nov 19 call"
+        }
+      ],
+      "settled": [
+        "<strong>LA-2 · Agent texts</strong>: hold for now. You'll ask Erez whether Slack or WhatsApp should come first instead of Twilio (Twilio's carrier registration takes a couple of weeks); the app is the final destination, so nothing is set up yet, recorded 2026-11-19 (in chat).",
+        "<strong>AI_ClientID</strong>: one number per person, 8 digits from 10000001, kept for good; the same email or phone always gets the same number (David, Nov 19). Built in se-autoaccept #15.",
+        "<strong>AI_FlagToBeStacked</strong>: 1 when the same agent already had the client (another address, or more than six hours earlier) and for every repeat inquiry; otherwise empty (Erez and David, Nov 19).",
+        "<strong>Only 1002</strong>: the service reads 1002 only; 1004 retires once Derek moves the active agents' filters (Nov 19).",
+        "<strong>Status updates</strong> from FileMaker to StreetEasy: stage 2, after go-live; StreetEasy referrals only (Nov 19)."
+      ]
+    },
+    {
+      "num": "11",
+      "title": "Lead auto-accept: your to-dos",
+      "prefix": "LT",
+      "tab": "leads",
+      "url": "https://github.com/Casa-Blanca-Real-Estate/se-autoaccept/pulls",
+      "linkLabel": "Open the service's PRs",
+      "intro": "<p>Errands for the go-live. Mark one <strong>Done</strong> when it's done; anything left here is still to do.</p>",
+      "questions": [
+        {
+          "id": "LT-9",
+          "q": "Merge and release casablanca #183 before the call (Send this lead to FileMaker)",
+          "short": "Merge and release #183",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>Each run's detail on the Lead auto-accept page gets a <strong>Send this lead to FileMaker</strong> button, with its Client ID and stack flag, so David can watch a real record fill in. It works with the push on or off. Merging isn't deploying: it needs the release too.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ],
+          "source": "#183"
+        },
+        {
+          "id": "LT-3",
+          "q": "Ask David whether to put AI_flag_message on the Emails_API layout",
+          "short": "Ask David: AI_flag_message",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>He created the field on the call, but it isn't on the layout in the screenshot. The Data API only fills fields that are on the layout. Needed for DMs (LA-1).</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ]
+        },
+        {
+          "id": "LT-4",
+          "q": "Pick the switch-on time with David",
+          "short": "Switch-on time",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>David's morning, which is lunchtime in New York, so he can watch records come in. At that moment he switches FileMaker off Gmail and I turn the push on. Derek moves the active agents' filters at the same time (LT-5).</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ]
+        },
+        {
+          "id": "LT-5",
+          "q": "Derek moves every active agent's forwarding filter to 1002 and retires 1004",
+          "short": "Derek: filters to 1002",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>About 40 minutes, done together with the switch-on so nothing is dropped or doubled.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ]
+        },
+        {
+          "id": "LT-6",
+          "q": "David deletes the test records once checked (#69849, Brian Tietje's real lead)",
+          "short": "Delete test records",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>#69849 (Brian Tietje) was sent by hand on Nov 19 and is probably a duplicate of the Gmail-imported copy. Plus the test sent during the go-live call, the first with a Client ID.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ]
+        },
+        {
+          "id": "LT-7",
+          "q": "Get Derek's routing rules for Hannah's and Jen's accounts",
+          "short": "Derek: Hannah/Jen rules",
+          "quick": true,
+          "needsYou": true,
+          "context": "<p>Price points below which a lead is passed on, and leads that already have an agent. He said he'd email them.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ]
+        },
+        {
+          "id": "LT-8",
+          "q": "Watch Dean DeSalvo's leads for a week",
+          "short": "Watch Dean's leads",
+          "quick": true,
+          "needsYou": false,
+          "default": "Open until a clean week",
+          "context": "<p>His leads were dropped silently from Nov 18 (a session file corrupted when the disk filled on Nov 11). Fixed in #13: a bad session is set aside, and any lead that fails is reported.</p>",
+          "options": [
+            [
+              "A",
+              "Done"
+            ]
+          ]
+        }
+      ],
+      "settled": [
+        "<strong>LT-1 · Merge se-autoaccept #15</strong>: merged and live 2026-11-19; AI_ClientID and AI_FlagToBeStacked are switched on for FileMaker (the push is still off). The test record goes during the next call so David can watch it fill in.",
+        "<strong>LT-2 · DMs and 1002's filter</strong>: nothing to fix now. DMs go straight to Derek, not 1002; if they start going to 1002, the filter gets a rule to forward them to Make then, recorded 2026-11-19 (in chat)."
+      ]
     }
   ],
   "reading": [
@@ -1429,6 +1715,14 @@
     }
   ],
   "changes": [
+    {
+      "date": "2026-11-19",
+      "label": "Thu Nov 19",
+      "items": [
+        "A new <strong>Lead accept</strong> tab: the StreetEasy lead service and its FileMaker push. LA-1 to LA-7 (questions; LA-2, agent texts, needs you) and LT-1 to LT-8 (to-dos for the go-live).",
+        "Answered in chat: LA-2 (texts: hold; you'll ask Erez about Slack or WhatsApp), LT-1 (#15 merged and live), LT-2 (DMs go to Derek, not 1002). New: LT-9, merge and release #183, the Send this lead to FileMaker button."
+      ]
+    },
     {
       "date": "2026-11-11",
       "label": "Wed Nov 11",

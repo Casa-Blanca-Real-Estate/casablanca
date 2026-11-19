@@ -120,6 +120,7 @@ select.topicjump { display: none; border: 1px solid var(--rule); background: var
 nav.side { position: sticky; top: 128px; align-self: start; max-height: calc(100vh - 140px); overflow: auto; font-size: 14px; }
 nav.side a { display: flex; justify-content: space-between; gap: 8px; text-decoration: none; color: var(--ink); padding: 6px 8px; border-radius: 7px; }
 nav.side a:hover { background: var(--surface-2); }
+nav.side a[hidden] { display: none; }
 nav.side a.cur { background: var(--accent-soft); }
 nav.side .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
 nav.side .n .w { color: var(--warn); }
@@ -320,6 +321,7 @@ details.donegrp .ri { margin-bottom: 10px; }
 <header class="top gutter">
   <div class="seg tabs" role="group" aria-label="View" id="tabs">
     <button type="button" data-tab="questions" aria-pressed="true">Questions</button>
+    <button type="button" data-tab="leads" aria-pressed="false">Lead accept<span class="tabn" id="leadsN"></span></button>
     <button type="button" data-tab="reading" aria-pressed="false">Reading list<span class="tabn" id="readingN"></span></button>
     <button type="button" data-tab="todo" aria-pressed="false">To-do<span class="tabn" id="todoN"></span></button>
     <button type="button" data-tab="design" aria-pressed="false">Design pass<span class="tabn" id="designN"></span></button>
@@ -393,6 +395,10 @@ details.donegrp .ri { margin-bottom: 10px; }
   const PREF_KEY = "casa-answer-sheet-prefs-v1";
   const TODO = DATA.todo || { groups: [] };
   const TODO_QS = new Set(TODO.groups.flatMap((g) => g.items.filter((it) => it.q).map((it) => it.q))); // cards shown on the To-do tab
+  // The Lead accept tab (2026-11-19): the topics marked tab "leads", in the same layout as Questions, which leaves them out.
+  let VIEW = "questions";
+  const inView = (t) => (t.tab === "leads") === (VIEW === "leads");
+  const LEAD_QS = new Set(DATA.topics.filter((t) => t.tab === "leads").flatMap((t) => t.questions.map((q) => q.id)));
 
   // ---------- model ----------
   const all = [];
@@ -629,7 +635,8 @@ details.donegrp .ri { margin-bottom: 10px; }
       a.innerHTML = `<span>${escapeText(t.title)}</span><span class="n"></span>`;
       side.append(a);
       t._nav = a;
-      jump.append(new Option(`${t.num} · ${t.title}`, t.num));
+      t._opt = new Option(`${t.num} · ${t.title}`, t.num);
+      jump.append(t._opt);
     }
     const sideTools = el("div", "tools");
     const copy = el("button", "btn", "Copy my answers as text");
@@ -659,7 +666,9 @@ details.donegrp .ri { margin-bottom: 10px; }
     queueMicrotask(paintReading);
     queueMicrotask(paintTodo);
     let ans = 0, def = 0, needs = 0;
-    const qall = all.filter((q) => !TODO_QS.has(q.id));
+    const qall = DATA.topics.filter(inView).flatMap((t) => t.questions).filter((q) => !TODO_QS.has(q.id));
+    const leadsOpen = all.filter((q) => LEAD_QS.has(q.id) && !TODO_QS.has(q.id) && statusOf(q) === "needs").length;
+    $("#leadsN").textContent = leadsOpen ? String(leadsOpen) : "";
     for (const q of qall) {
       const s = statusOf(q);
       if (s === "answered") ans++; else if (s === "default") def++; else needs++;
@@ -676,7 +685,8 @@ details.donegrp .ri { margin-bottom: 10px; }
       const tq = t.questions.filter((q) => !TODO_QS.has(q.id));
       for (const q of tq) { const s = statusOf(q); if (s === "answered") a++; if (s === "needs") nd++; if (s === "default") untouchedDefaults++; }
       const total = tq.length;
-      t._nav.hidden = total === 0;
+      t._nav.hidden = total === 0 || !inView(t);
+      t._opt.hidden = !inView(t);
       t._meta.textContent = `${a} of ${total} answered${nd ? ` · ${nd} still need you` : ""}`;
       t._nav.querySelector(".n").innerHTML = `${a}/${total}${nd ? ` · <span class="w">${nd}</span>` : ""}`;
       t._acc.disabled = readOnly || untouchedDefaults === 0;
@@ -693,6 +703,7 @@ details.donegrp .ri { margin-bottom: 10px; }
     let shown = 0;
     for (const t of DATA.topics) {
       let any = false;
+      if (!inView(t)) { t._sec.hidden = true; continue; }
       for (const q of t.questions) {
         if (TODO_QS.has(q.id)) continue; // shown on the To-do tab, unfiltered
         const s = statusOf(q);
@@ -722,6 +733,7 @@ details.donegrp .ri { margin-bottom: 10px; }
     const id = a.getAttribute("href").slice(3);
     const c = cards.get(id); if (!c) return;
     if (TODO_QS.has(id)) { setTab("todo", true); return; }
+    if (LEAD_QS.has(id) !== (VIEW === "leads")) setTab(LEAD_QS.has(id) ? "leads" : "questions", true);
     if (c.art.hidden) { prefs.filter = "all"; $("#search").value = ""; applyFilter(); }
   });
 
@@ -1192,14 +1204,16 @@ details.donegrp .ri { margin-bottom: 10px; }
   }
 
   // ---------- tabs ----------
+  let painted = false; // setTab repaints the question list only once boot has drawn it
   const LEDES = {
     questions: { title: "Your open questions", lede: document.getElementById("lede").innerHTML },
     reading: { title: "Your reading list", lede: "The documents that ask you something, newest first. Each one is read when you've answered its questions here." },
+    leads: { title: "Lead auto-accept", lede: "The StreetEasy lead service and its FileMaker push: what's waiting on you, questions first, then your to-dos. Answers save as you go." },
     todo: { title: "Your to-do list", lede: "Everything that's waiting on you, grouped by the job it's part of. Answers and ticks save as you go." },
     design: { title: "The design pass", lede: "Every page of the comp report, and the Studio's new pages, with what opens from each one nested under it. Tick a whole page or the pieces inside it, and leave a note for the build." },
   };
   function setTab(tab, fromHash) {
-    if (!["reading", "design", "todo"].includes(tab)) tab = "questions";
+    if (!["reading", "design", "todo", "leads"].includes(tab)) tab = "questions";
     prefs.tab = tab; saveJSON(PREF_KEY, prefs);
     const reading = tab === "reading", design = tab === "design", todo = tab === "todo", other = reading || design || todo;
     document.querySelector(".bar").hidden = other;
@@ -1211,7 +1225,8 @@ details.donegrp .ri { margin-bottom: 10px; }
     $("#pageTitle").textContent = LEDES[tab].title;
     $("#lede").innerHTML = LEDES[tab].lede;
     for (const b of $("#tabs").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
-    if (!fromHash) { try { history.replaceState(null, "", other ? "#" + tab : location.pathname + location.search); } catch {} }
+    if (!fromHash) { try { history.replaceState(null, "", other || tab === "leads" ? "#" + tab : location.pathname + location.search); } catch {} }
+    if (!other && VIEW !== tab) { VIEW = tab; if (painted) { paintTotals(); applyFilter(); window.scrollTo(0, 0); } }
     if (reading) paintReading();
     if (design) paintDesign();
   }
@@ -1232,9 +1247,11 @@ details.donegrp .ri { margin-bottom: 10px; }
   }
   renderAll();
   buildTodo();
-  const hashTab = { "#reading": "reading", "#design": "design", "#todo": "todo" }[location.hash];
+  const hashTab = { "#reading": "reading", "#design": "design", "#todo": "todo", "#leads": "leads" }[location.hash];
   const hashQ = location.hash.startsWith("#q-") && TODO_QS.has(location.hash.slice(3));
-  setTab(hashTab || (hashQ ? "todo" : location.hash ? "questions" : prefs.tab || "questions"), true);
+  const hashLead = location.hash.startsWith("#q-") && LEAD_QS.has(location.hash.slice(3));
+  setTab(hashTab || (hashQ ? "todo" : hashLead ? "leads" : location.hash ? "questions" : prefs.tab || "questions"), true);
+  painted = true;
   paintDesign();
   $("#compact").checked = !!prefs.compact;
   paintTotals();
