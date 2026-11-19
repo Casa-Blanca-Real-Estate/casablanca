@@ -1,4 +1,5 @@
 import { getStore } from '@netlify/blobs';
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 
 // Live site content editable in-platform by signed-in devs and read by everyone:
 // the next workshop card and the "What's new" changelog. Stored as a single
@@ -8,7 +9,7 @@ import { getStore } from '@netlify/blobs';
 const CORS = {
   'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Studio-Token',
   'Vary': 'Origin',
 };
 
@@ -30,6 +31,9 @@ async function read(store) {
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  // Reading: anyone signed in to the Studio. Changing: the team, as the dashboard's editing controls are.
+  const refused = await requireStudio(req, { headers: CORS, team: req.method !== 'GET' });
+  if (refused) return refused;
 
   try {
     const store = getStore('cb-site');

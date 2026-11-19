@@ -1,4 +1,5 @@
 import { getStore } from '@netlify/blobs';
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 
 // Brand asset library — logos, fonts, colors, guidelines and other on-brand
 // downloads, managed in-platform by signed-in devs and readable by everyone.
@@ -8,7 +9,7 @@ import { getStore } from '@netlify/blobs';
 const CORS = {
   'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Studio-Token',
   'Vary': 'Origin',
 };
 
@@ -25,6 +26,14 @@ const slug = (s) =>
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  // A file's bytes stay open: the page shows them in <img> and download links, which can't
+  // carry a token, and they're Casa's public brand assets. Listing: anyone signed in.
+  // Adding and removing: the team, as the page's own controls are.
+  const fileOnly = req.method === 'GET' && new URL(req.url).searchParams.has('file');
+  if (!fileOnly) {
+    const refused = await requireStudio(req, { headers: CORS, team: req.method !== 'GET' });
+    if (refused) return refused;
+  }
 
   try {
     const store = getStore('brand');

@@ -3,7 +3,8 @@
 //
 // Env: ANTHROPIC_API_KEY  (set in Netlify → Site settings → Environment variables)
 import Anthropic from '@anthropic-ai/sdk';
-import { json, preflight } from './_lib.mjs';
+import { cors, json, preflight } from './_lib.mjs';
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY from the environment
 
@@ -41,6 +42,8 @@ const SCHEMA = {
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return preflight();
+  const refused = await requireStudio(req, { headers: cors() });
+  if (refused) return refused;
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!process.env.ANTHROPIC_API_KEY) return json({ error: 'ANTHROPIC_API_KEY is not set on the backend' }, 500);
 

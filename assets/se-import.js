@@ -50,6 +50,8 @@
       try {
         const r = await post(b + '/.netlify/functions/streeteasy-status', { id: jobId }, opts.signal);
         j = await r.json();
+        // Signed out, or not let in (the Studio sign-in, studio-auth.js): waiting won't change it.
+        if (r.status === 401 || r.status === 403) { j = { status: 'error', error: (j && j.message) || 'Sign in to import.' }; }
       } catch (e) { await sleep(3000); continue; }
       if (j && j.status === 'done') { onStatus('Imported'); return j; }
       if (j && j.status === 'error') { const e = new Error(j.error || 'import failed'); e.blocked = j.blocked; throw e; }
@@ -64,7 +66,7 @@
     const r = await post(b + '/.netlify/functions/streeteasy', { url }, opts.signal);
     const tx = await r.text();
     let j; try { j = JSON.parse(tx); } catch (_) { throw new Error('server error (HTTP ' + r.status + ')'); }
-    if (!r.ok || j.error) { const e = new Error(j.error || 'import failed'); e.blocked = j.blocked; throw e; }
+    if (!r.ok || j.error) { const e = new Error(((r.status === 401 || r.status === 403) && j.message) || j.error || 'import failed'); e.blocked = j.blocked; throw e; }
     return j;
   }
 
