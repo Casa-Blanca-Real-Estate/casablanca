@@ -443,7 +443,7 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
         <div className="so-card-top">
           <div className="so-util">
             {j && row.group !== 'unsortable' && (
-              <button type="button" className="so-review" onClick={() => ws.openReview(j.reportCompId)}>Review with Hubert</button>
+              <button type="button" className="so-review" onClick={() => ws.openReview(j.reportCompId)}>Review this comp</button>
             )}
             {url && <a className="so-se" href={url} target="_blank" rel="noreferrer noopener">StreetEasy ↗</a>}
             {canEdit && !editing && (
@@ -456,6 +456,52 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
                 🗑
               </button>
             )}
+          </div>
+          <div className="so-notesec">
+            <span className="so-features-title">Your note</span>
+          {editing ? (
+            <textarea
+              className="so-note-input"
+              aria-label="Why it’s a comp"
+              rows={3}
+              maxLength={2000}
+              value={draft!.note}
+              placeholder={`What makes it comparable to ${home}, or not`}
+              onChange={(e) => set('note', e.target.value)}
+            />
+          ) : noteDraft !== null ? (
+            <div className="so-note-edit">
+              <textarea
+                ref={noteRef}
+                className="so-note-input"
+                aria-label="Why it’s a comp"
+                rows={3}
+                maxLength={2000}
+                value={noteDraft}
+                placeholder={`What makes it comparable to ${home}, or not`}
+                onChange={(e) => setNoteDraft(e.target.value)}
+              />
+              <div className="so-card-actions">
+                <button type="button" className="link" disabled={saving} onClick={() => { setNoteDraft(null); setAsking(false); setError(null); }}>Cancel</button>
+                <button type="button" className="btn primary so-save" disabled={saving} onClick={() => void saveNote()}>{saving ? 'Saving…' : 'Save note'}</button>
+              </div>
+            </div>
+          ) : row.note ? (
+            <p className="so-note">
+              {row.note}
+              {canEdit && (
+                <button type="button" className="so-note-pen" aria-label="Edit the note" title="Edit the note" onClick={() => { setError(null); setNoteDraft(row.note ?? ''); }}>
+                  <span className="so-pencil" aria-hidden="true">✎</span>
+                </button>
+              )}
+            </p>
+          ) : canEdit ? (
+            <button type="button" className="so-note-add" onClick={() => { setError(null); setNoteDraft(''); }}>
+              {sq(needs.has('note'))}+ Add a note
+            </button>
+          ) : (
+            <p className="so-note empty">No note yet.</p>
+          )}
           </div>
           <div className="so-metrics">
             <Metric label={PRICE_LABEL[row.group]} value={shortPrice(row.price)} input={factInput('price', PRICE_LABEL[row.group])} mark={factMark('price', 'the price')} />
@@ -472,31 +518,26 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
         <div className="so-features">
           <div className="so-features-head">
             <span className="so-features-title">Features</span>
-            <span className="so-shared"><span className="so-shared-sq" aria-hidden="true" />{shared} shared with {home}</span>
+            <span className="so-shared"><span className="so-shared-sq" aria-hidden="true" />Lavender: {home} has it too · {shared} shared</span>
           </div>
           {editing ? (
             <FeaturePicker value={draft!.features} onChange={(v) => set('features', v)} home={ws.homeFeatures} type={type} />
           ) : (
-            groups.map((g) => {
-              const picked = features[g.key] ?? [];
-              return (
-                <div key={g.key} className="so-frow">
-                  <span className="so-flabel">{g.label}</span>
-                  <span className="so-fopts">
-                    {picked.length
-                      ? picked.map((o) => (
-                        <span key={o} className={`so-fchip${ws.homeFeatures[g.key]?.includes(o) ? ' shared' : ''}`}>{o}</span>
-                      ))
-                      : <span className="so-fnone">—</span>}
-                  </span>
+            // One row of chips, the shared ones first (the design pass, 2026-11-06): what the comp has, at a glance.
+            (() => {
+              const chips = groups.flatMap((g) => (features[g.key] ?? []).filter((o) => o !== 'None').map((o) => ({ key: `${g.key}:${o}`, label: o, shared: Boolean(ws.homeFeatures[g.key]?.includes(o)), group: g.label })));
+              chips.sort((a, b) => Number(b.shared) - Number(a.shared));
+              return chips.length ? (
+                <div className="so-fflat">
+                  {chips.map((ch) => <span key={ch.key} className={`so-fchip${ch.shared ? ' shared' : ''}`} title={ch.group}>{ch.label}</span>)}
                 </div>
-              );
-            })
+              ) : <span className="so-fnone">None listed</span>;
+            })()
           )}
         </div>
 
         <div className="so-tagsec" ref={tagsRef}>
-          <span className="so-features-title so-tagsec-title">{sq(needs.has('tag'))}Tags <Info text={TAG_INFO} label="What a tag is" align="left" /></span>
+          <span className="so-features-title so-tagsec-title">{sq(needs.has('tag'))}Your tags · why it counts <Info text={TAG_INFO} label="What a tag is" align="left" /></span>
           {editing ? (
             <TagPicker value={draft!.tags} onChange={(v) => set('tags', v)} label="Tags" hidden={firstFloorHidden(draft!.floor)} suggested={suggested} />
           ) : (
@@ -511,50 +552,6 @@ export function CompCard({ ws, row, out, id, onEditing, start, collapseAsk = 0, 
             </div>
           )}
         </div>
-
-        {editing ? (
-          <textarea
-            className="so-note-input"
-            aria-label="Why it’s a comp"
-            rows={3}
-            maxLength={2000}
-            value={draft!.note}
-            placeholder={`What makes it comparable to ${home}, or not`}
-            onChange={(e) => set('note', e.target.value)}
-          />
-        ) : noteDraft !== null ? (
-          <div className="so-note-edit">
-            <textarea
-              ref={noteRef}
-              className="so-note-input"
-              aria-label="Why it’s a comp"
-              rows={3}
-              maxLength={2000}
-              value={noteDraft}
-              placeholder={`What makes it comparable to ${home}, or not`}
-              onChange={(e) => setNoteDraft(e.target.value)}
-            />
-            <div className="so-card-actions">
-              <button type="button" className="link" disabled={saving} onClick={() => { setNoteDraft(null); setAsking(false); setError(null); }}>Cancel</button>
-              <button type="button" className="btn primary so-save" disabled={saving} onClick={() => void saveNote()}>{saving ? 'Saving…' : 'Save note'}</button>
-            </div>
-          </div>
-        ) : row.note ? (
-          <p className="so-note">
-            {row.note}
-            {canEdit && (
-              <button type="button" className="so-note-pen" aria-label="Edit the note" title="Edit the note" onClick={() => { setError(null); setNoteDraft(row.note ?? ''); }}>
-                <span className="so-pencil" aria-hidden="true">✎</span>
-              </button>
-            )}
-          </p>
-        ) : canEdit ? (
-          <button type="button" className="so-note-add" onClick={() => { setError(null); setNoteDraft(''); }}>
-            {sq(needs.has('note'))}+ Add a note
-          </button>
-        ) : (
-          <p className="so-note empty">No note yet.</p>
-        )}
 
         {weak && <p className="so-weak-line"><strong>Hubert:</strong> looks weak, {weak.reason}. Your call: it doesn’t change the tier.</p>}
         {why && <p className="so-why"><span className="so-why-sq" aria-hidden="true" />Doesn’t count yet: {why}.</p>}
