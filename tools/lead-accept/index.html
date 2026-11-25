@@ -620,6 +620,8 @@
       c.appendChild(name);
       c.appendChild(el('div','mono',a.email));
       c.appendChild(el('div','small muted',a.autoAdded?('Added automatically '+ny(a.autoAdded)):a.addedByHand?('Added by hand '+ny(a.addedByHand)):'On the starting list'));
+      // When their own password was last set (the service records it from Nov 25; never the password itself).
+      if(a.hasOwnPassword) c.appendChild(el('div','small muted',a.passwordSetAt?('Password updated '+ny(a.passwordSetAt)):'Password set before Nov 25'));
       var acts=el('div','acts');
       var setBtn=el('button',null,a.hasOwnPassword?'Change password':'Set own password'); setBtn.type='button';
       acts.appendChild(setBtn);
