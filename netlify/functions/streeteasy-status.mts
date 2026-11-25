@@ -4,16 +4,19 @@
 //     → { status: 'queued' | 'running' | 'done' | 'error', ... }
 // Fast + well under the 26s cap: it only reads one Blobs key.
 import { getStore } from '@netlify/blobs';
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Studio-Token',
 };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  const refused = await requireStudio(req, { headers: CORS });
+  if (refused) return refused;
   try {
     let id;
     if (req.method === 'POST') { const b = await req.json().catch(() => ({})); id = b.id || b.jobId; }

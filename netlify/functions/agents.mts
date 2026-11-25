@@ -1,9 +1,10 @@
 import { getStore } from '@netlify/blobs';
+import { requireStudio } from '../../tools-src/studio-auth/production.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Studio-Token',
 };
 
 const json = (body, status = 200) =>
@@ -14,6 +15,8 @@ const json = (body, status = 200) =>
 
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  const refused = await requireStudio(req, { headers: CORS });
+  if (refused) return refused;
 
   try {
     const store = getStore('agents');
